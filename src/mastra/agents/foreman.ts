@@ -17,7 +17,7 @@ export function createForemanAgent(databaseUrl: string) {
     description:
       "AI assistant that helps users take actions across 9000+ apps via Zapier",
     instructions: SYSTEM_PROMPT,
-    model: "anthropic/claude-sonnet-4-5-20251015",
+    model: "anthropic/claude-sonnet-4-20250514",
     tools: {
       discover_connections: discoverConnectionsTool,
       list_actions: listActionsTool,

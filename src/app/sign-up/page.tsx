@@ -21,6 +21,8 @@ export default function SignUpPage() {
 
     if (result.error) {
       setError(result.error.message ?? "Sign up failed");
+    } else {
+      window.location.href = "/";
     }
   }
 

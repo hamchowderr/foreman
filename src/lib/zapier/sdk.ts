@@ -35,6 +35,10 @@ export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
 
   const identity = rows[0];
   if (!identity) {
+    // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json)
+    if (env.FOREMAN_MODE !== "production") {
+      return createZapierSdk();
+    }
     throw new ZapierNotConnected(userId);
   }
 

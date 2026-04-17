@@ -1,0 +1,48 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "what apps" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "discover_connections",
+            "arguments": {}
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "connections" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "discover_connections",
+            "arguments": {}
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "connected" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "discover_connections",
+            "arguments": {}
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "show my apps" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "discover_connections",
+            "arguments": {}
+          }
+        ]
+      }
+    }
+  ]
+}

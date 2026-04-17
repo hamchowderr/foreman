@@ -19,6 +19,8 @@ export default function SignInPage() {
 
     if (result.error) {
       setError(result.error.message ?? "Sign in failed");
+    } else {
+      window.location.href = "/";
     }
   }
 

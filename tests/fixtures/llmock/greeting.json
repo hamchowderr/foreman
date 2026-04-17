@@ -1,0 +1,16 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "hello" },
+      "response": { "content": "Hey there! I'm Foreman, your Zapier automation assistant. I can help you discover your connected apps, find available actions, and execute them. What would you like to do?" }
+    },
+    {
+      "match": { "userMessage": "hi" },
+      "response": { "content": "Hi! I'm Foreman. I can help you manage your Zapier integrations — discover connected apps, list available actions, or run them for you. How can I help?" }
+    },
+    {
+      "match": { "userMessage": "help" },
+      "response": { "content": "I can help you with your Zapier automations. Here's what I can do:\n\n- **Discover apps** — see what apps you have connected\n- **List actions** — find available actions for any app\n- **Execute actions** — run actions like sending emails or creating tasks\n\nJust tell me what you'd like to do!" }
+    }
+  ]
+}

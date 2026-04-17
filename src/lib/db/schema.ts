@@ -95,7 +95,7 @@ export const message = sqliteTable("message", {
   conversationId: text("conversation_id")
     .notNull()
     .references(() => conversation.id),
-  role: text("role", { enum: ["user", "agent", "system"] }).notNull(),
+  role: text("role", { enum: ["user", "assistant", "agent", "system"] }).notNull(),
   content: text("content").notNull(), // JSON stringified
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
