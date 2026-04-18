@@ -509,7 +509,19 @@ curl -X POST http://localhost:4111/a2a/foreman \
 
 ## Database
 
-Foreman uses SQLite locally via [Drizzle ORM](https://orm.drizzle.team) + [@libsql/client](https://github.com/tursodatabase/libsql-client-ts). For production, swap `DATABASE_URL` to a [Turso](https://turso.tech) hosted URL --- same driver, no code changes.
+Foreman uses SQLite locally via [Drizzle ORM](https://orm.drizzle.team) + [@libsql/client](https://github.com/tursodatabase/libsql-client-ts). For production on Vercel, use [Turso](https://turso.tech) (hosted LibSQL) --- same driver, zero code changes.
+
+**Local:** `DATABASE_URL=file:./foreman.db`
+**Production:** `DATABASE_URL=libsql://foreman-<your-org>.turso.io?authToken=<token>`
+
+Turso is available in the [Vercel Marketplace](https://vercel.com/marketplace) — one-click install auto-provisions the database and injects `DATABASE_URL` into your Vercel project.
+
+**Free tier comparison:**
+
+| Provider | Storage | Best for |
+|----------|---------|----------|
+| [Turso](https://turso.tech) (LibSQL) | 5 GB, 500M reads/mo | **Recommended** — zero code changes, same @libsql/client |
+| [Neon](https://neon.com) (Postgres) | 0.5 GB, 100 CU-hours/mo | Requires Drizzle adapter swap to Postgres |
 
 ### Tables
 
@@ -595,12 +607,28 @@ DEPLOY_TARGET=cloudflare npm run build:cloudflare
 
 ## Security
 
-- **Token encryption**: Zapier OAuth tokens are encrypted at rest with AES-256-GCM
-- **PII redaction**: Output processor strips emails, API keys, phone numbers, card numbers, SSNs
-- **API key hashing**: Keys are SHA-256 hashed, never stored in plaintext
-- **Signature verification**: Slack, Discord, and other webhooks verify request signatures
-- **Session validation**: Clerk JWT tokens verified via JWKS on every API call
-- **Input validation**: Zod schemas on all API inputs
+### Input Validation & Sanitization
+
+All API inputs are validated and sanitized before processing:
+
+- **Zod schemas** on every route — type-safe validation with descriptive error messages
+- **JSON parse protection** — malformed request bodies return 400, never crash the server
+- **Length limits** — message content (50KB max), voice text (10KB max), file uploads (25MB max)
+- **Parameter validation** — all URL params checked for existence and format
+- **SQL injection prevention** — Drizzle ORM uses parameterized queries (no raw SQL)
+
+### Output Sanitization
+
+- **PII redaction** — output processor strips emails, API keys, Bearer tokens, phone numbers, credit card numbers, and SSNs before responses leave the system
+- **Content filtering** — guardrails assess action risk and block dangerous operations
+
+### Authentication & Encryption
+
+- **Clerk JWT verification** — JWKS-based token validation via `@mastra/auth-clerk` on every API call
+- **Token encryption** — Zapier OAuth tokens encrypted at rest with AES-256-GCM
+- **API key hashing** — keys are SHA-256 hashed, never stored in plaintext
+- **Webhook signatures** — Slack, Discord, Linear, and other webhooks verify request signatures
+- **Guardrails** — rate limiting, sensitive app blocking, bulk operation confirmation
 
 ## Development
 
