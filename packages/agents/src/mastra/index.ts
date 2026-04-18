@@ -6,6 +6,18 @@ import type { MiddlewareHandler } from "hono";
 
 let _mastra: Mastra | undefined;
 
+async function loadDeployer() {
+  if (process.env.DEPLOY_TARGET === "vercel") {
+    const { VercelDeployer } = await import("@mastra/deployer-vercel");
+    return new VercelDeployer({ studio: true });
+  }
+  if (process.env.DEPLOY_TARGET === "cloudflare") {
+    const { CloudflareDeployer } = await import("@mastra/deployer-cloudflare");
+    return new CloudflareDeployer({ name: "foreman-agents" });
+  }
+  return undefined; // VPS: no deployer, standalone Hono server
+}
+
 export function getMastra(): Mastra {
   if (_mastra) return _mastra;
 
@@ -34,7 +46,7 @@ export function getMastra(): Mastra {
     },
     storage,
     server: {
-      port: 4111,
+      port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
       middleware: [customMiddleware],
     },
@@ -42,3 +54,18 @@ export function getMastra(): Mastra {
 
   return _mastra;
 }
+
+// For Vercel/Cloudflare builds: export the Mastra instance with deployer
+// Usage: DEPLOY_TARGET=vercel mastra build
+export async function createMastraWithDeployer() {
+  const deployer = await loadDeployer();
+  const mastra = getMastra();
+  if (deployer) {
+    // @ts-expect-error deployer is set after construction for build-time only
+    mastra.deployer = deployer;
+  }
+  return mastra;
+}
+
+// Default export for mastra build
+export const mastra = getMastra();

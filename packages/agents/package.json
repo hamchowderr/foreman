@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "mastra dev",
     "build": "mastra build",
+    "build:vercel": "DEPLOY_TARGET=vercel mastra build",
+    "build:cloudflare": "DEPLOY_TARGET=cloudflare mastra build",
     "start": "node .mastra/output/index.mjs",
     "dev:mock": "node tests/start-mock-dev.js",
     "db:generate": "drizzle-kit generate",
@@ -25,6 +27,10 @@
     "drizzle-orm": "^0.45.2",
     "hono": "^4.7.0",
     "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "@mastra/deployer-vercel": "^1.0.0",
+    "@mastra/deployer-cloudflare": "^1.0.0"
   },
   "devDependencies": {
     "@copilotkit/llmock": "^1.7.1",
