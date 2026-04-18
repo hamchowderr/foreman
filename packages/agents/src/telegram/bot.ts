@@ -2,6 +2,7 @@ import { Chat } from "chat";
 import { createTelegramAdapter } from "@chat-adapter/telegram";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
+import { registerChannelUser } from "../lib/identity";
 
 let _bot: Chat<{ telegram: ReturnType<typeof createTelegramAdapter> }> | undefined;
 let _telegramAdapter: ReturnType<typeof createTelegramAdapter> | undefined;
@@ -31,13 +32,21 @@ export function getTelegramBot() {
 
   async function generateReply(
     threadId: string,
-    userId: string,
+    telegramUserId: string,
     text: string,
+    displayName?: string,
   ) {
+    // Auto-register Telegram user → Foreman user (idempotent)
+    const userId = await registerChannelUser(
+      "telegram",
+      telegramUserId,
+      displayName
+    );
+
     const result = await agent.generate(text, {
       memory: {
         thread: `telegram-${threadId}`,
-        resource: `telegram-user-${userId}`,
+        resource: userId,
       },
     });
     return result.text;
@@ -46,7 +55,12 @@ export function getTelegramBot() {
   // Handle DMs — Telegram bots receive DMs as the primary interaction mode.
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
-    const reply = await generateReply(thread.channelId, message.author.userId, message.text);
+    const reply = await generateReply(
+      thread.channelId,
+      message.author.userId,
+      message.text,
+      message.author.name
+    );
     await thread.post(reply);
   });
 
@@ -54,14 +68,24 @@ export function getTelegramBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     await thread.subscribe();
-    const reply = await generateReply(thread.id, message.author.userId, message.text);
+    const reply = await generateReply(
+      thread.id,
+      message.author.userId,
+      message.text,
+      message.author.name
+    );
     await thread.post(reply);
   });
 
   // Handle follow-up messages in threads the bot is subscribed to.
   bot.onSubscribedMessage(async (thread, message) => {
     if (!message.text) return;
-    const reply = await generateReply(thread.id, message.author.userId, message.text);
+    const reply = await generateReply(
+      thread.id,
+      message.author.userId,
+      message.text,
+      message.author.name
+    );
     await thread.post(reply);
   });
 

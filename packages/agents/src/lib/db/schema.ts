@@ -185,3 +185,39 @@ export const capabilityFlag = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.userId, table.capability] })]
 );
+
+// ─── Channel Identity (multi-channel user linking) ───
+
+export const channelIdentity = sqliteTable(
+  "channel_identity",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    channel: text("channel", {
+      enum: ["web", "telegram", "slack", "discord", "mcp", "a2a"],
+    }).notNull(),
+    channelUserId: text("channel_user_id").notNull(),
+    displayName: text("display_name"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    // One identity per channel per external user
+    // Note: Drizzle SQLite unique constraints via composite index
+  ]
+);
+
+// ─── API Keys (MCP/A2A access) ───
+
+export const apiKey = sqliteTable("api_key", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id),
+  keyHash: text("key_hash").notNull().unique(),
+  name: text("name").notNull(),
+  scopes: text("scopes").notNull(), // JSON array: ["read", "write", "execute"]
+  lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
