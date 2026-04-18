@@ -60,13 +60,29 @@ export async function runAction(
 
   const sdk = await getSdkForUser(userId);
 
+  // Auto-discover connectionId if not provided
+  let resolvedConnectionId = connectionId;
+  if (!resolvedConnectionId) {
+    try {
+      const { data: conn } = await sdk.findFirstConnection({
+        appKey,
+        isExpired: false,
+      });
+      if (conn?.id) {
+        resolvedConnectionId = conn.id;
+      }
+    } catch {
+      // Continue without connectionId — SDK may still work
+    }
+  }
+
   try {
     const result = await sdk.runAction({
       app: appKey,
       actionType: actionType as "search" | "read" | "write" | "run" | "filter" | "read_bulk" | "search_and_write" | "search_or_write",
       action: actionKey,
       inputs,
-      ...(connectionId ? { connection: connectionId } : {}),
+      ...(resolvedConnectionId ? { connection: resolvedConnectionId } : {}),
     });
     return result;
   } catch (err) {
