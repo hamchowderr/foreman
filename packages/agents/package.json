@@ -10,6 +10,7 @@
     "build:cloudflare": "DEPLOY_TARGET=cloudflare mastra build",
     "start": "node .mastra/output/index.mjs",
     "dev:mock": "node tests/start-mock-dev.js",
+    "dev:telegram": "npx tsx src/telegram/start-polling.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest run"

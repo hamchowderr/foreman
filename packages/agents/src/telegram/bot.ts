@@ -4,6 +4,7 @@ import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
 
 let _bot: Chat<{ telegram: ReturnType<typeof createTelegramAdapter> }> | undefined;
+let _telegramAdapter: ReturnType<typeof createTelegramAdapter> | undefined;
 
 /**
  * Create and configure the Telegram bot backed by the Foreman Mastra agent.
@@ -16,6 +17,7 @@ export function getTelegramBot() {
   const telegram = createTelegramAdapter({
     mode: "auto",
   });
+  _telegramAdapter = telegram;
 
   const bot = new Chat({
     userName: "foreman",
@@ -64,5 +66,27 @@ export function getTelegramBot() {
   });
 
   _bot = bot;
+  return bot;
+}
+
+/**
+ * Return the underlying Telegram adapter instance.
+ * Useful for checking `runtimeMode` or calling `startPolling()`/`stopPolling()`.
+ */
+export function getTelegramAdapter() {
+  if (!_telegramAdapter) getTelegramBot();
+  return _telegramAdapter!;
+}
+
+/**
+ * Start the Telegram bot in polling mode for local development.
+ * Calls `bot.initialize()` which triggers the adapter's auto-mode detection
+ * and starts long-polling when no webhook URL is configured.
+ */
+export async function startTelegramPolling() {
+  const bot = getTelegramBot();
+  await bot.initialize();
+  const adapter = getTelegramAdapter();
+  console.log(`Telegram bot started in ${adapter.runtimeMode} mode`);
   return bot;
 }
