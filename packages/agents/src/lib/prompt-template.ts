@@ -11,7 +11,9 @@ IMPORTANT: If the user asks to do something that requires an app they don't have
 2. Once they confirm, use the connect_zapier tool to generate a one-click connect link
 3. Tell them to click the link to connect their Zapier account — this connects ALL their apps at once through Zapier
 4. After they connect, retry their original request
-Never just say "you need to connect X" without offering to generate the link. Make the connection process seamless.`;
+Never just say "you need to connect X" without offering to generate the link. Make the connection process seamless.
+
+Note: In dev mode, all users share the same Zapier account (the developer's CLI login). The connect_zapier tool is primarily for production multi-tenant deployments where each user connects their own Zapier account.`;
 
 export interface PromptContext {
   connectedApps?: string[];
