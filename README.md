@@ -601,7 +601,7 @@ DEPLOY_TARGET=cloudflare npm run build:cloudflare
 
 ### Testing
 
-Foreman has three layers of testing: unit tests, integration tests, and E2E tests.
+Foreman has three layers of testing: unit tests, integration tests, and E2E tests. **142 total tests (135 passing, 7 skipped) across 17 test files.**
 
 #### Unit Tests (Vitest)
 
@@ -613,16 +613,21 @@ cd packages/agents && npm test
 
 | Test File | What It Tests |
 |-----------|---------------|
+| `capabilities.test.ts` | Feature flags CRUD, default-on behavior, all 6 capability types |
+| `context-injector.test.ts` | Input processor: connected apps context injection |
 | `crypto.test.ts` | AES-256-GCM token encryption/decryption |
 | `env.test.ts` | Environment variable validation |
-| `zapier-errors.test.ts` | Zapier SDK error classification and retry logic |
-| `mastra-agent.test.ts` | Agent initialization, tool registration, model routing |
+| `guardrails.test.ts` | Rate limiting, risk assessment, sensitive app blocking, bulk confirmation |
+| `guardrails-config.test.ts` | Org-level guardrail defaults and configuration |
+| `identity.test.ts` | Clerk JWT parsing, orgId extraction, API key resolution, channel identity |
+| `mastra-agent.test.ts` | Agent initialization, tool registration (8 tools), model routing |
 | `model-routing.test.ts` | Model selection (sonnet/haiku/opus per agent role) |
 | `pii-redactor.test.ts` | Output processor: email, API key, phone, card, SSN redaction |
-| `context-injector.test.ts` | Input processor: connected apps context injection |
 | `prompt-template.test.ts` | Dynamic system prompt generation |
 | `stream-types.test.ts` | SSE stream encoding and type safety |
 | `telegram-bot.test.ts` | Telegram bot initialization and handler wiring |
+| `voice.test.ts` | STT/TTS functions, ElevenLabs primary, OpenAI fallback |
+| `zapier-errors.test.ts` | Zapier SDK error classification and retry logic |
 
 #### Integration Tests
 
@@ -634,6 +639,7 @@ cd packages/agents && npm test -- tests/integration
 
 | Test File | What It Tests |
 |-----------|---------------|
+| `api-routes.test.ts` | All API endpoints (capabilities, guardrails, workflows, voice), auth gating, mock JWT |
 | `protocols.test.ts` | REST API, A2A, and MCP protocol endpoints |
 
 #### E2E Tests (Playwright)
