@@ -3,8 +3,8 @@ import { getSlackBot } from "./bot";
 
 /**
  * Handle incoming Slack webhook POST requests.
- * Delegates to the Chat SDK's built-in webhook handler which
- * verifies the signing secret and dispatches to registered handlers.
+ * Passes the raw request directly to Chat SDK — it handles
+ * url_verification challenges and signature verification internally.
  */
 export async function handleSlackWebhook(c: Context): Promise<Response> {
   const bot = getSlackBot();

@@ -15,7 +15,9 @@
       "Bash(sed -i 's/^\\\\.env$/\\\\.env.local/' /c/Users/HamCh/code/foreman/packages/agents/.gitignore)",
       "Bash(pkill -f cloudflared)",
       "Bash(ngrok version:*)",
-      "Bash(ngrok http:*)"
+      "Bash(ngrok http:*)",
+      "Bash(pkill -f ngrok)",
+      "Bash(pkill -f \"node -e\")"
     ]
   }
 }

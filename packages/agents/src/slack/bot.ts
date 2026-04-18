@@ -53,38 +53,57 @@ export function getSlackBot() {
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
-    const reply = await generateReply(
-      thread.channelId,
-      message.author.userId,
-      message.text,
-      message.author.name
-    );
-    await thread.post(reply);
+    try {
+      console.log("[slack] DM from", message.author.userId, ":", message.text);
+      const reply = await generateReply(
+        thread.channelId,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[slack] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[slack] DM handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
   });
 
   // Handle @-mentions in channels
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
-    await thread.subscribe();
-    const reply = await generateReply(
-      thread.id,
-      message.author.userId,
-      message.text,
-      message.author.name
-    );
-    await thread.post(reply);
+    try {
+      console.log("[slack] Mention from", message.author.userId, ":", message.text);
+      await thread.subscribe();
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[slack] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[slack] Mention handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
   });
 
   // Handle follow-up messages in threads the bot is subscribed to
   bot.onSubscribedMessage(async (thread, message) => {
     if (!message.text) return;
-    const reply = await generateReply(
-      thread.id,
-      message.author.userId,
-      message.text,
-      message.author.name
-    );
-    await thread.post(reply);
+    try {
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[slack] Subscribed handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
   });
 
   _bot = bot;

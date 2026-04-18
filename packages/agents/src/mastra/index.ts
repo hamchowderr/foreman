@@ -27,8 +27,9 @@ export function getMastra(): Mastra {
   const historyAgent = createHistoryAgent();
   const supervisorAgent = createSupervisorAgent(databaseUrl);
 
-  // Lazy-load routes to break circular dependency
-  // Routes import getMastra() but only call it inside handlers (not at import time)
+  // Webhooks run on a separate server (webhook-server.ts on :4112)
+  // to avoid Mastra's middleware consuming the request body before
+  // signature verification. Only API routes go through this middleware.
   const customMiddleware: MiddlewareHandler = async (c, next) => {
     const { default: customRoutes } = await import("../routes");
     const response = await customRoutes.fetch(c.req.raw);
