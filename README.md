@@ -294,15 +294,17 @@ npm install
 DATABASE_URL=file:./foreman.db
 ENCRYPTION_KEY=<64-char hex string>
 ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-proj-...        # For embeddings and voice
+OPENAI_API_KEY=sk-proj-...              # For embeddings and voice STT
+AGENT_SERVER_URL=http://localhost:4111  # Used for Zapier OAuth callback URLs
 
 # Auth (Clerk)
 CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
+CLERK_JWKS_URI=https://<your-clerk-domain>.clerk.accounts.dev/.well-known/jwks.json
 
 # Zapier
-FOREMAN_MODE=dev                  # "dev", "production", or "self_hosted"
-ZAPIER_CLIENT_ID=...              # From: npx zapier-sdk create-client-credentials "name"
+FOREMAN_MODE=dev                        # "dev", "production", or "self_hosted"
+ZAPIER_CLIENT_ID=...                    # From: npx zapier-sdk create-client-credentials "name"
 ZAPIER_CLIENT_SECRET=...
 
 # Channels (add only what you need)
@@ -312,18 +314,21 @@ SLACK_SIGNING_SECRET=...
 DISCORD_BOT_TOKEN=...
 DISCORD_PUBLIC_KEY=...
 DISCORD_APPLICATION_ID=...
-CRON_SECRET=...                   # Required for Discord Gateway
-TEAMS_APP_ID=...
-TEAMS_APP_PASSWORD=...
-TEAMS_APP_TENANT_ID=...
-GOOGLE_CHAT_CREDENTIALS=...       # Service account JSON (single line)
+CRON_SECRET=...                         # Required for Discord Gateway
+TEAMS_APP_ID=...                        # Coming Soon
+TEAMS_APP_PASSWORD=...                  # Coming Soon
+TEAMS_APP_TENANT_ID=...                 # Coming Soon
+GOOGLE_CHAT_CREDENTIALS=...             # Service account JSON (single line)
 GITHUB_TOKEN=...
 GITHUB_WEBHOOK_SECRET=...
+LINEAR_API_KEY=lin_api_...              # Personal API key or use OAuth
+LINEAR_WEBHOOK_SECRET=lin_wh_...        # From Linear webhook creation
+LINEAR_BOT_USERNAME=...                 # Linear username for the API key
 
 # Voice (optional — falls back to OpenAI TTS if ElevenLabs not set)
 ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=...            # Defaults to "Rachel"
-GOOGLE_GENERATIVE_AI_API_KEY=...   # Gemini
+ELEVENLABS_VOICE_ID=...                 # Defaults to "Rachel"
+GOOGLE_GENERATIVE_AI_API_KEY=...        # Gemini
 ```
 
 **`packages/web/.env.local`:**
