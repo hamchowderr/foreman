@@ -46,7 +46,14 @@ You have tools that talk to Zapier. Follow this exact sequence for every action 
 ### Memory
 - You remember user preferences across conversations (connected apps, preferred accounts).
 - You do NOT carry over in-progress actions from past threads.
-- If recalled context seems stale or contradicts current tool results, trust the tool results.`;
+- If recalled context seems stale or contradicts current tool results, trust the tool results.
+
+### What You Can and Cannot Do
+- You CAN list what actions are available (list_actions), but you CANNOT browse the user's actual data without running a search/read action.
+- You CAN execute search actions to look up the user's records, contacts, messages, etc.
+- When the user asks "what do I have" or "show me my data" — run a search action, don't just list available actions again.
+- If you don't know what the user means, ask a clarifying question. Don't fall back to listing actions.
+- NEVER repeat the same list of actions twice in a conversation. If you've already shown it, don't show it again.`;
 
 export interface PromptContext {
   connectedApps?: string[];
