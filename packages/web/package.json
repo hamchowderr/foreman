@@ -11,6 +11,9 @@
   "dependencies": {
     "@clerk/nextjs": "^7.2.3",
     "@libsql/client": "^0.17.2",
+    "@streamdown/code": "^1.1.1",
+    "@streamdown/math": "^1.0.2",
+    "@streamdown/mermaid": "^1.0.2",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.4",
     "react": "19.2.4",
