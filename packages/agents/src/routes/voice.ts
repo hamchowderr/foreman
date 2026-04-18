@@ -3,6 +3,7 @@ import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 import { checkCapability } from "@/lib/capabilities";
 import { speechToText, textToSpeech } from "@/lib/voice";
+import { textSchema } from "@/lib/validation";
 
 const voice = new Hono<AppEnv>();
 
@@ -25,6 +26,11 @@ voice.post("/transcribe", async (c) => {
     return c.json({ error: "file field is required (multipart)" }, 400);
   }
 
+  // Whisper API limit: 25MB
+  if (file.size > 25 * 1024 * 1024) {
+    return c.json({ error: "File too large (max 25MB)" }, 400);
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const text = await speechToText(buffer, file.type || undefined);
 
@@ -40,10 +46,18 @@ voice.post("/synthesize", async (c) => {
     return c.json({ error: "Voice capability is not enabled" }, 403);
   }
 
-  const { text } = await c.req.json<{ text: string }>();
-  if (!text || typeof text !== "string") {
-    return c.json({ error: "text (string) is required" }, 400);
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
   }
+
+  const textResult = textSchema.safeParse(body.text);
+  if (!textResult.success) {
+    return c.json({ error: "text is required (string, max 10000 chars)" }, 400);
+  }
+  const text = textResult.data;
 
   const { audio, mimeType } = await textToSpeech(text);
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/guardrails";
 import { getOrgGuardrailConfig } from "@/lib/guardrails-config";
 import { setCapability } from "@/lib/capabilities";
+import { validateParam } from "@/lib/validation";
 
 const guardrails = new Hono<AppEnv>();
 
@@ -54,9 +55,17 @@ guardrails.get("/status", async (c) => {
 // PUT /app-access/:appKey — toggle sensitive app access
 guardrails.put("/app-access/:appKey", async (c) => {
   const userId = c.get("userId");
-  const appKey = c.req.param("appKey");
+  const appKey = validateParam(c.req.param("appKey"), "appKey");
+  if (!appKey) {
+    return c.json({ error: "Invalid appKey" }, 400);
+  }
 
-  const body = await c.req.json();
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
   if (typeof body.enabled !== "boolean") {
     return c.json({ error: "enabled (boolean) is required" }, 400);
   }

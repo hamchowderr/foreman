@@ -32,7 +32,12 @@ capabilities.put("/:capability", async (c) => {
     );
   }
 
-  const body = await c.req.json();
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
   if (typeof body.enabled !== "boolean") {
     return c.json(
       { error: "enabled (boolean) is required" },

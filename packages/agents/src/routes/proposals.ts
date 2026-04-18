@@ -7,6 +7,7 @@ import type { AppChunk } from "@/lib/stream/types";
 import { getInputFieldChoices, ZapierReauthRequired } from "@/lib/zapier";
 import { eq } from "drizzle-orm";
 import { indexActionRun } from "@/lib/rag";
+import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -18,7 +19,10 @@ proposals.use("/*", authMiddleware);
 // PATCH /:id — update proposal inputs
 proposals.patch("/:id", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid proposal id" }, 400);
+  }
 
   const proposal = await loadOwnedProposal(id, userId);
   if (!proposal) {
@@ -29,9 +33,21 @@ proposals.patch("/:id", async (c) => {
     return c.json({ error: "Can only edit pending proposals" }, 409);
   }
 
-  const body = await c.req.json();
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
   if (!body.inputs || typeof body.inputs !== "object") {
     return c.json({ error: "inputs object is required" }, 400);
+  }
+
+  // Guard against excessively large input payloads
+  const inputsStr = JSON.stringify(body.inputs);
+  if (inputsStr.length > 50000) {
+    return c.json({ error: "inputs payload too large (max 50KB)" }, 400);
   }
 
   const db = getDb();
@@ -49,7 +65,10 @@ proposals.patch("/:id", async (c) => {
 // POST /:id/approve — approve and execute (SSE stream)
 proposals.post("/:id/approve", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid proposal id" }, 400);
+  }
 
   const proposal = await loadOwnedProposal(id, userId);
   if (!proposal) {
@@ -228,7 +247,10 @@ proposals.post("/:id/approve", async (c) => {
 // POST /:id/decline — decline (SSE stream)
 proposals.post("/:id/decline", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid proposal id" }, 400);
+  }
 
   const proposal = await loadOwnedProposal(id, userId);
   if (!proposal) {
@@ -301,8 +323,14 @@ proposals.post("/:id/decline", async (c) => {
 // GET /:id/field-choices/:fieldKey — get enum choices
 proposals.get("/:id/field-choices/:fieldKey", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
-  const fieldKey = c.req.param("fieldKey");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid proposal id" }, 400);
+  }
+  const fieldKey = validateParam(c.req.param("fieldKey"), "fieldKey");
+  if (!fieldKey) {
+    return c.json({ error: "Invalid field key" }, 400);
+  }
 
   const proposal = await loadOwnedProposal(id, userId);
   if (!proposal) {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { getDb, schema } from "@/lib/db";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import { desc, eq, and, asc } from "drizzle-orm";
+import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -36,7 +37,10 @@ workflows.get("/", async (c) => {
 // GET /:id — get workflow with steps
 workflows.get("/:id", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid workflow id" }, 400);
+  }
   const db = getDb();
 
   const rows = await db
@@ -78,7 +82,10 @@ workflows.get("/:id", async (c) => {
 // GET /:id/runs — list past runs
 workflows.get("/:id/runs", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid workflow id" }, 400);
+  }
   const db = getDb();
 
   // Verify ownership
@@ -115,7 +122,10 @@ workflows.get("/:id/runs", async (c) => {
 // POST /:id/run — start a workflow run, stream SSE status updates
 workflows.post("/:id/run", async (c) => {
   const userId = c.get("userId");
-  const workflowId = c.req.param("id");
+  const workflowId = validateParam(c.req.param("id"), "id");
+  if (!workflowId) {
+    return c.json({ error: "Invalid workflow id" }, 400);
+  }
   const db = getDb();
 
   // Verify ownership
@@ -135,8 +145,19 @@ workflows.post("/:id/run", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const body = await c.req.json().catch(() => ({}));
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    body = {};
+  }
   const inputs = body.inputs ?? {};
+
+  // Guard against excessively large input payloads
+  const inputsStr = JSON.stringify(inputs);
+  if (inputsStr.length > 50000) {
+    return c.json({ error: "inputs payload too large (max 50KB)" }, 400);
+  }
 
   // Load steps
   const steps = await db

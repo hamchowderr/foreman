@@ -8,6 +8,7 @@ import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
 import { desc, eq, and, asc } from "drizzle-orm";
 import { RequestContext } from "@mastra/core/request-context";
+import { contentSchema, validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -88,7 +89,10 @@ conversations.get("/", async (c) => {
 // GET /:id — get conversation with messages
 conversations.get("/:id", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid conversation id" }, 400);
+  }
   const db = getDb();
 
   const rows = await db
@@ -133,7 +137,10 @@ conversations.get("/:id", async (c) => {
 // POST /:id/messages — stream agent response via SSE
 conversations.post("/:id/messages", async (c) => {
   const userId = c.get("userId");
-  const conversationId = c.req.param("id");
+  const conversationId = validateParam(c.req.param("id"), "id");
+  if (!conversationId) {
+    return c.json({ error: "Invalid conversation id" }, 400);
+  }
   const db = getDb();
 
   // Verify conversation ownership
@@ -153,11 +160,18 @@ conversations.post("/:id/messages", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const body = await c.req.json();
-  const userContent: string = body.content;
-  if (!userContent || typeof userContent !== "string") {
-    return c.json({ error: "content is required" }, 400);
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
   }
+
+  const contentResult = contentSchema.safeParse(body.content);
+  if (!contentResult.success) {
+    return c.json({ error: "content is required (string, max 50000 chars)" }, 400);
+  }
+  const userContent = contentResult.data;
 
   // Build dynamic system prompt if client sends context
   const dynamicPrompt = body.context
