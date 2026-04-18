@@ -6,6 +6,8 @@ const envSchema = z.object({
   ZAPIER_CREDENTIALS: z.string().optional(),
   ZAPIER_CLIENT_ID: z.string().optional(),
   ZAPIER_CLIENT_SECRET: z.string().optional(),
+  ZAPIER_REDIRECT_URI: z.string().optional(),
+  AGENT_SERVER_URL: z.string().optional(),
   DEV_ZAPIER_OVERRIDE: z.string().optional(),
   FOREMAN_MODE: z.enum(["dev", "production"]).optional().default("dev"),
   DEPLOY_TARGET: z.enum(["vps", "vercel", "cloudflare"]).optional().default("vps"),
@@ -15,6 +17,7 @@ const envSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().optional(),
   OTEL_ENABLED: z.string().optional(),
   OTEL_EXPORTER_ENDPOINT: z.string().optional(),
+  ZAPIER_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

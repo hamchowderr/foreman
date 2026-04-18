@@ -14,3 +14,4 @@ export {
   ZapierActionFailed,
   ZapierCapabilityDenied,
 } from "./errors";
+export { generateConnectUrl } from "./connect";

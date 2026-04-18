@@ -17,6 +17,7 @@ import { getActionSchemaTool } from "../tools/get-action-schema";
 import { getFieldChoicesTool } from "../tools/get-field-choices";
 import { executeActionTool } from "../tools/execute-action";
 import { rawApiCallTool } from "../tools/raw-api-call";
+import { searchHistoryTool } from "../tools/search-history";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -66,6 +67,7 @@ export function createForemanAgent(databaseUrl: string) {
       get_field_choices: getFieldChoicesTool,
       execute_action: executeActionTool,
       raw_api_call: rawApiCallTool,
+      search_history: searchHistoryTool,
     },
     scorers: {
       relevancy: {

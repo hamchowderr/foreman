@@ -6,6 +6,7 @@ import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
 import { getInputFieldChoices, ZapierReauthRequired } from "@/lib/zapier";
 import { eq } from "drizzle-orm";
+import { indexActionRun } from "@/lib/rag";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -112,6 +113,20 @@ proposals.post("/:id/approve", async (c) => {
               .update(schema.actionProposal)
               .set({ status: "executed", updatedAt: new Date() })
               .where(eq(schema.actionProposal.id, id));
+
+            // Index the completed action for RAG (fire-and-forget)
+            indexActionRun(
+              {
+                id: runRowId,
+                proposalId: id,
+                result: JSON.stringify(toolResult),
+                executedAt: new Date(),
+              },
+              proposal,
+              userId
+            ).catch((err) =>
+              console.error("[RAG] Failed to index action run:", err)
+            );
 
             const appChunk: AppChunk = {
               type: "action-executed",

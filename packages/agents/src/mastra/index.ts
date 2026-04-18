@@ -2,6 +2,7 @@ import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { createForemanAgent } from "./agents/foreman";
+import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import type { MiddlewareHandler } from "hono";
 
 let _mastra: Mastra | undefined;
@@ -45,6 +46,9 @@ export function getMastra(): Mastra {
   _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
+    },
+    workflows: {
+      webhookHandler: webhookHandlerWorkflow,
     },
     storage,
     observability,
