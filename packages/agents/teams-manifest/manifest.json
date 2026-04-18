@@ -1,0 +1,50 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "2bb24150-e204-4df7-8a8a-9f3c40f4e251",
+  "developer": {
+    "name": "Otaku Solutions",
+    "websiteUrl": "https://otakusolutions.io",
+    "privacyUrl": "https://otakusolutions.io/privacy",
+    "termsOfUseUrl": "https://otakusolutions.io/terms"
+  },
+  "name": {
+    "short": "Foreman",
+    "full": "Foreman - Zapier Automation Assistant"
+  },
+  "description": {
+    "short": "AI assistant for Zapier automations",
+    "full": "Foreman helps you take actions across 9000+ apps via Zapier. Discover connected apps, execute actions, and automate workflows — all from Teams."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#000000",
+  "bots": [
+    {
+      "botId": "2bb24150-e204-4df7-8a8a-9f3c40f4e251",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal"],
+          "commands": [
+            {
+              "title": "hello",
+              "description": "Say hello to Foreman"
+            },
+            {
+              "title": "apps",
+              "description": "List your connected Zapier apps"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": []
+}
