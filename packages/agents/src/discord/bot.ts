@@ -92,13 +92,20 @@ export function getDiscordBot() {
   bot.onSubscribedMessage(async (thread, message) => {
     if (!message.text) return;
     await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
-      thread.id,
-      message.author.userId,
-      message.text,
-      message.author.fullName
-    );
-    await thread.post(reply);
+    try {
+      console.log("[discord] Subscribed msg:", message.text.substring(0, 80));
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.fullName
+      );
+      console.log("[discord] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[discord] Error in onSubscribedMessage:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
   });
 
   _bot = bot;
