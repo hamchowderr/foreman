@@ -28,13 +28,13 @@ export function getDiscordBot() {
   const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
 
-  async function generateReply(
+  async function generateStreamedReply(
+    thread: any,
     threadId: string,
     discordUserId: string,
     text: string,
     displayName?: string,
   ) {
-    // Auto-register Discord user → Foreman user (idempotent)
     const userId = await registerChannelUser(
       "discord",
       discordUserId,
@@ -44,40 +44,49 @@ export function getDiscordBot() {
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Discord, because resource is the same userId.
+    let stepTexts: string[] = [];
+
     const result = await agent.generate(text, {
       maxSteps: 10,
       memory: {
         thread: `discord-${threadId}`,
         resource: userId,
       },
-      onStepFinish: (step: any) => {
+      onStepFinish: async (step: any) => {
         try {
-          const calls = step.toolCalls ?? [];
-          for (const tc of calls) {
-            if (!tc) continue;
-            const name = tc.toolName ?? tc.tool_name ?? Object.keys(tc).find(k => k.includes("name") || k.includes("Name")) ?? JSON.stringify(Object.keys(tc));
-            console.log(`[discord] Tool: ${name}`);
+          // If this step produced text (intermediate response), post it immediately
+          if (step.text && step.finishReason === "tool-calls") {
+            // Agent said something AND is about to call more tools — send it now
+            await thread.post(step.text);
+            stepTexts.push(step.text);
           }
-          if (step.text) console.log(`[discord] Step text: ${step.text.substring(0, 80)}`);
         } catch {
-          // Don't let logging errors crash the agent
+          // Don't let posting errors crash the agent
         }
       },
     });
-    return result.text || "I completed the tool calls but couldn't generate a final response. Please try again.";
+
+    // Return only the final text that hasn't been posted yet
+    const finalText = result.text || "";
+    if (finalText && !stepTexts.includes(finalText)) {
+      return finalText;
+    }
+    // If everything was already posted via onStepFinish, return null
+    return stepTexts.length > 0 ? null : (finalText || "Something went wrong — I couldn't generate a response.");
   }
 
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+    const reply = await generateStreamedReply(
+      thread,
       thread.channelId,
       message.author.userId,
       message.text,
       message.author.fullName
     );
-    await thread.post(reply);
+    if (reply) await thread.post(reply);
   });
 
   // Handle @-mentions in channels
@@ -87,14 +96,17 @@ export function getDiscordBot() {
     await thread.startTyping().catch(() => {});
     try {
       console.log("[discord] Generating reply for:", message.text.substring(0, 80));
-      const reply = await generateReply(
+      const reply = await generateStreamedReply(
+        thread,
         thread.id,
         message.author.userId,
         message.text,
         message.author.fullName
       );
-      console.log("[discord] Reply generated:", reply?.substring(0, 100));
-      await thread.post(reply);
+      if (reply) {
+        console.log("[discord] Final reply:", reply.substring(0, 100));
+        await thread.post(reply);
+      }
     } catch (err) {
       console.error("[discord] Error in onNewMention:", err);
       await thread.post("Sorry, I encountered an error processing your request. Please try again.");
@@ -107,14 +119,17 @@ export function getDiscordBot() {
     await thread.startTyping().catch(() => {});
     try {
       console.log("[discord] Subscribed msg:", message.text.substring(0, 80));
-      const reply = await generateReply(
+      const reply = await generateStreamedReply(
+        thread,
         thread.id,
         message.author.userId,
         message.text,
         message.author.fullName
       );
-      console.log("[discord] Reply:", reply?.substring(0, 100));
-      await thread.post(reply);
+      if (reply) {
+        console.log("[discord] Reply:", reply.substring(0, 100));
+        await thread.post(reply);
+      }
     } catch (err) {
       console.error("[discord] Error in onSubscribedMessage:", err);
       await thread.post("Sorry, I encountered an error. Please try again.");
