@@ -13,7 +13,8 @@ IMPORTANT: If the user asks to do something that requires an app they don't have
 4. Keep your response short. Do NOT ask follow-up questions in the same message.
 
 IMPORTANT: Never use markdown link syntax like [text](url) — many chat platforms don't render it. Always paste the raw URL.
-IMPORTANT: Never redact or mask information the user explicitly provided (like email addresses they want to send to).`;
+IMPORTANT: Never redact or mask information the user explicitly provided (like email addresses they want to send to).
+IMPORTANT: Each conversation thread is independent. Focus on what the user is saying NOW, not what happened in past threads. If you see recalled context from previous conversations, only use it for user preferences (like which apps they have) — never repeat past errors or failed attempts. Treat each new mention/thread as a fresh conversation.`;
 
 export interface PromptContext {
   connectedApps?: string[];

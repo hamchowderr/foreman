@@ -102,8 +102,9 @@ export function createForemanAgent(databaseUrl: string) {
         lastMessages: 20,
         workingMemory: { enabled: true },
         semanticRecall: {
-          topK: 4,
-          messageRange: 2,
+          topK: 2,
+          messageRange: 1,
+          scope: "resource", // Cross-thread recall for user preferences, but limited to reduce noise
         },
         observationalMemory: true,
       },
