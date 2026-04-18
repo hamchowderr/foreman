@@ -196,7 +196,7 @@ export const channelIdentity = sqliteTable(
       .notNull()
       .references(() => user.id),
     channel: text("channel", {
-      enum: ["web", "telegram", "slack", "discord", "mcp", "a2a"],
+      enum: ["web", "telegram", "slack", "discord", "mcp", "a2a", "teams", "gchat", "whatsapp", "github", "linear", "imessage"],
     }).notNull(),
     channelUserId: text("channel_user_id").notNull(),
     displayName: text("display_name"),

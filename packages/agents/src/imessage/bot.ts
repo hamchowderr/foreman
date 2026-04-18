@@ -1,0 +1,98 @@
+import { Chat } from "chat";
+import { createiMessageAdapter } from "chat-adapter-imessage";
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { getMastra } from "../mastra";
+import { registerChannelUser } from "../lib/identity";
+
+let _bot: Chat<{ imessage: ReturnType<typeof createiMessageAdapter> }> | undefined;
+let _imessageAdapter: ReturnType<typeof createiMessageAdapter> | undefined;
+
+/**
+ * Create and configure the iMessage bot backed by the Foreman Mastra agent.
+ * Uses Chat SDK with the community iMessage adapter. Plain text only — no
+ * cards, no streaming. The bot is a singleton — safe to call multiple times.
+ */
+export function getiMessageBot() {
+  if (_bot) return _bot;
+
+  const isLocal = process.env.IMESSAGE_LOCAL === "true";
+  const imessage = createiMessageAdapter({ local: isLocal });
+  _imessageAdapter = imessage;
+
+  const bot = new Chat({
+    userName: "foreman",
+    adapters: { imessage },
+    state: createMemoryState(),
+    logger: "info",
+  });
+
+  const mastra = getMastra();
+  const agent = mastra.getAgent("foreman");
+
+  async function generateReply(
+    threadId: string,
+    imessageUserId: string,
+    text: string,
+    displayName?: string,
+  ) {
+    const userId = await registerChannelUser(
+      "imessage",
+      imessageUserId,
+      displayName
+    );
+
+    const result = await agent.generate(text, {
+      memory: {
+        thread: `imessage-${threadId}`,
+        resource: userId,
+      },
+    });
+    return result.text;
+  }
+
+  // iMessage is DM-only
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      console.log("[imessage] Message from", message.author.userId, ":", message.text);
+      const reply = await generateReply(
+        thread.channelId,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[imessage] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[imessage] DM handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  bot.onSubscribedMessage(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[imessage] Subscribed handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  _bot = bot;
+  return bot;
+}
+
+/**
+ * Return the underlying iMessage adapter instance.
+ */
+export function getiMessageAdapter() {
+  if (!_imessageAdapter) getiMessageBot();
+  return _imessageAdapter!;
+}

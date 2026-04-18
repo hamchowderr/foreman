@@ -1,6 +1,12 @@
 import http from "node:http";
 import { getSlackBot } from "./slack/bot";
 import { getTelegramBot } from "./telegram/bot";
+import { getTeamsBot } from "./teams/bot";
+import { getGoogleChatBot } from "./gchat/bot";
+import { getWhatsAppBot } from "./whatsapp/bot";
+import { getGitHubBot } from "./github/bot";
+import { getLinearBot } from "./linear/bot";
+import { getiMessageBot } from "./imessage/bot";
 
 /**
  * Standalone webhook server using raw Node.js HTTP.
@@ -54,6 +60,114 @@ const server = http.createServer(async (req, res) => {
         body: rawBody,
       });
       const response = await bot.webhooks.telegram(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
+    if (path === "/teams/webhook" && req.method === "POST") {
+      const bot = getTeamsBot();
+      const request = new Request(url, {
+        method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        body: rawBody,
+      });
+      const response = await bot.webhooks.teams(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
+    if (path === "/gchat/webhook" && req.method === "POST") {
+      const bot = getGoogleChatBot();
+      const request = new Request(url, {
+        method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        body: rawBody,
+      });
+      const response = await bot.webhooks.gchat(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
+    if (path === "/whatsapp/webhook" && (req.method === "POST" || req.method === "GET")) {
+      const bot = getWhatsAppBot();
+      const request = new Request(url, {
+        method: req.method!,
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        ...(req.method === "POST" ? { body: rawBody } : {}),
+      });
+      const response = await bot.webhooks.whatsapp(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
+    if (path === "/github/webhook" && req.method === "POST") {
+      const bot = getGitHubBot();
+      const request = new Request(url, {
+        method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        body: rawBody,
+      });
+      const response = await bot.webhooks.github(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
+    if (path === "/linear/webhook" && req.method === "POST") {
+      const bot = getLinearBot();
+      const request = new Request(url, {
+        method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        body: rawBody,
+      });
+      const response = await bot.webhooks.linear(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
+    if (path === "/imessage/webhook" && req.method === "POST") {
+      const bot = getiMessageBot();
+      const request = new Request(url, {
+        method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        body: rawBody,
+      });
+      const response = await bot.webhooks.imessage(request);
       res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
       const body = await response.text();
       res.end(body);

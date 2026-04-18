@@ -1,0 +1,115 @@
+import { Chat } from "chat";
+import { createTeamsAdapter } from "@chat-adapter/teams";
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { getMastra } from "../mastra";
+import { registerChannelUser } from "../lib/identity";
+
+let _bot: Chat<{ teams: ReturnType<typeof createTeamsAdapter> }> | undefined;
+let _teamsAdapter: ReturnType<typeof createTeamsAdapter> | undefined;
+
+/**
+ * Create and configure the Microsoft Teams bot backed by the Foreman Mastra agent.
+ * Uses Chat SDK with the Teams adapter. The bot is a singleton — safe to
+ * call multiple times.
+ */
+export function getTeamsBot() {
+  if (_bot) return _bot;
+
+  const teams = createTeamsAdapter({ appType: "singleTenant" });
+  _teamsAdapter = teams;
+
+  const bot = new Chat({
+    userName: "foreman",
+    adapters: { teams },
+    state: createMemoryState(),
+    logger: "info",
+  });
+
+  const mastra = getMastra();
+  const agent = mastra.getAgent("foreman");
+
+  async function generateReply(
+    threadId: string,
+    teamsUserId: string,
+    text: string,
+    displayName?: string,
+  ) {
+    const userId = await registerChannelUser(
+      "teams",
+      teamsUserId,
+      displayName
+    );
+
+    const result = await agent.generate(text, {
+      memory: {
+        thread: `teams-${threadId}`,
+        resource: userId,
+      },
+    });
+    return result.text;
+  }
+
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      console.log("[teams] DM from", message.author.userId, ":", message.text);
+      const reply = await generateReply(
+        thread.channelId,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[teams] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[teams] DM handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  bot.onNewMention(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      console.log("[teams] Mention from", message.author.userId, ":", message.text);
+      await thread.subscribe();
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[teams] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[teams] Mention handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  bot.onSubscribedMessage(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[teams] Subscribed handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  _bot = bot;
+  return bot;
+}
+
+/**
+ * Return the underlying Teams adapter instance.
+ */
+export function getTeamsAdapter() {
+  if (!_teamsAdapter) getTeamsBot();
+  return _teamsAdapter!;
+}

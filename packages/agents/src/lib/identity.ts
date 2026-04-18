@@ -142,7 +142,7 @@ export async function registerChannelUser(
 
 export interface ResolvedIdentity {
   userId: string;
-  channel: "web" | "telegram" | "slack" | "discord" | "mcp" | "a2a" | "dev";
+  channel: "web" | "telegram" | "slack" | "discord" | "mcp" | "a2a" | "dev" | "teams" | "gchat" | "whatsapp" | "github" | "linear" | "imessage";
 }
 
 /**

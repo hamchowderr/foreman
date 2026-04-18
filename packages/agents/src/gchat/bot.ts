@@ -1,0 +1,115 @@
+import { Chat } from "chat";
+import { createGoogleChatAdapter } from "@chat-adapter/gchat";
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { getMastra } from "../mastra";
+import { registerChannelUser } from "../lib/identity";
+
+let _bot: Chat<{ gchat: ReturnType<typeof createGoogleChatAdapter> }> | undefined;
+let _gchatAdapter: ReturnType<typeof createGoogleChatAdapter> | undefined;
+
+/**
+ * Create and configure the Google Chat bot backed by the Foreman Mastra agent.
+ * Uses Chat SDK with the Google Chat adapter. The bot is a singleton — safe to
+ * call multiple times.
+ */
+export function getGoogleChatBot() {
+  if (_bot) return _bot;
+
+  const gchat = createGoogleChatAdapter();
+  _gchatAdapter = gchat;
+
+  const bot = new Chat({
+    userName: "foreman",
+    adapters: { gchat },
+    state: createMemoryState(),
+    logger: "info",
+  });
+
+  const mastra = getMastra();
+  const agent = mastra.getAgent("foreman");
+
+  async function generateReply(
+    threadId: string,
+    gchatUserId: string,
+    text: string,
+    displayName?: string,
+  ) {
+    const userId = await registerChannelUser(
+      "gchat",
+      gchatUserId,
+      displayName
+    );
+
+    const result = await agent.generate(text, {
+      memory: {
+        thread: `gchat-${threadId}`,
+        resource: userId,
+      },
+    });
+    return result.text;
+  }
+
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      console.log("[gchat] DM from", message.author.userId, ":", message.text);
+      const reply = await generateReply(
+        thread.channelId,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[gchat] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[gchat] DM handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  bot.onNewMention(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      console.log("[gchat] Mention from", message.author.userId, ":", message.text);
+      await thread.subscribe();
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      console.log("[gchat] Reply:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[gchat] Mention handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  bot.onSubscribedMessage(async (thread, message) => {
+    if (!message.text) return;
+    try {
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.name
+      );
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[gchat] Subscribed handler error:", err);
+      await thread.post("Sorry, I encountered an error. Please try again.");
+    }
+  });
+
+  _bot = bot;
+  return bot;
+}
+
+/**
+ * Return the underlying Google Chat adapter instance.
+ */
+export function getGoogleChatAdapter() {
+  if (!_gchatAdapter) getGoogleChatBot();
+  return _gchatAdapter!;
+}

@@ -22,6 +22,32 @@ const envSchema = z.object({
   OTEL_ENABLED: z.string().optional(),
   OTEL_EXPORTER_ENDPOINT: z.string().optional(),
   ZAPIER_WEBHOOK_SECRET: z.string().optional(),
+  // Microsoft Teams
+  TEAMS_APP_ID: z.string().optional(),
+  TEAMS_APP_PASSWORD: z.string().optional(),
+  TEAMS_APP_TENANT_ID: z.string().optional(),
+  // Google Chat
+  GOOGLE_CHAT_CREDENTIALS: z.string().optional(),
+  GOOGLE_CHAT_USE_ADC: z.string().optional(),
+  // WhatsApp
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  // GitHub
+  GITHUB_TOKEN: z.string().optional(),
+  GITHUB_APP_ID: z.string().optional(),
+  GITHUB_PRIVATE_KEY: z.string().optional(),
+  GITHUB_WEBHOOK_SECRET: z.string().optional(),
+  GITHUB_INSTALLATION_ID: z.string().optional(),
+  GITHUB_BOT_USER_ID: z.string().optional(),
+  // Linear
+  LINEAR_CLIENT_ID: z.string().optional(),
+  LINEAR_CLIENT_SECRET: z.string().optional(),
+  LINEAR_ACCESS_TOKEN: z.string().optional(),
+  // iMessage
+  IMESSAGE_LOCAL: z.string().optional(),
+  IMESSAGE_SERVER_URL: z.string().optional(),
+  IMESSAGE_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
