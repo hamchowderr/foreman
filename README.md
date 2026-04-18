@@ -360,9 +360,9 @@ cd packages/agents && npm run start:webhooks
 cd packages/web && npm run dev
 ```
 
-### 6. Test with LLMock (optional)
+### 6. Test with AIMock (optional)
 
-For deterministic testing without real LLM calls:
+For deterministic testing without real API calls (LLM, voice, MCP, A2A):
 
 ```bash
 cd packages/agents && npm run dev:mock
@@ -648,21 +648,34 @@ cd packages/web && npx playwright test
 |-----------|---------------|
 | `smoke.spec.ts` | Sign up, sign in, create chat, send message, receive response |
 
-#### LLMock (Deterministic LLM Testing)
+#### AIMock (Deterministic AI Testing)
 
-Foreman includes `@copilotkit/llmock` for fixture-based deterministic LLM testing. This replaces real Claude API calls with predictable, repeatable responses defined in JSON fixtures.
+Foreman uses [`@copilotkit/aimock`](https://aimock.copilotkit.dev) for comprehensive mock infrastructure. It replaces real API calls with predictable, fixture-driven responses — not just LLMs, but voice, MCP, A2A, and more.
 
-Test fixtures are in `packages/agents/tests/fixtures/llmock/`. Each fixture defines a match pattern and a canned response.
+| Mock | What it covers |
+|------|---------------|
+| **LLM** | Claude, OpenAI, Gemini — chat completions with streaming |
+| **Multimedia** | Whisper transcription, TTS synthesis |
+| **MCP** | Tool definitions, resources, prompts |
+| **A2A** | Agent cards, message routing, SSE streaming |
+| **Vector** | Embedding responses for RAG pipeline |
+
+Test fixtures are in `packages/agents/tests/fixtures/aimock/`. Config in `aimock.json`.
 
 ```bash
-# Start agent server with LLMock instead of real Claude
+# Start agent server with AIMock (all APIs mocked)
 cd packages/agents && npm run dev:mock
+
+# Or run aimock standalone
+npx @copilotkit/aimock --config aimock.json --port 4010
 ```
 
-This is useful for:
+Useful for:
 - Running tests in CI without API keys
 - Reproducing specific conversation flows
 - Testing tool-calling sequences deterministically
+- Voice testing without hitting OpenAI/ElevenLabs
+- Chaos testing (error injection, mid-stream disconnects)
 
 ### Local Tunnel (ngrok)
 

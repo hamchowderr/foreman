@@ -1,0 +1,24 @@
+{
+  "llm": { "fixtures": "./tests/fixtures/aimock" },
+  "mcp": {
+    "tools": [
+      { "name": "discover_connections", "description": "Discover available Zapier connections" },
+      { "name": "list_actions", "description": "List available actions for a connection" },
+      { "name": "get_action_schema", "description": "Get the schema for a specific action" },
+      { "name": "get_field_choices", "description": "Get field choices for an action parameter" },
+      { "name": "execute_action", "description": "Execute a Zapier action" },
+      { "name": "raw_api_call", "description": "Make a raw API call" },
+      { "name": "search_history", "description": "Search conversation history" },
+      { "name": "fork_conversation", "description": "Fork the current conversation" }
+    ]
+  },
+  "a2a": {
+    "agents": [
+      { "name": "foreman", "description": "Primary orchestrator agent" },
+      { "name": "discovery", "description": "Tool and connection discovery agent" },
+      { "name": "execution", "description": "Action execution agent" },
+      { "name": "history", "description": "Conversation history agent" },
+      { "name": "supervisor", "description": "Agent supervision and routing" }
+    ]
+  }
+}

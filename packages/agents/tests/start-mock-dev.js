@@ -1,41 +1,65 @@
-const path = require("node:path");
-const { spawn } = require("node:child_process");
-const { LLMock } = require("@copilotkit/aimock");
+import path from "node:path";
+import { spawn } from "node:child_process";
 
-const LLMOCK_PORT = 5555;
-const FIXTURE_DIR = path.join(__dirname, "fixtures", "llmock");
+const AIMOCK_PORT = 4010;
+const AIMOCK_URL = `http://localhost:${AIMOCK_PORT}`;
+const CONFIG_PATH = path.join(import.meta.dirname, "..", "aimock.json");
 
 async function main() {
-  const mock = new LLMock({ port: LLMOCK_PORT, logLevel: "info" });
-  mock.loadFixtureDir(FIXTURE_DIR);
-  const url = await mock.start();
-  const baseUrl = `${url}/v1`;
+  // Start aimock server via CLI
+  const aimock = spawn(
+    "npx",
+    ["@copilotkit/aimock", "--config", CONFIG_PATH, "--port", String(AIMOCK_PORT)],
+    { stdio: "inherit", shell: true },
+  );
 
-  console.log(`LLMock running at ${url}`);
-  console.log(`ANTHROPIC_BASE_URL=${baseUrl}`);
-  console.log("Starting next dev...\n");
+  // Wait for aimock to be ready
+  await waitForServer(AIMOCK_URL);
 
-  const child = spawn("npx", ["next", "dev"], {
+  console.log(`aimock running at ${AIMOCK_URL}`);
+  console.log(`ANTHROPIC_BASE_URL=${AIMOCK_URL}`);
+  console.log(`OPENAI_BASE_URL=${AIMOCK_URL}/v1`);
+  console.log("Starting mastra dev...\n");
+
+  const child = spawn("npx", ["mastra", "dev"], {
     stdio: "inherit",
     shell: true,
     env: {
       ...process.env,
-      ANTHROPIC_BASE_URL: baseUrl,
-      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "sk-ant-mock-key-for-testing",
+      ANTHROPIC_BASE_URL: AIMOCK_URL,
+      ANTHROPIC_API_KEY:
+        process.env.ANTHROPIC_API_KEY || "sk-ant-mock-key-for-testing",
+      OPENAI_BASE_URL: `${AIMOCK_URL}/v1`,
+      OPENAI_API_KEY:
+        process.env.OPENAI_API_KEY || "sk-mock-key-for-testing",
     },
   });
 
-  const shutdown = async () => {
+  const shutdown = () => {
     child.kill("SIGINT");
-    await mock.stop();
+    aimock.kill("SIGINT");
     process.exit(0);
   };
 
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
   child.on("exit", (code) => {
-    mock.stop().then(() => process.exit(code ?? 0));
+    aimock.kill("SIGINT");
+    process.exit(code ?? 0);
   });
+}
+
+async function waitForServer(url, retries = 30, delayMs = 500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(`${url}/health`);
+      if (res.ok) return;
+    } catch {
+      // not ready yet
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw new Error(`aimock did not start at ${url} after ${retries} retries`);
 }
 
 main().catch((err) => {

@@ -10,7 +10,7 @@
     "build:cloudflare": "DEPLOY_TARGET=cloudflare mastra build",
     "start": "node .mastra/output/index.mjs",
     "start:webhooks": "npx tsx src/webhook-server.ts",
-    "dev:mock": "node tests/start-mock-dev.js",
+    "dev:mock": "npx @copilotkit/aimock --config aimock.json --port 4010",
     "dev:telegram": "npx tsx src/telegram/start-polling.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -51,7 +51,7 @@
     "@mastra/deployer-vercel": "^1.0.0"
   },
   "devDependencies": {
-    "@copilotkit/llmock": "^1.7.1",
+    "@copilotkit/aimock": "^1.14.3",
     "@types/node": "^20",
     "@zapier/zapier-sdk-cli": "^0.39.9",
     "drizzle-kit": "^0.31.10",

@@ -28,7 +28,9 @@
       "Bash(disown)",
       "Bash(jobs -l)",
       "Bash(pkill -f \"test-discord-gw\")",
-      "Bash(python3 -c \"import sys,json; items=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]} P{i[\\\\\"priority\\\\\"]} [{i[\\\\\"issue_type\\\\\"]}] {i[\\\\\"title\\\\\"]}'\\) for i in sorted\\(items, key=lambda x: x['priority']\\)]\")"
+      "Bash(python3 -c \"import sys,json; items=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]} P{i[\\\\\"priority\\\\\"]} [{i[\\\\\"issue_type\\\\\"]}] {i[\\\\\"title\\\\\"]}'\\) for i in sorted\\(items, key=lambda x: x['priority']\\)]\")",
+      "Bash(mv tests/llmock-setup.ts tests/aimock-setup.ts)",
+      "Bash(mv tests/llmock-teardown.ts tests/aimock-teardown.ts)"
     ]
   }
 }

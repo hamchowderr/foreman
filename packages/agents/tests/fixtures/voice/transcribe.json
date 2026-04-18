@@ -1,0 +1,26 @@
+{
+  "fixtures": [
+    {
+      "match": {},
+      "response": {
+        "transcription": {
+          "text": "Hello, I'd like to set up a new automation workflow.",
+          "language": "en",
+          "duration": 3.5,
+          "words": [
+            { "word": "Hello", "start": 0.0, "end": 0.4 },
+            { "word": "I'd", "start": 0.5, "end": 0.7 },
+            { "word": "like", "start": 0.7, "end": 0.9 },
+            { "word": "to", "start": 0.9, "end": 1.0 },
+            { "word": "set", "start": 1.0, "end": 1.2 },
+            { "word": "up", "start": 1.2, "end": 1.4 },
+            { "word": "a", "start": 1.4, "end": 1.5 },
+            { "word": "new", "start": 1.5, "end": 1.7 },
+            { "word": "automation", "start": 1.7, "end": 2.4 },
+            { "word": "workflow", "start": 2.5, "end": 3.2 }
+          ]
+        }
+      }
+    }
+  ]
+}

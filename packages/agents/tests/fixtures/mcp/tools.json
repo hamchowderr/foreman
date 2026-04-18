@@ -1,0 +1,97 @@
+{
+  "tools": [
+    {
+      "name": "discover_connections",
+      "description": "Discover available Zapier connections",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Search query for connections" }
+        }
+      }
+    },
+    {
+      "name": "list_actions",
+      "description": "List available actions for a connection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "connectionId": { "type": "string", "description": "The connection ID" }
+        },
+        "required": ["connectionId"]
+      }
+    },
+    {
+      "name": "get_action_schema",
+      "description": "Get the schema for a specific action",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actionId": { "type": "string", "description": "The action ID" }
+        },
+        "required": ["actionId"]
+      }
+    },
+    {
+      "name": "get_field_choices",
+      "description": "Get field choices for an action parameter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actionId": { "type": "string", "description": "The action ID" },
+          "fieldName": { "type": "string", "description": "The field name" }
+        },
+        "required": ["actionId", "fieldName"]
+      }
+    },
+    {
+      "name": "execute_action",
+      "description": "Execute a Zapier action",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actionId": { "type": "string", "description": "The action ID" },
+          "params": { "type": "object", "description": "Action parameters" }
+        },
+        "required": ["actionId"]
+      }
+    },
+    {
+      "name": "raw_api_call",
+      "description": "Make a raw API call",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string" },
+          "method": { "type": "string" },
+          "body": { "type": "object" }
+        },
+        "required": ["url"]
+      }
+    },
+    {
+      "name": "search_history",
+      "description": "Search conversation history",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "number" }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "fork_conversation",
+      "description": "Fork the current conversation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": { "type": "string" },
+          "fromMessageId": { "type": "string" }
+        },
+        "required": ["conversationId"]
+      }
+    }
+  ]
+}
