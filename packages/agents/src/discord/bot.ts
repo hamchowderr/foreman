@@ -44,7 +44,7 @@ export function getDiscordBot() {
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Discord, because resource is the same userId.
-    let stepTexts: string[] = [];
+    let postedStepTexts: string[] = [];
 
     const result = await agent.generate(text, {
       maxSteps: 10,
@@ -54,11 +54,9 @@ export function getDiscordBot() {
       },
       onStepFinish: async (step: any) => {
         try {
-          // If this step produced text (intermediate response), post it immediately
           if (step.text && step.finishReason === "tool-calls") {
-            // Agent said something AND is about to call more tools — send it now
             await thread.post(step.text);
-            stepTexts.push(step.text);
+            postedStepTexts.push(step.text);
           }
         } catch {
           // Don't let posting errors crash the agent
@@ -66,13 +64,13 @@ export function getDiscordBot() {
       },
     });
 
-    // Return only the final text that hasn't been posted yet
-    const finalText = result.text || "";
-    if (finalText && !stepTexts.includes(finalText)) {
-      return finalText;
+    // result.text contains ALL step texts concatenated.
+    // Strip out anything we already posted to avoid duplicates.
+    let finalText = result.text || "";
+    for (const posted of postedStepTexts) {
+      finalText = finalText.replace(posted, "").trim();
     }
-    // If everything was already posted via onStepFinish, return null
-    return stepTexts.length > 0 ? null : (finalText || "Something went wrong — I couldn't generate a response.");
+    return finalText || (postedStepTexts.length > 0 ? null : "Something went wrong — I couldn't generate a response.");
   }
 
   // Handle DMs
