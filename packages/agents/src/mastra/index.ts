@@ -1,6 +1,8 @@
 import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
 import { createForemanAgent } from "./agents/foreman";
+import { dailySummaryWorkflow } from "../workflows/daily-summary";
+import { healthCheckWorkflow } from "../workflows/health-check";
 import customRoutes from "../routes";
 import type { MiddlewareHandler } from "hono";
 
@@ -43,6 +45,10 @@ export function getMastra(): Mastra {
   _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
+    },
+    workflows: {
+      "daily-summary": dailySummaryWorkflow,
+      "health-check": healthCheckWorkflow,
     },
     storage,
     server: {
