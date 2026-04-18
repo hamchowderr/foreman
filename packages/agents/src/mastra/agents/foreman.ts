@@ -20,6 +20,7 @@ import { executeActionTool } from "../tools/execute-action";
 import { rawApiCallTool } from "../tools/raw-api-call";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
+import { connectZapierTool } from "../tools/connect-zapier";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -71,6 +72,7 @@ export function createForemanAgent(databaseUrl: string) {
       raw_api_call: rawApiCallTool,
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
+      connect_zapier: connectZapierTool,
     },
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {

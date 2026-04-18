@@ -30,7 +30,7 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("get_field_choices");
     expect(toolNames).toContain("execute_action");
     expect(toolNames).toContain("raw_api_call");
-    expect(toolNames).toHaveLength(8);
+    expect(toolNames).toHaveLength(9);
   });
 
   it("execute_action has requireApproval set to true", async () => {
