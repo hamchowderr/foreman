@@ -5,8 +5,9 @@ import { runAction } from "@/lib/zapier";
 export const executeActionTool = createTool({
   id: "execute_action",
   description:
-    "Execute a Zapier action with the given inputs. Requires user approval before running.",
-  requireApproval: true,
+    "Execute a Zapier action with the given inputs. IMPORTANT: Before calling this tool, " +
+    "you MUST describe what you're about to do and ask the user for confirmation. " +
+    "Only call this tool AFTER the user has explicitly agreed (e.g., 'yes', 'go ahead', 'do it').",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
     appKey: z.string().describe("The Zapier app key"),

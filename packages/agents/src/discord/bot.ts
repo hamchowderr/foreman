@@ -50,18 +50,8 @@ export function getDiscordBot() {
         thread: `discord-${threadId}`,
         resource: userId,
       },
-      onStepFinish: (step) => {
-        console.log(`[discord] Step finished:`, {
-          text: step.text?.substring(0, 100),
-          toolCalls: step.toolCalls?.map((tc: any) => tc.toolName),
-          finishReason: step.finishReason,
-        });
-      },
     });
-    if (!result.text) {
-      console.error("[discord] Empty response. Steps:", result.steps?.length, "Tool results:", JSON.stringify(result.toolResults)?.substring(0, 200));
-    }
-    return result.text || "Something went wrong — I couldn't generate a response.";
+    return result.text || "I completed the tool calls but couldn't generate a final response. Please try again.";
   }
 
   // Handle DMs
