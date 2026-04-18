@@ -72,7 +72,7 @@ export function createForemanAgent(databaseUrl: string) {
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
     },
-    voice: new OpenAIVoice(),
+    voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {
         scorer: createAnswerRelevancyScorer({ model: MODELS.fast }),

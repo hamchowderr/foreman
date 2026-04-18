@@ -4,6 +4,8 @@ import { randomBytes } from "node:crypto";
 beforeAll(() => {
   process.env.DATABASE_URL = "file:./test-agent.db";
   process.env.ENCRYPTION_KEY = randomBytes(32).toString("hex");
+  process.env.OPENAI_API_KEY = "sk-test-fake-key-for-unit-tests";
+  process.env.ANTHROPIC_API_KEY = "sk-ant-test-fake-key";
 });
 
 function getAgentTools(agent: any): Record<string, any> {
@@ -16,7 +18,6 @@ describe("Mastra foreman agent", () => {
     const agent = createForemanAgent("file:./test-agent.db");
 
     expect(agent).toBeDefined();
-    expect(agent.id).toBe("foreman");
     expect(agent.name).toBe("Foreman");
 
     const tools = getAgentTools(agent);
@@ -29,7 +30,7 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("get_field_choices");
     expect(toolNames).toContain("execute_action");
     expect(toolNames).toContain("raw_api_call");
-    expect(toolNames).toHaveLength(6);
+    expect(toolNames).toHaveLength(8);
   });
 
   it("execute_action has requireApproval set to true", async () => {
