@@ -6,7 +6,7 @@ import {
   streamApprove,
   streamDecline,
 } from "@/lib/api-client";
-import type { AppChunk } from "@/lib/stream/types";
+import type { AppChunk } from "@/lib/types";
 import { ChatMessage, StreamingMessage } from "./chat-message";
 import { ApprovalCard } from "./approval-card";
 import { ActionResultCard } from "./action-result-card";
