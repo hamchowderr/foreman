@@ -1,5 +1,7 @@
 "use client";
 
+import { Streamdown } from "streamdown";
+
 export function ChatMessage({
   role,
   content,
@@ -10,6 +12,7 @@ export function ChatMessage({
   const isUser = role === "user";
   const isError = role === "system" && content.startsWith("Error:");
   const isSystem = role === "system" && !isError;
+  const isAgent = role === "agent" || (!isUser && !isSystem && !isError);
 
   let bubbleClass: string;
   if (isUser) {
@@ -27,10 +30,14 @@ export function ChatMessage({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-[75%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${bubbleClass}`}
+        className={`max-w-[75%] rounded-xl px-4 py-2.5 text-sm leading-relaxed ${bubbleClass}`}
       >
         {isError && <span className="mr-1.5">{"\u26A0"}</span>}
-        {content}
+        {isAgent ? (
+          <Streamdown animated={false}>{content}</Streamdown>
+        ) : (
+          <span className="whitespace-pre-wrap">{content}</span>
+        )}
       </div>
     </div>
   );
@@ -40,9 +47,8 @@ export function StreamingMessage({ text }: { text: string }) {
   if (!text) return null;
   return (
     <div className="flex justify-start mb-3">
-      <div className="max-w-[75%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap bg-[#f0f0f0] text-foreground dark:bg-[#1a1a1a]">
-        {text}
-        <span className="inline-block w-1.5 h-4 ml-0.5 bg-foreground/40 animate-pulse" />
+      <div className="max-w-[75%] rounded-xl px-4 py-2.5 text-sm leading-relaxed bg-[#f0f0f0] text-foreground dark:bg-[#1a1a1a]">
+        <Streamdown animated>{text}</Streamdown>
       </div>
     </div>
   );
