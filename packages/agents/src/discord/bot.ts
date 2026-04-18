@@ -52,12 +52,11 @@ export function getDiscordBot() {
       },
       onStepFinish: (step: any) => {
         try {
-          if (step.toolCalls?.length) {
-            for (const tc of step.toolCalls) {
-              const name = tc?.toolName ?? tc?.name ?? "unknown";
-              const args = tc?.args ? JSON.stringify(tc.args).substring(0, 150) : "{}";
-              console.log(`[discord] Tool: ${name}(${args})`);
-            }
+          const calls = step.toolCalls ?? [];
+          for (const tc of calls) {
+            if (!tc) continue;
+            const name = tc.toolName ?? tc.tool_name ?? Object.keys(tc).find(k => k.includes("name") || k.includes("Name")) ?? JSON.stringify(Object.keys(tc));
+            console.log(`[discord] Tool: ${name}`);
           }
           if (step.text) console.log(`[discord] Step text: ${step.text.substring(0, 80)}`);
         } catch {
