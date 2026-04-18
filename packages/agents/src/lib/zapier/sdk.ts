@@ -10,6 +10,53 @@ type ZapierSdk = ReturnType<typeof createZapierSdk>;
 const sdkCache = new Map<string, { sdk: ZapierSdk; expiresAt: number }>();
 const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
 
+// Self-hosted mode: single shared SDK instance for all users
+let sharedSdkCache: { sdk: ZapierSdk; expiresAt: number } | undefined;
+
+async function getSharedSdk(): Promise<ZapierSdk> {
+  if (sharedSdkCache && sharedSdkCache.expiresAt > Date.now()) {
+    return sharedSdkCache.sdk;
+  }
+
+  const env = getEnv();
+  if (!env.ZAPIER_CLIENT_ID || !env.ZAPIER_CLIENT_SECRET) {
+    throw new Error(
+      "self_hosted mode requires ZAPIER_CLIENT_ID and ZAPIER_CLIENT_SECRET env vars"
+    );
+  }
+
+  const res = await fetch(ZAPIER_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: env.ZAPIER_CLIENT_ID,
+      client_secret: env.ZAPIER_CLIENT_SECRET,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Failed to obtain shared Zapier token: ${res.status} ${res.statusText}`
+    );
+  }
+
+  const data = (await res.json()) as {
+    access_token: string;
+    expires_in?: number;
+  };
+
+  const expiresIn = data.expires_in || 3600;
+  const sdk = createZapierSdk({ credentials: data.access_token });
+
+  sharedSdkCache = {
+    sdk,
+    expiresAt: Date.now() + Math.min(expiresIn * 1000, 5 * 60 * 1000),
+  };
+
+  return sdk;
+}
+
 async function refreshAccessToken(
   userId: string,
   refreshToken: string
@@ -52,6 +99,11 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     return createZapierSdk({
       credentials: env.DEV_ZAPIER_OVERRIDE,
     });
+  }
+
+  // Self-hosted mode: single shared Zapier account for all users
+  if (env.FOREMAN_MODE === "self_hosted") {
+    return getSharedSdk();
   }
 
   // Cache key includes orgId so org and personal connections are cached separately

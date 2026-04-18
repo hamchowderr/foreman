@@ -1,5 +1,6 @@
 import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
+import { MastraAuthClerk } from "@mastra/auth-clerk";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { createForemanAgent } from "./agents/foreman";
 import { createDiscoveryAgent } from "./agents/discovery";
@@ -8,6 +9,19 @@ import { createHistoryAgent } from "./agents/history";
 import { createSupervisorAgent } from "./agents/supervisor";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import type { MiddlewareHandler } from "hono";
+
+// Conditional Vercel deployer (only imported when DEPLOY_TARGET=vercel)
+const getDeployer = async () => {
+  if (process.env.DEPLOY_TARGET === "vercel") {
+    const { VercelDeployer } = await import("@mastra/deployer-vercel");
+    return new VercelDeployer({
+      studio: true,
+      maxDuration: 300,
+      memory: 1024,
+    });
+  }
+  return undefined;
+};
 
 let _mastra: Mastra | undefined;
 
@@ -69,6 +83,10 @@ export function getMastra(): Mastra {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
       middleware: [customMiddleware],
+      auth: new MastraAuthClerk({
+        publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY,
+        secretKey: process.env.CLERK_SECRET_KEY,
+      }),
     },
   });
 

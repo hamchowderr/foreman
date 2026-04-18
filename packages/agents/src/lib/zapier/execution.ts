@@ -3,27 +3,26 @@ import {
   ZapierActionFailed,
   ZapierCapabilityDenied,
 } from "./errors";
-import { eq, and } from "drizzle-orm";
-import { getDb, schema } from "../db";
+import { checkCapability } from "../capabilities";
 
-async function checkCapability(
+/** Map Zapier action types to capability names. */
+const ACTION_TYPE_CAPABILITY: Record<string, string> = {
+  search: "search",
+  read: "read",
+  read_bulk: "read",
+  write: "write",
+  search_and_write: "write",
+  search_or_write: "write",
+  run: "execute",
+  filter: "execute",
+};
+
+async function requireCapability(
   userId: string,
   capability: string
 ): Promise<void> {
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(schema.capabilityFlag)
-    .where(
-      and(
-        eq(schema.capabilityFlag.userId, userId),
-        eq(schema.capabilityFlag.capability, capability)
-      )
-    )
-    .limit(1);
-
-  const flag = rows[0];
-  if (!flag || !flag.enabled) {
+  const enabled = await checkCapability(userId, capability);
+  if (!enabled) {
     throw new ZapierCapabilityDenied(capability, userId);
   }
 }
@@ -36,7 +35,8 @@ export async function runAction(
   inputs: Record<string, unknown>,
   connectionId?: string
 ) {
-  await checkCapability(userId, "execute_action");
+  const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
+  await requireCapability(userId, capability);
 
   const sdk = await getSdkForUser(userId);
 
@@ -67,7 +67,7 @@ export async function rawFetch(
     connectionId: string;
   }
 ) {
-  await checkCapability(userId, "raw_api_call");
+  await requireCapability(userId, "raw_api");
 
   const sdk = await getSdkForUser(userId);
 

@@ -166,6 +166,95 @@ export async function* streamDecline(
   yield* readSSEStream(res);
 }
 
+// ─── Workflows ───
+
+export interface WorkflowSummary {
+  id: string;
+  name: string;
+  source_conversation_id: string | null;
+  parameters: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowDetail {
+  workflow: WorkflowSummary;
+  steps: Array<{
+    id: string;
+    order: number;
+    proposal_template: Record<string, unknown>;
+  }>;
+}
+
+export interface WorkflowRunSummary {
+  id: string;
+  workflow_id: string;
+  inputs: Record<string, unknown>;
+  status: "pending" | "running" | "success" | "failed" | "declined";
+  created_at: string;
+  completed_at: string | null;
+}
+
+export async function listWorkflows() {
+  const res = await agentFetch("/workflows");
+  await throwIfNotOk(res, "Failed to list workflows");
+  return res.json() as Promise<WorkflowSummary[]>;
+}
+
+export async function getWorkflow(id: string) {
+  const res = await agentFetch(`/workflows/${id}`);
+  await throwIfNotOk(res, "Failed to get workflow");
+  return res.json() as Promise<WorkflowDetail>;
+}
+
+export async function listWorkflowRuns(workflowId: string) {
+  const res = await agentFetch(`/workflows/${workflowId}/runs`);
+  await throwIfNotOk(res, "Failed to list workflow runs");
+  return res.json() as Promise<WorkflowRunSummary[]>;
+}
+
+export async function* streamWorkflowRun(
+  workflowId: string,
+  inputs?: Record<string, unknown>
+): AsyncGenerator<Record<string, unknown>> {
+  let res: Response;
+  try {
+    res = await agentFetch(`/workflows/${workflowId}/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inputs: inputs ?? {} }),
+    });
+  } catch {
+    throw new Error("Network error — check your connection");
+  }
+
+  await throwIfNotOk(res, "Failed to run workflow");
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n\n");
+    buffer = lines.pop()!;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("data: ")) {
+        try {
+          yield JSON.parse(trimmed.slice(6));
+        } catch {
+          // Skip malformed chunks
+        }
+      }
+    }
+  }
+}
+
 async function* readSSEStream(res: Response): AsyncGenerator<AppChunk> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();

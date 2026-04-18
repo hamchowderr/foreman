@@ -9,7 +9,7 @@ const envSchema = z.object({
   ZAPIER_REDIRECT_URI: z.string().optional(),
   AGENT_SERVER_URL: z.string().optional(),
   DEV_ZAPIER_OVERRIDE: z.string().optional(),
-  FOREMAN_MODE: z.enum(["dev", "production"]).optional().default("dev"),
+  FOREMAN_MODE: z.enum(["dev", "production", "self_hosted"]).optional().default("dev"),
   DEPLOY_TARGET: z.enum(["vps", "vercel", "cloudflare"]).optional().default("vps"),
   PORT: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
