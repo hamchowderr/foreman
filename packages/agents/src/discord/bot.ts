@@ -72,13 +72,20 @@ export function getDiscordBot() {
     if (!message.text) return;
     await thread.subscribe();
     await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
-      thread.id,
-      message.author.userId,
-      message.text,
-      message.author.fullName
-    );
-    await thread.post(reply);
+    try {
+      console.log("[discord] Generating reply for:", message.text.substring(0, 80));
+      const reply = await generateReply(
+        thread.id,
+        message.author.userId,
+        message.text,
+        message.author.fullName
+      );
+      console.log("[discord] Reply generated:", reply?.substring(0, 100));
+      await thread.post(reply);
+    } catch (err) {
+      console.error("[discord] Error in onNewMention:", err);
+      await thread.post("Sorry, I encountered an error processing your request. Please try again.");
+    }
   });
 
   // Handle follow-up messages in threads the bot is subscribed to
