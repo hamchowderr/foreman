@@ -51,12 +51,18 @@ export function getDiscordBot() {
         resource: userId,
       },
       onStepFinish: (step: any) => {
-        if (step.toolCalls?.length) {
-          for (const tc of step.toolCalls) {
-            console.log(`[discord] Tool: ${tc.toolName}(${JSON.stringify(tc.args).substring(0, 150)})`);
+        try {
+          if (step.toolCalls?.length) {
+            for (const tc of step.toolCalls) {
+              const name = tc?.toolName ?? tc?.name ?? "unknown";
+              const args = tc?.args ? JSON.stringify(tc.args).substring(0, 150) : "{}";
+              console.log(`[discord] Tool: ${name}(${args})`);
+            }
           }
+          if (step.text) console.log(`[discord] Step text: ${step.text.substring(0, 80)}`);
+        } catch {
+          // Don't let logging errors crash the agent
         }
-        if (step.text) console.log(`[discord] Step text: ${step.text.substring(0, 80)}`);
       },
     });
     return result.text || "I completed the tool calls but couldn't generate a final response. Please try again.";
