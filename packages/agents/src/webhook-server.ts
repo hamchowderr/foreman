@@ -193,6 +193,25 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (path?.startsWith("/zapier/")) {
+      // Serve zapier-connect routes (OAuth flow for non-web channels)
+      const { default: zapierConnect } = await import("./routes/zapier-connect");
+      const request = new Request(url, {
+        method: req.method!,
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        ...(req.method === "POST" ? { body: rawBody } : {}),
+      });
+      const response = await zapierConnect.fetch(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
     if (path === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok" }));
