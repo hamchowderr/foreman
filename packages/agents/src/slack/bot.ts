@@ -59,7 +59,7 @@ export function getSlackBot() {
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[slack] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -79,7 +79,7 @@ export function getSlackBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[slack] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -97,7 +97,7 @@ export function getSlackBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       await thread.post(reply);
     } catch (err) {

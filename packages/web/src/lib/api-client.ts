@@ -1,15 +1,22 @@
 import type { AppChunk } from "./types";
-import { authClient } from "./auth-client";
 
 const AGENT_URL =
   process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+
+async function getClerkToken(): Promise<string | null> {
+  try {
+    // Client-side: use Clerk's global session to get a JWT
+    const session = (window as any).__clerk?.session;
+    if (session) return await session.getToken();
+  } catch {}
+  return null;
+}
 
 async function agentFetch(
   path: string,
   init?: RequestInit
 ): Promise<Response> {
-  const session = await authClient.getSession();
-  const token = session?.data?.session?.token;
+  const token = await getClerkToken();
   return fetch(`${AGENT_URL}${path}`, {
     ...init,
     headers: {

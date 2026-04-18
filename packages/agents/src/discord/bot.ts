@@ -57,7 +57,7 @@ export function getDiscordBot() {
       thread.channelId,
       message.author.userId,
       message.text,
-      message.author.name
+      message.author.fullName
     );
     await thread.post(reply);
   });
@@ -70,7 +70,7 @@ export function getDiscordBot() {
       thread.id,
       message.author.userId,
       message.text,
-      message.author.name
+      message.author.fullName
     );
     await thread.post(reply);
   });
@@ -82,7 +82,7 @@ export function getDiscordBot() {
       thread.id,
       message.author.userId,
       message.text,
-      message.author.name
+      message.author.fullName
     );
     await thread.post(reply);
   });

@@ -58,7 +58,7 @@ export function getLinearBot() {
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[linear] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -77,7 +77,7 @@ export function getLinearBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[linear] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -94,7 +94,7 @@ export function getLinearBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       await thread.post(reply);
     } catch (err) {

@@ -57,7 +57,7 @@ export function getTeamsBot() {
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[teams] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -76,7 +76,7 @@ export function getTeamsBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[teams] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -93,7 +93,7 @@ export function getTeamsBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       await thread.post(reply);
     } catch (err) {

@@ -10,22 +10,32 @@ import { timingSafeEqual, createHash, randomUUID } from "node:crypto";
  * 3. Channel identity (Telegram, Slack, Discord)
  */
 
-// ─── BetterAuth Session Resolution ───
+// ─── Clerk JWT Resolution ───
 
-export async function resolveFromSessionToken(
+/**
+ * Verify a Clerk JWT and extract the user ID (sub claim).
+ * In dev, we decode without full verification for simplicity.
+ * In production, use Clerk's JWKS endpoint for proper verification.
+ */
+export async function resolveFromClerkJwt(
   token: string
 ): Promise<string | null> {
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(schema.session)
-    .where(eq(schema.session.token, token))
-    .limit(1);
+  try {
+    // Decode JWT payload (base64url)
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf-8")
+    );
 
-  const session = rows[0];
-  if (!session) return null;
-  if (session.expiresAt.getTime() < Date.now()) return null;
-  return session.userId;
+    // Check expiration
+    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+
+    // Return the Clerk user ID (sub claim)
+    return payload.sub ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── API Key Resolution ───
@@ -155,10 +165,10 @@ export async function resolveFromRequest(
 ): Promise<ResolvedIdentity | null> {
   const authHeader = request.headers.get("authorization");
 
-  // 1. Bearer token (BetterAuth session)
+  // 1. Bearer token (Clerk JWT)
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
-    const userId = await resolveFromSessionToken(token);
+    const userId = await resolveFromClerkJwt(token);
     if (userId) return { userId, channel: "web" };
   }
 

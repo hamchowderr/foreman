@@ -58,7 +58,7 @@ export function getWhatsAppBot() {
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[whatsapp] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -78,7 +78,7 @@ export function getWhatsAppBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       console.log("[whatsapp] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -95,7 +95,7 @@ export function getWhatsAppBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.name
+        message.author.fullName
       );
       await thread.post(reply);
     } catch (err) {

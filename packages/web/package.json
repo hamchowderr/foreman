@@ -9,8 +9,8 @@
     "test:e2e": "npx playwright test"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.2.3",
     "@libsql/client": "^0.17.2",
-    "better-auth": "^1.6.5",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.4",
     "react": "19.2.4",

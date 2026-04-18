@@ -7,6 +7,7 @@ import { getWhatsAppBot } from "./whatsapp/bot";
 import { getGitHubBot } from "./github/bot";
 import { getLinearBot } from "./linear/bot";
 import { getiMessageBot } from "./imessage/bot";
+import { getDiscordBot, getDiscordAdapter } from "./discord/bot";
 
 /**
  * Standalone webhook server using raw Node.js HTTP.
@@ -156,6 +157,24 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (path === "/discord/webhook" && req.method === "POST") {
+      const bot = getDiscordBot();
+      const request = new Request(url, {
+        method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+        ),
+        body: rawBody,
+      });
+      const response = await bot.webhooks.discord(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      const body = await response.text();
+      res.end(body);
+      return;
+    }
+
     if (path === "/imessage/webhook" && req.method === "POST") {
       const bot = getiMessageBot();
       const request = new Request(url, {
@@ -191,4 +210,27 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(port, () => {
   console.log(`Webhook server running on port ${port}`);
+
+  // Initialize Discord bot — start Gateway WebSocket for receiving messages
+  if (process.env.DISCORD_BOT_TOKEN) {
+    (async () => {
+    try {
+      const bot = getDiscordBot();
+      const adapter = getDiscordAdapter();
+      // Must initialize Chat instance before starting Gateway
+      await bot.initialize();
+      // Start Gateway listener in legacy mode (direct processing, no webhook forwarding)
+      adapter
+        .startGatewayListener(
+          { waitUntil: (p: Promise<unknown>) => { p.catch((err: unknown) => console.error("Discord Gateway error:", err)); } },
+          24 * 60 * 60 * 1000 // 24 hours
+        )
+        .then(() => console.log("Discord Gateway listener started"))
+        .catch((err: unknown) => console.error("Discord Gateway startup error:", err));
+      console.log("Discord bot initialized");
+    } catch (err) {
+      console.error("Failed to initialize Discord bot:", err);
+    }
+    })();
+  }
 });
