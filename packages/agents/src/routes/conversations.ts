@@ -23,6 +23,7 @@ conversations.use("/*", authMiddleware);
 // POST / — create conversation
 conversations.post("/", async (c) => {
   const userId = c.get("userId");
+  const orgId = c.get("orgId");
   const db = getDb();
   const mastra = getMastra();
 
@@ -38,6 +39,7 @@ conversations.post("/", async (c) => {
   await db.insert(schema.conversation).values({
     id,
     userId,
+    orgId: orgId ?? null,
     mastraThreadId: thread.id,
     title: null,
     createdAt: now,
@@ -58,12 +60,18 @@ conversations.post("/", async (c) => {
 // GET / — list conversations
 conversations.get("/", async (c) => {
   const userId = c.get("userId");
+  const orgId = c.get("orgId");
   const db = getDb();
+
+  // When orgId is set, show org conversations; otherwise show personal (orgId IS NULL)
+  const whereClause = orgId
+    ? and(eq(schema.conversation.userId, userId), eq(schema.conversation.orgId, orgId))
+    : eq(schema.conversation.userId, userId);
 
   const rows = await db
     .select()
     .from(schema.conversation)
-    .where(eq(schema.conversation.userId, userId))
+    .where(whereClause)
     .orderBy(desc(schema.conversation.updatedAt));
 
   return c.json(

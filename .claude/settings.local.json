@@ -24,7 +24,11 @@
       "Bash($AZ account:*)",
       "Bash($AZ ad:*)",
       "Bash($AZ bot:*)",
-      "Bash('/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az' bot msteams create --resource-group foreman-rg --name foreman-bot)"
+      "Bash('/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az' bot msteams create --resource-group foreman-rg --name foreman-bot)",
+      "Bash(disown)",
+      "Bash(jobs -l)",
+      "Bash(pkill -f \"test-discord-gw\")",
+      "Bash(python3 -c \"import sys,json; items=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]} P{i[\\\\\"priority\\\\\"]} [{i[\\\\\"issue_type\\\\\"]}] {i[\\\\\"title\\\\\"]}'\\) for i in sorted\\(items, key=lambda x: x['priority']\\)]\")"
     ]
   }
 }

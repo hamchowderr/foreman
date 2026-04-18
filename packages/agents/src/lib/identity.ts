@@ -12,14 +12,20 @@ import { timingSafeEqual, createHash, randomUUID } from "node:crypto";
 
 // ─── Clerk JWT Resolution ───
 
+export interface ClerkJwtResult {
+  userId: string;
+  orgId?: string;
+}
+
 /**
- * Verify a Clerk JWT and extract the user ID (sub claim).
+ * Verify a Clerk JWT and extract the user ID (sub claim) and org ID (org_id claim).
  * In dev, we decode without full verification for simplicity.
  * In production, use Clerk's JWKS endpoint for proper verification.
+ * Clerk includes org_id in the JWT when the user has an active org selected.
  */
 export async function resolveFromClerkJwt(
   token: string
-): Promise<string | null> {
+): Promise<ClerkJwtResult | null> {
   try {
     // Decode JWT payload (base64url)
     const parts = token.split(".");
@@ -31,8 +37,13 @@ export async function resolveFromClerkJwt(
     // Check expiration
     if (payload.exp && payload.exp * 1000 < Date.now()) return null;
 
-    // Return the Clerk user ID (sub claim)
-    return payload.sub ?? null;
+    const userId = payload.sub;
+    if (!userId) return null;
+
+    return {
+      userId,
+      orgId: payload.org_id ?? undefined,
+    };
   } catch {
     return null;
   }
@@ -152,6 +163,7 @@ export async function registerChannelUser(
 
 export interface ResolvedIdentity {
   userId: string;
+  orgId?: string;
   channel: "web" | "telegram" | "slack" | "discord" | "mcp" | "a2a" | "dev" | "teams" | "gchat" | "whatsapp" | "github" | "linear" | "imessage";
 }
 
@@ -168,8 +180,8 @@ export async function resolveFromRequest(
   // 1. Bearer token (Clerk JWT)
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
-    const userId = await resolveFromClerkJwt(token);
-    if (userId) return { userId, channel: "web" };
+    const result = await resolveFromClerkJwt(token);
+    if (result) return { userId: result.userId, orgId: result.orgId, channel: "web" };
   }
 
   // 2. API key

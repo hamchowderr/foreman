@@ -69,6 +69,7 @@ export const zapierIdentity = sqliteTable("zapier_identity", {
     .notNull()
     .unique()
     .references(() => user.id),
+  orgId: text("org_id"), // nullable — when set, this is a shared org connection
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token").notNull(),
   expiresAt: integer("expires_at", { mode: "timestamp" }),
@@ -84,6 +85,7 @@ export const conversation = sqliteTable("conversation", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id),
+  orgId: text("org_id"), // nullable — when set, this is an org-scoped conversation
   mastraThreadId: text("mastra_thread_id"),
   title: text("title"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
@@ -195,6 +197,7 @@ export const channelIdentity = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
+    orgId: text("org_id"), // nullable — links channel user to an org
     channel: text("channel", {
       enum: ["web", "telegram", "slack", "discord", "mcp", "a2a", "teams", "gchat", "whatsapp", "github", "linear", "imessage"],
     }).notNull(),

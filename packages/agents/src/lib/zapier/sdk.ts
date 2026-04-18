@@ -44,7 +44,7 @@ async function refreshAccessToken(
   };
 }
 
-export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
+export async function getSdkForUser(userId: string, orgId?: string): Promise<ZapierSdk> {
   const env = getEnv();
 
   // DEV_ZAPIER_OVERRIDE: use a direct token for local development
@@ -54,21 +54,39 @@ export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
     });
   }
 
+  // Cache key includes orgId so org and personal connections are cached separately
+  const cacheKey = orgId ? `${userId}:org:${orgId}` : userId;
+
   // Check cache
-  const cached = sdkCache.get(userId);
+  const cached = sdkCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.sdk;
   }
 
-  // Load from database
+  // Load from database — when orgId is set, try shared org connection first
+  type IdentityRow = typeof schema.zapierIdentity.$inferSelect;
   const db = getDb();
-  const rows = await db
-    .select()
-    .from(schema.zapierIdentity)
-    .where(eq(schema.zapierIdentity.userId, userId))
-    .limit(1);
+  let identity: IdentityRow | undefined;
 
-  const identity = rows[0];
+  if (orgId) {
+    const orgRows = await db
+      .select()
+      .from(schema.zapierIdentity)
+      .where(eq(schema.zapierIdentity.orgId, orgId))
+      .limit(1);
+    identity = orgRows[0];
+  }
+
+  // Fall back to user's personal connection
+  if (!identity) {
+    const userRows = await db
+      .select()
+      .from(schema.zapierIdentity)
+      .where(eq(schema.zapierIdentity.userId, userId))
+      .limit(1);
+    identity = userRows[0];
+  }
+
   if (!identity) {
     // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json)
     if (env.FOREMAN_MODE !== "production") {
@@ -117,7 +135,7 @@ export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
 
   // Cache for 5 minutes or until token expires, whichever is sooner
   const fiveMinutes = Date.now() + 5 * 60 * 1000;
-  sdkCache.set(userId, {
+  sdkCache.set(cacheKey, {
     sdk,
     expiresAt: Math.min(fiveMinutes, tokenExpiry),
   });

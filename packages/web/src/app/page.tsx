@@ -1,4 +1,4 @@
-import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, UserButton, OrganizationSwitcher } from "@clerk/nextjs";
 import { ChatShell } from "@/components/chat-shell";
 
 export default function Home() {
@@ -22,7 +22,10 @@ export default function Home() {
       <Show when="signed-in">
         <header className="flex items-center justify-between px-4 py-2 border-b">
           <h1 className="text-lg font-semibold">Foreman</h1>
-          <UserButton />
+          <div className="flex items-center gap-3">
+            <OrganizationSwitcher afterSelectOrganizationUrl="/" afterLeaveOrganizationUrl="/" />
+            <UserButton />
+          </div>
         </header>
         <div className="flex-1">
           <ChatShell />

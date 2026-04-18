@@ -19,6 +19,9 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   }
 
   c.set("userId", identity.userId);
+  if (identity.orgId) {
+    c.set("orgId", identity.orgId);
+  }
 
   await next();
 };
