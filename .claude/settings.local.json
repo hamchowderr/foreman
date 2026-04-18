@@ -9,7 +9,8 @@
       "Bash(cp -r src/lib/zapier/* packages/agents/src/lib/zapier/)",
       "Bash(cp -r src/lib/db/* packages/agents/src/lib/db/)",
       "Bash(cp -r src/lib/stream/* packages/agents/src/lib/stream/)",
-      "Bash(cp -r drizzle/* packages/agents/drizzle/)"
+      "Bash(cp -r drizzle/* packages/agents/drizzle/)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")"
     ]
   }
 }

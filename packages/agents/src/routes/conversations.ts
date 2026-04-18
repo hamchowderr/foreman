@@ -252,7 +252,12 @@ conversations.post("/:id/messages", async (c) => {
               let title = userContent.slice(0, 60);
               try {
                 const titleResult = await agent.generate(
-                  `Generate a 3-5 word title for this conversation. The user said: "${userContent}". The assistant replied: "${accumulatedText.slice(0, 200)}". Reply with ONLY the title, no quotes or punctuation.`
+                  `Generate a 3-5 word title for this conversation. The user said: "${userContent}". The assistant replied: "${accumulatedText.slice(0, 200)}". Reply with ONLY the title, no quotes or punctuation.`,
+                  {
+                    memory: conv.mastraThreadId
+                      ? { thread: conv.mastraThreadId, resource: userId }
+                      : undefined,
+                  }
                 );
                 const generated = titleResult.text?.trim();
                 if (
