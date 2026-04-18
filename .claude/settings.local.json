@@ -17,7 +17,10 @@
       "Bash(ngrok version:*)",
       "Bash(ngrok http:*)",
       "Bash(pkill -f ngrok)",
-      "Bash(pkill -f \"node -e\")"
+      "Bash(pkill -f \"node -e\")",
+      "Bash(winget install:*)",
+      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az\" account show)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft SDKs/Azure/CLI2/wbin/az\" account show)"
     ]
   }
 }
