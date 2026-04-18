@@ -13,6 +13,8 @@ const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET_TOKEN: z.string().optional(),
   TELEGRAM_BOT_USERNAME: z.string().optional(),
+  OTEL_ENABLED: z.string().optional(),
+  OTEL_EXPORTER_ENDPOINT: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

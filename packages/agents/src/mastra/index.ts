@@ -1,5 +1,6 @@
 import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
+import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { createForemanAgent } from "./agents/foreman";
 import type { MiddlewareHandler } from "hono";
 
@@ -28,11 +29,25 @@ export function getMastra(): Mastra {
     await next();
   };
 
+  const otelEnabled = process.env.OTEL_ENABLED === "true";
+
+  const observability = otelEnabled
+    ? new Observability({
+        configs: {
+          default: {
+            serviceName: "foreman-agents",
+            exporters: [new DefaultExporter(), new ConsoleExporter()],
+          },
+        },
+      })
+    : undefined;
+
   _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
     },
     storage,
+    observability,
     server: {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",

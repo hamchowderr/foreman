@@ -1,12 +1,19 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { getDb, schema } from "@/lib/db";
 import { getMastra } from "@/mastra";
+import { MODELS, buildSystemPrompt } from "@/mastra/agents/foreman";
 import { createChunkTransformer } from "@/lib/stream/transformer";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
 import { desc, eq, and, asc } from "drizzle-orm";
+import { RequestContext } from "@mastra/core/request-context";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
+
+const titleSchema = z.object({
+  title: z.string().max(80),
+});
 
 const conversations = new Hono<AppEnv>();
 
@@ -144,6 +151,11 @@ conversations.post("/:id/messages", async (c) => {
     return c.json({ error: "content is required" }, 400);
   }
 
+  // Build dynamic system prompt if client sends context
+  const dynamicPrompt = body.context
+    ? buildSystemPrompt(body.context)
+    : undefined;
+
   // Persist user message
   const userMessageId = crypto.randomUUID();
   await db.insert(schema.message).values({
@@ -173,7 +185,11 @@ conversations.post("/:id/messages", async (c) => {
   const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
 
+  const rctx = new RequestContext([["userId", userId]]);
+
   const result = await agent.stream(messages, {
+    requestContext: rctx,
+    ...(dynamicPrompt ? { instructions: dynamicPrompt } : {}),
     memory: conv.mastraThreadId
       ? { thread: conv.mastraThreadId, resource: userId }
       : undefined,
@@ -252,19 +268,14 @@ conversations.post("/:id/messages", async (c) => {
               let title = userContent.slice(0, 60);
               try {
                 const titleResult = await agent.generate(
-                  `Generate a 3-5 word title for this conversation. The user said: "${userContent}". The assistant replied: "${accumulatedText.slice(0, 200)}". Reply with ONLY the title, no quotes or punctuation.`,
+                  `Generate a 3-5 word title for this conversation. The user said: "${userContent}". The assistant replied: "${accumulatedText.slice(0, 200)}".`,
                   {
-                    memory: conv.mastraThreadId
-                      ? { thread: conv.mastraThreadId, resource: userId }
-                      : undefined,
+                    model: MODELS.fast,
+                    structuredOutput: { schema: titleSchema },
                   }
                 );
-                const generated = titleResult.text?.trim();
-                if (
-                  generated &&
-                  generated.length > 0 &&
-                  generated.length <= 80
-                ) {
+                const generated = titleResult.object?.title?.trim();
+                if (generated && generated.length > 0) {
                   title = generated;
                 }
               } catch {

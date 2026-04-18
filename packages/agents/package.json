@@ -19,8 +19,10 @@
     "@chat-adapter/telegram": "^4.26.0",
     "@libsql/client": "^0.17.2",
     "@mastra/core": "^1.25.0",
+    "@mastra/evals": "^1.2.1",
     "@mastra/libsql": "^1.8.1",
     "@mastra/memory": "^1.15.1",
+    "@mastra/observability": "^1.9.1",
     "@zapier/zapier-sdk": "^0.41.0",
     "better-auth": "^1.6.5",
     "chat": "^4.26.0",
@@ -29,8 +31,8 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "@mastra/deployer-vercel": "^1.0.0",
-    "@mastra/deployer-cloudflare": "^1.0.0"
+    "@mastra/deployer-cloudflare": "^1.0.0",
+    "@mastra/deployer-vercel": "^1.0.0"
   },
   "devDependencies": {
     "@copilotkit/llmock": "^1.7.1",

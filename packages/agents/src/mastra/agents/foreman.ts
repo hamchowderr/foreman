@@ -2,6 +2,15 @@ import { Agent } from "@mastra/core/agent";
 import { Workspace, LocalFilesystem, LocalSandbox } from "@mastra/core/workspace";
 import { Memory } from "@mastra/memory";
 import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
+import {
+  createAnswerRelevancyScorer,
+  createToxicityScorer,
+} from "@mastra/evals/scorers/prebuilt";
+import { contextInjector, piiRedactor } from "../../lib/processors";
+import {
+  buildSystemPrompt,
+  type PromptContext,
+} from "../../lib/prompt-template";
 import { discoverConnectionsTool } from "../tools/discover-connections";
 import { listActionsTool } from "../tools/list-actions";
 import { getActionSchemaTool } from "../tools/get-action-schema";
@@ -9,7 +18,15 @@ import { getFieldChoicesTool } from "../tools/get-field-choices";
 import { executeActionTool } from "../tools/execute-action";
 import { rawApiCallTool } from "../tools/raw-api-call";
 
-const SYSTEM_PROMPT = `You are Foreman, an AI assistant that helps the user take actions across 9000+ apps via Zapier. Use discovery tools (discover_connections, list_actions, get_action_schema, get_field_choices) freely to understand what the user has connected and what is possible. Before calling execute_action, you must first call get_action_schema and fill in the inputs based on user intent. For any input field that has enumerated choices (dropdown-style), call get_field_choices rather than guessing values. Never call raw_api_call unless no pre-built action can accomplish the goal; always prefer pre-built actions. When proposing an action for approval, describe it in one plain-English sentence that will become the human_label shown to the user.`;
+/** Model routing constants — use the right model for the job */
+export const MODELS = {
+  /** Default model for conversation and execution approval */
+  default: "anthropic/claude-sonnet-4-20250514",
+  /** Fast/cheap model for title generation and lightweight tasks */
+  fast: "anthropic/claude-haiku-4-5-20251001",
+} as const;
+
+export { buildSystemPrompt, type PromptContext };
 
 export function createForemanAgent(databaseUrl: string) {
   const workspacePath = "./data/workspace";
@@ -38,8 +55,8 @@ export function createForemanAgent(databaseUrl: string) {
     name: "Foreman",
     description:
       "AI assistant that helps users take actions across 9000+ apps via Zapier",
-    instructions: SYSTEM_PROMPT,
-    model: "anthropic/claude-sonnet-4-20250514",
+    instructions: buildSystemPrompt(),
+    model: MODELS.default,
     tools: {
       discover_connections: discoverConnectionsTool,
       list_actions: listActionsTool,
@@ -48,6 +65,18 @@ export function createForemanAgent(databaseUrl: string) {
       execute_action: executeActionTool,
       raw_api_call: rawApiCallTool,
     },
+    scorers: {
+      relevancy: {
+        scorer: createAnswerRelevancyScorer({ model: MODELS.fast }),
+        sampling: { type: "ratio", rate: 0.3 },
+      },
+      toxicity: {
+        scorer: createToxicityScorer({ model: MODELS.fast }),
+        sampling: { type: "ratio", rate: 0.2 },
+      },
+    },
+    inputProcessors: [contextInjector],
+    outputProcessors: [piiRedactor],
     workspace,
     memory: new Memory({
       storage: new LibSQLStore({
