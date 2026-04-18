@@ -20,13 +20,25 @@ export const getTableTool = createTool({
   description: "Get details about a specific Zapier Table including its fields/columns.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    tableId: z.string().describe("The table ID"),
+    table: z.string().describe("The table ID"),
   }),
-  execute: async ({ userId, tableId }) => {
+  execute: async ({ userId, table }) => {
     const sdk = await getSdkForUser(userId);
-    const { data } = await sdk.getTable({ tableId });
+    const { data } = await sdk.getTable({ table });
     return { table: data };
   },
+});
+
+const filterSchema = z.object({
+  fieldKey: z.string().describe("The field key to filter on"),
+  operator: z
+    .enum([
+      "search", "in", "exact", "contains", "different",
+      "icontains", "gte", "gt", "lt", "lte", "range",
+      "isnull", "startswith", "is_within",
+    ])
+    .describe("The filter operator"),
+  value: z.unknown().optional().describe("The filter value"),
 });
 
 export const listTableRecordsTool = createTool({
@@ -35,37 +47,28 @@ export const listTableRecordsTool = createTool({
     "List records in a Zapier Table. Supports filtering and sorting.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    tableId: z.string().describe("The table ID"),
-    filter: z
-      .record(z.string(), z.unknown())
+    table: z.string().describe("The table ID"),
+    filters: z
+      .array(filterSchema)
       .optional()
-      .describe("Optional filter object to narrow results"),
+      .describe("Optional array of filter conditions"),
     sort: z
-      .string()
+      .object({
+        fieldKey: z.string().describe("The field key to sort by"),
+        direction: z
+          .enum(["asc", "desc"])
+          .describe("Sort direction: 'asc' or 'desc'"),
+      })
       .optional()
-      .describe("Optional field key to sort by"),
-    sortDirection: z
-      .enum(["asc", "desc"])
-      .optional()
-      .describe("Sort direction (default: asc)"),
-    limit: z
-      .number()
-      .optional()
-      .describe("Maximum number of records to return"),
-    offset: z
-      .number()
-      .optional()
-      .describe("Number of records to skip (for pagination)"),
+      .describe("Optional sort condition"),
   }),
-  execute: async ({ userId, tableId, filter, sort, sortDirection, limit, offset }) => {
+  execute: async ({ userId, table, filters, sort }) => {
     const sdk = await getSdkForUser(userId);
     const { data } = await sdk.listTableRecords({
-      tableId,
-      ...(filter ? { filter } : {}),
+      table,
+      keyMode: "names",
+      ...(filters ? { filters } : {}),
       ...(sort ? { sort } : {}),
-      ...(sortDirection ? { sortDirection } : {}),
-      ...(limit ? { limit } : {}),
-      ...(offset ? { offset } : {}),
     });
     return { records: data };
   },
@@ -76,15 +79,19 @@ export const createTableRecordTool = createTool({
   description: "Create a new record in a Zapier Table.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    tableId: z.string().describe("The table ID"),
-    fields: z
+    table: z.string().describe("The table ID"),
+    data: z
       .record(z.string(), z.unknown())
-      .describe("The field values for the new record"),
+      .describe("The field values for the new record, keyed by field name"),
   }),
-  execute: async ({ userId, tableId, fields }) => {
+  execute: async ({ userId, table, data }) => {
     const sdk = await getSdkForUser(userId);
-    const { data } = await sdk.createTableRecord({ tableId, fields });
-    return { record: data };
+    const result = await sdk.createTableRecords({
+      table,
+      keyMode: "names",
+      records: [{ data }],
+    });
+    return { record: result.data?.[0] ?? result.data };
   },
 });
 
@@ -93,39 +100,39 @@ export const updateTableRecordTool = createTool({
   description: "Update an existing record in a Zapier Table.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    tableId: z.string().describe("The table ID"),
+    table: z.string().describe("The table ID"),
     recordId: z.string().describe("The record ID to update"),
-    fields: z
+    data: z
       .record(z.string(), z.unknown())
-      .describe("The field values to update"),
+      .describe("The field values to update, keyed by field name"),
   }),
-  execute: async ({ userId, tableId, recordId, fields }) => {
+  execute: async ({ userId, table, recordId, data }) => {
     const sdk = await getSdkForUser(userId);
-    const { data } = await sdk.updateTableRecord({ tableId, recordId, fields });
-    return { record: data };
+    const result = await sdk.updateTableRecords({
+      table,
+      keyMode: "names",
+      records: [{ id: recordId, data }],
+    });
+    return { record: result.data?.[0] ?? result.data };
   },
 });
 
 export const searchTableRecordsTool = createTool({
   id: "search_table_records",
   description:
-    "Search records in a Zapier Table using field-level filters.",
+    "Search records in a Zapier Table by matching a field value.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    tableId: z.string().describe("The table ID"),
-    searchField: z.string().describe("The field key to search on"),
-    searchValue: z.string().describe("The value to search for"),
-    limit: z
-      .number()
-      .optional()
-      .describe("Maximum number of records to return"),
+    table: z.string().describe("The table ID"),
+    fieldKey: z.string().describe("The field key to search on"),
+    value: z.string().describe("The value to search for"),
   }),
-  execute: async ({ userId, tableId, searchField, searchValue, limit }) => {
+  execute: async ({ userId, table, fieldKey, value }) => {
     const sdk = await getSdkForUser(userId);
     const { data } = await sdk.listTableRecords({
-      tableId,
-      filter: { [searchField]: searchValue },
-      ...(limit ? { limit } : {}),
+      table,
+      keyMode: "names",
+      filters: [{ fieldKey, operator: "search", value }],
     });
     return { records: data };
   },

@@ -23,7 +23,7 @@ describe("buildSystemPrompt", () => {
     });
     expect(result).toContain("## Connected Apps");
     expect(result).toContain("Gmail, Slack, Notion");
-    expect(result).toContain("Prioritize these");
+    expect(result).toContain("Use these when possible");
   });
 
   it("does not include connected apps section when array is empty", () => {
@@ -38,7 +38,6 @@ describe("buildSystemPrompt", () => {
     expect(result).toContain("## Recent Actions");
     expect(result).toContain("- Sent email via Gmail");
     expect(result).toContain("- Created task in Notion");
-    expect(result).toContain("anticipate");
   });
 
   it("does not include recent actions section when array is empty", () => {

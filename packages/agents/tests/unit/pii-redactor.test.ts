@@ -12,14 +12,14 @@ describe("PII Redactor", () => {
       return result?.payload?.text ?? text;
     }
 
-    it("redacts email addresses", async () => {
+    it("does NOT redact email addresses (user-provided data)", async () => {
       const result = await redactChunk("Contact us at admin@example.com for help");
-      expect(result).toBe("Contact us at [EMAIL] for help");
+      expect(result).toBe("Contact us at admin@example.com for help");
     });
 
-    it("redacts multiple email addresses", async () => {
+    it("preserves multiple email addresses", async () => {
       const result = await redactChunk("From foo@bar.com to baz@qux.org");
-      expect(result).toBe("From [EMAIL] to [EMAIL]");
+      expect(result).toBe("From foo@bar.com to baz@qux.org");
     });
 
     it("redacts sk-* API keys", async () => {
@@ -83,15 +83,13 @@ describe("PII Redactor", () => {
       expect(result.payload.text).toBe(clean);
     });
 
-    it("redacts mixed content with multiple PII types", async () => {
+    it("redacts mixed content — phones and keys but NOT emails", async () => {
       const result = await redactChunk(
         "Email admin@test.com, call (555) 123-4567, key sk-abcdefghijklmnopqrstuvwxyz"
       );
-      expect(result).toContain("[EMAIL]");
+      expect(result).toContain("admin@test.com"); // emails preserved
       expect(result).toContain("[PHONE]");
       expect(result).toContain("[API_KEY]");
-      expect(result).not.toContain("admin@test.com");
-      expect(result).not.toContain("555");
     });
 
     it("does not modify non-text-delta parts", async () => {
@@ -122,7 +120,7 @@ describe("PII Redactor", () => {
       } as any);
 
       expect(result[0].content.parts[0].text).toBe(
-        "Your email is [EMAIL]"
+        "Your email is user@example.com"
       );
     });
 

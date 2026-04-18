@@ -30,25 +30,25 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("get_field_choices");
     expect(toolNames).toContain("execute_action");
     expect(toolNames).toContain("raw_api_call");
-    expect(toolNames).toHaveLength(9);
+    expect(toolNames).toHaveLength(16);
   });
 
-  it("execute_action has requireApproval set to true", async () => {
+  it("execute_action uses conversational approval (no requireApproval)", async () => {
     const { createForemanAgent } = await import("@/mastra/agents/foreman");
     const agent = createForemanAgent("file:./test-agent.db");
     const tools = getAgentTools(agent);
     const tool = tools["execute_action"];
     expect(tool).toBeDefined();
-    expect(tool.requireApproval).toBe(true);
+    expect(tool.requireApproval).toBeFalsy();
   });
 
-  it("raw_api_call has requireApproval set to true", async () => {
+  it("raw_api_call uses conversational approval (no requireApproval)", async () => {
     const { createForemanAgent } = await import("@/mastra/agents/foreman");
     const agent = createForemanAgent("file:./test-agent.db");
     const tools = getAgentTools(agent);
     const tool = tools["raw_api_call"];
     expect(tool).toBeDefined();
-    expect(tool.requireApproval).toBe(true);
+    expect(tool.requireApproval).toBeFalsy();
   });
 
   it("discovery tools do not have requireApproval", async () => {
