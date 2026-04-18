@@ -20,8 +20,7 @@ export const executeActionTool = createTool({
       .describe("The input parameters for the action"),
     connectionId: z
       .string()
-      .optional()
-      .describe("Optional connection ID"),
+      .describe("The connection ID from discover_connections. REQUIRED — always pass this."),
     humanLabel: z
       .string()
       .describe(
