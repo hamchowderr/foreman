@@ -195,8 +195,11 @@ const server = http.createServer(async (req, res) => {
 
     if (path?.startsWith("/zapier/")) {
       // Serve zapier-connect routes (OAuth flow for non-web channels)
+      // Strip /zapier prefix since the Hono sub-app routes are /connect/:token and /callback
       const { default: zapierConnect } = await import("./routes/zapier-connect");
-      const request = new Request(url, {
+      const strippedPath = path.replace("/zapier", "");
+      const strippedUrl = `http://localhost:${port}${strippedPath}`;
+      const request = new Request(strippedUrl, {
         method: req.method!,
         headers: Object.fromEntries(
           Object.entries(req.headers)
