@@ -49,7 +49,7 @@ export function getLinearBot() {
         resource: userId,
       },
     });
-    return result.text;
+    return result.text || "I'm processing your request. Please give me a moment...";
   }
 
   // Linear interactions come as mentions in issues/comments

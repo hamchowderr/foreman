@@ -51,7 +51,7 @@ export function getGitHubBot() {
         resource: userId,
       },
     });
-    return result.text;
+    return result.text || "I'm processing your request. Please give me a moment...";
   }
 
   // GitHub interactions come as mentions in issues/PRs

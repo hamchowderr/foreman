@@ -52,7 +52,7 @@ export function getTelegramBot() {
         resource: userId,
       },
     });
-    return result.text;
+    return result.text || "I'm processing your request. Please give me a moment...";
   }
 
   // Handle DMs — Telegram bots receive DMs as the primary interaction mode.

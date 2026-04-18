@@ -50,7 +50,8 @@ export function getDiscordBot() {
         resource: userId,
       },
     });
-    return result.text;
+    // Handle cases where agent returns tool results but empty text
+    return result.text || "I'm processing your request. Please give me a moment...";
   }
 
   // Handle DMs

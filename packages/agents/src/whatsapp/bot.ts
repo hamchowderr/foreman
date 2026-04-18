@@ -49,7 +49,7 @@ export function getWhatsAppBot() {
         resource: userId,
       },
     });
-    return result.text;
+    return result.text || "I'm processing your request. Please give me a moment...";
   }
 
   // WhatsApp is primarily DM-based

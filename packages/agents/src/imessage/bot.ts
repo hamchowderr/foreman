@@ -50,7 +50,7 @@ export function getiMessageBot() {
         resource: userId,
       },
     });
-    return result.text;
+    return result.text || "I'm processing your request. Please give me a moment...";
   }
 
   // iMessage is DM-only
