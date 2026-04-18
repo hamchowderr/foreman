@@ -41,6 +41,9 @@ export function getDiscordBot() {
       displayName
     );
 
+    // Memory: thread = channel-specific conversation, resource = unified user ID.
+    // Semantic recall works across channels — what user said on Slack
+    // is available when they message from Discord, because resource is the same userId.
     const result = await agent.generate(text, {
       memory: {
         thread: `discord-${threadId}`,

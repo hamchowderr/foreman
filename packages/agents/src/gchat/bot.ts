@@ -40,6 +40,9 @@ export function getGoogleChatBot() {
       displayName
     );
 
+    // Memory: thread = channel-specific conversation, resource = unified user ID.
+    // Semantic recall works across channels — what user said on Slack
+    // is available when they message from Google Chat, because resource is the same userId.
     const result = await agent.generate(text, {
       memory: {
         thread: `gchat-${threadId}`,

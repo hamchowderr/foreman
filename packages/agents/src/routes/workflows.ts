@@ -5,11 +5,48 @@ import { desc, eq, and, asc } from "drizzle-orm";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
+import { executeWorkflow } from "@/lib/workflows/engine";
+import { saveWorkflowFromConversation } from "@/lib/workflows/save";
+import { extractParams } from "@/lib/workflows/params";
 
 const workflows = new Hono<AppEnv>();
 
 // All routes require auth
 workflows.use("/*", authMiddleware);
+
+// POST / — create workflow from a conversation
+workflows.post("/", async (c) => {
+  const userId = c.get("userId");
+  const orgId = c.get("orgId");
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { conversationId, name } = body;
+  if (!conversationId || typeof conversationId !== "string") {
+    return c.json({ error: "conversationId is required" }, 400);
+  }
+  if (!name || typeof name !== "string" || name.length > 200) {
+    return c.json({ error: "name is required (max 200 chars)" }, 400);
+  }
+
+  try {
+    const result = await saveWorkflowFromConversation(
+      conversationId,
+      userId,
+      name,
+      orgId
+    );
+    return c.json(result, 201);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 400);
+  }
+});
 
 // GET / — list workflows for current user
 workflows.get("/", async (c) => {
@@ -62,20 +99,27 @@ workflows.get("/:id", async (c) => {
     .where(eq(schema.workflowStep.workflowId, id))
     .orderBy(asc(schema.workflowStep.order));
 
+  // Collect all live parameters from step templates
+  const liveParams = new Set<string>();
+  const parsedSteps = steps.map((s) => {
+    const template = JSON.parse(s.proposalTemplate) as Record<string, unknown>;
+    const inputs = (template.inputs ?? {}) as Record<string, unknown>;
+    for (const p of extractParams(inputs)) {
+      liveParams.add(p);
+    }
+    return { id: s.id, order: s.order, proposal_template: template };
+  });
+
   return c.json({
     workflow: {
       id: wf.id,
       name: wf.name,
       source_conversation_id: wf.sourceConversationId,
-      parameters: JSON.parse(wf.parameters),
+      parameters: [...liveParams],
       created_at: wf.createdAt.toISOString(),
       updated_at: wf.updatedAt.toISOString(),
     },
-    steps: steps.map((s) => ({
-      id: s.id,
-      order: s.order,
-      proposal_template: JSON.parse(s.proposalTemplate),
-    })),
+    steps: parsedSteps,
   });
 });
 
@@ -159,86 +203,20 @@ workflows.post("/:id/run", async (c) => {
     return c.json({ error: "inputs payload too large (max 50KB)" }, 400);
   }
 
-  // Load steps
-  const steps = await db
-    .select()
-    .from(schema.workflowStep)
-    .where(eq(schema.workflowStep.workflowId, workflowId))
-    .orderBy(asc(schema.workflowStep.order));
-
-  // Create run record
-  const runId = crypto.randomUUID();
-  const now = new Date();
-
-  await db.insert(schema.workflowRun).values({
-    id: runId,
-    workflowId,
-    inputs: JSON.stringify(inputs),
-    status: "running",
-    createdAt: now,
-  });
+  const orgId = c.get("orgId");
 
   const sseStream = new ReadableStream({
     async start(controller) {
-      // Send initial status
-      controller.enqueue(
-        encodeSSE({
-          type: "status",
-          runId,
-          status: "running",
-        } as any)
-      );
-
       try {
-        for (const step of steps) {
-          // Notify step started
-          controller.enqueue(
-            encodeSSE({
-              type: "step",
-              runId,
-              stepId: step.id,
-              order: step.order,
-              status: "running",
-            } as any)
-          );
-
-          // Execute step (placeholder — actual execution would
-          // invoke the action described in proposalTemplate)
-          const template = JSON.parse(step.proposalTemplate);
-
-          // Notify step complete
-          controller.enqueue(
-            encodeSSE({
-              type: "step",
-              runId,
-              stepId: step.id,
-              order: step.order,
-              status: "complete",
-              result: { template },
-            } as any)
-          );
+        for await (const event of executeWorkflow(
+          workflowId,
+          userId,
+          inputs,
+          orgId
+        )) {
+          controller.enqueue(encodeSSE(event as any));
         }
-
-        // Mark run as success
-        await db
-          .update(schema.workflowRun)
-          .set({ status: "success", completedAt: new Date() })
-          .where(eq(schema.workflowRun.id, runId));
-
-        controller.enqueue(
-          encodeSSE({
-            type: "complete",
-            runId,
-            status: "success",
-          } as any)
-        );
       } catch (err) {
-        // Mark run as failed
-        await db
-          .update(schema.workflowRun)
-          .set({ status: "failed", completedAt: new Date() })
-          .where(eq(schema.workflowRun.id, runId));
-
         controller.enqueue(
           encodeSSE({
             type: "error",

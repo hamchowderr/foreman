@@ -195,6 +195,19 @@ export interface WorkflowRunSummary {
   completed_at: string | null;
 }
 
+export async function saveWorkflow(
+  conversationId: string,
+  name: string
+): Promise<{ workflowId: string; steps: number; parameters: string[] }> {
+  const res = await agentFetch("/workflows", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ conversationId, name }),
+  });
+  await throwIfNotOk(res, "Failed to save workflow");
+  return res.json();
+}
+
 export async function listWorkflows() {
   const res = await agentFetch("/workflows");
   await throwIfNotOk(res, "Failed to list workflows");
