@@ -10,7 +10,12 @@
       "Bash(cp -r src/lib/db/* packages/agents/src/lib/db/)",
       "Bash(cp -r src/lib/stream/* packages/agents/src/lib/stream/)",
       "Bash(cp -r drizzle/* packages/agents/drizzle/)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(mv /c/Users/HamCh/code/foreman/packages/agents/.env /c/Users/HamCh/code/foreman/packages/agents/.env.local)",
+      "Bash(sed -i 's/^\\\\.env$/\\\\.env.local/' /c/Users/HamCh/code/foreman/packages/agents/.gitignore)",
+      "Bash(pkill -f cloudflared)",
+      "Bash(ngrok version:*)",
+      "Bash(ngrok http:*)"
     ]
   }
 }
