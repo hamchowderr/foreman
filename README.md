@@ -1,8 +1,34 @@
 # Foreman
 
-An AI assistant that helps users take actions across 9,000+ apps via Zapier. Built with [Mastra](https://mastra.ai) for agentic AI and [Vercel Chat SDK](https://chat-sdk.dev) for multi-channel delivery.
+> **Alpha** — This project is in active development. Self-hostable today, cloud version coming soon.
+> Questions? Reach out at **tylan@otakusolutions.io**
 
-Foreman is accessible from a web UI, Slack, Telegram, Discord, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage --- all powered by the same agent backend.
+An AI assistant that takes actions across 9,000+ apps on your behalf via Zapier. Tell it what you want done in plain language — it figures out which app and action to use, shows you what it plans to do (human-in-the-loop approval), and executes it.
+
+Built with [Mastra](https://mastra.ai) for agentic AI and [Vercel Chat SDK](https://chat-sdk.dev) for multi-channel delivery. Foreman is accessible from a web UI, Slack, Telegram, Discord, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage --- all powered by the same agent backend. It remembers your preferences, connected apps, and past actions across all channels.
+
+## Try It — 5 Things to Test
+
+| # | What to say | What Foreman does |
+|---|------------|-------------------|
+| 1 | "What apps do I have connected?" | Lists your connected Zapier apps (e.g., Gmail, Slack, Trello) |
+| 2 | "Send an email to test@example.com saying the project is complete" | Finds Gmail's send action, shows you the draft for approval, then sends it |
+| 3 | "Create a Trello card called 'Follow up with client' in my To Do list" | Discovers Trello actions, gets board/list options, creates the card after approval |
+| 4 | "What actions can I do with Slack?" | Lists all available Slack actions (send message, create channel, etc.) |
+| 5 | "Search my recent emails for anything about invoices" | Uses Gmail's search to find matching emails and returns the results |
+
+Works from **any channel** — web, Discord, Slack, Telegram, or MCP. Same user = same memory across channels.
+
+### First-Time Users (No Zapier Connected)
+
+If you haven't connected Zapier yet, just ask Foreman to do something — it will automatically detect that you're not connected and provide a one-click link to connect your Zapier account. The flow:
+
+1. You: "Send an email to john@example.com"
+2. Foreman: "You haven't connected Zapier yet. Click here to connect: [link]"
+3. You click the link → Zapier OAuth in your browser → done
+4. You: "Now send that email" → Foreman executes it
+
+This works from any channel — web, Discord, Slack, Telegram, MCP, etc.
 
 ## Architecture
 
