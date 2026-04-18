@@ -4,6 +4,7 @@ import {
   ZapierCapabilityDenied,
 } from "./errors";
 import { checkCapability } from "../capabilities";
+import { runGuardrails } from "../guardrails";
 
 /** Map Zapier action types to capability names. */
 const ACTION_TYPE_CAPABILITY: Record<string, string> = {
@@ -37,6 +38,25 @@ export async function runAction(
 ) {
   const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
   await requireCapability(userId, capability);
+
+  // Run guardrails (rate limit, app access, risk assessment)
+  const guardrailResult = await runGuardrails(userId, appKey, actionType, actionKey, inputs);
+  if (!guardrailResult.allowed) {
+    throw new ZapierCapabilityDenied(
+      guardrailResult.reason ?? "Action blocked by guardrails",
+      userId
+    );
+  }
+  if (guardrailResult.requiresConfirmation) {
+    // Return risk info so the agent can present confirmation to the user.
+    // The caller (proposal flow) checks for an approved proposal before reaching here,
+    // so if we get here with requiresConfirmation=true the action needs a proposal first.
+    return {
+      __guardrail_confirmation_required: true,
+      risk: guardrailResult.risk,
+      reason: guardrailResult.risk?.reason ?? "This action requires confirmation",
+    };
+  }
 
   const sdk = await getSdkForUser(userId);
 

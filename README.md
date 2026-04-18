@@ -98,7 +98,7 @@ In production on Vercel, Mastra Studio is also available at the deployed URL whe
 | **Evals** | Answer relevancy (30%), toxicity scoring (20%) |
 | **Multi-Agent** | Supervisor pattern with discovery, execution, and history subagents |
 | **Workflows** | Daily summary digest, health checks, webhook handler |
-| **Voice** | OpenAI voice integration (speech-to-text, text-to-speech) |
+| **Voice I/O** | Speech-to-text (Whisper) + text-to-speech (ElevenLabs/OpenAI), per-user toggle |
 | **Dynamic Prompts** | System prompt adapts based on user's connected apps and recent actions |
 
 ### Channels
@@ -178,6 +178,37 @@ Foreman can extract repeatable action sequences from conversations and save them
 - Workflows are scoped per-user and linked to their source conversation
 
 API: `GET /workflows`, `GET /workflows/:id`, `POST /workflows/:id/run` (SSE stream), `GET /workflows/:id/runs`
+
+### Voice I/O
+
+Foreman supports voice input and output, controllable per-user via the `voice` capability flag.
+
+- **Speech-to-Text**: OpenAI Whisper for transcription
+- **Text-to-Speech**: ElevenLabs (primary, highest quality) with OpenAI TTS fallback
+- **Web UI**: Mic button next to chat input, speaker icon on agent messages
+- **Channels**: Telegram voice messages, Discord voice messages, WhatsApp voice messages (*Coming Soon*)
+- **Optional**: Disabled per-user via capabilities API
+
+Env vars: `ELEVENLABS_API_KEY` (optional, falls back to OpenAI TTS), `ELEVENLABS_VOICE_ID` (optional, defaults to "Rachel"), `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini)
+
+API: `POST /api/voice/transcribe` (multipart audio upload), `POST /api/voice/synthesize` (text → audio response)
+
+### Guardrails
+
+Foreman includes a multi-layer guardrail system to prevent accidental or harmful actions:
+
+| Guardrail | Description | Default |
+|-----------|-------------|---------|
+| **Rate limiting** | Per-user sliding window (30/min, 200/hour) | Enabled |
+| **Action risk assessment** | Classifies actions as low/medium/high/critical | Enabled |
+| **Sensitive app blocking** | Banking, HR, security apps require opt-in | Blocked by default |
+| **Bulk confirmation** | Requires approval for operations affecting >5 records | Enabled |
+| **Org admin controls** | Org admins can override guardrail settings for all members | Configurable |
+| **PII redaction** | Strips emails, API keys, phones, cards, SSNs from output | Always on |
+
+Sensitive app categories: Banking (Stripe, PayPal, Square, Plaid, Wise), HR (BambooHR, Gusto, Rippling, Workday, ADP), Security (Okta, Auth0, 1Password)
+
+API: `GET /api/guardrails/status`, `PUT /api/guardrails/app-access/:appKey`
 
 ## Foreman Modes
 
@@ -288,6 +319,11 @@ TEAMS_APP_TENANT_ID=...
 GOOGLE_CHAT_CREDENTIALS=...       # Service account JSON (single line)
 GITHUB_TOKEN=...
 GITHUB_WEBHOOK_SECRET=...
+
+# Voice (optional — falls back to OpenAI TTS if ElevenLabs not set)
+ELEVENLABS_API_KEY=...
+ELEVENLABS_VOICE_ID=...            # Defaults to "Rachel"
+GOOGLE_GENERATIVE_AI_API_KEY=...   # Gemini
 ```
 
 **`packages/web/.env.local`:**
@@ -446,6 +482,10 @@ curl -X POST http://localhost:4111/a2a/foreman \
 | `GET` | `/workflows/:id` | Get workflow with steps |
 | `POST` | `/workflows/:id/run` | Start a workflow run (SSE stream) |
 | `GET` | `/workflows/:id/runs` | List past runs for a workflow |
+| `POST` | `/api/voice/transcribe` | Speech-to-text (multipart audio upload) |
+| `POST` | `/api/voice/synthesize` | Text-to-speech (text → audio response) |
+| `GET` | `/api/guardrails/status` | Get current guardrail settings |
+| `PUT` | `/api/guardrails/app-access/:appKey` | Update sensitive app access |
 
 ### Webhook Server (`:4112`)
 
@@ -650,6 +690,7 @@ Channels that need ngrok for local testing:
 | Chat channels | [Vercel Chat SDK](https://chat-sdk.dev) |
 | LLM | Claude (Anthropic) via Mastra |
 | Embeddings | OpenAI (text-embedding-3-small) |
+| Voice TTS | [ElevenLabs](https://elevenlabs.io) (primary) + OpenAI TTS (fallback) |
 | Database | SQLite / LibSQL (Turso for cloud) |
 | ORM | Drizzle |
 | Auth | Clerk + @mastra/auth-clerk |
