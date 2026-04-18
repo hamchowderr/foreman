@@ -11,6 +11,7 @@ import {
   buildSystemPrompt,
   type PromptContext,
 } from "../../lib/prompt-template";
+import { OpenAIVoice } from "@mastra/voice-openai";
 import { discoverConnectionsTool } from "../tools/discover-connections";
 import { listActionsTool } from "../tools/list-actions";
 import { getActionSchemaTool } from "../tools/get-action-schema";
@@ -18,6 +19,7 @@ import { getFieldChoicesTool } from "../tools/get-field-choices";
 import { executeActionTool } from "../tools/execute-action";
 import { rawApiCallTool } from "../tools/raw-api-call";
 import { searchHistoryTool } from "../tools/search-history";
+import { forkConversationTool } from "../tools/fork-conversation";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -68,7 +70,9 @@ export function createForemanAgent(databaseUrl: string) {
       execute_action: executeActionTool,
       raw_api_call: rawApiCallTool,
       search_history: searchHistoryTool,
+      fork_conversation: forkConversationTool,
     },
+    voice: new OpenAIVoice(),
     scorers: {
       relevancy: {
         scorer: createAnswerRelevancyScorer({ model: MODELS.fast }),

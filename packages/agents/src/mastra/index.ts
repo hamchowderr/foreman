@@ -2,6 +2,10 @@ import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { createForemanAgent } from "./agents/foreman";
+import { createDiscoveryAgent } from "./agents/discovery";
+import { createExecutionAgent } from "./agents/execution";
+import { createHistoryAgent } from "./agents/history";
+import { createSupervisorAgent } from "./agents/supervisor";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import type { MiddlewareHandler } from "hono";
 
@@ -18,6 +22,10 @@ export function getMastra(): Mastra {
   });
 
   const foremanAgent = createForemanAgent(databaseUrl);
+  const discoveryAgent = createDiscoveryAgent();
+  const executionAgent = createExecutionAgent();
+  const historyAgent = createHistoryAgent();
+  const supervisorAgent = createSupervisorAgent(databaseUrl);
 
   // Lazy-load routes to break circular dependency
   // Routes import getMastra() but only call it inside handlers (not at import time)
@@ -46,6 +54,10 @@ export function getMastra(): Mastra {
   _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
+      discovery: discoveryAgent,
+      execution: executionAgent,
+      history: historyAgent,
+      supervisor: supervisorAgent,
     },
     workflows: {
       webhookHandler: webhookHandlerWorkflow,
