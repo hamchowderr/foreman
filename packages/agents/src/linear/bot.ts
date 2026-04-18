@@ -57,7 +57,8 @@ export function getLinearBot() {
     if (!message.text) return;
     try {
       console.log("[linear] DM from", message.author.userId, ":", message.text);
-      const reply = await generateReply(
+      await thread.startTyping().catch(() => {});
+    const reply = await generateReply(
         thread.channelId,
         message.author.userId,
         message.text,
@@ -76,7 +77,8 @@ export function getLinearBot() {
     try {
       console.log("[linear] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
-      const reply = await generateReply(
+      await thread.startTyping().catch(() => {});
+    const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
@@ -93,7 +95,8 @@ export function getLinearBot() {
   bot.onSubscribedMessage(async (thread, message) => {
     if (!message.text) return;
     try {
-      const reply = await generateReply(
+      await thread.startTyping().catch(() => {});
+    const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,

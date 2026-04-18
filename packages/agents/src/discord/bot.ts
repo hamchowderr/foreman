@@ -56,6 +56,7 @@ export function getDiscordBot() {
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
+    await thread.startTyping().catch(() => {});
     const reply = await generateReply(
       thread.channelId,
       message.author.userId,
@@ -69,6 +70,7 @@ export function getDiscordBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     await thread.subscribe();
+    await thread.startTyping().catch(() => {});
     const reply = await generateReply(
       thread.id,
       message.author.userId,
@@ -81,6 +83,7 @@ export function getDiscordBot() {
   // Handle follow-up messages in threads the bot is subscribed to
   bot.onSubscribedMessage(async (thread, message) => {
     if (!message.text) return;
+    await thread.startTyping().catch(() => {});
     const reply = await generateReply(
       thread.id,
       message.author.userId,

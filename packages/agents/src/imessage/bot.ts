@@ -58,7 +58,8 @@ export function getiMessageBot() {
     if (!message.text) return;
     try {
       console.log("[imessage] Message from", message.author.userId, ":", message.text);
-      const reply = await generateReply(
+      await thread.startTyping().catch(() => {});
+    const reply = await generateReply(
         thread.channelId,
         message.author.userId,
         message.text,
@@ -75,7 +76,8 @@ export function getiMessageBot() {
   bot.onSubscribedMessage(async (thread, message) => {
     if (!message.text) return;
     try {
-      const reply = await generateReply(
+      await thread.startTyping().catch(() => {});
+    const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
