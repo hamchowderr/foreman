@@ -370,7 +370,7 @@ Discord uses a Gateway WebSocket connection for receiving messages. The webhook 
 4. Download the JSON key and set `GOOGLE_CHAT_CREDENTIALS` (entire JSON on one line)
 5. Configure the Chat app in Google Workspace with webhook URL: `https://<your-domain>/gchat/webhook`
 
-### Microsoft Teams
+### Microsoft Teams -- *Coming Soon*
 
 1. Register a bot in [Azure Portal](https://portal.azure.com) (Azure Bot resource)
 2. Set messaging endpoint to `https://<your-domain>/teams/webhook`
@@ -379,7 +379,7 @@ Discord uses a Gateway WebSocket connection for receiving messages. The webhook 
 5. Create a Teams app manifest and sideload or publish to your org
 6. Requires M365 license for testing
 
-### WhatsApp
+### WhatsApp -- *Coming Soon*
 
 1. Set up a Meta Business account and WhatsApp Business API
 2. Configure webhook URL: `https://<your-domain>/whatsapp/webhook`
@@ -393,9 +393,16 @@ Discord uses a Gateway WebSocket connection for receiving messages. The webhook 
 
 ### Linear
 
-1. Create an OAuth app or use an access token
+1. Create an OAuth app or use a personal API key
 2. Set webhook URL: `https://<your-domain>/linear/webhook`
-3. Configure adapter with `clientId`, `clientSecret`, and/or `accessToken`
+3. Set `LINEAR_API_KEY` (personal) or `LINEAR_CLIENT_ID` + `LINEAR_CLIENT_SECRET` (OAuth)
+4. Set `LINEAR_WEBHOOK_SECRET` (from webhook creation) and `LINEAR_BOT_USERNAME`
+
+### iMessage -- *Coming Soon*
+
+1. Requires macOS with Messages app access
+2. Configure webhook URL: `https://<your-domain>/imessage/webhook`
+3. Uses `chat-adapter-imessage` package
 
 ### MCP (Model Context Protocol)
 
@@ -653,4 +660,4 @@ Channels that need ngrok for local testing:
 
 ## License
 
-Private. Copyright Otaku Solutions.
+MIT License. Copyright (c) 2026 Otaku Solutions.
