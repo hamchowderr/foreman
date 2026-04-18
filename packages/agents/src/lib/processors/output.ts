@@ -11,11 +11,10 @@ import type { ChunkType } from "@mastra/core/stream";
  * Each entry maps a pattern to its replacement placeholder.
  */
 const PII_PATTERNS: Array<{ regex: RegExp; replacement: string }> = [
-  // Email addresses
-  {
-    regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-    replacement: "[EMAIL]",
-  },
+  // NOTE: Email addresses are NOT redacted — users frequently provide emails
+  // as part of their requests (e.g., "send email to john@example.com").
+  // Redacting them breaks the user experience.
+
   // API keys: sk-*, xoxb-*, xoxp-*, xoxa-*, rk_live_*, sk_live_*, pk_live_*
   {
     regex: /\b(?:sk-[a-zA-Z0-9]{20,}|xox[bpas]-[a-zA-Z0-9-]{10,}|[spr]k_live_[a-zA-Z0-9]{10,})\b/g,
