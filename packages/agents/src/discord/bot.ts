@@ -45,13 +45,13 @@ export function getDiscordBot() {
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Discord, because resource is the same userId.
     const result = await agent.generate(text, {
+      maxSteps: 5,
       memory: {
         thread: `discord-${threadId}`,
         resource: userId,
       },
     });
-    // Handle cases where agent returns tool results but empty text
-    return result.text || "I'm processing your request. Please give me a moment...";
+    return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
   // Handle DMs

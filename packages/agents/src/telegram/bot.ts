@@ -47,12 +47,13 @@ export function getTelegramBot() {
     // Semantic recall works across channels — what user said on Discord
     // is available when they message from Telegram, because resource is the same userId.
     const result = await agent.generate(text, {
+      maxSteps: 5,
       memory: {
         thread: `telegram-${threadId}`,
         resource: userId,
       },
     });
-    return result.text || "I'm processing your request. Please give me a moment...";
+    return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
   // Handle DMs — Telegram bots receive DMs as the primary interaction mode.

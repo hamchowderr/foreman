@@ -44,12 +44,13 @@ export function getTeamsBot() {
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Teams, because resource is the same userId.
     const result = await agent.generate(text, {
+      maxSteps: 5,
       memory: {
         thread: `teams-${threadId}`,
         resource: userId,
       },
     });
-    return result.text || "I'm processing your request. Please give me a moment...";
+    return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
   bot.onDirectMessage(async (thread, message) => {

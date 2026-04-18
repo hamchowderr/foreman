@@ -45,12 +45,13 @@ export function getiMessageBot() {
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from iMessage, because resource is the same userId.
     const result = await agent.generate(text, {
+      maxSteps: 5,
       memory: {
         thread: `imessage-${threadId}`,
         resource: userId,
       },
     });
-    return result.text || "I'm processing your request. Please give me a moment...";
+    return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
   // iMessage is DM-only
