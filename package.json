@@ -2,7 +2,9 @@
   "name": "foreman",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["packages/*"],
   "scripts": {
+    "dev": "npm run dev --workspace=packages/agents & npm run dev --workspace=packages/web",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

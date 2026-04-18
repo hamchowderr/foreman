@@ -12,7 +12,7 @@ export function encodeSSE(chunk: AppChunk): Uint8Array {
 /**
  * Create SSE response headers.
  */
-export function sseHeaders(): HeadersInit {
+export function sseHeaders(): Record<string, string> {
   return {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",

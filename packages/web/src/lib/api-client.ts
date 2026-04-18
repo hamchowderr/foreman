@@ -1,4 +1,23 @@
-import type { AppChunk } from "./stream/types";
+import type { AppChunk } from "./types";
+import { authClient } from "./auth-client";
+
+const AGENT_URL =
+  process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+
+async function agentFetch(
+  path: string,
+  init?: RequestInit
+): Promise<Response> {
+  const session = await authClient.getSession();
+  const token = session?.data?.session?.token;
+  return fetch(`${AGENT_URL}${path}`, {
+    ...init,
+    headers: {
+      ...init?.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+}
 
 async function throwIfNotOk(res: Response, label: string): Promise<void> {
   if (res.ok) return;
@@ -13,7 +32,7 @@ async function throwIfNotOk(res: Response, label: string): Promise<void> {
 }
 
 export async function createConversation() {
-  const res = await fetch("/api/conversations", { method: "POST" });
+  const res = await agentFetch("/api/conversations", { method: "POST" });
   await throwIfNotOk(res, "Failed to create conversation");
   return res.json() as Promise<{
     id: string;
@@ -24,7 +43,7 @@ export async function createConversation() {
 }
 
 export async function listConversations() {
-  const res = await fetch("/api/conversations");
+  const res = await agentFetch("/api/conversations");
   await throwIfNotOk(res, "Failed to list conversations");
   return res.json() as Promise<
     Array<{
@@ -37,7 +56,7 @@ export async function listConversations() {
 }
 
 export async function getConversation(id: string) {
-  const res = await fetch(`/api/conversations/${id}`);
+  const res = await agentFetch(`/api/conversations/${id}`);
   await throwIfNotOk(res, "Failed to get conversation");
   return res.json() as Promise<{
     conversation: {
@@ -58,7 +77,7 @@ export async function patchProposal(
   proposalId: string,
   inputs: Record<string, unknown>
 ) {
-  const res = await fetch(`/api/proposals/${proposalId}`, {
+  const res = await agentFetch(`/api/proposals/${proposalId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ inputs }),
@@ -71,7 +90,7 @@ export async function fetchFieldChoices(
   proposalId: string,
   fieldKey: string
 ) {
-  const res = await fetch(
+  const res = await agentFetch(
     `/api/proposals/${proposalId}/field-choices/${fieldKey}`
   );
   await throwIfNotOk(res, "Failed to fetch field choices");
@@ -89,7 +108,7 @@ export async function* streamMessage(
 ): AsyncGenerator<AppChunk> {
   let res: Response;
   try {
-    res = await fetch(`/api/conversations/${conversationId}/messages`, {
+    res = await agentFetch(`/api/conversations/${conversationId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -110,7 +129,7 @@ export async function* streamApprove(
 ): AsyncGenerator<AppChunk> {
   let res: Response;
   try {
-    res = await fetch(`/api/proposals/${proposalId}/approve`, {
+    res = await agentFetch(`/api/proposals/${proposalId}/approve`, {
       method: "POST",
     });
   } catch {
@@ -129,7 +148,7 @@ export async function* streamDecline(
 ): AsyncGenerator<AppChunk> {
   let res: Response;
   try {
-    res = await fetch(`/api/proposals/${proposalId}/decline`, {
+    res = await agentFetch(`/api/proposals/${proposalId}/decline`, {
       method: "POST",
     });
   } catch {

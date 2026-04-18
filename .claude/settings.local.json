@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 local.db \".tables\")",
+      "Bash(sqlite3 foreman.db \".tables\")",
+      "Bash(mcp__key-broker__list_secrets)",
+      "Read(//c/Users/HamCh/**)",
+      "Bash(cp -r src/mastra/* packages/agents/src/mastra/)",
+      "Bash(cp -r src/lib/zapier/* packages/agents/src/lib/zapier/)",
+      "Bash(cp -r src/lib/db/* packages/agents/src/lib/db/)",
+      "Bash(cp -r src/lib/stream/* packages/agents/src/lib/stream/)",
+      "Bash(cp -r drizzle/* packages/agents/drizzle/)"
+    ]
+  }
+}

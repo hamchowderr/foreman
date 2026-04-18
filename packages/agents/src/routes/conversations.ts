@@ -1,23 +1,124 @@
-import { getSessionFromRequest } from "@/lib/api-auth";
+import { Hono } from "hono";
 import { getDb, schema } from "@/lib/db";
 import { getMastra } from "@/mastra";
 import { createChunkTransformer } from "@/lib/stream/transformer";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
-import { eq, and, asc } from "drizzle-orm";
+import { desc, eq, and, asc } from "drizzle-orm";
+import { authMiddleware } from "./middleware";
+import type { AppEnv } from "./types";
 
-export const dynamic = "force-dynamic";
+const conversations = new Hono<AppEnv>();
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getSessionFromRequest(request);
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+// All routes require auth
+conversations.use("/*", authMiddleware);
+
+// POST / — create conversation
+conversations.post("/", async (c) => {
+  const userId = c.get("userId");
+  const db = getDb();
+  const mastra = getMastra();
+
+  // Create a Mastra thread for memory
+  const memory = await mastra.getAgent("foreman").getMemory();
+  const thread = await memory!.createThread({
+    resourceId: userId,
+  });
+
+  const id = crypto.randomUUID();
+  const now = new Date();
+
+  await db.insert(schema.conversation).values({
+    id,
+    userId,
+    mastraThreadId: thread.id,
+    title: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return c.json(
+    {
+      id,
+      mastra_thread_id: thread.id,
+      title: null,
+      created_at: now.toISOString(),
+    },
+    201
+  );
+});
+
+// GET / — list conversations
+conversations.get("/", async (c) => {
+  const userId = c.get("userId");
+  const db = getDb();
+
+  const rows = await db
+    .select()
+    .from(schema.conversation)
+    .where(eq(schema.conversation.userId, userId))
+    .orderBy(desc(schema.conversation.updatedAt));
+
+  return c.json(
+    rows.map((conv) => ({
+      id: conv.id,
+      mastra_thread_id: conv.mastraThreadId,
+      title: conv.title,
+      created_at: conv.createdAt.toISOString(),
+      updated_at: conv.updatedAt.toISOString(),
+    }))
+  );
+});
+
+// GET /:id — get conversation with messages
+conversations.get("/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+  const db = getDb();
+
+  const rows = await db
+    .select()
+    .from(schema.conversation)
+    .where(
+      and(
+        eq(schema.conversation.id, id),
+        eq(schema.conversation.userId, userId)
+      )
+    )
+    .limit(1);
+
+  const conv = rows[0];
+  if (!conv) {
+    return c.json({ error: "Not found" }, 404);
   }
 
-  const { id: conversationId } = await params;
+  const messages = await db
+    .select()
+    .from(schema.message)
+    .where(eq(schema.message.conversationId, id))
+    .orderBy(asc(schema.message.createdAt));
+
+  return c.json({
+    conversation: {
+      id: conv.id,
+      mastra_thread_id: conv.mastraThreadId,
+      title: conv.title,
+      created_at: conv.createdAt.toISOString(),
+      updated_at: conv.updatedAt.toISOString(),
+    },
+    messages: messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: JSON.parse(m.content),
+      created_at: m.createdAt.toISOString(),
+    })),
+  });
+});
+
+// POST /:id/messages — stream agent response via SSE
+conversations.post("/:id/messages", async (c) => {
+  const userId = c.get("userId");
+  const conversationId = c.req.param("id");
   const db = getDb();
 
   // Verify conversation ownership
@@ -27,23 +128,20 @@ export async function POST(
     .where(
       and(
         eq(schema.conversation.id, conversationId),
-        eq(schema.conversation.userId, session.user.id)
+        eq(schema.conversation.userId, userId)
       )
     )
     .limit(1);
 
   const conv = convRows[0];
   if (!conv) {
-    return Response.json({ error: "Not found" }, { status: 404 });
+    return c.json({ error: "Not found" }, 404);
   }
 
-  const body = await request.json();
+  const body = await c.req.json();
   const userContent: string = body.content;
   if (!userContent || typeof userContent !== "string") {
-    return Response.json(
-      { error: "content is required" },
-      { status: 400 }
-    );
+    return c.json({ error: "content is required" }, 400);
   }
 
   // Persist user message
@@ -64,7 +162,10 @@ export async function POST(
     .orderBy(asc(schema.message.createdAt));
 
   const messages = historyRows.map((m) => ({
-    role: (m.role === "agent" ? "assistant" : m.role) as "user" | "assistant" | "system",
+    role: (m.role === "agent" ? "assistant" : m.role) as
+      | "user"
+      | "assistant"
+      | "system",
     content: JSON.parse(m.content) as string,
   }));
 
@@ -74,7 +175,7 @@ export async function POST(
 
   const result = await agent.stream(messages, {
     memory: conv.mastraThreadId
-      ? { thread: conv.mastraThreadId, resource: session.user.id }
+      ? { thread: conv.mastraThreadId, resource: userId }
       : undefined,
   });
 
@@ -96,10 +197,15 @@ export async function POST(
             try {
               while (true) {
                 const { done, value } = await reader.read();
-                if (done) { writer.close(); break; }
+                if (done) {
+                  writer.close();
+                  break;
+                }
                 await writer.write(value);
               }
-            } catch { writer.close(); }
+            } catch {
+              writer.close();
+            }
           })();
 
           // Read transformer output
@@ -149,7 +255,11 @@ export async function POST(
                   `Generate a 3-5 word title for this conversation. The user said: "${userContent}". The assistant replied: "${accumulatedText.slice(0, 200)}". Reply with ONLY the title, no quotes or punctuation.`
                 );
                 const generated = titleResult.text?.trim();
-                if (generated && generated.length > 0 && generated.length <= 80) {
+                if (
+                  generated &&
+                  generated.length > 0 &&
+                  generated.length <= 80
+                ) {
                   title = generated;
                 }
               } catch {
@@ -188,5 +298,8 @@ export async function POST(
     },
   });
 
-  return new Response(sseStream, { headers: sseHeaders() });
-}
+  const headers = sseHeaders();
+  return new Response(sseStream, { headers });
+});
+
+export default conversations;
