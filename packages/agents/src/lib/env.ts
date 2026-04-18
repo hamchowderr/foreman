@@ -44,6 +44,9 @@ const envSchema = z.object({
   LINEAR_CLIENT_ID: z.string().optional(),
   LINEAR_CLIENT_SECRET: z.string().optional(),
   LINEAR_ACCESS_TOKEN: z.string().optional(),
+  // Voice I/O
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_VOICE_ID: z.string().optional(),
   // iMessage
   IMESSAGE_LOCAL: z.string().optional(),
   IMESSAGE_SERVER_URL: z.string().optional(),

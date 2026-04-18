@@ -8,6 +8,7 @@ export const CAPABILITIES = [
   "write",
   "execute",
   "raw_api",
+  "voice",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

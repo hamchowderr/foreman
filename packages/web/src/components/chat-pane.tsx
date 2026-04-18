@@ -11,6 +11,7 @@ import { ChatMessage, StreamingMessage } from "./chat-message";
 import { ApprovalCard } from "./approval-card";
 import { ActionResultCard } from "./action-result-card";
 import { ReauthBanner } from "./reauth-banner";
+import { VoiceButton, SpeakButton } from "./voice-button";
 
 interface Message {
   id: string;
@@ -261,6 +262,43 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
     [processChunks]
   );
 
+  const handleVoiceTranscription = useCallback(
+    (text: string) => {
+      if (!text.trim() || isStreaming) return;
+      setInput("");
+      setIsStreaming(true);
+
+      setItems((prev) => [
+        ...prev,
+        {
+          type: "message",
+          message: {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: text,
+          },
+        },
+      ]);
+
+      processChunks(streamMessage(conversationId, text))
+        .catch((err) => {
+          setItems((prev) => [
+            ...prev,
+            {
+              type: "message",
+              message: {
+                id: crypto.randomUUID(),
+                role: "system",
+                content: `Error: ${err instanceof Error ? err.message : String(err)}`,
+              },
+            },
+          ]);
+        })
+        .finally(() => setIsStreaming(false));
+    },
+    [isStreaming, conversationId, processChunks]
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -289,11 +327,15 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
           switch (item.type) {
             case "message":
               return (
-                <ChatMessage
-                  key={item.message.id}
-                  role={item.message.role}
-                  content={item.message.content}
-                />
+                <div key={item.message.id} className="flex items-end gap-0">
+                  <ChatMessage
+                    role={item.message.role}
+                    content={item.message.content}
+                  />
+                  {item.message.role === "agent" && (
+                    <SpeakButton text={item.message.content} />
+                  )}
+                </div>
               );
             case "proposal":
               return (
@@ -335,6 +377,10 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
             rows={1}
             disabled={isStreaming}
             className="flex-1 resize-none rounded-xl border border-[#ddd] dark:border-[#444] bg-transparent px-4 py-3 text-sm placeholder:text-foreground/30 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-foreground/20"
+          />
+          <VoiceButton
+            onTranscription={handleVoiceTranscription}
+            disabled={isStreaming}
           />
           <button
             onClick={handleSend}
