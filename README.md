@@ -61,9 +61,7 @@ foreman/
 │       │   ├── app/                     # Pages: chat, sign-in, sign-up
 │       │   ├── components/              # Chat shell, approval cards, message components
 │       │   └── lib/
-│       │       ├── api-client.ts        # Calls agent server via NEXT_PUBLIC_AGENT_SERVER_URL
-│       │       ├── auth.ts              # BetterAuth server config
-│       │       └── auth-client.ts       # BetterAuth client
+│       │       └── api-client.ts        # Calls agent server via NEXT_PUBLIC_AGENT_SERVER_URL
 │       ├── package.json
 │       └── tsconfig.json
 ├── package.json             # Workspace root
@@ -71,6 +69,18 @@ foreman/
 ├── CLAUDE.md                # AI assistant instructions
 └── .beads/                  # Issue tracking (Dolt-backed)
 ```
+
+## Mastra Dev Playground
+
+When running `npm run dev` in `packages/agents`, Mastra provides a built-in dev UI at [http://localhost:4111](http://localhost:4111) where you can:
+
+- Browse registered agents and their tools
+- Test conversations interactively
+- View memory, threads, and message history
+- Inspect workflows and trigger runs
+- See observability traces (when `OTEL_ENABLED=true`)
+
+In production on Vercel, Mastra Studio is also available at the deployed URL when `studio: true` is set in the deployer config.
 
 ## Features
 
@@ -95,7 +105,7 @@ foreman/
 
 | Channel | Adapter | How It Works |
 |---------|---------|-------------|
-| **Web** | Next.js frontend | BetterAuth sessions, SSE streaming |
+| **Web** | Next.js frontend | Clerk sessions, SSE streaming |
 | **Slack** | `@chat-adapter/slack` | Webhook on `:4112/slack/webhook` |
 | **Telegram** | `@chat-adapter/telegram` | Webhook or polling mode |
 | **Discord** | `@chat-adapter/discord` | Gateway WebSocket + Interactions endpoint |
@@ -108,17 +118,41 @@ foreman/
 | **MCP** | Mastra built-in | `GET /mcp/*` (Claude Code, ChatGPT, etc.) |
 | **A2A** | Mastra built-in | `POST /a2a/foreman` (agent-to-agent) |
 
-### Identity System
+### Authentication
 
-Foreman uses a channel-agnostic identity layer. Users are automatically registered on first contact from any channel and linked to a unified Foreman user ID.
+Foreman uses [Clerk](https://clerk.com) for user authentication and `@mastra/auth-clerk` for agent server JWT verification.
 
 | Auth Method | Use Case |
 |-------------|----------|
-| BetterAuth session (Bearer token) | Web frontend |
-| API key (`x-api-key` header, `fmn_` prefix) | MCP, A2A, programmatic access |
+| Clerk (Google OAuth, email, etc.) | Web frontend sign-in/sign-up |
+| `@mastra/auth-clerk` (JWKS JWT verification) | Agent server validates Clerk session tokens |
+| API key (`x-api-key` header, `fmn_` prefix, SHA-256 hashed) | MCP, A2A, programmatic access |
 | Channel identity | Auto-registered per platform (Slack, Discord, Telegram, etc.) |
 
 Users from chat channels get auto-created Foreman accounts. Multiple channel identities can be linked to a single user.
+
+### Organizations (Multi-Tenant)
+
+Foreman supports [Clerk Organizations](https://clerk.com/docs/organizations/overview) for multi-tenant workspaces:
+
+- `orgId` is included in the JWT and used to scope data access
+- Zapier connections and conversations are scoped per organization
+- The web UI includes an `OrganizationSwitcher` for switching between orgs
+- Shared Zapier connections are available to all members within an org
+
+### Capabilities
+
+Per-user feature flags that control what actions the agent can perform. All capabilities default to **enabled**.
+
+| Capability | Description |
+|------------|-------------|
+| `search` | Search/discover apps and actions |
+| `read` | Read data from connected apps |
+| `write` | Write/create data in connected apps |
+| `execute` | Execute actions (with approval flow) |
+| `raw_api` | Direct Zapier API calls |
+
+Manage via `GET /capabilities` (list all) and `PUT /capabilities/:capability` (set `{ "enabled": true/false }`).
 
 ### Zapier Tools
 
@@ -134,6 +168,27 @@ Users from chat channels get auto-created Foreman accounts. Multiple channel ide
 | `fork_conversation` | Branch a conversation for parallel exploration |
 | `connect_zapier` | Generate a one-time Zapier connect URL for non-web channels |
 
+### Workflows
+
+Foreman can extract repeatable action sequences from conversations and save them as reusable workflows.
+
+- **Management UI** at `/workflows` in the web frontend
+- **SSE streaming** for real-time run status updates (step-by-step progress)
+- **Run history** tracking with success/failure status
+- Workflows are scoped per-user and linked to their source conversation
+
+API: `GET /workflows`, `GET /workflows/:id`, `POST /workflows/:id/run` (SSE stream), `GET /workflows/:id/runs`
+
+## Foreman Modes
+
+Foreman supports three operating modes, set via `FOREMAN_MODE` in `.env.local`:
+
+| Mode | Value | Description |
+|------|-------|-------------|
+| **Dev** | `dev` (default) | Uses your personal Zapier CLI login. No client credentials needed. Best for local development. |
+| **Production** | `production` | Multi-tenant: each user connects their own Zapier account via OAuth. Requires `ZAPIER_CLIENT_ID` and `ZAPIER_CLIENT_SECRET`. |
+| **Self-Hosted** | `self_hosted` | Uses shared Zapier client credentials for all users (single account). Ideal for personal/team deployments where everyone shares one Zapier connection. |
+
 ## Zapier Configuration
 
 Foreman uses the [Zapier SDK](https://docs.zapier.com/sdk) to execute actions across 9,000+ apps on behalf of users.
@@ -146,7 +201,7 @@ Uses your personal Zapier CLI login. No client credentials needed.
 npx @zapier/zapier-sdk-cli login    # One-time login
 ```
 
-Set `FOREMAN_MODE=dev` in `.env.local` (or omit it — dev is the default).
+Set `FOREMAN_MODE=dev` in `.env.local` (or omit it --- dev is the default).
 
 ### Production Mode
 
@@ -171,6 +226,18 @@ ZAPIER_CLIENT_SECRET=<client_secret from step 1>
 **3. User OAuth flow:**
 
 Users connect their Zapier accounts via the web UI or by using the `connect_zapier` tool in any chat channel. The tool generates a one-time URL that initiates the OAuth flow. Tokens are encrypted at rest (AES-256-GCM) and stored per-user.
+
+### Self-Hosted Mode
+
+For single-account deployments where all users share one Zapier connection.
+
+```bash
+FOREMAN_MODE=self_hosted
+ZAPIER_CLIENT_ID=<client_id>
+ZAPIER_CLIENT_SECRET=<client_secret>
+```
+
+All users share the same Zapier credentials. No per-user OAuth flow is needed.
 
 ## Prerequisites
 
@@ -198,8 +265,12 @@ ENCRYPTION_KEY=<64-char hex string>
 ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-proj-...        # For embeddings and voice
 
+# Auth (Clerk)
+CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+
 # Zapier
-FOREMAN_MODE=dev                  # "dev" uses CLI login, "production" uses client credentials
+FOREMAN_MODE=dev                  # "dev", "production", or "self_hosted"
 ZAPIER_CLIENT_ID=...              # From: npx zapier-sdk create-client-credentials "name"
 ZAPIER_CLIENT_SECRET=...
 
@@ -223,8 +294,8 @@ GITHUB_WEBHOOK_SECRET=...
 
 ```bash
 NEXT_PUBLIC_AGENT_SERVER_URL=http://localhost:4111
-BETTER_AUTH_URL=http://localhost:3000
-DATABASE_URL=file:../agents/foreman.db
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
 ```
 
 ### 3. Run database migrations
@@ -362,6 +433,12 @@ curl -X POST http://localhost:4111/a2a/foreman \
 | `POST` | `/api/proposals/:id/approve` | Approve action proposal |
 | `POST` | `/api/proposals/:id/decline` | Decline action proposal |
 | `GET` | `/api/proposals/:id/field-choices/:fieldKey` | Get dynamic field options |
+| `GET` | `/capabilities` | List current user's capability flags |
+| `PUT` | `/capabilities/:capability` | Set a capability flag (`{ "enabled": bool }`) |
+| `GET` | `/workflows` | List user's saved workflows |
+| `GET` | `/workflows/:id` | Get workflow with steps |
+| `POST` | `/workflows/:id/run` | Start a workflow run (SSE stream) |
+| `GET` | `/workflows/:id/runs` | List past runs for a workflow |
 
 ### Webhook Server (`:4112`)
 
@@ -386,7 +463,7 @@ Foreman uses SQLite locally via [Drizzle ORM](https://orm.drizzle.team) + [@libs
 
 | Table | Purpose |
 |-------|---------|
-| `user` | BetterAuth user accounts |
+| `user` | User accounts (synced from Clerk) |
 | `session` | Active sessions |
 | `account` | OAuth provider links |
 | `verification` | Email verification tokens |
@@ -416,7 +493,17 @@ npx drizzle-kit migrate
 
 ## Deployment
 
-### VPS (Default)
+### Deployment Targets
+
+| Component | Target | Notes |
+|-----------|--------|-------|
+| Web frontend | Vercel | Standard Next.js deployment |
+| Agent server API | Vercel or VPS | Vercel uses `VercelDeployer({ studio: true, maxDuration: 300 })` |
+| Webhook server + Discord Gateway | VPS | Long-running processes, not suited for serverless |
+
+**Important:** SQLite is ephemeral on Vercel's filesystem. For Vercel deployments, use [Turso](https://turso.tech) (hosted LibSQL) by setting `DATABASE_URL` to a Turso URL --- same driver, no code changes.
+
+### VPS
 
 The agent server is a standard Node.js process. Deploy with PM2, systemd, or Docker.
 
@@ -434,14 +521,14 @@ cd packages/agents
 DEPLOY_TARGET=vercel npm run build:vercel
 ```
 
+When deployed to Vercel with `studio: true`, Mastra Studio is available at the deployed URL for browsing agents, testing conversations, and viewing traces in production.
+
 ### Cloudflare Workers
 
 ```bash
 cd packages/agents
 DEPLOY_TARGET=cloudflare npm run build:cloudflare
 ```
-
-The web frontend deploys as a standard Next.js app on Vercel or any Node.js host.
 
 ## Models
 
@@ -460,7 +547,7 @@ The web frontend deploys as a standard Next.js app on Vercel or any Node.js host
 - **PII redaction**: Output processor strips emails, API keys, phone numbers, card numbers, SSNs
 - **API key hashing**: Keys are SHA-256 hashed, never stored in plaintext
 - **Signature verification**: Slack, Discord, and other webhooks verify request signatures
-- **Session validation**: BetterAuth sessions checked on every API call
+- **Session validation**: Clerk JWT tokens verified via JWKS on every API call
 - **Input validation**: Zod schemas on all API inputs
 
 ## Development
@@ -558,7 +645,7 @@ Channels that need ngrok for local testing:
 | Embeddings | OpenAI (text-embedding-3-small) |
 | Database | SQLite / LibSQL (Turso for cloud) |
 | ORM | Drizzle |
-| Auth | BetterAuth |
+| Auth | Clerk + @mastra/auth-clerk |
 | Frontend | Next.js 16, React, Tailwind |
 | API layer | Hono (via Mastra server) |
 | Automation | Zapier SDK |
