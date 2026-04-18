@@ -21,9 +21,11 @@ import { rawApiCallTool } from "../tools/raw-api-call";
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
   /** Default model for conversation and execution approval */
-  default: "anthropic/claude-sonnet-4-20250514",
-  /** Fast/cheap model for title generation and lightweight tasks */
+  default: "anthropic/claude-sonnet-4-6",
+  /** Fast/cheap model for title generation, scoring, lightweight tasks */
   fast: "anthropic/claude-haiku-4-5-20251001",
+  /** Heavy reasoning for complex multi-step planning */
+  heavy: "anthropic/claude-opus-4-6",
 } as const;
 
 export { buildSystemPrompt, type PromptContext };
