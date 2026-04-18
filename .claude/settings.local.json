@@ -20,7 +20,11 @@
       "Bash(pkill -f \"node -e\")",
       "Bash(winget install:*)",
       "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az\" account show)",
-      "Bash(\"/c/Program Files \\(x86\\)/Microsoft SDKs/Azure/CLI2/wbin/az\" account show)"
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft SDKs/Azure/CLI2/wbin/az\" account show)",
+      "Bash($AZ account:*)",
+      "Bash($AZ ad:*)",
+      "Bash($AZ bot:*)",
+      "Bash('/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az' bot msteams create --resource-group foreman-rg --name foreman-bot)"
     ]
   }
 }
