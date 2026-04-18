@@ -21,6 +21,15 @@ import { rawApiCallTool } from "../tools/raw-api-call";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
+import { searchAppsTool } from "../tools/search-apps";
+import {
+  listTablesTool,
+  getTableTool,
+  listTableRecordsTool,
+  createTableRecordTool,
+  updateTableRecordTool,
+  searchTableRecordsTool,
+} from "../tools/zapier-tables";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -70,6 +79,13 @@ export function createForemanAgent(databaseUrl: string) {
       get_field_choices: getFieldChoicesTool,
       execute_action: executeActionTool,
       raw_api_call: rawApiCallTool,
+      search_apps: searchAppsTool,
+      list_tables: listTablesTool,
+      get_table: getTableTool,
+      list_table_records: listTableRecordsTool,
+      create_table_record: createTableRecordTool,
+      update_table_record: updateTableRecordTool,
+      search_table_records: searchTableRecordsTool,
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,

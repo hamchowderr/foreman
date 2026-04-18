@@ -10,15 +10,15 @@ export const executeActionTool = createTool({
     "Do NOT re-ask for confirmation — just execute.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    appKey: z.string().describe("The Zapier app key"),
+    app: z.string().describe("The Zapier app key (e.g. 'gmail', 'slack')"),
     actionType: z
       .enum(["search", "read", "write", "run", "filter", "read_bulk", "search_and_write", "search_or_write"])
       .describe("The action type"),
-    actionKey: z.string().describe("The action key to execute"),
+    action: z.string().describe("The action key to execute"),
     inputs: z
       .record(z.string(), z.unknown())
       .describe("The input parameters for the action"),
-    connectionId: z
+    connection: z
       .string()
       .describe("The connection ID from discover_connections. REQUIRED — always pass this."),
     humanLabel: z
@@ -27,14 +27,14 @@ export const executeActionTool = createTool({
         "A plain-English sentence describing what this action will do, shown to the user for approval"
       ),
   }),
-  execute: async ({ userId, appKey, actionType, actionKey, inputs, connectionId }) => {
+  execute: async ({ userId, app, actionType, action, inputs, connection }) => {
     const result = await runAction(
       userId,
-      appKey,
+      app,
       actionType,
-      actionKey,
+      action,
       inputs,
-      connectionId
+      connection
     );
     return { result };
   },

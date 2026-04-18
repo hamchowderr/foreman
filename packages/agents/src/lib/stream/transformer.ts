@@ -161,12 +161,12 @@ async function createProposalFromApproval(
   const now = new Date();
 
   // The execute_action tool schema has these fields in args
-  const appKey = (args.appKey as string) ?? "";
+  const appKey = (args.app as string) ?? "";
   const actionType = (args.actionType as string) ?? "write";
-  const actionKey = (args.actionKey as string) ?? "";
+  const actionKey = (args.action as string) ?? "";
   const humanLabel = (args.humanLabel as string) ?? "";
   const inputs = (args.inputs as Record<string, unknown>) ?? {};
-  const connectionId = (args.connectionId as string) ?? null;
+  const connectionId = (args.connection as string) ?? null;
 
   // For input_schema, we store the schema of the inputs field
   // In a real scenario this would come from get_action_schema,

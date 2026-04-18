@@ -6,6 +6,16 @@ import {
 import { checkCapability } from "../capabilities";
 import { runGuardrails } from "../guardrails";
 
+type ActionType =
+  | "search"
+  | "read"
+  | "write"
+  | "run"
+  | "filter"
+  | "read_bulk"
+  | "search_and_write"
+  | "search_or_write";
+
 /** Map Zapier action types to capability names. */
 const ACTION_TYPE_CAPABILITY: Record<string, string> = {
   search: "search",
@@ -30,17 +40,17 @@ async function requireCapability(
 
 export async function runAction(
   userId: string,
-  appKey: string,
+  app: string,
   actionType: string,
-  actionKey: string,
+  action: string,
   inputs: Record<string, unknown>,
-  connectionId?: string
+  connection?: string
 ) {
   const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
   await requireCapability(userId, capability);
 
   // Run guardrails (rate limit, app access, risk assessment)
-  const guardrailResult = await runGuardrails(userId, appKey, actionType, actionKey, inputs);
+  const guardrailResult = await runGuardrails(userId, app, actionType, action, inputs);
   if (!guardrailResult.allowed) {
     throw new ZapierCapabilityDenied(
       guardrailResult.reason ?? "Action blocked by guardrails",
@@ -48,9 +58,6 @@ export async function runAction(
     );
   }
   if (guardrailResult.requiresConfirmation) {
-    // Return risk info so the agent can present confirmation to the user.
-    // The caller (proposal flow) checks for an approved proposal before reaching here,
-    // so if we get here with requiresConfirmation=true the action needs a proposal first.
     return {
       __guardrail_confirmation_required: true,
       risk: guardrailResult.risk,
@@ -60,34 +67,35 @@ export async function runAction(
 
   const sdk = await getSdkForUser(userId);
 
-  // Auto-discover connectionId if not provided
-  let resolvedConnectionId = connectionId;
-  if (!resolvedConnectionId) {
+  // Auto-discover connection if not provided
+  let resolvedConnection = connection;
+  if (!resolvedConnection) {
     try {
       const { data: conn } = await sdk.findFirstConnection({
-        appKey,
-        isExpired: false,
+        app,
+        expired: false,
       });
       if (conn?.id) {
-        resolvedConnectionId = conn.id;
+        resolvedConnection = conn.id;
       }
     } catch {
-      // Continue without connectionId — SDK may still work
+      // Continue without connection — SDK may still work
     }
   }
 
   try {
     const result = await sdk.runAction({
-      app: appKey,
-      actionType: actionType as "search" | "read" | "write" | "run" | "filter" | "read_bulk" | "search_and_write" | "search_or_write",
-      action: actionKey,
+      app,
+      actionType: actionType as ActionType,
+      action,
       inputs,
-      ...(resolvedConnectionId ? { connection: resolvedConnectionId } : {}),
+      timeoutMs: 180000,
+      ...(resolvedConnection ? { connection: resolvedConnection } : {}),
     });
     return result;
   } catch (err) {
     throw new ZapierActionFailed(
-      actionKey,
+      action,
       err instanceof Error ? err.message : String(err)
     );
   }
@@ -100,7 +108,7 @@ export async function rawFetch(
     method?: string;
     headers?: Record<string, string>;
     body?: unknown;
-    connectionId: string;
+    connection: string;
   }
 ) {
   await requireCapability(userId, "raw_api");
@@ -112,7 +120,7 @@ export async function rawFetch(
       method: (options.method ?? "GET") as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
       headers: options.headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
-      connection: options.connectionId,
+      connection: options.connection,
     });
     return result;
   } catch (err) {

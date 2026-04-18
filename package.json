@@ -2,9 +2,10 @@
   "name": "foreman",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "npm run dev --workspace=packages/agents & npm run dev --workspace=packages/web",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -13,7 +14,10 @@
     "test": "vitest run",
     "test:api": "vitest run --config vitest.api.config.ts",
     "test:e2e": "npx playwright test",
-    "dev:mock": "node tests/start-mock-dev.js"
+    "dev:mock": "node tests/start-mock-dev.js",
+    "lint": "biome check .",
+    "lint:fix": "biome check --fix .",
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
@@ -29,6 +33,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@copilotkit/llmock": "^1.7.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",

@@ -5,8 +5,10 @@ import { rawFetch } from "@/lib/zapier";
 export const rawApiCallTool = createTool({
   id: "raw_api_call",
   description:
-    "Make a raw HTTP request through a Zapier connection. Only use when no pre-built action can accomplish the goal. Requires user approval.",
-  
+    "Make a raw HTTP request through a Zapier connection using zapier.fetch(). " +
+    "The user's stored credentials (OAuth tokens, API keys) are auto-injected into the request. " +
+    "Only use when no pre-built action can accomplish the goal. Requires user approval.",
+
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
     url: z.string().url().describe("The full URL to request"),
@@ -19,21 +21,21 @@ export const rawApiCallTool = createTool({
       .optional()
       .describe("Optional request headers"),
     body: z.unknown().optional().describe("Optional request body"),
-    connectionId: z
+    connection: z
       .string()
-      .describe("The connection ID to authenticate the request"),
+      .describe("The connection ID — credentials are auto-injected from this connection"),
     humanLabel: z
       .string()
       .describe(
         "A plain-English sentence describing what this API call will do"
       ),
   }),
-  execute: async ({ userId, url, method, headers, body, connectionId }) => {
+  execute: async ({ userId, url, method, headers, body, connection }) => {
     const result = await rawFetch(userId, url, {
       method,
       headers,
       body,
-      connectionId,
+      connection,
     });
     return { result };
   },

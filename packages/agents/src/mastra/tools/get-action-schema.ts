@@ -1,30 +1,31 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { getActionInputSchema } from "@/lib/zapier";
+import { getInputFieldsSchema } from "@/lib/zapier";
 
 export const getActionSchemaTool = createTool({
   id: "get_action_schema",
   description:
-    "Get the input field schema for a specific action, showing what parameters are required.",
+    "Get the JSON Schema for a specific action's input fields, showing parameter types, required fields, and descriptions. " +
+    "Returns a proper JSON Schema object that describes exactly what inputs the action expects.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    appKey: z.string().describe("The Zapier app key (e.g. 'gmail')"),
+    app: z.string().describe("The Zapier app key (e.g. 'gmail', 'slack')"),
     actionType: z
       .enum(["search", "read", "write", "run", "filter", "read_bulk", "search_and_write", "search_or_write"])
       .describe("The action type"),
-    actionKey: z.string().describe("The action key returned from list_actions"),
-    connectionId: z
+    action: z.string().describe("The action key returned from list_actions"),
+    connection: z
       .string()
       .optional()
-      .describe("Optional connection ID to scope the schema"),
+      .describe("Optional connection ID to scope the schema to a specific account"),
   }),
-  execute: async ({ userId, appKey, actionType, actionKey, connectionId }) => {
-    const schema = await getActionInputSchema(
+  execute: async ({ userId, app, actionType, action, connection }) => {
+    const schema = await getInputFieldsSchema(
       userId,
-      appKey,
+      app,
       actionType,
-      actionKey,
-      connectionId
+      action,
+      connection
     );
     return { schema };
   },

@@ -1,49 +1,65 @@
 import { getSdkForUser } from "./sdk";
 
+type ActionType =
+  | "search"
+  | "read"
+  | "write"
+  | "run"
+  | "filter"
+  | "read_bulk"
+  | "search_and_write"
+  | "search_or_write";
+
 export async function listUserConnections(userId: string) {
   const sdk = await getSdkForUser(userId);
   const { data } = await sdk.listConnections();
   return data;
 }
 
-export async function listActionsForApp(userId: string, appKey: string) {
+export async function listActionsForApp(userId: string, app: string) {
   const sdk = await getSdkForUser(userId);
-  const { data } = await sdk.listActions({ app: appKey });
+  const { data } = await sdk.listActions({ app });
   return data;
 }
 
-export async function getActionInputSchema(
+export async function getInputFieldsSchema(
   userId: string,
-  appKey: string,
+  app: string,
   actionType: string,
-  actionKey: string,
-  connectionId?: string
+  action: string,
+  connection?: string
 ) {
   const sdk = await getSdkForUser(userId);
-  const { data } = await sdk.listInputFields({
-    app: appKey,
-    actionType: actionType as "search" | "read" | "write" | "run" | "filter" | "read_bulk" | "search_and_write" | "search_or_write",
-    action: actionKey,
-    ...(connectionId ? { connection: connectionId } : {}),
+  const { data } = await sdk.getInputFieldsSchema({
+    app,
+    actionType: actionType as ActionType,
+    action,
+    ...(connection ? { connection } : {}),
   });
   return data;
 }
 
 export async function getInputFieldChoices(
   userId: string,
-  appKey: string,
+  app: string,
   actionType: string,
-  actionKey: string,
-  fieldKey: string,
-  connectionId?: string
+  action: string,
+  inputField: string,
+  connection?: string
 ) {
   const sdk = await getSdkForUser(userId);
   const { data } = await sdk.listInputFieldChoices({
-    app: appKey,
-    actionType: actionType as "search" | "read" | "write" | "run" | "filter" | "read_bulk" | "search_and_write" | "search_or_write",
-    action: actionKey,
-    inputField: fieldKey,
-    ...(connectionId ? { connection: connectionId } : {}),
+    app,
+    actionType: actionType as ActionType,
+    action,
+    inputField,
+    ...(connection ? { connection } : {}),
   });
+  return data;
+}
+
+export async function searchApps(userId: string, search: string) {
+  const sdk = await getSdkForUser(userId);
+  const { data } = await sdk.listApps({ search });
   return data;
 }

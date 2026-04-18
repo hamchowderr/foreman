@@ -8,10 +8,10 @@ export const listActionsTool = createTool({
     "List available actions (search, read, write) for a specific connected app.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    appKey: z.string().describe("The Zapier app key (e.g. 'gmail', 'slack')"),
+    app: z.string().describe("The Zapier app key (e.g. 'gmail', 'slack')"),
   }),
-  execute: async ({ userId, appKey }) => {
-    const actions = await listActionsForApp(userId, appKey);
+  execute: async ({ userId, app }) => {
+    const actions = await listActionsForApp(userId, app);
     return { actions };
   },
 });

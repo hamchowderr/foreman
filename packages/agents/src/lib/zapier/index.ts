@@ -2,8 +2,9 @@ export { getSdkForUser } from "./sdk";
 export {
   listUserConnections,
   listActionsForApp,
-  getActionInputSchema,
+  getInputFieldsSchema,
   getInputFieldChoices,
+  searchApps,
 } from "./discovery";
 export { runAction, rawFetch } from "./execution";
 export {

@@ -8,27 +8,27 @@ export const getFieldChoicesTool = createTool({
     "Get the available choices for a dropdown-style input field on an action.",
   inputSchema: z.object({
     userId: z.string().describe("The user ID"),
-    appKey: z.string().describe("The Zapier app key"),
+    app: z.string().describe("The Zapier app key (e.g. 'gmail', 'slack')"),
     actionType: z
       .enum(["search", "read", "write", "run", "filter", "read_bulk", "search_and_write", "search_or_write"])
       .describe("The action type"),
-    actionKey: z.string().describe("The action key"),
-    fieldKey: z
+    action: z.string().describe("The action key"),
+    inputField: z
       .string()
-      .describe("The field key to get choices for"),
-    connectionId: z
+      .describe("The input field key to get choices for"),
+    connection: z
       .string()
       .optional()
       .describe("Optional connection ID"),
   }),
-  execute: async ({ userId, appKey, actionType, actionKey, fieldKey, connectionId }) => {
+  execute: async ({ userId, app, actionType, action, inputField, connection }) => {
     const choices = await getInputFieldChoices(
       userId,
-      appKey,
+      app,
       actionType,
-      actionKey,
-      fieldKey,
-      connectionId
+      action,
+      inputField,
+      connection
     );
     return { choices };
   },
