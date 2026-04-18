@@ -8,6 +8,9 @@ const envSchema = z.object({
   ZAPIER_CLIENT_SECRET: z.string().optional(),
   DEV_ZAPIER_OVERRIDE: z.string().optional(),
   FOREMAN_MODE: z.enum(["dev", "production"]).optional().default("dev"),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_WEBHOOK_SECRET_TOKEN: z.string().optional(),
+  TELEGRAM_BOT_USERNAME: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

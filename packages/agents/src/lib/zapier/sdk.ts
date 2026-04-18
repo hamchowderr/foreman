@@ -1,13 +1,48 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "../db";
-import { decryptToken } from "../crypto";
+import { decryptToken, encryptToken } from "../crypto";
 import { getEnv } from "../env";
 import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
 
 type ZapierSdk = ReturnType<typeof createZapierSdk>;
 
 const sdkCache = new Map<string, { sdk: ZapierSdk; expiresAt: number }>();
+const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
+
+async function refreshAccessToken(
+  userId: string,
+  refreshToken: string
+): Promise<{ accessToken: string; refreshToken: string; expiresAt: Date }> {
+  const env = getEnv();
+  const res = await fetch(ZAPIER_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: env.ZAPIER_CLIENT_ID || "",
+      client_secret: env.ZAPIER_CLIENT_SECRET || "",
+    }),
+  });
+
+  if (!res.ok) {
+    throw new ZapierReauthRequired(userId, "refresh token rejected");
+  }
+
+  const data = (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+
+  const expiresIn = data.expires_in || 3600;
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || refreshToken,
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
+  };
+}
 
 export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
   const env = getEnv();
@@ -42,12 +77,39 @@ export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
     throw new ZapierNotConnected(userId);
   }
 
-  // Check expiry
-  if (identity.expiresAt && identity.expiresAt.getTime() < Date.now()) {
-    throw new ZapierReauthRequired(userId, "access token expired");
-  }
+  let accessToken: string;
+  let tokenExpiry: number;
 
-  const accessToken = decryptToken(identity.accessToken);
+  // Refresh if expired
+  if (identity.expiresAt && identity.expiresAt.getTime() < Date.now()) {
+    try {
+      const storedRefresh = decryptToken(identity.refreshToken);
+      const refreshed = await refreshAccessToken(userId, storedRefresh);
+
+      // Update DB with new tokens
+      await db
+        .update(schema.zapierIdentity)
+        .set({
+          accessToken: encryptToken(refreshed.accessToken),
+          refreshToken: encryptToken(refreshed.refreshToken),
+          expiresAt: refreshed.expiresAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.zapierIdentity.userId, userId));
+
+      accessToken = refreshed.accessToken;
+      tokenExpiry = refreshed.expiresAt.getTime();
+    } catch {
+      // Clear cache on refresh failure
+      sdkCache.delete(userId);
+      throw new ZapierReauthRequired(userId, "token refresh failed");
+    }
+  } else {
+    accessToken = decryptToken(identity.accessToken);
+    tokenExpiry = identity.expiresAt
+      ? identity.expiresAt.getTime()
+      : Date.now() + 5 * 60 * 1000;
+  }
 
   const sdk = createZapierSdk({
     credentials: accessToken,
@@ -55,9 +117,6 @@ export async function getSdkForUser(userId: string): Promise<ZapierSdk> {
 
   // Cache for 5 minutes or until token expires, whichever is sooner
   const fiveMinutes = Date.now() + 5 * 60 * 1000;
-  const tokenExpiry = identity.expiresAt
-    ? identity.expiresAt.getTime()
-    : fiveMinutes;
   sdkCache.set(userId, {
     sdk,
     expiresAt: Math.min(fiveMinutes, tokenExpiry),

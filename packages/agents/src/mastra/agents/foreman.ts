@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
-import { LibSQLStore } from "@mastra/libsql";
+import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
 import { discoverConnectionsTool } from "../tools/discover-connections";
 import { listActionsTool } from "../tools/list-actions";
 import { getActionSchemaTool } from "../tools/get-action-schema";
@@ -31,9 +31,19 @@ export function createForemanAgent(databaseUrl: string) {
         id: "foreman-memory",
         url: databaseUrl,
       }),
+      vector: new LibSQLVector({
+        id: "foreman-memory-vector",
+        url: databaseUrl,
+      }),
+      embedder: "openai/text-embedding-3-small",
       options: {
         lastMessages: 20,
         workingMemory: { enabled: true },
+        semanticRecall: {
+          topK: 4,
+          messageRange: 2,
+        },
+        observationalMemory: true,
       },
     }),
   });
