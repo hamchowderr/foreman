@@ -8,6 +8,7 @@ import { createExecutionAgent } from "./agents/execution";
 import { createHistoryAgent } from "./agents/history";
 import { createSupervisorAgent } from "./agents/supervisor";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
+import { validateAgentCapabilities } from "../lib/providers";
 import type { MiddlewareHandler } from "hono";
 
 // Conditional Vercel deployer (only imported when DEPLOY_TARGET=vercel)
@@ -36,6 +37,8 @@ export async function getMastra(): Promise<Mastra> {
 }
 
 async function _initMastra(): Promise<Mastra> {
+  validateAgentCapabilities();
+
   const databaseUrl = process.env.DATABASE_URL!;
 
   const storage = new LibSQLStore({

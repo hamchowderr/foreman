@@ -32,7 +32,7 @@ describe("Mastra foreman agent", () => {
   }, 30000);
 
   it("MODELS constants are correct", async () => {
-    const { MODELS } = await import("@/mastra/agents/foreman");
+    const { MODELS } = await import("@/lib/providers");
     expect(MODELS.default).toBe("anthropic/claude-sonnet-4-6");
     expect(MODELS.fast).toBe("anthropic/claude-haiku-4-5-20251001");
     expect(MODELS.heavy).toBe("anthropic/claude-opus-4-6");

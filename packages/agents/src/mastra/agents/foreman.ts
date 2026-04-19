@@ -17,16 +17,7 @@ import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { createZapierMCPClient, addModelOutputTransformers } from "../../lib/zapier-mcp";
-
-/** Model routing constants — use the right model for the job */
-export const MODELS = {
-  /** Default model for conversation and execution approval */
-  default: "anthropic/claude-sonnet-4-6",
-  /** Fast/cheap model for title generation, scoring, lightweight tasks */
-  fast: "anthropic/claude-haiku-4-5-20251001",
-  /** Heavy reasoning for complex multi-step planning */
-  heavy: "anthropic/claude-opus-4-6",
-} as const;
+import { AGENT_MODELS, MODELS } from "../../lib/providers";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -78,7 +69,7 @@ export async function createForemanAgent(databaseUrl: string) {
     description:
       "AI assistant that helps users take actions across 9000+ apps via Zapier",
     instructions: buildSystemPrompt(),
-    model: MODELS.default,
+    model: AGENT_MODELS.foreman,
     tools: {
       // Custom tools always available (not behind search)
       search_history: searchHistoryTool,
