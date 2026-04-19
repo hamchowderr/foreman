@@ -209,6 +209,14 @@ conversations.post("/:id/messages", async (c) => {
       memory: conv.mastraThreadId
         ? { thread: conv.mastraThreadId, resource: userId }
         : undefined,
+      savePerStep: true,
+      // Use fast model for initial tool discovery steps, default for reasoning
+      prepareStep: async ({ stepNumber }) => {
+        if (stepNumber <= 2) {
+          return { model: MODELS.fast };
+        }
+        return {};
+      },
     }
   );
 

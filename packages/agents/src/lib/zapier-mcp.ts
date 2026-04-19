@@ -15,6 +15,10 @@ import { MCPClient } from "@mastra/mcp";
  * - Env var: ZAPIER_CREDENTIALS (production token)
  * - Client credentials: ZAPIER_CREDENTIALS_CLIENT_ID + ZAPIER_CREDENTIALS_CLIENT_SECRET
  */
+/**
+ * Create the shared MCP client for the Zapier SDK.
+ * Uses global credentials (CLI login or ZAPIER_CREDENTIALS env var).
+ */
 export function createZapierMCPClient() {
   return new MCPClient({
     id: "zapier-sdk",
@@ -25,6 +29,29 @@ export function createZapierMCPClient() {
       },
     },
     timeout: 120000, // Zapier API calls can be slow
+  });
+}
+
+/**
+ * Create a per-user MCP client with dynamic credentials.
+ * Used for multi-tenant scenarios where each user has their own Zapier token.
+ *
+ * Usage in route handlers:
+ *   const userMcp = createUserZapierMCPClient(userToken);
+ *   const toolsets = await userMcp.listToolsets();
+ *   const result = await agent.generate(prompt, { toolsets });
+ *   await userMcp.disconnect();
+ */
+export function createUserZapierMCPClient(credentials: string) {
+  return new MCPClient({
+    id: `zapier-sdk-user`,
+    servers: {
+      zapier: {
+        command: "npx",
+        args: ["zapier-sdk", "mcp", "--credentials", credentials],
+      },
+    },
+    timeout: 120000,
   });
 }
 

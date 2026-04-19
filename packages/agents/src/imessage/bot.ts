@@ -4,7 +4,7 @@ import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
 import { registerChannelUser } from "../lib/identity";
 
-let _bot: Chat<{ imessage: ReturnType<typeof createiMessageAdapter> }> | undefined;
+let _bot: Chat | undefined;
 let _imessageAdapter: ReturnType<typeof createiMessageAdapter> | undefined;
 
 /**
@@ -21,7 +21,7 @@ export async function getiMessageBot() {
 
   const bot = new Chat({
     userName: "foreman",
-    adapters: { imessage },
+    adapters: { imessage } as any, // Type mismatch: chat-adapter-imessage missing channelIdFromThreadId
     state: createMemoryState(),
     logger: "info",
   });

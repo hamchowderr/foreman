@@ -29,7 +29,17 @@ export const forkConversationTool = createTool({
     messagesCopied: z.number(),
     sourceThreadId: z.string(),
   }),
+  onOutput: ({ output, toolName }) => {
+    const o = output as any;
+    console.log(`[tool:${toolName}] Forked ${o?.sourceThreadId} → ${o?.newThreadId} (${o?.messagesCopied} messages)`);
+  },
   execute: async ({ threadId, title, messageLimit }, ctx) => {
+    await ctx?.writer?.write({
+      type: "custom-event",
+      status: "forking",
+      message: `Cloning conversation ${threadId.slice(0, 8)}...`,
+    });
+
     const agentId = ctx.agent?.agentId;
     if (!agentId || !ctx.mastra) {
       throw new Error(

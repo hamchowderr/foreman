@@ -34,7 +34,8 @@
       "Bash(disown sleep:*)",
       "Bash(sed:*)",
       "Bash(printf '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}\\\\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}\\\\n')",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(python3 -c \"import sys,json; items=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]:15s} {i[\\\\\"status\\\\\"]:12s} {i[\\\\\"title\\\\\"][:70]}'\\) for i in items]\")"
     ]
   }
 }

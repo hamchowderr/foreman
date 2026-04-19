@@ -30,7 +30,21 @@ export const searchHistoryTool = createTool({
       })
     ),
   }),
-  execute: async ({ query, userId, topK }, _ctx) => {
+  toModelOutput: (output) => {
+    // Summarize history results for the model — keep scores and key metadata
+    const results = output.results.map((r) => ({
+      score: Math.round(r.score * 100) / 100,
+      app: (r.metadata as any).app ?? "unknown",
+      action: (r.metadata as any).action ?? "unknown",
+      date: (r.metadata as any).executedAt ?? (r.metadata as any).date,
+    }));
+    return { type: "text" as const, text: JSON.stringify(results) };
+  },
+  onOutput: ({ output, toolName }) => {
+    const count = (output as any)?.results?.length ?? 0;
+    console.log(`[tool:${toolName}] Found ${count} history results`);
+  },
+  execute: async ({ query, userId, topK }) => {
     const results = await searchActionHistory(query, userId, topK);
     return { results };
   },

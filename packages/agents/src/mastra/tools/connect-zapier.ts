@@ -22,9 +22,18 @@ export const connectZapierTool = createTool({
         "If not provided, returns the general Zapier connections page URL."
       ),
   }),
-  execute: async ({ userId, appSlug }) => {
-    // If a specific app is requested, try to get the direct connect URL
+  onOutput: ({ output, toolName }) => {
+    console.log(`[tool:${toolName}] Generated connect URL for ${(output as any)?.appName ?? "generic"}`);
+  },
+  execute: async ({ userId, appSlug }, context) => {
+    // Stream progress to the client
     if (appSlug) {
+      await context?.writer?.write({
+        type: "custom-event",
+        status: "searching",
+        message: `Looking up ${appSlug} on Zapier...`,
+      });
+
       try {
         const sdk = createZapierSdk();
         const { data: apps } = await sdk.listApps({
