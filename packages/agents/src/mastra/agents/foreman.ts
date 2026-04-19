@@ -23,6 +23,7 @@ import {
   modelSettingsFor,
   onFinishCostLogger,
   systemPromptFor,
+  toolsWithCacheControl,
 } from "../../lib/providers";
 
 export { buildSystemPrompt, type PromptContext };
@@ -80,12 +81,12 @@ export async function createForemanAgent(databaseUrl: string) {
       modelSettings: modelSettingsFor("foreman"),
       onFinish: onFinishCostLogger("foreman"),
     },
-    tools: {
+    tools: toolsWithCacheControl("foreman", {
       // Custom tools always available (not behind search)
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
-    },
+    }),
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {

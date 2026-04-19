@@ -5,6 +5,7 @@ import {
   modelSettingsFor,
   onFinishCostLogger,
   systemPromptFor,
+  toolsWithCacheControl,
 } from "../../lib/providers";
 import { createZapierMCPClient } from "../../lib/zapier-mcp";
 
@@ -45,9 +46,9 @@ export async function createExecutionAgent() {
       modelSettings: modelSettingsFor("execution"),
       onFinish: onFinishCostLogger("execution"),
     },
-    tools: {
+    tools: toolsWithCacheControl("execution", {
       ...(_mcpTools ?? {}),
       connect_zapier: connectZapierTool,
-    },
+    }),
   });
 }

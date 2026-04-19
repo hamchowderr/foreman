@@ -11,7 +11,7 @@
  */
 
 import type { AgentName } from "./models";
-import { AGENT_PROMPT_CACHING } from "./caching";
+import { agentWantsCaching } from "./caching";
 
 export type Capability = "tools" | "streaming" | "prompt-caching";
 
@@ -69,7 +69,7 @@ export const AGENT_REQUIREMENTS: Record<AgentName, Capability[]> = Object.keys(
 ).reduce((acc, key) => {
   const name = key as AgentName;
   const reqs = [...CORE_REQUIREMENTS[name]];
-  if (AGENT_PROMPT_CACHING[name]) reqs.push("prompt-caching");
+  if (agentWantsCaching(name)) reqs.push("prompt-caching");
   acc[name] = reqs;
   return acc;
 }, {} as Record<AgentName, Capability[]>);

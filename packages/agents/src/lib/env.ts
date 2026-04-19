@@ -89,6 +89,16 @@ const envSchema = z.object({
   EXECUTION_PROMPT_CACHING: z.string().optional(),
   SUPERVISOR_PROMPT_CACHING: z.string().optional(),
   HISTORY_PROMPT_CACHING: z.string().optional(),
+  // Per-agent Anthropic tool-schema caching opt-in. Independent of the
+  // system-prompt switch above; both gate on the `prompt-caching` capability.
+  // Attaches providerOptions.anthropic.cacheControl to the last tool in each
+  // agent's tool map, creating a single breakpoint that caches every earlier
+  // tool definition as one block (max 4 breakpoints per Anthropic request).
+  FOREMAN_TOOL_CACHING: z.string().optional(),
+  DISCOVERY_TOOL_CACHING: z.string().optional(),
+  EXECUTION_TOOL_CACHING: z.string().optional(),
+  SUPERVISOR_TOOL_CACHING: z.string().optional(),
+  HISTORY_TOOL_CACHING: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

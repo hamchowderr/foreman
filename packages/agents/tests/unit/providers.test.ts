@@ -33,6 +33,11 @@ const AGENT_ENV_KEYS = [
   "EXECUTION_PROMPT_CACHING",
   "SUPERVISOR_PROMPT_CACHING",
   "HISTORY_PROMPT_CACHING",
+  "FOREMAN_TOOL_CACHING",
+  "DISCOVERY_TOOL_CACHING",
+  "EXECUTION_TOOL_CACHING",
+  "SUPERVISOR_TOOL_CACHING",
+  "HISTORY_TOOL_CACHING",
 ] as const;
 
 function clearEnv() {
@@ -250,6 +255,88 @@ describe("providers/caching", () => {
     process.env.FOREMAN_MODEL = "openai/gpt-4o";
     const { validateAgentCapabilities } = await import("@/lib/providers");
     expect(() => validateAgentCapabilities()).toThrow(/prompt-caching/);
+  });
+});
+
+describe("providers/caching — toolsWithCacheControl", () => {
+  const tools = {
+    tool_a: { description: "A", inputSchema: {} },
+    tool_b: { description: "B", inputSchema: {} },
+    tool_c: { description: "C", inputSchema: {} },
+  };
+
+  it("returns tools unchanged when caching is disabled", async () => {
+    const { toolsWithCacheControl } = await import("@/lib/providers");
+    const result = toolsWithCacheControl("discovery", tools);
+    expect(result).toEqual(tools);
+    expect(result.tool_c).not.toHaveProperty("providerOptions");
+  });
+
+  it("attaches cacheControl to the last tool when enabled", async () => {
+    process.env.DISCOVERY_TOOL_CACHING = "true";
+    const { toolsWithCacheControl } = await import("@/lib/providers");
+    const result = toolsWithCacheControl("discovery", tools);
+    expect(result.tool_a).not.toHaveProperty("providerOptions");
+    expect(result.tool_b).not.toHaveProperty("providerOptions");
+    expect(result.tool_c).toMatchObject({
+      description: "C",
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
+    });
+  });
+
+  it("preserves existing providerOptions on the last tool", async () => {
+    process.env.DISCOVERY_TOOL_CACHING = "true";
+    const toolsWithExisting = {
+      tool_a: { description: "A" },
+      tool_b: { description: "B", providerOptions: { openai: { foo: 1 } } },
+    };
+    const { toolsWithCacheControl } = await import("@/lib/providers");
+    const result = toolsWithCacheControl("discovery", toolsWithExisting);
+    expect(result.tool_b).toMatchObject({
+      providerOptions: {
+        openai: { foo: 1 },
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
+    });
+  });
+
+  it("is a no-op on an empty tool map", async () => {
+    process.env.DISCOVERY_TOOL_CACHING = "true";
+    const { toolsWithCacheControl } = await import("@/lib/providers");
+    expect(toolsWithCacheControl("discovery", {})).toEqual({});
+  });
+
+  it("scopes per-agent — DISCOVERY_TOOL_CACHING does not leak into history", async () => {
+    process.env.DISCOVERY_TOOL_CACHING = "true";
+    const { toolsWithCacheControl } = await import("@/lib/providers");
+    const discoveryResult = toolsWithCacheControl("discovery", tools);
+    const historyResult = toolsWithCacheControl("history", tools);
+    expect(discoveryResult.tool_c).toHaveProperty("providerOptions");
+    expect(historyResult.tool_c).not.toHaveProperty("providerOptions");
+  });
+});
+
+describe("providers/caching — capability gating combines both switches", () => {
+  it("adds prompt-caching requirement when only tool caching is enabled", async () => {
+    process.env.DISCOVERY_TOOL_CACHING = "true";
+    const { AGENT_REQUIREMENTS } = await import("@/lib/providers");
+    expect(AGENT_REQUIREMENTS.discovery).toContain("prompt-caching");
+  });
+
+  it("fails startup validation when tool caching is enabled on a non-supporting model", async () => {
+    process.env.EXECUTION_TOOL_CACHING = "true";
+    process.env.EXECUTION_MODEL = "google/gemini-2.5-flash";
+    const { validateAgentCapabilities } = await import("@/lib/providers");
+    expect(() => validateAgentCapabilities()).toThrow(/prompt-caching/);
+  });
+
+  it("passes when both switches are on and the model supports caching", async () => {
+    process.env.FOREMAN_PROMPT_CACHING = "true";
+    process.env.FOREMAN_TOOL_CACHING = "true";
+    const { validateAgentCapabilities } = await import("@/lib/providers");
+    expect(() => validateAgentCapabilities()).not.toThrow();
   });
 });
 

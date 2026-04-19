@@ -18,7 +18,10 @@ export {
 } from "./params";
 export {
   AGENT_PROMPT_CACHING,
+  AGENT_TOOL_CACHING,
+  agentWantsCaching,
   systemPromptFor,
+  toolsWithCacheControl,
 } from "./caching";
 export {
   MODEL_PRICING,
