@@ -6,6 +6,7 @@ import {
   createAnswerRelevancyScorer,
   createToxicityScorer,
 } from "@mastra/evals/scorers/prebuilt";
+import { ToolSearchProcessor } from "@mastra/core/processors";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import {
   buildSystemPrompt,
@@ -63,6 +64,14 @@ export async function createForemanAgent(databaseUrl: string) {
   const zapierMcp = getZapierMcp();
   const mcpTools = addModelOutputTransformers(await zapierMcp.listTools());
 
+  // Use ToolSearchProcessor for MCP tools — with 33+ tools, loading all schemas
+  // into context every call wastes ~6-8K tokens. The agent gets search_tools and
+  // load_tool meta-tools to discover and load only what it needs per request.
+  const zapierToolSearch = new ToolSearchProcessor({
+    tools: mcpTools,
+    search: { topK: 8, minScore: 0.1 },
+  });
+
   return new Agent({
     id: "foreman",
     name: "Foreman",
@@ -71,9 +80,7 @@ export async function createForemanAgent(databaseUrl: string) {
     instructions: buildSystemPrompt(),
     model: MODELS.default,
     tools: {
-      // MCP tools from Zapier SDK (actions, apps, connections, tables, HTTP)
-      ...mcpTools,
-      // Custom tools not covered by MCP
+      // Custom tools always available (not behind search)
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
@@ -89,7 +96,7 @@ export async function createForemanAgent(databaseUrl: string) {
         sampling: { type: "ratio", rate: 0.2 },
       },
     },
-    inputProcessors: [contextInjector],
+    inputProcessors: [contextInjector, zapierToolSearch],
     outputProcessors: [piiRedactor],
     workspace,
     memory: new Memory({

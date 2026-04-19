@@ -29,11 +29,25 @@ export function createZapierMCPClient() {
 }
 
 /**
- * Wrap MCP tools with toModelOutput to reduce context usage.
- *
- * MCP tool results can be very verbose (full API responses, nested objects).
- * toModelOutput transforms the raw result into a concise summary before
- * sending it back to the model, saving tokens and improving decisions.
+ * Tools that execute real actions and should require user approval.
+ */
+const APPROVAL_REQUIRED_TOOLS = new Set([
+  "zapier_run-action",
+  "zapier_fetch",
+  "zapier_request",
+  "zapier_create-table",
+  "zapier_delete-table",
+  "zapier_create-table-records",
+  "zapier_update-table-records",
+  "zapier_delete-table-records",
+  "zapier_create-table-fields",
+  "zapier_delete-table-fields",
+]);
+
+/**
+ * Wrap MCP tools with:
+ * - toModelOutput: reduces verbose API responses before sending to model
+ * - requireApproval: on write/delete tools to prevent unsanctioned actions
  */
 export function addModelOutputTransformers(
   tools: Record<string, any>
@@ -44,6 +58,7 @@ export function addModelOutputTransformers(
     transformed[name] = {
       ...tool,
       toModelOutput: createSummarizer(name),
+      ...(APPROVAL_REQUIRED_TOOLS.has(name) ? { requireApproval: true } : {}),
     };
   }
 

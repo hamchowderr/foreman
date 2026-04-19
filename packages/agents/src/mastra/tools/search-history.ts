@@ -4,6 +4,7 @@ import { searchActionHistory } from "@/lib/rag";
 
 export const searchHistoryTool = createTool({
   id: "search_history",
+  strict: true,
   description:
     "Search the user's past action history to find similar actions they've taken before. " +
     "Use this to recommend actions based on what the user has done previously, or to recall " +

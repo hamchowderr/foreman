@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const forkConversationTool = createTool({
   id: "fork_conversation",
+  strict: true,
   description:
     "Fork (clone) the current conversation thread to explore a different automation path. " +
     "Creates a copy of the conversation history so the user can try alternative approaches " +

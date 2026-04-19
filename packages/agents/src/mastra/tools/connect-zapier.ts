@@ -5,6 +5,7 @@ import { createZapierSdk } from "@zapier/zapier-sdk";
 
 export const connectZapierTool = createTool({
   id: "connect_zapier",
+  strict: true,
   description:
     "Generate a URL for the user to connect an app on Zapier. " +
     "If appSlug is provided (e.g. 'gmail', 'trello', 'slack'), generates a direct " +
