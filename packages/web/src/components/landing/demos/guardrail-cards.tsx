@@ -126,7 +126,7 @@ export function GuardrailCards() {
       </div>
 
       {/* Desktop (lg+): grid of cards + sticky side panel */}
-      <div className="hidden lg:grid grid-cols-[1fr_1.1fr] gap-4 items-start">
+      <div className="hidden lg:grid grid-cols-[1.2fr_1fr] gap-5 items-start">
         <div className="grid grid-cols-2 gap-2">
           {GUARDRAILS.map((g) => {
             const selected = g.id === activeId;

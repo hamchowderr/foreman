@@ -138,17 +138,17 @@ export function ToolDiscovery() {
               <motion.div
                 key={tool}
                 animate={{
-                  opacity: phase === "typing" ? 0.3 : visible ? 1 : 0.12,
+                  opacity: phase === "typing" ? 0.45 : visible ? 1 : 0.35,
                   scale: visible && phase === "loaded" ? 1 : 0.96,
                 }}
                 transition={{
                   duration: 0.3,
                   delay: phase === "matching" && matched ? Math.random() * 0.3 : 0,
                 }}
-                className={`relative rounded-md px-2 py-1.5 text-[10px] sm:text-[11px] font-mono border truncate ${
+                className={`relative rounded-md px-2 py-1.5 text-[10px] sm:text-[11px] font-mono border truncate cursor-default transition-colors hover:border-accent/40 hover:text-accent ${
                   visible
-                    ? "bg-accent/10 border-accent/30 text-accent"
-                    : "bg-background border-border text-muted"
+                    ? "bg-accent/10 border-accent/30 text-accent font-medium"
+                    : "bg-background border-border/60 text-foreground/50"
                 }`}
               >
                 {tool}

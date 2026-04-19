@@ -139,7 +139,7 @@ function Hero() {
 function WhyNotZap() {
   return (
     <section className="bg-surface/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">For existing Zapier users</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
@@ -163,7 +163,7 @@ function WhyNotZap() {
 
 function HowItWorks() {
   return (
-    <section id="how" className="py-16 sm:py-24 md:py-32">
+    <section id="how" className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <Reveal className="max-w-2xl mb-12 sm:mb-16">
           <Badge variant="accent" className="mb-4">How it works</Badge>
@@ -182,7 +182,7 @@ function HowItWorks() {
 function ToolDiscoverySection() {
   return (
     <section id="features" className="bg-surface/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <div className="grid md:grid-cols-[1fr_1.3fr] gap-10 md:gap-12 items-center">
           <Reveal>
             <Badge variant="accent" className="mb-4">Picks the right tool for the job</Badge>
@@ -223,7 +223,7 @@ function ToolDiscoverySection() {
 
 function Channels() {
   return (
-    <section id="channels" className="py-16 sm:py-24 md:py-32">
+    <section id="channels" className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">One brain, everywhere</Badge>
@@ -298,7 +298,7 @@ function Channels() {
 function Guardrails() {
   return (
     <section className="bg-surface/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">Safe by construction</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
@@ -321,7 +321,7 @@ function Guardrails() {
 
 function HistorySection() {
   return (
-    <section className="py-16 sm:py-24 md:py-32">
+    <section className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
           <Reveal>
@@ -349,7 +349,7 @@ function HistorySection() {
 function PiiSection() {
   return (
     <section className="bg-surface/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
           <Reveal>
             <Badge variant="accent" className="mb-4">Sensitive info stays out of sight</Badge>
@@ -391,7 +391,7 @@ function PiiSection() {
 
 function BringYourOwnZapier() {
   return (
-    <section className="py-16 sm:py-24 md:py-32">
+    <section className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
           <Reveal>
@@ -435,7 +435,7 @@ function BringYourOwnZapier() {
 function Workflows() {
   return (
     <section className="bg-surface/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">Workflows</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
@@ -459,7 +459,7 @@ function Workflows() {
 
 function Hosting() {
   return (
-    <section id="hosting" className="py-16 sm:py-24 md:py-32">
+    <section id="hosting" className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">Hosting</Badge>
@@ -554,7 +554,7 @@ function Hosting() {
 function FiveThings() {
   return (
     <section className="bg-surface/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">Try these five things</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
@@ -576,7 +576,7 @@ function FiveThings() {
 
 function ClosingCta() {
   return (
-    <section className="py-16 sm:py-24 md:py-32">
+    <section className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <Reveal>
           <div className="relative rounded-2xl border border-border/60 overflow-hidden">
