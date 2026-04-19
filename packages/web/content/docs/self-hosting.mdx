@@ -1,0 +1,47 @@
+---
+title: Self-hosting
+description: Run Foreman on your laptop or your own VPS.
+---
+
+# Self-hosting
+
+Foreman is MIT-licensed. Run it locally or on any VPS — your data never
+leaves your box.
+
+## One command
+
+```bash
+docker run -p 3000:3000 foreman
+```
+
+That's it. Open `http://localhost:3000` and you're in.
+
+## Requirements
+
+- Docker 20+
+- An Anthropic API key (for the LLM)
+- An OpenAI API key (for embeddings)
+- A Zapier account
+
+## Env vars
+
+Foreman reads config from environment variables. The essentials:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+DATABASE_URL=file:./foreman.db
+ENCRYPTION_KEY=<64-char hex>
+```
+
+Generate the encryption key with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+## VPS deploy
+
+Any VPS that runs Docker works. A small $5/month box is plenty for personal
+use. Expose port 3000 behind HTTPS (Caddy, Traefik, or your cloud's load
+balancer) and you're done.

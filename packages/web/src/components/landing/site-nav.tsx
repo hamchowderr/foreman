@@ -29,6 +29,12 @@ export function SiteNav() {
           <NavLink href="#how">How it works</NavLink>
           <NavLink href="#channels">Channels</NavLink>
           <NavLink href="#hosting">Pricing</NavLink>
+          <Link
+            href="/docs"
+            className="px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors rounded-md hover:bg-surface"
+          >
+            Docs
+          </Link>
           <a
             href="https://github.com/hamchowderr/foreman"
             target="_blank"
@@ -68,6 +74,7 @@ export function SiteNav() {
           <a href="#how" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>How it works</a>
           <a href="#channels" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Channels</a>
           <a href="#hosting" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Pricing</a>
+          <Link href="/docs" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Docs</Link>
           <a href="https://github.com/hamchowderr/foreman" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground">
             <GitHubIcon /> GitHub
           </a>
