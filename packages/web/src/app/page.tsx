@@ -396,7 +396,7 @@ function BringYourOwnZapier() {
           <Reveal>
             <Badge variant="accent" className="mb-4">Your Zapier, one click away</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              Plug Foreman into the Zapier you already use.
+              Plug Foreman into your Zapier account.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
               Sign in with your Zapier once. Every app you've already
