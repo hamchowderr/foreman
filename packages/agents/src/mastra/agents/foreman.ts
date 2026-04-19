@@ -12,24 +12,10 @@ import {
   type PromptContext,
 } from "../../lib/prompt-template";
 import { OpenAIVoice } from "@mastra/voice-openai";
-import { discoverConnectionsTool } from "../tools/discover-connections";
-import { listActionsTool } from "../tools/list-actions";
-import { getActionSchemaTool } from "../tools/get-action-schema";
-import { getFieldChoicesTool } from "../tools/get-field-choices";
-import { executeActionTool } from "../tools/execute-action";
-import { rawApiCallTool } from "../tools/raw-api-call";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { searchAppsTool } from "../tools/search-apps";
-import {
-  listTablesTool,
-  getTableTool,
-  listTableRecordsTool,
-  createTableRecordTool,
-  updateTableRecordTool,
-  searchTableRecordsTool,
-} from "../tools/zapier-tables";
+import { createZapierMCPClient } from "../../lib/zapier-mcp";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -43,7 +29,14 @@ export const MODELS = {
 
 export { buildSystemPrompt, type PromptContext };
 
-export function createForemanAgent(databaseUrl: string) {
+// Shared MCP client — initialized once, reused across agent calls
+let _zapierMcp: ReturnType<typeof createZapierMCPClient> | undefined;
+function getZapierMcp() {
+  if (!_zapierMcp) _zapierMcp = createZapierMCPClient();
+  return _zapierMcp;
+}
+
+export async function createForemanAgent(databaseUrl: string) {
   const workspacePath = "./data/workspace";
 
   const workspace = new Workspace({
@@ -65,6 +58,10 @@ export function createForemanAgent(databaseUrl: string) {
     },
   });
 
+  // Get all tools from Zapier SDK MCP server (replaces 13 custom tools)
+  const zapierMcp = getZapierMcp();
+  const mcpTools = await zapierMcp.listTools();
+
   return new Agent({
     id: "foreman",
     name: "Foreman",
@@ -73,19 +70,9 @@ export function createForemanAgent(databaseUrl: string) {
     instructions: buildSystemPrompt(),
     model: MODELS.default,
     tools: {
-      discover_connections: discoverConnectionsTool,
-      list_actions: listActionsTool,
-      get_action_schema: getActionSchemaTool,
-      get_field_choices: getFieldChoicesTool,
-      execute_action: executeActionTool,
-      raw_api_call: rawApiCallTool,
-      search_apps: searchAppsTool,
-      list_tables: listTablesTool,
-      get_table: getTableTool,
-      list_table_records: listTableRecordsTool,
-      create_table_record: createTableRecordTool,
-      update_table_record: updateTableRecordTool,
-      search_table_records: searchTableRecordsTool,
+      // MCP tools from Zapier SDK (actions, apps, connections, tables, HTTP)
+      ...mcpTools,
+      // Custom tools not covered by MCP
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,

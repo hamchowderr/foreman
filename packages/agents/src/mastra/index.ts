@@ -24,10 +24,18 @@ const getDeployer = async () => {
 };
 
 let _mastra: Mastra | undefined;
+let _mastraPromise: Promise<Mastra> | undefined;
 
-export function getMastra(): Mastra {
+export async function getMastra(): Promise<Mastra> {
   if (_mastra) return _mastra;
+  if (_mastraPromise) return _mastraPromise;
 
+  _mastraPromise = _initMastra();
+  _mastra = await _mastraPromise;
+  return _mastra;
+}
+
+async function _initMastra(): Promise<Mastra> {
   const databaseUrl = process.env.DATABASE_URL!;
 
   const storage = new LibSQLStore({
@@ -35,9 +43,11 @@ export function getMastra(): Mastra {
     url: databaseUrl,
   });
 
-  const foremanAgent = createForemanAgent(databaseUrl);
-  const discoveryAgent = createDiscoveryAgent();
-  const executionAgent = createExecutionAgent();
+  const [foremanAgent, discoveryAgent, executionAgent] = await Promise.all([
+    createForemanAgent(databaseUrl),
+    createDiscoveryAgent(),
+    createExecutionAgent(),
+  ]);
   const historyAgent = createHistoryAgent();
   const supervisorAgent = createSupervisorAgent({
     databaseUrl,
@@ -71,7 +81,7 @@ export function getMastra(): Mastra {
       })
     : undefined;
 
-  _mastra = new Mastra({
+  return new Mastra({
     agents: {
       foreman: foremanAgent,
       discovery: discoveryAgent,
@@ -94,9 +104,7 @@ export function getMastra(): Mastra {
       }),
     },
   });
-
-  return _mastra;
 }
 
 // Default export for mastra build
-export const mastra = getMastra();
+export const mastra = await getMastra();

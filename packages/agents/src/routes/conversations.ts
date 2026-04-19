@@ -26,7 +26,7 @@ conversations.post("/", async (c) => {
   const userId = c.get("userId");
   const orgId = c.get("orgId");
   const db = getDb();
-  const mastra = getMastra();
+  const mastra = await getMastra();
 
   // Create a Mastra thread for memory
   const memory = await mastra.getAgent("foreman").getMemory();
@@ -112,7 +112,7 @@ conversations.get("/:id", async (c) => {
   }
 
   // Load messages from Mastra Memory thread (single source of truth)
-  const mastra = getMastra();
+  const mastra = await getMastra();
   const memory = await mastra.getAgent("foreman").getMemory();
   let messages: Array<{ id: string; role: string; content: string; created_at: string }> = [];
 
@@ -196,7 +196,7 @@ conversations.post("/:id/messages", async (c) => {
   // Stream from Mastra agent — memory handles message persistence and history
   // We only send the current user message; Mastra Memory loads prior context
   // from the thread automatically via the `memory` option.
-  const mastra = getMastra();
+  const mastra = await getMastra();
   const agent = mastra.getAgent("foreman");
 
   const rctx = new RequestContext([["userId", userId]]);

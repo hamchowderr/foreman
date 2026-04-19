@@ -26,7 +26,7 @@ export function getiMessageBot() {
     logger: "info",
   });
 
-  const mastra = getMastra();
+  const mastra = await getMastra();
   const agent = mastra.getAgent("foreman");
 
   async function generateReply(

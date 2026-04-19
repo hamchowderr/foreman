@@ -90,7 +90,7 @@ proposals.post("/:id/approve", async (c) => {
   // Parse the mastraRunId which is stored as "runId:toolCallId"
   const [runId, toolCallId] = proposal.mastraRunId!.split(":");
 
-  const mastra = getMastra();
+  const mastra = await getMastra();
   const agent = mastra.getAgent("foreman");
 
   const sseStream = new ReadableStream({
@@ -272,7 +272,7 @@ proposals.post("/:id/decline", async (c) => {
   // Parse the mastraRunId
   const [runId, toolCallId] = proposal.mastraRunId!.split(":");
 
-  const mastra = getMastra();
+  const mastra = await getMastra();
   const agent = mastra.getAgent("foreman");
 
   const sseStream = new ReadableStream({

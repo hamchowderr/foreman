@@ -40,7 +40,7 @@ webhooks.post("/zapier", async (c) => {
   }
 
   // Fire-and-forget: run the workflow asynchronously
-  const mastra = getMastra();
+  const mastra = await getMastra();
   const workflow = mastra.getWorkflow("webhookHandler");
 
   workflow
