@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { patchProposal, fetchFieldChoices } from "@/lib/api-client";
+import { useAgentFetch, patchProposal, fetchFieldChoices } from "@/lib/api-client";
 
 interface Proposal {
   id: string;
@@ -28,6 +28,7 @@ export function ApprovalCard({
   onDecline,
   disabled,
 }: ApprovalCardProps) {
+  const agentFetch = useAgentFetch();
   const [inputs, setInputs] = useState<Record<string, unknown>>(
     proposal.inputs
   );
@@ -41,11 +42,11 @@ export function ApprovalCard({
   const handleApprove = useCallback(async () => {
     if (editing) {
       setSaving(true);
-      await patchProposal(proposal.id, inputs);
+      await patchProposal(agentFetch, proposal.id, inputs);
       setSaving(false);
     }
     onApprove(proposal.id);
-  }, [editing, inputs, proposal.id, onApprove]);
+  }, [agentFetch, editing, inputs, proposal.id, onApprove]);
 
   const handleDecline = useCallback(() => {
     onDecline(proposal.id);
@@ -86,6 +87,7 @@ export function ApprovalCard({
             value={inputs[key]}
             onChange={(v) => updateField(key, v)}
             proposalId={proposal.id}
+            agentFetch={agentFetch}
             disabled={disabled}
           />
         ))}
@@ -112,12 +114,15 @@ export function ApprovalCard({
   );
 }
 
+type AgentFetch = (path: string, init?: RequestInit) => Promise<Response>;
+
 function SchemaField({
   fieldKey,
   schema,
   value,
   onChange,
   proposalId,
+  agentFetch,
   disabled,
 }: {
   fieldKey: string;
@@ -125,6 +130,7 @@ function SchemaField({
   value: unknown;
   onChange: (v: unknown) => void;
   proposalId: string;
+  agentFetch: AgentFetch;
   disabled?: boolean;
 }) {
   const label =
@@ -143,6 +149,7 @@ function SchemaField({
         value={value as string}
         onChange={onChange}
         proposalId={proposalId}
+        agentFetch={agentFetch}
         disabled={disabled}
       />
     );
@@ -249,6 +256,7 @@ function DynamicDropdownField({
   value,
   onChange,
   proposalId,
+  agentFetch,
   disabled,
 }: {
   fieldKey: string;
@@ -257,6 +265,7 @@ function DynamicDropdownField({
   value: string;
   onChange: (v: string) => void;
   proposalId: string;
+  agentFetch: AgentFetch;
   disabled?: boolean;
 }) {
   const [choices, setChoices] = useState<
@@ -267,7 +276,7 @@ function DynamicDropdownField({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchFieldChoices(proposalId, fieldKey)
+    fetchFieldChoices(agentFetch, proposalId, fieldKey)
       .then((data) => {
         if (!cancelled) {
           setChoices(data.choices);

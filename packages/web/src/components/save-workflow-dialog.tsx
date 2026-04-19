@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { saveWorkflow } from "@/lib/api-client";
+import { useAgentFetch, saveWorkflow } from "@/lib/api-client";
 
 interface SaveWorkflowDialogProps {
   conversationId: string;
@@ -14,6 +14,7 @@ export function SaveWorkflowDialog({
   open,
   onClose,
 }: SaveWorkflowDialogProps) {
+  const agentFetch = useAgentFetch();
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{
@@ -30,7 +31,7 @@ export function SaveWorkflowDialog({
     setSaving(true);
     setError(null);
     try {
-      const res = await saveWorkflow(conversationId, name.trim());
+      const res = await saveWorkflow(agentFetch, conversationId, name.trim());
       setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

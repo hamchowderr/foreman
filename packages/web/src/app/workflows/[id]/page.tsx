@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
+  useAgentFetch,
   getWorkflow,
   listWorkflowRuns,
   streamWorkflowRun,
@@ -12,6 +13,7 @@ import {
 import Link from "next/link";
 
 export default function WorkflowDetailPage() {
+  const agentFetch = useAgentFetch();
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -23,21 +25,21 @@ export default function WorkflowDetailPage() {
   const [runStatus, setRunStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getWorkflow(id), listWorkflowRuns(id)])
+    Promise.all([getWorkflow(agentFetch, id), listWorkflowRuns(agentFetch, id)])
       .then(([wfDetail, wfRuns]) => {
         setDetail(wfDetail);
         setRuns(wfRuns);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [agentFetch, id]);
 
   async function handleRun() {
     setRunning(true);
     setRunStatus("Starting...");
 
     try {
-      for await (const event of streamWorkflowRun(id)) {
+      for await (const event of streamWorkflowRun(agentFetch, id)) {
         if (event.type === "status") {
           setRunStatus(`Status: ${event.status}`);
         } else if (event.type === "step") {
@@ -45,7 +47,7 @@ export default function WorkflowDetailPage() {
         } else if (event.type === "complete") {
           setRunStatus("Complete");
           // Refresh runs list
-          listWorkflowRuns(id).then(setRuns).catch(() => {});
+          listWorkflowRuns(agentFetch, id).then(setRuns).catch(() => {});
         } else if (event.type === "error") {
           setRunStatus(`Error: ${event.message}`);
         }

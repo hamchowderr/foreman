@@ -6,7 +6,7 @@ import { MODELS, buildSystemPrompt } from "@/mastra/agents/foreman";
 import { createChunkTransformer } from "@/lib/stream/transformer";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
-import { desc, eq, and, asc } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { RequestContext } from "@mastra/core/request-context";
 import { contentSchema, validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
@@ -111,11 +111,31 @@ conversations.get("/:id", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const messages = await db
-    .select()
-    .from(schema.message)
-    .where(eq(schema.message.conversationId, id))
-    .orderBy(asc(schema.message.createdAt));
+  // Load messages from Mastra Memory thread (single source of truth)
+  const mastra = getMastra();
+  const memory = await mastra.getAgent("foreman").getMemory();
+  let messages: Array<{ id: string; role: string; content: string; created_at: string }> = [];
+
+  if (conv.mastraThreadId && memory) {
+    const recalled = await memory.recall({
+      threadId: conv.mastraThreadId,
+    });
+    messages = recalled.messages.map((m) => ({
+      id: m.id,
+      role: m.role === "assistant" ? "agent" : m.role,
+      content: typeof m.content === "string"
+        ? m.content
+        : Array.isArray(m.content?.parts)
+          ? m.content.parts
+              .filter((p: any) => p.type === "text")
+              .map((p: any) => p.text)
+              .join("")
+          : JSON.stringify(m.content),
+      created_at: m.createdAt instanceof Date
+        ? m.createdAt.toISOString()
+        : String(m.createdAt ?? ""),
+    }));
+  }
 
   return c.json({
     conversation: {
@@ -125,12 +145,7 @@ conversations.get("/:id", async (c) => {
       created_at: conv.createdAt.toISOString(),
       updated_at: conv.updatedAt.toISOString(),
     },
-    messages: messages.map((m) => ({
-      id: m.id,
-      role: m.role,
-      content: JSON.parse(m.content),
-      created_at: m.createdAt.toISOString(),
-    })),
+    messages,
   });
 });
 
@@ -178,44 +193,24 @@ conversations.post("/:id/messages", async (c) => {
     ? buildSystemPrompt(body.context)
     : undefined;
 
-  // Persist user message
-  const userMessageId = crypto.randomUUID();
-  await db.insert(schema.message).values({
-    id: userMessageId,
-    conversationId,
-    role: "user",
-    content: JSON.stringify(userContent),
-    createdAt: new Date(),
-  });
-
-  // Load conversation history for context
-  const historyRows = await db
-    .select()
-    .from(schema.message)
-    .where(eq(schema.message.conversationId, conversationId))
-    .orderBy(asc(schema.message.createdAt));
-
-  const messages = historyRows.map((m) => ({
-    role: (m.role === "agent" ? "assistant" : m.role) as
-      | "user"
-      | "assistant"
-      | "system",
-    content: JSON.parse(m.content) as string,
-  }));
-
-  // Stream from Mastra agent
+  // Stream from Mastra agent — memory handles message persistence and history
+  // We only send the current user message; Mastra Memory loads prior context
+  // from the thread automatically via the `memory` option.
   const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
 
   const rctx = new RequestContext([["userId", userId]]);
 
-  const result = await agent.stream(messages, {
-    requestContext: rctx,
-    ...(dynamicPrompt ? { instructions: dynamicPrompt } : {}),
-    memory: conv.mastraThreadId
-      ? { thread: conv.mastraThreadId, resource: userId }
-      : undefined,
-  });
+  const result = await agent.stream(
+    [{ role: "user" as const, content: userContent }],
+    {
+      requestContext: rctx,
+      ...(dynamicPrompt ? { instructions: dynamicPrompt } : {}),
+      memory: conv.mastraThreadId
+        ? { thread: conv.mastraThreadId, resource: userId }
+        : undefined,
+    }
+  );
 
   // Set up the SSE transform pipeline
   const transformer = createChunkTransformer(conversationId);
@@ -274,17 +269,9 @@ conversations.post("/:id/messages", async (c) => {
 
           controller.enqueue(encodeSSE(chunk));
 
-          // On done, persist agent message
+          // On done, Mastra Memory has already persisted messages to the thread.
+          // We only need to handle title generation and conversation metadata updates.
           if (chunk.type === "done" && accumulatedText) {
-            const agentMessageId = crypto.randomUUID();
-            await db.insert(schema.message).values({
-              id: agentMessageId,
-              conversationId,
-              role: "assistant",
-              content: JSON.stringify(accumulatedText),
-              createdAt: new Date(),
-            });
-
             // Generate conversation title from first exchange if not set
             if (!conv.title && accumulatedText.length > 0) {
               let title = userContent.slice(0, 60);

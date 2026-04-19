@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
+  useAgentFetch,
   streamMessage,
   streamApprove,
   streamDecline,
@@ -50,6 +51,7 @@ interface ChatPaneProps {
 }
 
 export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: ChatPaneProps) {
+  const agentFetch = useAgentFetch();
   const [items, setItems] = useState<ChatItem[]>(() =>
     initialMessages.map((m) => ({ type: "message" as const, message: m }))
   );
@@ -199,7 +201,7 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
     ]);
 
     try {
-      await processChunks(streamMessage(conversationId, text));
+      await processChunks(streamMessage(agentFetch, conversationId, text));
     } catch (err) {
       setItems((prev) => [
         ...prev,
@@ -232,7 +234,7 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
               : item
           )
         );
-        await processChunks(streamApprove(proposalId));
+        await processChunks(streamApprove(agentFetch, proposalId));
       } finally {
         setIsStreaming(false);
       }
@@ -254,7 +256,7 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
               : item
           )
         );
-        await processChunks(streamDecline(proposalId));
+        await processChunks(streamDecline(agentFetch, proposalId));
       } finally {
         setIsStreaming(false);
       }
@@ -280,7 +282,7 @@ export function ChatPane({ conversationId, initialMessages, onTitleUpdate }: Cha
         },
       ]);
 
-      processChunks(streamMessage(conversationId, text))
+      processChunks(streamMessage(agentFetch, conversationId, text))
         .catch((err) => {
           setItems((prev) => [
             ...prev,

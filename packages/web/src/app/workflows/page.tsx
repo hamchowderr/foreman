@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  useAgentFetch,
   listWorkflows,
   streamWorkflowRun,
   type WorkflowSummary,
@@ -9,6 +10,7 @@ import {
 import Link from "next/link";
 
 export default function WorkflowsPage() {
+  const agentFetch = useAgentFetch();
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,18 +18,18 @@ export default function WorkflowsPage() {
   const [runStatus, setRunStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    listWorkflows()
+    listWorkflows(agentFetch)
       .then(setWorkflows)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [agentFetch]);
 
   async function handleRun(workflowId: string) {
     setRunningId(workflowId);
     setRunStatus("Starting...");
 
     try {
-      for await (const event of streamWorkflowRun(workflowId)) {
+      for await (const event of streamWorkflowRun(agentFetch, workflowId)) {
         if (event.type === "status") {
           setRunStatus(`Status: ${event.status}`);
         } else if (event.type === "step") {

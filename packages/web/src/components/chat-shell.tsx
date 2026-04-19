@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
+  useAgentFetch,
   createConversation,
   listConversations,
   getConversation,
@@ -22,6 +23,7 @@ interface Message {
 }
 
 export function ChatShell() {
+  const agentFetch = useAgentFetch();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,22 +31,22 @@ export function ChatShell() {
 
   // Load conversation list
   useEffect(() => {
-    listConversations()
+    listConversations(agentFetch)
       .then((data) => {
         setConversations(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [agentFetch]);
 
   const handleSelect = useCallback(async (id: string) => {
     setActiveId(id);
-    const data = await getConversation(id);
+    const data = await getConversation(agentFetch, id);
     setMessages(data.messages);
-  }, []);
+  }, [agentFetch]);
 
   const handleNew = useCallback(async () => {
-    const conv = await createConversation();
+    const conv = await createConversation(agentFetch);
     const item: ConversationItem = {
       id: conv.id,
       title: null,
@@ -53,7 +55,7 @@ export function ChatShell() {
     setConversations((prev) => [item, ...prev]);
     setActiveId(conv.id);
     setMessages([]);
-  }, []);
+  }, [agentFetch]);
 
   const handleTitleUpdate = useCallback(
     (conversationId: string, title: string) => {

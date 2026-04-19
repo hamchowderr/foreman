@@ -39,7 +39,6 @@
     "@mastra/voice-openai": "^0.12.1",
     "@zapier/zapier-sdk": "^0.41.0",
     "ai": "^6.0.168",
-    "better-auth": "^1.6.5",
     "chat": "^4.26.0",
     "chat-adapter-imessage": "^0.1.1",
     "drizzle-orm": "^0.45.2",

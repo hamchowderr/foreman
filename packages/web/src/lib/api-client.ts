@@ -1,30 +1,35 @@
+import { useAuth } from "@clerk/nextjs";
+import { useCallback, useMemo } from "react";
 import type { AppChunk } from "./types";
 
 const AGENT_URL =
   process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
-async function getClerkToken(): Promise<string | null> {
-  try {
-    // Client-side: use Clerk's global session to get a JWT
-    const session = (window as any).__clerk?.session;
-    if (session) return await session.getToken();
-  } catch {}
-  return null;
+/**
+ * Hook that returns an authenticated fetch function using Clerk's official API.
+ * All agent API calls should go through the returned `agentFetch`.
+ */
+export function useAgentFetch() {
+  const { getToken } = useAuth();
+
+  const agentFetch = useCallback(
+    async (path: string, init?: RequestInit): Promise<Response> => {
+      const token = await getToken();
+      return fetch(`${AGENT_URL}${path}`, {
+        ...init,
+        headers: {
+          ...init?.headers,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    },
+    [getToken]
+  );
+
+  return agentFetch;
 }
 
-async function agentFetch(
-  path: string,
-  init?: RequestInit
-): Promise<Response> {
-  const token = await getClerkToken();
-  return fetch(`${AGENT_URL}${path}`, {
-    ...init,
-    headers: {
-      ...init?.headers,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-}
+type AgentFetch = (path: string, init?: RequestInit) => Promise<Response>;
 
 async function throwIfNotOk(res: Response, label: string): Promise<void> {
   if (res.ok) return;
@@ -38,8 +43,8 @@ async function throwIfNotOk(res: Response, label: string): Promise<void> {
   throw new Error(`${label} (${res.status}): ${detail}`);
 }
 
-export async function createConversation() {
-  const res = await agentFetch("/api/conversations", { method: "POST" });
+export async function createConversation(fetcher: AgentFetch) {
+  const res = await fetcher("/api/conversations", { method: "POST" });
   await throwIfNotOk(res, "Failed to create conversation");
   return res.json() as Promise<{
     id: string;
@@ -49,8 +54,8 @@ export async function createConversation() {
   }>;
 }
 
-export async function listConversations() {
-  const res = await agentFetch("/api/conversations");
+export async function listConversations(fetcher: AgentFetch) {
+  const res = await fetcher("/api/conversations");
   await throwIfNotOk(res, "Failed to list conversations");
   return res.json() as Promise<
     Array<{
@@ -62,8 +67,8 @@ export async function listConversations() {
   >;
 }
 
-export async function getConversation(id: string) {
-  const res = await agentFetch(`/api/conversations/${id}`);
+export async function getConversation(fetcher: AgentFetch, id: string) {
+  const res = await fetcher(`/api/conversations/${id}`);
   await throwIfNotOk(res, "Failed to get conversation");
   return res.json() as Promise<{
     conversation: {
@@ -81,10 +86,11 @@ export async function getConversation(id: string) {
 }
 
 export async function patchProposal(
+  fetcher: AgentFetch,
   proposalId: string,
   inputs: Record<string, unknown>
 ) {
-  const res = await agentFetch(`/api/proposals/${proposalId}`, {
+  const res = await fetcher(`/api/proposals/${proposalId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ inputs }),
@@ -94,10 +100,11 @@ export async function patchProposal(
 }
 
 export async function fetchFieldChoices(
+  fetcher: AgentFetch,
   proposalId: string,
   fieldKey: string
 ) {
-  const res = await agentFetch(
+  const res = await fetcher(
     `/api/proposals/${proposalId}/field-choices/${fieldKey}`
   );
   await throwIfNotOk(res, "Failed to fetch field choices");
@@ -110,12 +117,13 @@ export async function fetchFieldChoices(
  * Send a message and return an async iterator of AppChunks via SSE.
  */
 export async function* streamMessage(
+  fetcher: AgentFetch,
   conversationId: string,
   content: string
 ): AsyncGenerator<AppChunk> {
   let res: Response;
   try {
-    res = await agentFetch(`/api/conversations/${conversationId}/messages`, {
+    res = await fetcher(`/api/conversations/${conversationId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -132,11 +140,12 @@ export async function* streamMessage(
  * Approve a proposal and return an async iterator of AppChunks via SSE.
  */
 export async function* streamApprove(
+  fetcher: AgentFetch,
   proposalId: string
 ): AsyncGenerator<AppChunk> {
   let res: Response;
   try {
-    res = await agentFetch(`/api/proposals/${proposalId}/approve`, {
+    res = await fetcher(`/api/proposals/${proposalId}/approve`, {
       method: "POST",
     });
   } catch {
@@ -151,11 +160,12 @@ export async function* streamApprove(
  * Decline a proposal and return an async iterator of AppChunks via SSE.
  */
 export async function* streamDecline(
+  fetcher: AgentFetch,
   proposalId: string
 ): AsyncGenerator<AppChunk> {
   let res: Response;
   try {
-    res = await agentFetch(`/api/proposals/${proposalId}/decline`, {
+    res = await fetcher(`/api/proposals/${proposalId}/decline`, {
       method: "POST",
     });
   } catch {
@@ -196,10 +206,11 @@ export interface WorkflowRunSummary {
 }
 
 export async function saveWorkflow(
+  fetcher: AgentFetch,
   conversationId: string,
   name: string
 ): Promise<{ workflowId: string; steps: number; parameters: string[] }> {
-  const res = await agentFetch("/workflows", {
+  const res = await fetcher("/workflows", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ conversationId, name }),
@@ -208,31 +219,32 @@ export async function saveWorkflow(
   return res.json();
 }
 
-export async function listWorkflows() {
-  const res = await agentFetch("/workflows");
+export async function listWorkflows(fetcher: AgentFetch) {
+  const res = await fetcher("/workflows");
   await throwIfNotOk(res, "Failed to list workflows");
   return res.json() as Promise<WorkflowSummary[]>;
 }
 
-export async function getWorkflow(id: string) {
-  const res = await agentFetch(`/workflows/${id}`);
+export async function getWorkflow(fetcher: AgentFetch, id: string) {
+  const res = await fetcher(`/workflows/${id}`);
   await throwIfNotOk(res, "Failed to get workflow");
   return res.json() as Promise<WorkflowDetail>;
 }
 
-export async function listWorkflowRuns(workflowId: string) {
-  const res = await agentFetch(`/workflows/${workflowId}/runs`);
+export async function listWorkflowRuns(fetcher: AgentFetch, workflowId: string) {
+  const res = await fetcher(`/workflows/${workflowId}/runs`);
   await throwIfNotOk(res, "Failed to list workflow runs");
   return res.json() as Promise<WorkflowRunSummary[]>;
 }
 
 export async function* streamWorkflowRun(
+  fetcher: AgentFetch,
   workflowId: string,
   inputs?: Record<string, unknown>
 ): AsyncGenerator<Record<string, unknown>> {
   let res: Response;
   try {
-    res = await agentFetch(`/workflows/${workflowId}/run`, {
+    res = await fetcher(`/workflows/${workflowId}/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ inputs: inputs ?? {} }),

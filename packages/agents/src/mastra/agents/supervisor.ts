@@ -3,9 +3,6 @@ import { Memory } from "@mastra/memory";
 import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import { MODELS } from "./foreman";
-import { createDiscoveryAgent } from "./discovery";
-import { createExecutionAgent } from "./execution";
-import { createHistoryAgent } from "./history";
 
 const SUPERVISOR_PROMPT = `You are Foreman Supervisor, an AI assistant that helps users take actions across 9000+ apps via Zapier. You coordinate specialist agents to fulfill user requests.
 
@@ -23,11 +20,14 @@ Routing guidelines:
 
 Never expose internal agent names to the user. Present yourself as "Foreman".`;
 
-export function createSupervisorAgent(databaseUrl: string) {
-  const discoveryAgent = createDiscoveryAgent();
-  const executionAgent = createExecutionAgent();
-  const historyAgent = createHistoryAgent();
+interface SupervisorDeps {
+  databaseUrl: string;
+  discoveryAgent: Agent;
+  executionAgent: Agent;
+  historyAgent: Agent;
+}
 
+export function createSupervisorAgent({ databaseUrl, discoveryAgent, executionAgent, historyAgent }: SupervisorDeps) {
   return new Agent({
     id: "supervisor",
     name: "Foreman Supervisor",

@@ -5,7 +5,7 @@ import {
   primaryKey,
 } from "drizzle-orm/sqlite-core";
 
-// ─── BetterAuth tables ───
+// ─── Auth tables (legacy BetterAuth, kept for migration compatibility) ───
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),

@@ -39,7 +39,12 @@ export function getMastra(): Mastra {
   const discoveryAgent = createDiscoveryAgent();
   const executionAgent = createExecutionAgent();
   const historyAgent = createHistoryAgent();
-  const supervisorAgent = createSupervisorAgent(databaseUrl);
+  const supervisorAgent = createSupervisorAgent({
+    databaseUrl,
+    discoveryAgent,
+    executionAgent,
+    historyAgent,
+  });
 
   // Webhooks run on a separate server (webhook-server.ts on :4112)
   // to avoid Mastra's middleware consuming the request body before
