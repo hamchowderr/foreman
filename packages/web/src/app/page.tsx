@@ -394,15 +394,15 @@ function BringYourOwnZapier() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">Connect Zapier in one click</Badge>
+            <Badge variant="accent" className="mb-4">Your Zapier, one click away</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              Uses the Zapier account you already have.
+              Plug Foreman into the Zapier you already use.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              Sign in with Zapier once and Foreman can see everything you've
-              already hooked up — Gmail, Slack, Trello, all of them. Actions
-              run through your Zapier and count against your plan. Nothing new
-              to set up on their side.
+              Sign in with your Zapier once. Every app you've already
+              connected — Gmail, Slack, Trello, whatever — is immediately
+              available. Actions run through your Zapier and count against
+              your plan. Nothing else to set up, nothing new to install.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
@@ -482,8 +482,8 @@ function Hosting() {
                     <Badge variant="outline">Alpha</Badge>
                   </div>
                   <p className="text-sm text-muted mb-6 leading-relaxed">
-                    Sign in with Clerk, connect your Zapier account, start
-                    chatting. Zero infrastructure.
+                    Sign in, connect your Zapier, start chatting. We host it,
+                    you use it.
                   </p>
                   <ul className="space-y-2.5 text-sm mb-8 flex-1">
                     {["Managed upgrades and backups", "All 9 chat channels included", "Usage billed by Zapier"].map((line) => (

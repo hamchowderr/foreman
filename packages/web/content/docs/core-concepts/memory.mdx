@@ -34,14 +34,12 @@ entire message history, not just the current thread.
 That's how you can say *"do that again but in Trello"* a week later and
 have Foreman know what *"that"* was.
 
-<TypeTable
-  type={{
-    embedder: { type: "string", default: "openai/text-embedding-3-small" },
-    topK: { type: "number", default: "2" },
-    messageRange: { type: "number", default: "1" },
-    scope: { type: "'thread' | 'resource'", default: "'resource'" },
-  }}
-/>
+| Setting | Default |
+| --- | --- |
+| Embedder | `openai/text-embedding-3-small` |
+| Top K | `2` |
+| Message range | `1` |
+| Scope | `resource` (searches all of your messages, not just this thread) |
 
 ## Observational memory
 
