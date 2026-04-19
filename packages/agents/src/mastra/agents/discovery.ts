@@ -2,6 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import {
   AGENT_MODELS,
   modelSettingsFor,
+  onFinishCostLogger,
   systemPromptFor,
 } from "../../lib/providers";
 import { createZapierMCPClient } from "../../lib/zapier-mcp";
@@ -48,7 +49,10 @@ export async function createDiscoveryAgent() {
       "Explores Zapier integrations — discovers connected apps, lists available actions, retrieves action schemas and field choices. Use this agent for any question about what apps or actions are available.",
     instructions: systemPromptFor("discovery", DISCOVERY_PROMPT),
     model: AGENT_MODELS.discovery,
-    defaultOptions: { modelSettings: modelSettingsFor("discovery") },
+    defaultOptions: {
+      modelSettings: modelSettingsFor("discovery"),
+      onFinish: onFinishCostLogger("discovery"),
+    },
     tools: _mcpTools,
   });
 }

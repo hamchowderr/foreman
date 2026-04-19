@@ -21,6 +21,7 @@ import {
   AGENT_MODELS,
   MODELS,
   modelSettingsFor,
+  onFinishCostLogger,
   systemPromptFor,
 } from "../../lib/providers";
 
@@ -75,7 +76,10 @@ export async function createForemanAgent(databaseUrl: string) {
       "AI assistant that helps users take actions across 9000+ apps via Zapier",
     instructions: systemPromptFor("foreman", buildSystemPrompt()),
     model: AGENT_MODELS.foreman,
-    defaultOptions: { modelSettings: modelSettingsFor("foreman") },
+    defaultOptions: {
+      modelSettings: modelSettingsFor("foreman"),
+      onFinish: onFinishCostLogger("foreman"),
+    },
     tools: {
       // Custom tools always available (not behind search)
       search_history: searchHistoryTool,

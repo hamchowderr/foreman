@@ -3,6 +3,7 @@ import { connectZapierTool } from "../tools/connect-zapier";
 import {
   AGENT_MODELS,
   modelSettingsFor,
+  onFinishCostLogger,
   systemPromptFor,
 } from "../../lib/providers";
 import { createZapierMCPClient } from "../../lib/zapier-mcp";
@@ -40,7 +41,10 @@ export async function createExecutionAgent() {
       "Executes Zapier actions, makes raw API calls, and manages Zapier account connections. Use this agent when you need to run an action, make an API request, or connect a user to Zapier.",
     instructions: systemPromptFor("execution", EXECUTION_PROMPT),
     model: AGENT_MODELS.execution,
-    defaultOptions: { modelSettings: modelSettingsFor("execution") },
+    defaultOptions: {
+      modelSettings: modelSettingsFor("execution"),
+      onFinish: onFinishCostLogger("execution"),
+    },
     tools: {
       ...(_mcpTools ?? {}),
       connect_zapier: connectZapierTool,

@@ -5,6 +5,7 @@ import { contextInjector, piiRedactor } from "../../lib/processors";
 import {
   AGENT_MODELS,
   modelSettingsFor,
+  onFinishCostLogger,
   systemPromptFor,
 } from "../../lib/providers";
 
@@ -39,7 +40,10 @@ export function createSupervisorAgent({ databaseUrl, discoveryAgent, executionAg
       "Supervisor agent that routes requests to specialist subagents for discovery, execution, and history analysis.",
     instructions: systemPromptFor("supervisor", SUPERVISOR_PROMPT),
     model: AGENT_MODELS.supervisor,
-    defaultOptions: { modelSettings: modelSettingsFor("supervisor") },
+    defaultOptions: {
+      modelSettings: modelSettingsFor("supervisor"),
+      onFinish: onFinishCostLogger("supervisor"),
+    },
     agents: {
       discovery: discoveryAgent,
       execution: executionAgent,

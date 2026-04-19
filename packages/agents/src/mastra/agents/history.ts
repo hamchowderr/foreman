@@ -3,6 +3,7 @@ import { searchHistoryTool } from "../tools/search-history";
 import {
   AGENT_MODELS,
   modelSettingsFor,
+  onFinishCostLogger,
   systemPromptFor,
 } from "../../lib/providers";
 
@@ -23,7 +24,10 @@ export function createHistoryAgent() {
       "Searches and analyzes the user's past Zapier action history. Use this agent to recall previous actions, find usage patterns, or get recommendations based on history.",
     instructions: systemPromptFor("history", HISTORY_PROMPT),
     model: AGENT_MODELS.history,
-    defaultOptions: { modelSettings: modelSettingsFor("history") },
+    defaultOptions: {
+      modelSettings: modelSettingsFor("history"),
+      onFinish: onFinishCostLogger("history"),
+    },
     tools: {
       search_history: searchHistoryTool,
     },

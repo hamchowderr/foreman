@@ -252,3 +252,109 @@ describe("providers/caching", () => {
     expect(() => validateAgentCapabilities()).toThrow(/prompt-caching/);
   });
 });
+
+describe("providers/cost", () => {
+  it("calculates cost for Anthropic sonnet correctly (3/15 USD per 1M)", async () => {
+    const { calculateCost } = await import("@/lib/providers");
+    const result = calculateCost("anthropic/claude-sonnet-4-6", {
+      inputTokens: 1_000_000,
+      outputTokens: 1_000_000,
+    });
+    expect(result.inputCostUsd).toBeCloseTo(3, 6);
+    expect(result.outputCostUsd).toBeCloseTo(15, 6);
+    expect(result.totalCostUsd).toBeCloseTo(18, 6);
+    expect(result.provider).toBe("anthropic");
+    expect(result.pricingMissing).toBe(false);
+  });
+
+  it("applies the cached-input price to cachedInputTokens and subtracts from fresh input", async () => {
+    const { calculateCost } = await import("@/lib/providers");
+    // Anthropic sonnet: fresh $3/M, cached $0.30/M, output $15/M.
+    // 1M total input of which 900k cached → 100k fresh input.
+    const result = calculateCost("anthropic/claude-sonnet-4-6", {
+      inputTokens: 1_000_000,
+      cachedInputTokens: 900_000,
+      outputTokens: 0,
+    });
+    expect(result.inputCostUsd).toBeCloseTo(0.3, 6); // 100k * 3/M
+    expect(result.cachedInputCostUsd).toBeCloseTo(0.27, 6); // 900k * 0.3/M
+    expect(result.totalCostUsd).toBeCloseTo(0.57, 6);
+  });
+
+  it("handles models without an explicit cached-input price by reusing input price", async () => {
+    const { calculateCost } = await import("@/lib/providers");
+    const result = calculateCost("openai/gpt-4o-mini", {
+      inputTokens: 1_000_000,
+      cachedInputTokens: 500_000,
+      outputTokens: 0,
+    });
+    // $0.15/M input, no cached rate → cached also $0.15/M.
+    expect(result.inputCostUsd).toBeCloseTo(0.075, 6);
+    expect(result.cachedInputCostUsd).toBeCloseTo(0.075, 6);
+    expect(result.totalCostUsd).toBeCloseTo(0.15, 6);
+  });
+
+  it("flags unknown models and returns zero cost (tokens still recorded)", async () => {
+    const { calculateCost } = await import("@/lib/providers");
+    const result = calculateCost("bogus/unknown-model", {
+      inputTokens: 100,
+      outputTokens: 200,
+    });
+    expect(result.pricingMissing).toBe(true);
+    expect(result.totalCostUsd).toBe(0);
+    expect(result.inputTokens).toBe(100);
+    expect(result.outputTokens).toBe(200);
+  });
+
+  it("handles undefined token counts by treating them as zero", async () => {
+    const { calculateCost } = await import("@/lib/providers");
+    const result = calculateCost("openai/gpt-4o", {
+      inputTokens: undefined,
+      outputTokens: undefined,
+    });
+    expect(result.totalCostUsd).toBe(0);
+    expect(result.pricingMissing).toBe(false);
+  });
+
+  it("onFinishCostLogger emits a JSON log line with expected fields", async () => {
+    const { onFinishCostLogger } = await import("@/lib/providers");
+    const lines: string[] = [];
+    const origLog = console.log;
+    console.log = (msg: string) => {
+      lines.push(String(msg));
+    };
+    try {
+      const logger = onFinishCostLogger("discovery");
+      logger({ totalUsage: { inputTokens: 1000, outputTokens: 500 } });
+    } finally {
+      console.log = origLog;
+    }
+    expect(lines).toHaveLength(1);
+    const parsed = JSON.parse(lines[0]);
+    expect(parsed.msg).toBe("llm.cost");
+    expect(parsed.agent).toBe("discovery");
+    expect(parsed.inputTokens).toBe(1000);
+    expect(parsed.outputTokens).toBe(500);
+    expect(parsed.provider).toBe("anthropic"); // discovery default
+    expect(parsed.totalCostUsd).toBeGreaterThan(0);
+  });
+
+  it("onFinishCostLogger reads the current model from AGENT_MODELS", async () => {
+    process.env.DISCOVERY_MODEL = "openai/gpt-4o-mini";
+    const { onFinishCostLogger } = await import("@/lib/providers");
+    const lines: string[] = [];
+    const origLog = console.log;
+    console.log = (m: string) => {
+      lines.push(String(m));
+    };
+    try {
+      const logger = onFinishCostLogger("discovery");
+      logger({ totalUsage: { inputTokens: 1000, outputTokens: 500 } });
+    } finally {
+      console.log = origLog;
+    }
+    const parsed = JSON.parse(lines[0]);
+    expect(parsed.model).toBe("openai/gpt-4o-mini");
+    expect(parsed.provider).toBe("openai");
+  });
+});

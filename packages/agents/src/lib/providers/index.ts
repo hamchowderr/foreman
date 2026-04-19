@@ -20,4 +20,12 @@ export {
   AGENT_PROMPT_CACHING,
   systemPromptFor,
 } from "./caching";
+export {
+  MODEL_PRICING,
+  calculateCost,
+  onFinishCostLogger,
+  type ModelPricing,
+  type UsageTokens,
+  type CostBreakdown,
+} from "./cost";
 export { validateAgentCapabilities } from "./validate";
