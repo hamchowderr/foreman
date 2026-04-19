@@ -18,7 +18,8 @@ const buttonVariants = cva(
         default: "h-10 px-5 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-12 rounded-xl px-8 text-base",
-        icon: "h-9 w-9",
+        // min-44px on mobile per iOS HIG, tighter on desktop
+        icon: "h-11 w-11 md:h-9 md:w-9",
       },
     },
     defaultVariants: {

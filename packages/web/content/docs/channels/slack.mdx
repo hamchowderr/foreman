@@ -1,0 +1,95 @@
+---
+title: Slack
+description: DM Foreman or @mention it in a channel.
+---
+
+## Cloud
+
+<Steps>
+  <Step>
+    ### Add to your workspace
+
+    Visit [foreman.otakusolutions.io/install/slack](https://foreman.otakusolutions.io/install/slack)
+    and click **Add to Slack**. Pick the workspace, review the scopes, click
+    **Allow**.
+
+    <Callout>
+      Scopes we request: `chat:write`, `app_mentions:read`, `im:history`,
+      `im:read`, `users:read`. Nothing else.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Link your Foreman account
+
+    First time you message the bot, Slack sends you back to Foreman to
+    confirm the link. Sign in (or sign up) and that Slack identity is now
+    tied to your user.
+  </Step>
+
+  <Step>
+    ### Talk to it
+
+    - **DM**: send a direct message to the Foreman bot.
+    - **Channel**: `@Foreman email Jake the Q3 deck`.
+    - Approvals come back inline with **Approve** / **Edit** buttons.
+  </Step>
+</Steps>
+
+## Self-host
+
+<Steps>
+  <Step>
+    ### Create a Slack app
+
+    Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New
+    App** → **From scratch**. Name it *Foreman*, pick your workspace.
+  </Step>
+
+  <Step>
+    ### Set up Event Subscriptions
+
+    Toggle **Event Subscriptions** on. Request URL:
+
+    <Tabs items={["Local + ngrok", "VPS"]}>
+      <Tab value="Local + ngrok">
+        ```
+        https://<your-ngrok>.ngrok.io/slack/webhook
+        ```
+      </Tab>
+      <Tab value="VPS">
+        ```
+        https://foreman.yourdomain.com/slack/webhook
+        ```
+      </Tab>
+    </Tabs>
+
+    Subscribe to bot events: `app_mention`, `message.im`.
+  </Step>
+
+  <Step>
+    ### OAuth scopes
+
+    Bot Token Scopes: `chat:write`, `users:read`, `app_mentions:read`.
+
+    Install to workspace. Copy the **Bot Token** and **Signing Secret**.
+  </Step>
+
+  <Step>
+    ### Set env vars
+
+    ```bash
+    SLACK_BOT_TOKEN=xoxb-...
+    SLACK_SIGNING_SECRET=...
+    ```
+
+    Restart Foreman. Mention the bot in any channel and you're live.
+  </Step>
+</Steps>
+
+## Using it
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Connect Zapier and run your first action." />
+  <Card title="Approvals" href="/docs/core-concepts/approvals" description="How the Approve/Decline flow works." />
+</Cards>

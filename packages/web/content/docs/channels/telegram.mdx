@@ -1,0 +1,95 @@
+---
+title: Telegram
+description: DM @foreman_bot or add it to a group.
+---
+
+## Cloud
+
+<Steps>
+  <Step>
+    ### Open the bot
+
+    In Telegram, search for [@foreman_bot](https://t.me/foreman_bot) and
+    start a conversation. Tap **Start**.
+  </Step>
+
+  <Step>
+    ### Link your account
+
+    The bot will message you a one-time link. Open it, sign in to Foreman,
+    confirm — that Telegram chat is now tied to your user.
+  </Step>
+
+  <Step>
+    ### Talk to it
+
+    - **DM**: just type.
+    - **Group**: add the bot to a group and use `@foreman_bot ...` or
+      reply to its messages.
+    - Approvals render as Telegram inline keyboards (Approve / Decline
+      buttons).
+  </Step>
+</Steps>
+
+## Self-host
+
+<Steps>
+  <Step>
+    ### Create a bot via BotFather
+
+    On Telegram, message [@BotFather](https://t.me/BotFather):
+
+    ```
+    /newbot
+    ```
+
+    Give it a name and a unique `@handle`. BotFather replies with a **bot
+    token** — copy it.
+  </Step>
+
+  <Step>
+    ### Pick webhook or polling mode
+
+    <Tabs items={["Webhook (recommended)", "Polling (local dev)"]}>
+      <Tab value="Webhook (recommended)">
+        Set the webhook via Telegram's API:
+
+        ```bash
+        curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+          -d "url=https://foreman.yourdomain.com/telegram/webhook"
+        ```
+      </Tab>
+      <Tab value="Polling (local dev)">
+        No public URL needed. Foreman polls Telegram for updates.
+
+        ```bash
+        cd packages/agents
+        npx tsx src/telegram/start-polling.ts
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### Set env var
+
+    ```bash
+    TELEGRAM_BOT_TOKEN=<token from BotFather>
+    ```
+
+    Restart Foreman. Message your bot and you're live.
+  </Step>
+</Steps>
+
+<Callout>
+  Group chats: BotFather has a **Group Privacy** setting. Disable it if
+  you want Foreman to see every message in a group (not just mentions) —
+  useful for summarization flows.
+</Callout>
+
+## Using it
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Connect Zapier and run your first action." />
+  <Card title="Voice I/O" href="/docs/core-concepts/voice" description="Telegram voice notes work via Whisper." />
+</Cards>
