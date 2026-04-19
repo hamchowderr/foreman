@@ -92,8 +92,9 @@ function Hero() {
 
           <p className="text-base sm:text-lg text-muted max-w-lg leading-relaxed">
             Foreman is the plain-language layer over your Zapier account.
-            Describe what you want done — it picks the app, drafts the action,
-            waits for approval, and executes. In any chat app you already use.
+            Execute actions, manage Zapier Tables, discover connections —
+            all through natural language, with approval before anything runs.
+            From any chat app you already use.
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -145,8 +146,9 @@ function WhyNotZap() {
             Why build a Zap for every little thing?
           </h2>
           <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-            Building a Zap is great for scheduled, recurring automations. It's
-            overkill when you just need to send an email. Watch them race.
+            Zaps are for recurring automations. Zapier Copilot helps you build them.
+            Foreman skips the building — it executes actions, manages tables, and
+            queries your apps directly. No triggers, no paths, no canvas. Watch them race.
           </p>
         </Reveal>
         <Reveal delay={0.1}>
@@ -188,16 +190,15 @@ function ToolDiscoverySection() {
               Smart enough to know what to use.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              Foreman has a toolbox of ways to talk to your apps. Instead of
-              picking through all of them every time, it reads what you asked
-              and pulls out only the tools it actually needs. Faster responses,
-              and nothing clutters the conversation.
+              33 tools from the Zapier SDK — actions, connections, tables, HTTP,
+              and more. Instead of loading them all every time, Foreman searches
+              for what it needs and loads only that. Faster responses, less noise.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "Understands what you're asking, not just what you typed",
-                "Grabs the handful of tools needed for your request",
-                "Ignores the rest — no noise, faster replies",
+                "Execute actions, search data, manage tables",
+                "Discover and connect apps on the fly",
+                "Authenticated HTTP requests via Zapier Relay",
                 "Works across all 9,000+ Zapier apps",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
@@ -399,17 +400,17 @@ function BringYourOwnZapier() {
               Plug Foreman into your Zapier account.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              Sign in with your Zapier once. Every app you've already
-              connected — Gmail, Slack, Trello, whatever — is immediately
-              available. Actions run through your Zapier and count against
-              your plan. Nothing else to set up, nothing new to install.
+              Sign in with your Zapier once. Every app, connection, and
+              Zapier Table you already have is immediately available.
+              Execute actions, create and query tables, discover new apps —
+              all through your existing account. Nothing new to install.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "One click to connect",
-                "No re-connecting your existing apps",
-                "Works alongside any Zaps you already have",
-                "Revoke access anytime from Zapier",
+                "One click to connect your Zapier account",
+                "Existing apps, connections, and tables — all available",
+                "Create new tables, add fields, query records via chat",
+                "Works alongside your existing Zaps and workflows",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
                   <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
@@ -584,11 +585,12 @@ function ClosingCta() {
 
             <div className="relative p-8 sm:p-12 md:p-16 text-center">
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-[-0.03em] max-w-2xl mx-auto">
-                Stop building Zaps for every little thing.
+                Execute actions. Manage tables. Query apps. Just say it.
               </h2>
               <p className="text-muted mt-4 sm:mt-5 text-base sm:text-lg max-w-xl mx-auto">
                 Connect your Zapier account and start giving Foreman
-                instructions. It's alpha — free while we build.
+                instructions. Actions, tables, connections, search — all
+                through natural language. It's alpha — free while we build.
               </p>
               <div className="flex flex-wrap justify-center gap-3 mt-6 sm:mt-8">
                 <MagneticButton strength={0.25}>
@@ -656,7 +658,7 @@ function SiteFooter() {
               <span className="font-semibold text-foreground">Foreman</span>
             </div>
             <p className="text-xs text-muted mt-3 leading-relaxed max-w-[220px]">
-              Plain-language automation on top of your Zapier account.
+              Execute actions, manage tables, and query 9,000+ apps through your Zapier account.
             </p>
           </div>
 
