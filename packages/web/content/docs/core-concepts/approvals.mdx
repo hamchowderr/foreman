@@ -1,0 +1,76 @@
+---
+title: Approvals
+description: Human-in-the-loop for every write action.
+---
+
+Foreman never writes, sends, or deletes without your explicit go-ahead.
+This is not a toggle — it's baked into how the agent runs.
+
+## The flow
+
+<Steps>
+  <Step>
+    ### You say what you want
+
+    ```
+    Delete the archived cards in my Trello Personal board.
+    ```
+  </Step>
+
+  <Step>
+    ### Foreman drafts the action
+
+    Picks the Trello app, picks the Delete Card action, enumerates the
+    cards that match, fills every field it needs.
+  </Step>
+
+  <Step>
+    ### You see the full draft
+
+    | Field | Value |
+    | --- | --- |
+    | board | Personal |
+    | list | Archive |
+    | cards | 14 affected |
+
+    Plus an **Approve** and **Decline** button.
+  </Step>
+
+  <Step>
+    ### Approve → it runs
+
+    Tool executes. Result comes back. Action is logged to your history.
+  </Step>
+</Steps>
+
+## How it's enforced
+
+10 Zapier MCP tools are marked `requireApproval`. When the agent invokes
+one, Mastra pauses the stream and surfaces an **action proposal** event.
+The frontend renders it as an approval card. Only when you `POST
+/api/proposals/:id/approve` does the tool actually run.
+
+<Callout type="info">
+  See [Toolbox search](/docs/core-concepts/tool-discovery) for the full
+  list of approval-gated tools.
+</Callout>
+
+## Bulk operations
+
+Any action that affects **more than 5 records** gets an extra confirmation
+step — even if you've approved other deletes recently. This is independent
+of `requireApproval` and catches things like *"delete every card in the
+Archive list"*.
+
+## Audit trail
+
+Every approved action lands in your `action_run` table. You can search it
+semantically (*"what did I send to Jake last week?"*) using the
+`search_history` tool.
+
+## What's different from a Zap
+
+A Zap runs on a trigger and finishes on its own. Foreman pauses for you,
+by design. For recurring automation you don't want to watch, use the
+[Workflows](/docs/core-concepts/workflows) feature — but even workflows
+still approve every write step the first time they run.

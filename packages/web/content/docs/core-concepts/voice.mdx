@@ -1,0 +1,50 @@
+---
+title: Voice I/O
+description: Talk to Foreman and have it talk back.
+---
+
+Foreman supports voice input and voice output through its chat channels.
+Hit the mic icon, speak your request; hit the speaker icon on any reply
+to hear it back.
+
+## Providers
+
+| Direction | Primary | Fallback |
+| --- | --- | --- |
+| **Speech → text** | OpenAI Whisper | — |
+| **Text → speech** | ElevenLabs | OpenAI TTS |
+
+If `ELEVENLABS_API_KEY` isn't set, Foreman quietly falls back to OpenAI
+TTS.
+
+## Endpoints
+
+- `POST /api/voice/transcribe` — multipart audio upload, returns text
+- `POST /api/voice/synthesize` — `{ text }`, returns audio
+
+<Callout>
+  Both endpoints obey the user's `voice` capability flag. If the user (or
+  their org admin) has disabled voice, both return 403.
+</Callout>
+
+## Voice in redactions
+
+Voice output flows through the same PII redactor as text. So if the agent
+would have said *"I'll email tyler@acme.com"*, the synthesized audio says
+*"I'll email [EMAIL]"*. Nothing sensitive comes out of the speaker.
+
+## Configuration
+
+<TypeTable
+  type={{
+    ELEVENLABS_API_KEY: { type: "string", description: "Primary TTS provider." },
+    ELEVENLABS_VOICE_ID: { type: "string", default: "Rachel", description: "Which voice to use." },
+    OPENAI_API_KEY: { type: "string", description: "Whisper STT + fallback TTS." },
+  }}
+/>
+
+## Self-host
+
+Voice works identically on self-host. You need both keys in your `.env`
+and nothing else. Whisper and ElevenLabs are both HTTP APIs, so no extra
+infrastructure.

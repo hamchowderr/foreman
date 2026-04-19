@@ -1,6 +1,12 @@
 import { source } from "@/lib/source";
-import { DocsPage, DocsBody, DocsDescription, DocsTitle } from "fumadocs-ui/page";
+import {
+  DocsPage,
+  DocsBody,
+  DocsDescription,
+  DocsTitle,
+} from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
+import { useMDXComponents } from "@/mdx-components";
 
 export default async function Page({
   params,
@@ -12,13 +18,14 @@ export default async function Page({
   if (!page) notFound();
 
   const MDX = page.data.body;
+  const mdxComponents = useMDXComponents();
 
   return (
     <DocsPage toc={page.data.toc}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
-        <MDX />
+        <MDX components={mdxComponents} />
       </DocsBody>
     </DocsPage>
   );

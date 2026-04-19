@@ -1,0 +1,90 @@
+---
+title: Streaming
+description: SSE, savePerStep, prepareStep, chunk transformers.
+---
+
+Mastra's `agent.stream()` returns a rich `fullStream` of chunks. Foreman's
+frontend wants a simpler shape. The `/conversations/:id/messages` route
+bridges the two.
+
+<Files>
+  <Folder name="packages/agents/src/" defaultOpen>
+    <Folder name="mastra">
+      <File name="agents/foreman.ts" />
+    </Folder>
+    <Folder name="routes">
+      <File name="conversations.ts" />
+    </Folder>
+    <Folder name="lib/stream">
+      <File name="types.ts" />
+      <File name="chunk-transformer.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+## The pipeline
+
+<Steps>
+  <Step>
+    ### Request arrives
+
+    `POST /api/conversations/:id/messages` with a user message.
+  </Step>
+  <Step>
+    ### Call `agent.stream`
+
+    With two important options:
+
+    - `savePerStep: true` — persist state after each tool call, not just
+      at the end. Matters when a stream drops mid-execution.
+    - `prepareStep` — dynamic model picker. First 2 steps use Haiku (fast
+      tool discovery). Rest uses Sonnet (reasoning).
+  </Step>
+  <Step>
+    ### Transform the chunks
+
+    `createChunkTransformer` converts Mastra `fullStream` chunks into
+    Foreman's `AppChunk` type:
+
+    ```ts
+    type AppChunk =
+      | { type: "text-delta"; text: string }
+      | { type: "tool-call"; name: string; args: unknown }
+      | { type: "proposal-created"; proposal: Proposal }
+      | { type: "action-executed"; result: unknown }
+      | { type: "error"; message: string }
+      | { type: "done" };
+    ```
+  </Step>
+  <Step>
+    ### Ship as SSE
+
+    Each `AppChunk` goes out as `data: {...}\n\n`. Client consumes with a
+    tiny EventSource wrapper.
+  </Step>
+</Steps>
+
+## Why custom transform
+
+Mastra has `toUIMessageStreamResponse()` for Vercel AI SDK frontends. We
+don't use it because Foreman's approval flow needs richer events
+(`proposal-created` with full draft details) that the UI-stream format
+doesn't cover cleanly.
+
+## The approval interrupt
+
+When an `requireApproval` tool is invoked:
+
+1. Mastra pauses the stream
+2. Emits a `proposal-created` event with the full draft
+3. Client renders the approval card
+4. User clicks Approve/Decline → `POST /api/proposals/:id/approve`
+5. Route resumes the stream — tool executes, result comes back as
+   `action-executed`
+
+## savePerStep on channel adapters
+
+Slack, Discord, Telegram etc. all use `savePerStep: true` too. If a
+network blip drops the connection mid-reply, the last tool call is still
+persisted — so on reconnect, Foreman knows where it left off and can
+resume from the next step.

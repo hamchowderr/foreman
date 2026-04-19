@@ -1,0 +1,89 @@
+---
+title: Toolbox search
+description: How Foreman picks the right tools for your request.
+---
+
+Foreman has a toolbox of 33 MCP tools (plus a few custom ones) — ways to
+talk to Zapier apps, tables, webhooks, connections, auth. Loading every
+tool into every request would waste tokens, slow down replies, and clutter
+the agent's context.
+
+Instead, the toolbox is **searched**, not loaded.
+
+## How it works
+
+<Steps>
+  <Step>
+    ### You say something
+
+    "Email Jake the Q3 deck." Or anything else.
+  </Step>
+
+  <Step>
+    ### Foreman searches
+
+    The agent gets a meta-tool called `search_tools` that takes your
+    request and returns the 3–5 most relevant tool descriptions.
+  </Step>
+
+  <Step>
+    ### Only matched tools load
+
+    Foreman loads the handful it needs — typically `search-actions`,
+    `get-action-schema`, `find-field-choices`, `run-action`. The other
+    28 stay dormant.
+  </Step>
+
+  <Step>
+    ### Runs your request
+
+    With the right tools in context and none of the noise, Foreman picks
+    the app, fills the fields, and shows you the draft.
+  </Step>
+</Steps>
+
+## Custom tools (always loaded)
+
+Three tools are small and important enough to stay loaded for every
+request:
+
+<TypeTable
+  type={{
+    connect_zapier: { description: "Generate a one-time Zapier connect URL (for non-web channels)." },
+    search_history: { description: "Semantic search across past action results." },
+    fork_conversation: { description: "Branch a conversation for parallel exploration." },
+  }}
+/>
+
+## requireApproval
+
+10 of the 33 MCP tools are write/delete operations. They never run without
+your explicit approval — the agent proposes, you approve.
+
+<Callout type="warn">
+  If you self-host and disable approvals (don't), Foreman will still
+  surface what it would run. Blind execution is never the default.
+</Callout>
+
+The 10 approval-gated tools:
+
+```ts
+run-action, fetch, request,
+create-table, delete-table,
+create-table-records, update-table-records, delete-table-records,
+create-table-fields, delete-table-fields
+```
+
+## toModelOutput
+
+Every tool result passes through a summarizer before reaching the agent —
+lists cap at 20 items, unnecessary fields strip out, long strings trim.
+This keeps tool responses small and stops the agent from getting buried in
+raw JSON.
+
+## Next
+
+<Cards>
+  <Card title="Approvals" href="/docs/core-concepts/approvals" description="The full approval flow." />
+  <Card title="Guardrails" href="/docs/core-concepts/guardrails" description="Everything else that protects you from the agent." />
+</Cards>

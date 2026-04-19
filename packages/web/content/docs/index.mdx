@@ -3,16 +3,42 @@ title: Welcome to Foreman
 description: Plain-language automation on top of your Zapier account.
 ---
 
-# Welcome
-
 Foreman is an AI assistant that takes actions across 9,000+ apps through your
 Zapier account. Tell it what to do in plain English — it picks the right app
 and action, shows you the draft, and runs it after you approve.
 
-This site is a quick tour of what Foreman can do and how to get set up.
+## Start here
 
-## Where to start
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Sign in, connect Zapier, run your first action." />
+  <Card title="Channels" href="/docs/channels" description="Use Foreman from Slack, Discord, Telegram, and more." />
+  <Card title="Self-hosting" href="/docs/self-hosting" description="Run Foreman on your laptop or on a VPS." />
+</Cards>
 
-- [Getting started](/docs/getting-started) — connect your Zapier account and run your first action.
-- [Channels](/docs/channels) — use Foreman from Slack, Discord, Telegram, and more.
-- [Self-hosting](/docs/self-hosting) — run Foreman on your own box.
+## Core concepts
+
+<Cards>
+  <Card title="Memory" href="/docs/core-concepts/memory" description="Working, semantic, and observational memory explained." />
+  <Card title="Toolbox search" href="/docs/core-concepts/tool-discovery" description="How Foreman picks the right tools per request." />
+  <Card title="Approvals" href="/docs/core-concepts/approvals" description="The human-in-the-loop flow for every write action." />
+  <Card title="Guardrails" href="/docs/core-concepts/guardrails" description="PII redaction, rate limits, sensitive apps, org rules." />
+  <Card title="Workflows" href="/docs/core-concepts/workflows" description="Save a conversation pattern as a reusable workflow." />
+  <Card title="Voice I/O" href="/docs/core-concepts/voice" description="Talk to Foreman and have it talk back." />
+</Cards>
+
+## Integrations
+
+<Cards>
+  <Card title="MCP (cloud)" href="/docs/integrations/mcp-cloud" description="Connect Claude Code, ChatGPT, or any MCP client to cloud Foreman." />
+  <Card title="MCP (self-hosted)" href="/docs/integrations/mcp-self-hosted" description="Same thing, but against your own Foreman instance." />
+  <Card title="A2A (cloud)" href="/docs/integrations/a2a-cloud" description="Call Foreman from another Mastra agent over HTTP." />
+  <Card title="A2A (self-hosted)" href="/docs/integrations/a2a-self-hosted" description="Point your own agents at localhost or your VPS." />
+</Cards>
+
+## Under the hood
+
+<Cards>
+  <Card title="Mastra framework" href="/docs/architecture/mastra" description="Agents, memory, processors, workflows — the full stack." />
+  <Card title="Zapier SDK via MCP" href="/docs/architecture/zapier-sdk" description="How Foreman talks to Zapier — stdio transport, requireApproval." />
+  <Card title="Streaming" href="/docs/architecture/streaming" description="SSE, savePerStep, prepareStep, custom chunk transformers." />
+</Cards>

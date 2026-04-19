@@ -102,7 +102,7 @@ export function ByozOAuth() {
                   <span className="h-2 w-2 rounded-full bg-green-400/70" />
                 </div>
                 <span className="text-[10px] font-mono text-muted flex-1 truncate">
-                  zapier.com/oauth/authorize
+                  zapier.com/connect
                 </span>
                 <ExternalLink className="h-3 w-3 text-muted" />
               </div>

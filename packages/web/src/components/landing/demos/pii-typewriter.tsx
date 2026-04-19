@@ -2,7 +2,16 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { ScanEye, Lock } from "@/components/icons/hi";
+import {
+  ScanEye,
+  Lock,
+  Mail,
+  Phone,
+  IdCard,
+  Key,
+  CreditCard,
+} from "@/components/icons/hi";
+import type { ComponentType } from "react";
 
 type Token = {
   text: string;
@@ -144,22 +153,28 @@ export function PiiTypewriter() {
             )}
           </p>
         </div>
-        <div className="px-5 py-3 border-t border-border bg-background/50 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] sm:text-xs text-muted">
-          <Metric label="emails" />
-          <Metric label="phones" />
-          <Metric label="SSNs" />
-          <Metric label="API keys" />
-          <Metric label="cards" />
+        <div className="px-5 py-3 border-t border-border bg-background/50 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] sm:text-xs text-muted">
+          <Metric label="emails" Icon={Mail} />
+          <Metric label="phones" Icon={Phone} />
+          <Metric label="SSNs" Icon={IdCard} />
+          <Metric label="API keys" Icon={Key} />
+          <Metric label="cards" Icon={CreditCard} />
         </div>
       </div>
     </div>
   );
 }
 
-function Metric({ label }: { label: string }) {
+function Metric({
+  label,
+  Icon,
+}: {
+  label: string;
+  Icon: ComponentType<{ className?: string }>;
+}) {
   return (
-    <span className="flex items-center gap-1">
-      <span className="h-1 w-1 rounded-full bg-accent" />
+    <span className="flex items-center gap-1.5">
+      <Icon className="h-3.5 w-3.5 text-accent" />
       <span>{label}</span>
     </span>
   );

@@ -3,28 +3,48 @@ title: Getting started
 description: Sign in, connect Zapier, run your first action.
 ---
 
-# Getting started
+Three steps and you're running.
 
-Three steps and you're done:
+<Steps>
+  <Step>
+    ### Sign in
 
-## 1. Sign in
+    Head to [foreman.otakusolutions.io](https://foreman.otakusolutions.io) and
+    click **Sign in**. We use Clerk, so you can use email, Google, or GitHub.
+  </Step>
 
-Head to [foreman.otakusolutions.io](https://foreman.otakusolutions.io) and
-click **Sign in**. We use Clerk, so you can use email, Google, or GitHub.
+  <Step>
+    ### Connect your Zapier account
 
-## 2. Connect your Zapier account
+    On first launch, Foreman asks for access to your existing Zapier account.
+    One click and you're connected — we don't store your password, just a
+    revocable access token (encrypted at rest with AES-256-GCM).
 
-On first launch, Foreman will ask to connect your Zapier account. It's one
-OAuth click — we don't store your Zapier credentials, just the access token
-(encrypted with AES-256-GCM, revocable from Zapier at any time).
+    <Callout type="info">
+      Everything you've already wired up in Zapier — Gmail, Slack, Trello,
+      any of the 9,000+ apps — is instantly available. Nothing new to set up
+      on their side.
+    </Callout>
+  </Step>
 
-## 3. Just say it
+  <Step>
+    ### Just say it
 
-Try one of these:
+    Try any of these:
 
-- *"What apps do I have connected?"*
-- *"Email Jake the Q3 deck."*
-- *"Create a Trello card for client follow-up in my To Do list."*
+    - *"What apps do I have connected?"*
+    - *"Email Jake the Q3 deck."*
+    - *"Create a Trello card for client follow-up in my To Do list."*
 
-For every write action, you'll see a draft and a big **Approve** button.
-Nothing runs until you say so.
+    For every write action, Foreman shows you a draft and waits. Nothing
+    runs until you hit **Approve**.
+  </Step>
+</Steps>
+
+## What's next
+
+<Cards>
+  <Card title="Channels" href="/docs/channels" description="Use the same Foreman from Slack, Discord, Telegram, and more." />
+  <Card title="Memory" href="/docs/core-concepts/memory" description="How Foreman remembers your preferences across conversations." />
+  <Card title="Self-hosting" href="/docs/self-hosting" description="Run Foreman on your own hardware." />
+</Cards>

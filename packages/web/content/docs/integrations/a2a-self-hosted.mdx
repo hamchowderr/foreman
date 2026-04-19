@@ -1,0 +1,62 @@
+---
+title: A2A · self-hosted
+description: Other agents calling your Foreman instance.
+---
+
+Same shape as cloud — just point at your own URL.
+
+## Endpoint
+
+<Tabs items={["Local", "VPS"]}>
+  <Tab value="Local">
+    ```
+    http://localhost:3000/a2a/foreman
+    ```
+  </Tab>
+  <Tab value="VPS">
+    ```
+    https://foreman.yourdomain.com/a2a/foreman
+    ```
+  </Tab>
+</Tabs>
+
+## Example: curl
+
+```bash
+curl -X POST http://localhost:3000/a2a/foreman \
+  -H "content-type: application/json" \
+  -H "x-api-key: fmn_your_key_here" \
+  -d '{"message": "Send Jake the Q3 deck"}'
+```
+
+## From another Mastra agent
+
+Identical to cloud — just swap the URL.
+
+```ts
+const res = await fetch("http://localhost:3000/a2a/foreman", {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    "x-api-key": process.env.FOREMAN_API_KEY!,
+  },
+  body: JSON.stringify({ message: "Create a Trello card for blocker review" }),
+});
+```
+
+## Auth-free mode (lab only)
+
+For fully local multi-agent setups, you can set `DISABLE_API_AUTH=true`
+and drop the header.
+
+<Callout type="warn">
+  Never run auth-free on a public network. Any HTTP request that reaches
+  your Foreman can run write actions in your Zapier.
+</Callout>
+
+## Related
+
+<Cards>
+  <Card title="A2A (cloud)" href="/docs/integrations/a2a-cloud" description="The hosted version." />
+  <Card title="MCP (self-hosted)" href="/docs/integrations/mcp-self-hosted" description="For AI clients instead of agents." />
+</Cards>

@@ -37,6 +37,9 @@ import {
   ToolboxIcon,
   FilterIcon,
   ScanEyeIcon,
+  SmartPhone01Icon,
+  Key01Icon,
+  IdIcon,
 } from "@hugeicons/core-free-icons";
 import type { SVGProps } from "react";
 
@@ -97,3 +100,6 @@ export const History = make(Activity01Icon);
 export const Toolbox = make(ToolboxIcon);
 export const Filter = make(FilterIcon);
 export const ScanEye = make(ScanEyeIcon);
+export const Phone = make(SmartPhone01Icon);
+export const Key = make(Key01Icon);
+export const IdCard = make(IdIcon);

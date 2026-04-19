@@ -7,11 +7,12 @@ import {
   SlackBrand,
   DiscordBrand,
   TelegramBrand,
+  GithubBrand,
   BRAND_COLORS,
 } from "@/components/icons/brands";
 
 type ChannelSkin = {
-  id: "slack" | "discord" | "telegram" | "web";
+  id: "slack" | "discord" | "telegram" | "web" | "github";
   label: string;
   sub: string;
   Icon: ComponentType<{ size?: number; color?: string; className?: string }>;
@@ -50,6 +51,14 @@ const CHANNEL_SKINS: Record<ChannelSkin["id"], ChannelSkin> = {
     sub: "web app",
     Icon: Globe,
     brand: BRAND_COLORS.zapier,
+    brandText: "#ffffff",
+  },
+  github: {
+    id: "github",
+    label: "GitHub",
+    sub: "issue comment",
+    Icon: GithubBrand,
+    brand: "#1f2328",
     brandText: "#ffffff",
   },
 };
@@ -146,7 +155,7 @@ const SCENES: Scene[] = [
   },
   {
     id: "search",
-    channelId: "slack",
+    channelId: "github",
     say: "Search my recent emails for anything about invoices",
     description: "Runs Gmail search, returns threads.",
     chat: [

@@ -406,7 +406,7 @@ function BringYourOwnZapier() {
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "One OAuth click to connect",
+                "One click to connect",
                 "No re-connecting your existing apps",
                 "Works alongside any Zaps you already have",
                 "Revoke access anytime from Zapier",
