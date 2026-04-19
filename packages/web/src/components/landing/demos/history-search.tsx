@@ -69,8 +69,8 @@ export function HistorySearch() {
   return (
     <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden">
       <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center gap-2">
-        <History className="h-3.5 w-3.5 text-accent" />
-        <span className="text-xs font-mono text-muted">action-history · semantic</span>
+        <History className="h-4 w-4 text-accent" />
+        <span className="text-xs font-medium text-muted">Recent activity</span>
       </div>
 
       <div className="p-4 sm:p-5">

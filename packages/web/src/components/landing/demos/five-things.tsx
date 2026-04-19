@@ -1,11 +1,62 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { useEffect, useState } from "react";
-import { Check, ChevronRight } from "@/components/icons/hi";
+import { useEffect, useState, type ComponentType } from "react";
+import { Check, ChevronRight, Globe } from "@/components/icons/hi";
+import {
+  SlackBrand,
+  DiscordBrand,
+  TelegramBrand,
+  BRAND_COLORS,
+} from "@/components/icons/brands";
+
+type ChannelSkin = {
+  id: "slack" | "discord" | "telegram" | "web";
+  label: string;
+  sub: string;
+  Icon: ComponentType<{ size?: number; color?: string; className?: string }>;
+  brand: string;
+  brandText: string;
+};
+
+const CHANNEL_SKINS: Record<ChannelSkin["id"], ChannelSkin> = {
+  slack: {
+    id: "slack",
+    label: "Slack",
+    sub: "#foreman",
+    Icon: SlackBrand,
+    brand: BRAND_COLORS.slack,
+    brandText: "#ffffff",
+  },
+  discord: {
+    id: "discord",
+    label: "Discord",
+    sub: "#general",
+    Icon: DiscordBrand,
+    brand: BRAND_COLORS.discord,
+    brandText: "#ffffff",
+  },
+  telegram: {
+    id: "telegram",
+    label: "Telegram",
+    sub: "@foreman_bot",
+    Icon: TelegramBrand,
+    brand: BRAND_COLORS.telegram,
+    brandText: "#ffffff",
+  },
+  web: {
+    id: "web",
+    label: "Foreman",
+    sub: "web app",
+    Icon: Globe,
+    brand: BRAND_COLORS.zapier,
+    brandText: "#ffffff",
+  },
+};
 
 type Scene = {
   id: string;
+  channelId: ChannelSkin["id"];
   say: string;
   description: string;
   chat: Array<
@@ -25,6 +76,7 @@ type Scene = {
 const SCENES: Scene[] = [
   {
     id: "list-apps",
+    channelId: "slack",
     say: "What apps do I have connected?",
     description: "Lists your connected Zapier apps.",
     chat: [
@@ -38,6 +90,7 @@ const SCENES: Scene[] = [
   },
   {
     id: "email",
+    channelId: "discord",
     say: "Email test@example.com that the project is complete",
     description: "Drafts and sends after approval.",
     chat: [
@@ -58,6 +111,7 @@ const SCENES: Scene[] = [
   },
   {
     id: "trello",
+    channelId: "telegram",
     say: "Create a Trello card 'Follow up with client' in my To Do list",
     description: "Picks the board and list, creates on approval.",
     chat: [
@@ -78,6 +132,7 @@ const SCENES: Scene[] = [
   },
   {
     id: "slack-actions",
+    channelId: "web",
     say: "What actions can I do with Slack?",
     description: "Lists every available Slack action.",
     chat: [
@@ -91,6 +146,7 @@ const SCENES: Scene[] = [
   },
   {
     id: "search",
+    channelId: "slack",
     say: "Search my recent emails for anything about invoices",
     description: "Runs Gmail search, returns threads.",
     chat: [
@@ -108,6 +164,7 @@ export function FiveThingsReplay() {
   const [activeId, setActiveId] = useState<string>(SCENES[0].id);
   const [step, setStep] = useState(0);
   const scene = SCENES.find((s) => s.id === activeId)!;
+  const skin = CHANNEL_SKINS[scene.channelId];
 
   useEffect(() => {
     setStep(0);
@@ -128,6 +185,7 @@ export function FiveThingsReplay() {
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">
         {SCENES.map((s, i) => {
           const selected = s.id === activeId;
+          const sSkin = CHANNEL_SKINS[s.channelId];
           return (
             <button
               key={s.id}
@@ -148,7 +206,15 @@ export function FiveThingsReplay() {
                 <div className={`text-sm font-medium truncate ${selected ? "text-foreground" : ""}`}>
                   "{s.say}"
                 </div>
-                <div className="text-xs text-muted mt-0.5 truncate">{s.description}</div>
+                <div className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
+                  <span
+                    className="inline-flex items-center justify-center h-3 w-3 rounded-sm shrink-0"
+                    style={{ backgroundColor: sSkin.brand }}
+                  >
+                    <sSkin.Icon size={8} color={sSkin.brandText} />
+                  </span>
+                  <span className="truncate">in {sSkin.label}</span>
+                </div>
               </div>
               <ChevronRight
                 className={`h-4 w-4 shrink-0 mt-1 transition-transform ${
@@ -162,12 +228,31 @@ export function FiveThingsReplay() {
 
       {/* Replay pane */}
       <div className="rounded-2xl border border-border bg-surface overflow-hidden min-h-[400px] flex flex-col">
-        <div className="px-4 py-3 border-b border-border flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-red-400/70" />
-          <span className="h-2 w-2 rounded-full bg-yellow-400/70" />
-          <span className="h-2 w-2 rounded-full bg-green-400/70" />
-          <span className="ml-3 text-xs font-mono text-muted truncate">foreman · chat</span>
-        </div>
+        {/* Channel-themed header */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={skin.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="px-4 py-2.5 flex items-center gap-2.5 shrink-0"
+            style={{ backgroundColor: skin.brand, color: skin.brandText }}
+          >
+            <skin.Icon size={16} color={skin.brandText} />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight truncate">
+                {skin.label}
+              </span>
+              <span
+                className="text-[10px] leading-tight truncate"
+                style={{ color: skin.brandText, opacity: 0.75 }}
+              >
+                {skin.sub}
+              </span>
+            </div>
+          </motion.div>
+        </AnimatePresence>
         <div className="p-4 space-y-3 flex-1">
           {scene.chat.slice(0, step + 1).map((msg, i) => (
             <motion.div
