@@ -36,20 +36,20 @@ the agent as `run-action`, `search-actions`, etc.
 takes a `requireApproval` option that intercepts those calls and surfaces
 an **action proposal** instead of running them.
 
-<TypeTable
-  type={{
-    "run-action": { type: "write" },
-    "fetch": { type: "write" },
-    "request": { type: "write" },
-    "create-table": { type: "write" },
-    "delete-table": { type: "write" },
-    "create-table-records": { type: "write" },
-    "update-table-records": { type: "write" },
-    "delete-table-records": { type: "write" },
-    "create-table-fields": { type: "write" },
-    "delete-table-fields": { type: "write" },
-  }}
-/>
+The approval-gated tools:
+
+| Tool | Kind |
+| --- | --- |
+| `run-action` | write |
+| `fetch` | write |
+| `request` | write |
+| `create-table` | write |
+| `delete-table` | write |
+| `create-table-records` | write |
+| `update-table-records` | write |
+| `delete-table-records` | write |
+| `create-table-fields` | write |
+| `delete-table-fields` | write |
 
 ## toModelOutput
 

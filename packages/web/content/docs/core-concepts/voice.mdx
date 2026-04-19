@@ -35,13 +35,11 @@ would have said *"I'll email tyler@acme.com"*, the synthesized audio says
 
 ## Configuration
 
-<TypeTable
-  type={{
-    ELEVENLABS_API_KEY: { type: "string", description: "Primary TTS provider." },
-    ELEVENLABS_VOICE_ID: { type: "string", default: "Rachel", description: "Which voice to use." },
-    OPENAI_API_KEY: { type: "string", description: "Whisper STT + fallback TTS." },
-  }}
-/>
+| Env var | Default | Description |
+| --- | --- | --- |
+| `ELEVENLABS_API_KEY` | — | Primary TTS provider. |
+| `ELEVENLABS_VOICE_ID` | `Rachel` | Which voice to use. |
+| `OPENAI_API_KEY` | — | Whisper STT + fallback TTS. |
 
 ## Self-host
 

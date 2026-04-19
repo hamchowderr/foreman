@@ -66,7 +66,9 @@ const CHANNEL_SKINS: Record<ChannelSkin["id"], ChannelSkin> = {
 type Scene = {
   id: string;
   channelId: ChannelSkin["id"];
-  say: string;
+  /** Short category title shown in the list (not the literal prompt). */
+  title: string;
+  /** One-line description under the title. */
   description: string;
   chat: Array<
     | { role: "user"; text: string }
@@ -86,8 +88,8 @@ const SCENES: Scene[] = [
   {
     id: "list-apps",
     channelId: "slack",
-    say: "What apps do I have connected?",
-    description: "Lists your connected Zapier apps.",
+    title: "List your connected apps",
+    description: "Quick inventory of everything Zapier sees.",
     chat: [
       { role: "user", text: "What apps do I have connected?" },
       { role: "thinking" },
@@ -100,8 +102,8 @@ const SCENES: Scene[] = [
   {
     id: "email",
     channelId: "discord",
-    say: "Email test@example.com that the project is complete",
-    description: "Drafts and sends after approval.",
+    title: "Send an email",
+    description: "Foreman drafts it; you approve.",
     chat: [
       { role: "user", text: "Email test@example.com that the project is complete." },
       { role: "thinking" },
@@ -121,8 +123,8 @@ const SCENES: Scene[] = [
   {
     id: "trello",
     channelId: "telegram",
-    say: "Create a Trello card 'Follow up with client' in my To Do list",
-    description: "Picks the board and list, creates on approval.",
+    title: "Create a Trello card",
+    description: "Picks the board and list for you.",
     chat: [
       { role: "user", text: "Create a Trello card 'Follow up with client' in my To Do list." },
       { role: "thinking" },
@@ -142,8 +144,8 @@ const SCENES: Scene[] = [
   {
     id: "slack-actions",
     channelId: "web",
-    say: "What actions can I do with Slack?",
-    description: "Lists every available Slack action.",
+    title: "Discover an app's actions",
+    description: "See everything a connected app can do.",
     chat: [
       { role: "user", text: "What actions can I do with Slack?" },
       { role: "thinking" },
@@ -156,8 +158,8 @@ const SCENES: Scene[] = [
   {
     id: "search",
     channelId: "github",
-    say: "Search my recent emails for anything about invoices",
-    description: "Runs Gmail search, returns threads.",
+    title: "Search your history",
+    description: "Semantic recall over past actions.",
     chat: [
       { role: "user", text: "Search my recent emails for anything about invoices." },
       { role: "thinking" },
@@ -213,7 +215,7 @@ export function FiveThingsReplay() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className={`text-sm font-medium truncate ${selected ? "text-foreground" : ""}`}>
-                  "{s.say}"
+                  {s.title}
                 </div>
                 <div className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
                   <span
@@ -222,7 +224,7 @@ export function FiveThingsReplay() {
                   >
                     <sSkin.Icon size={8} color={sSkin.brandText} />
                   </span>
-                  <span className="truncate">in {sSkin.label}</span>
+                  <span className="truncate">{s.description} · in {sSkin.label}</span>
                 </div>
               </div>
               <ChevronRight

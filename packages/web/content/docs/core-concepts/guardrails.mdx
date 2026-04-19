@@ -30,13 +30,11 @@ The output processor scans every model response for sensitive data:
 
 Per-user sliding window:
 
-<TypeTable
-  type={{
-    "per minute": { type: "number", default: "30 actions" },
-    "per hour": { type: "number", default: "200 actions" },
-    "bulk op threshold": { type: "number", default: "5 records" },
-  }}
-/>
+| Window | Limit |
+| --- | --- |
+| Per minute | 30 actions |
+| Per hour | 200 actions |
+| Bulk-op threshold | 5 records (triggers extra confirmation) |
 
 Requests beyond the limit get a friendly "slow down" reply rather than a
 500.
