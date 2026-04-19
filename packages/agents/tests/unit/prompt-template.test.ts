@@ -11,6 +11,32 @@ describe("buildSystemPrompt", () => {
     expect(result).not.toContain("User Preferences");
   });
 
+  it("references MCP tool names, not old custom names", () => {
+    const result = buildSystemPrompt();
+    // New MCP tool names
+    expect(result).toContain("list-connections");
+    expect(result).toContain("list-actions");
+    expect(result).toContain("get-input-fields-schema");
+    expect(result).toContain("list-input-field-choices");
+    expect(result).toContain("run-action");
+    expect(result).toContain("list-apps");
+    // ToolSearchProcessor meta-tools
+    expect(result).toContain("search_tools");
+    expect(result).toContain("load_tool");
+    // Old custom tool names should NOT be present
+    expect(result).not.toContain("discover_connections");
+    expect(result).not.toContain("get_action_schema");
+    expect(result).not.toContain("get_field_choices");
+    expect(result).not.toContain("execute_action");
+  });
+
+  it("lists always-available custom tools", () => {
+    const result = buildSystemPrompt();
+    expect(result).toContain("connect_zapier");
+    expect(result).toContain("search_history");
+    expect(result).toContain("fork_conversation");
+  });
+
   it("returns base prompt with empty context", () => {
     const result = buildSystemPrompt({});
     expect(result).toContain("You are Foreman");

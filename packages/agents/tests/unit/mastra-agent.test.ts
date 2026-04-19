@@ -8,64 +8,33 @@ beforeAll(() => {
   process.env.ANTHROPIC_API_KEY = "sk-ant-test-fake-key";
 });
 
-function getAgentTools(agent: any): Record<string, any> {
-  return agent.__getOverridableFields().tools;
-}
-
 describe("Mastra foreman agent", () => {
-  it("instantiates with all 6 tools registered", async () => {
+  it("createForemanAgent is async and returns an agent", async () => {
     const { createForemanAgent } = await import("@/mastra/agents/foreman");
-    const agent = createForemanAgent("file:./test-agent.db");
+    const agent = await createForemanAgent("file:./test-agent.db");
 
     expect(agent).toBeDefined();
     expect(agent.name).toBe("Foreman");
+    expect(agent.id).toBe("foreman");
+  }, 30000); // MCP server startup can take time
 
-    const tools = getAgentTools(agent);
-    expect(tools).toBeDefined();
+  it("has the 3 custom tools registered", async () => {
+    const { createForemanAgent } = await import("@/mastra/agents/foreman");
+    const agent = await createForemanAgent("file:./test-agent.db");
 
+    // Agent tools are accessible via listTools()
+    const tools = await agent.listTools();
     const toolNames = Object.keys(tools);
-    expect(toolNames).toContain("discover_connections");
-    expect(toolNames).toContain("list_actions");
-    expect(toolNames).toContain("get_action_schema");
-    expect(toolNames).toContain("get_field_choices");
-    expect(toolNames).toContain("execute_action");
-    expect(toolNames).toContain("raw_api_call");
-    expect(toolNames).toHaveLength(16);
-  });
 
-  it("execute_action uses conversational approval (no requireApproval)", async () => {
-    const { createForemanAgent } = await import("@/mastra/agents/foreman");
-    const agent = createForemanAgent("file:./test-agent.db");
-    const tools = getAgentTools(agent);
-    const tool = tools["execute_action"];
-    expect(tool).toBeDefined();
-    expect(tool.requireApproval).toBeFalsy();
-  });
+    expect(toolNames).toContain("search_history");
+    expect(toolNames).toContain("fork_conversation");
+    expect(toolNames).toContain("connect_zapier");
+  }, 30000);
 
-  it("raw_api_call uses conversational approval (no requireApproval)", async () => {
-    const { createForemanAgent } = await import("@/mastra/agents/foreman");
-    const agent = createForemanAgent("file:./test-agent.db");
-    const tools = getAgentTools(agent);
-    const tool = tools["raw_api_call"];
-    expect(tool).toBeDefined();
-    expect(tool.requireApproval).toBeFalsy();
-  });
-
-  it("discovery tools do not have requireApproval", async () => {
-    const { createForemanAgent } = await import("@/mastra/agents/foreman");
-    const agent = createForemanAgent("file:./test-agent.db");
-    const tools = getAgentTools(agent);
-
-    const discoveryTools = [
-      "discover_connections",
-      "list_actions",
-      "get_action_schema",
-      "get_field_choices",
-    ];
-
-    for (const name of discoveryTools) {
-      const tool = tools[name];
-      expect(tool.requireApproval).toBeFalsy();
-    }
-  });
+  it("MODELS constants are correct", async () => {
+    const { MODELS } = await import("@/mastra/agents/foreman");
+    expect(MODELS.default).toBe("anthropic/claude-sonnet-4-6");
+    expect(MODELS.fast).toBe("anthropic/claude-haiku-4-5-20251001");
+    expect(MODELS.heavy).toBe("anthropic/claude-opus-4-6");
+  }, 30000);
 });

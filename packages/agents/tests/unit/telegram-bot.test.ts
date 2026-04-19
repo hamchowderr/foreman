@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 
 // Mock the Mastra agent so we don't need a real DB or LLM
 vi.mock("@/mastra", () => ({
-  getMastra: () => ({
+  getMastra: vi.fn().mockResolvedValue({
     getAgent: () => ({
       generate: vi.fn().mockResolvedValue({ text: "mock reply" }),
     }),
@@ -19,8 +19,8 @@ beforeAll(() => {
 describe("Telegram bot", () => {
   it("getTelegramBot returns a singleton", async () => {
     const { getTelegramBot } = await import("@/telegram/bot");
-    const bot1 = getTelegramBot();
-    const bot2 = getTelegramBot();
+    const bot1 = await getTelegramBot();
+    const bot2 = await getTelegramBot();
     expect(bot1).toBe(bot2);
   });
 
@@ -32,16 +32,14 @@ describe("Telegram bot", () => {
 
   it("bot has webhook handler for telegram", async () => {
     const { getTelegramBot } = await import("@/telegram/bot");
-    const bot = getTelegramBot();
+    const bot = await getTelegramBot();
     expect(bot.webhooks).toBeDefined();
     expect(typeof bot.webhooks.telegram).toBe("function");
   });
 
   it("bot registers onDirectMessage handler", async () => {
     const { getTelegramBot } = await import("@/telegram/bot");
-    const bot = getTelegramBot();
-    // The Chat SDK exposes registered handler counts — verify at least one DM handler exists
-    // Since handlers are registered during construction, the bot object should be fully wired
+    const bot = await getTelegramBot();
     expect(bot).toBeDefined();
   });
 });
