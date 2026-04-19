@@ -12,7 +12,7 @@ let _whatsappAdapter: ReturnType<typeof createWhatsAppAdapter> | undefined;
  * Uses Chat SDK with the WhatsApp adapter. The bot is a singleton — safe to
  * call multiple times.
  */
-export function getWhatsAppBot() {
+export async function getWhatsAppBot() {
   if (_bot) return _bot;
 
   const whatsapp = createWhatsAppAdapter();
@@ -45,6 +45,7 @@ export function getWhatsAppBot() {
     // is available when they message from WhatsApp, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `whatsapp-${threadId}`,
         resource: userId,

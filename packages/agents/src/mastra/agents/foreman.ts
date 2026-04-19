@@ -15,7 +15,7 @@ import { OpenAIVoice } from "@mastra/voice-openai";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { createZapierMCPClient } from "../../lib/zapier-mcp";
+import { createZapierMCPClient, addModelOutputTransformers } from "../../lib/zapier-mcp";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -59,8 +59,9 @@ export async function createForemanAgent(databaseUrl: string) {
   });
 
   // Get all tools from Zapier SDK MCP server (replaces 13 custom tools)
+  // toModelOutput transformers reduce verbose API responses before they hit the model
   const zapierMcp = getZapierMcp();
-  const mcpTools = await zapierMcp.listTools();
+  const mcpTools = addModelOutputTransformers(await zapierMcp.listTools());
 
   return new Agent({
     id: "foreman",

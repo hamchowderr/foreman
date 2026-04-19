@@ -12,7 +12,7 @@ let _linearAdapter: ReturnType<typeof createLinearAdapter> | undefined;
  * Uses Chat SDK with the Linear adapter. Comment-based only — no cards/modals.
  * The bot is a singleton — safe to call multiple times.
  */
-export function getLinearBot() {
+export async function getLinearBot() {
   if (_bot) return _bot;
 
   const linear = createLinearAdapter();
@@ -45,6 +45,7 @@ export function getLinearBot() {
     // is available when they message from Linear, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `linear-${threadId}`,
         resource: userId,

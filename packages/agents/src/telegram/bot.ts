@@ -12,7 +12,7 @@ let _telegramAdapter: ReturnType<typeof createTelegramAdapter> | undefined;
  * Uses Chat SDK with the Telegram adapter. The bot is a singleton — safe to
  * call multiple times.
  */
-export function getTelegramBot() {
+export async function getTelegramBot() {
   if (_bot) return _bot;
 
   const telegram = createTelegramAdapter({
@@ -48,6 +48,7 @@ export function getTelegramBot() {
     // is available when they message from Telegram, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `telegram-${threadId}`,
         resource: userId,

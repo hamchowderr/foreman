@@ -12,7 +12,7 @@ let _teamsAdapter: ReturnType<typeof createTeamsAdapter> | undefined;
  * Uses Chat SDK with the Teams adapter. The bot is a singleton — safe to
  * call multiple times.
  */
-export function getTeamsBot() {
+export async function getTeamsBot() {
   if (_bot) return _bot;
 
   const teams = createTeamsAdapter({ appType: "singleTenant" });
@@ -45,6 +45,7 @@ export function getTeamsBot() {
     // is available when they message from Teams, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `teams-${threadId}`,
         resource: userId,

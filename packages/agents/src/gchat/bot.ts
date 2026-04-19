@@ -12,7 +12,7 @@ let _gchatAdapter: ReturnType<typeof createGoogleChatAdapter> | undefined;
  * Uses Chat SDK with the Google Chat adapter. The bot is a singleton — safe to
  * call multiple times.
  */
-export function getGoogleChatBot() {
+export async function getGoogleChatBot() {
   if (_bot) return _bot;
 
   const gchat = createGoogleChatAdapter();
@@ -45,6 +45,7 @@ export function getGoogleChatBot() {
     // is available when they message from Google Chat, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `gchat-${threadId}`,
         resource: userId,

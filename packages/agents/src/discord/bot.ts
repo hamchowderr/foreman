@@ -12,7 +12,7 @@ let _discordAdapter: ReturnType<typeof createDiscordAdapter> | undefined;
  * Uses Chat SDK with the Discord adapter. The bot is a singleton — safe to
  * call multiple times.
  */
-export function getDiscordBot() {
+export async function getDiscordBot() {
   if (_bot) return _bot;
 
   const discord = createDiscordAdapter();
@@ -48,6 +48,7 @@ export function getDiscordBot() {
 
     const result = await agent.generate(text, {
       maxSteps: 10,
+      savePerStep: true,
       memory: {
         thread: `discord-${threadId}`,
         resource: userId,

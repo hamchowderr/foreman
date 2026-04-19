@@ -12,7 +12,7 @@ let _imessageAdapter: ReturnType<typeof createiMessageAdapter> | undefined;
  * Uses Chat SDK with the community iMessage adapter. Plain text only — no
  * cards, no streaming. The bot is a singleton — safe to call multiple times.
  */
-export function getiMessageBot() {
+export async function getiMessageBot() {
   if (_bot) return _bot;
 
   const isLocal = process.env.IMESSAGE_LOCAL === "true";
@@ -46,6 +46,7 @@ export function getiMessageBot() {
     // is available when they message from iMessage, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `imessage-${threadId}`,
         resource: userId,

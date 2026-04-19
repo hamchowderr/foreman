@@ -12,7 +12,7 @@ let _githubAdapter: ReturnType<typeof createGitHubAdapter> | undefined;
  * Uses Chat SDK with the GitHub adapter. Comment-based only — no cards/modals.
  * The bot is a singleton — safe to call multiple times.
  */
-export function getGitHubBot() {
+export async function getGitHubBot() {
   if (_bot) return _bot;
 
   const github = createGitHubAdapter({
@@ -47,6 +47,7 @@ export function getGitHubBot() {
     // is available when they message from GitHub, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `github-${threadId}`,
         resource: userId,

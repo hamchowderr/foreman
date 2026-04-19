@@ -12,7 +12,7 @@ let _slackAdapter: ReturnType<typeof createSlackAdapter> | undefined;
  * Uses Chat SDK with the Slack adapter. The bot is a singleton — safe to
  * call multiple times.
  */
-export function getSlackBot() {
+export async function getSlackBot() {
   if (_bot) return _bot;
 
   const slack = createSlackAdapter();
@@ -46,6 +46,7 @@ export function getSlackBot() {
     // is available when they message from Slack, because resource is the same userId.
     const result = await agent.generate(text, {
       maxSteps: 5,
+      savePerStep: true,
       memory: {
         thread: `slack-${threadId}`,
         resource: userId,
