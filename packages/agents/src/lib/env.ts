@@ -63,6 +63,24 @@ const envSchema = z.object({
   EXECUTION_MODEL: z.string().optional(),
   SUPERVISOR_MODEL: z.string().optional(),
   HISTORY_MODEL: z.string().optional(),
+  // Per-agent generation parameters (see src/lib/providers/params.ts). All
+  // optional; unset values fall through to Mastra's and the provider's defaults.
+  // Name suffix matches AI SDK's CallSettings shape (maxOutputTokens, topP).
+  FOREMAN_TEMPERATURE: z.string().optional(),
+  FOREMAN_MAX_OUTPUT_TOKENS: z.string().optional(),
+  FOREMAN_TOP_P: z.string().optional(),
+  DISCOVERY_TEMPERATURE: z.string().optional(),
+  DISCOVERY_MAX_OUTPUT_TOKENS: z.string().optional(),
+  DISCOVERY_TOP_P: z.string().optional(),
+  EXECUTION_TEMPERATURE: z.string().optional(),
+  EXECUTION_MAX_OUTPUT_TOKENS: z.string().optional(),
+  EXECUTION_TOP_P: z.string().optional(),
+  SUPERVISOR_TEMPERATURE: z.string().optional(),
+  SUPERVISOR_MAX_OUTPUT_TOKENS: z.string().optional(),
+  SUPERVISOR_TOP_P: z.string().optional(),
+  HISTORY_TEMPERATURE: z.string().optional(),
+  HISTORY_MAX_OUTPUT_TOKENS: z.string().optional(),
+  HISTORY_TOP_P: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

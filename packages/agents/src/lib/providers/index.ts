@@ -11,4 +11,9 @@ export {
   AGENT_REQUIREMENTS,
   type Capability,
 } from "./capabilities";
+export {
+  AGENT_PARAMS,
+  modelSettingsFor,
+  type AgentParams,
+} from "./params";
 export { validateAgentCapabilities } from "./validate";

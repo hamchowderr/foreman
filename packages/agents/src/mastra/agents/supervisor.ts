@@ -2,7 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
 import { contextInjector, piiRedactor } from "../../lib/processors";
-import { AGENT_MODELS } from "../../lib/providers";
+import { AGENT_MODELS, modelSettingsFor } from "../../lib/providers";
 
 const SUPERVISOR_PROMPT = `You are Foreman Supervisor, an AI assistant that helps users take actions across 9000+ apps via Zapier. You coordinate specialist agents to fulfill user requests.
 
@@ -35,6 +35,7 @@ export function createSupervisorAgent({ databaseUrl, discoveryAgent, executionAg
       "Supervisor agent that routes requests to specialist subagents for discovery, execution, and history analysis.",
     instructions: SUPERVISOR_PROMPT,
     model: AGENT_MODELS.supervisor,
+    defaultOptions: { modelSettings: modelSettingsFor("supervisor") },
     agents: {
       discovery: discoveryAgent,
       execution: executionAgent,

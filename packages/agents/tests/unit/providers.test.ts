@@ -13,6 +13,21 @@ const AGENT_ENV_KEYS = [
   "EXECUTION_MODEL",
   "SUPERVISOR_MODEL",
   "HISTORY_MODEL",
+  "FOREMAN_TEMPERATURE",
+  "FOREMAN_MAX_OUTPUT_TOKENS",
+  "FOREMAN_TOP_P",
+  "DISCOVERY_TEMPERATURE",
+  "DISCOVERY_MAX_OUTPUT_TOKENS",
+  "DISCOVERY_TOP_P",
+  "EXECUTION_TEMPERATURE",
+  "EXECUTION_MAX_OUTPUT_TOKENS",
+  "EXECUTION_TOP_P",
+  "SUPERVISOR_TEMPERATURE",
+  "SUPERVISOR_MAX_OUTPUT_TOKENS",
+  "SUPERVISOR_TOP_P",
+  "HISTORY_TEMPERATURE",
+  "HISTORY_MAX_OUTPUT_TOKENS",
+  "HISTORY_TOP_P",
 ] as const;
 
 function clearEnv() {
@@ -125,5 +140,54 @@ describe("providers/validate", () => {
     const { validateAgentCapabilities } = await import("@/lib/providers");
     expect(() => validateAgentCapabilities()).toThrow(/discovery/);
     expect(() => validateAgentCapabilities()).toThrow(/fake\/provider-y/);
+  });
+});
+
+describe("providers/params", () => {
+  it("returns undefined for agents with no env params (Mastra/provider defaults apply)", async () => {
+    const { modelSettingsFor } = await import("@/lib/providers");
+    expect(modelSettingsFor("foreman")).toBeUndefined();
+    expect(modelSettingsFor("discovery")).toBeUndefined();
+  });
+
+  it("resolves temperature from env", async () => {
+    process.env.DISCOVERY_TEMPERATURE = "0.1";
+    const { modelSettingsFor } = await import("@/lib/providers");
+    expect(modelSettingsFor("discovery")).toEqual({ temperature: 0.1 });
+  });
+
+  it("resolves multiple params for the same agent", async () => {
+    process.env.EXECUTION_TEMPERATURE = "0.3";
+    process.env.EXECUTION_MAX_OUTPUT_TOKENS = "4096";
+    process.env.EXECUTION_TOP_P = "0.95";
+    const { modelSettingsFor } = await import("@/lib/providers");
+    expect(modelSettingsFor("execution")).toEqual({
+      temperature: 0.3,
+      maxOutputTokens: 4096,
+      topP: 0.95,
+    });
+  });
+
+  it("ignores non-numeric values (falls back to provider default)", async () => {
+    process.env.FOREMAN_TEMPERATURE = "not-a-number";
+    const { modelSettingsFor } = await import("@/lib/providers");
+    expect(modelSettingsFor("foreman")).toBeUndefined();
+  });
+
+  it("scopes params per agent — FOREMAN_* does not leak into discovery", async () => {
+    process.env.FOREMAN_TEMPERATURE = "0.7";
+    const { modelSettingsFor } = await import("@/lib/providers");
+    expect(modelSettingsFor("foreman")).toEqual({ temperature: 0.7 });
+    expect(modelSettingsFor("discovery")).toBeUndefined();
+  });
+
+  it("accepts integer and decimal forms", async () => {
+    process.env.HISTORY_MAX_OUTPUT_TOKENS = "2048";
+    process.env.HISTORY_TEMPERATURE = "0";
+    const { modelSettingsFor } = await import("@/lib/providers");
+    expect(modelSettingsFor("history")).toEqual({
+      temperature: 0,
+      maxOutputTokens: 2048,
+    });
   });
 });
