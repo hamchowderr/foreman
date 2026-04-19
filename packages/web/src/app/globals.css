@@ -2,12 +2,22 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --surface: #fafafa;
+  --accent: #ff4a00;
+  --accent-foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,11 +26,35 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --muted: #9ca3af;
+    --border: #262626;
+    --surface: #131313;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+.typing-dot {
+  animation: typing-dot 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
