@@ -5,7 +5,7 @@
 
 An AI assistant that takes actions across 9,000+ apps on your behalf via Zapier. Tell it what you want done in plain language — it figures out which app and action to use, shows you what it plans to do (human-in-the-loop approval), and executes it.
 
-Built with [Mastra](https://mastra.ai) for agentic AI and [Vercel Chat SDK](https://chat-sdk.dev) for multi-channel delivery. Foreman is accessible from a web UI, Slack, Telegram, Discord, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage --- all powered by the same agent backend. It remembers your preferences, connected apps, and past actions across all channels.
+Built with [Mastra](https://mastra.ai) for agentic AI and [Chat SDK](https://chat-sdk.dev) for multi-channel delivery. Foreman is accessible from a web UI, Slack, Telegram, Discord, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage --- all powered by the same agent backend. It remembers your preferences, connected apps, and past actions across all channels.
 
 ## Try It — 5 Things to Test
 
@@ -38,18 +38,19 @@ foreman/
 │   ├── agents/          # Standalone Mastra/Hono agent server (:4111)
 │   │   ├── src/
 │   │   │   ├── mastra/
-│   │   │   │   ├── index.ts              # Mastra instance, server config, observability
+│   │   │   │   ├── index.ts              # Mastra instance, server config, auth, observability
 │   │   │   │   ├── agents/
-│   │   │   │   │   ├── foreman.ts        # Primary agent (9 tools, memory, processors, evals)
+│   │   │   │   │   ├── foreman.ts        # Primary agent (MCP tools, memory, processors, evals)
 │   │   │   │   │   ├── supervisor.ts     # Multi-agent supervisor
 │   │   │   │   │   ├── discovery.ts      # App discovery subagent (Haiku)
 │   │   │   │   │   ├── execution.ts      # Action execution subagent (Sonnet)
 │   │   │   │   │   └── history.ts        # History search subagent (Haiku)
-│   │   │   │   └── tools/                # 9 Zapier tools (discover, list, schema, execute, etc.)
+│   │   │   │   └── tools/                # 3 custom tools (connect_zapier, search_history, fork_conversation)
 │   │   │   ├── lib/
 │   │   │   │   ├── zapier/               # SDK wrapper, discovery, execution, errors, connect
+│   │   │   │   ├── zapier-mcp.ts         # MCPClient (stdio) → Zapier SDK MCP server + toModelOutput + requireApproval
 │   │   │   │   ├── db/                   # Drizzle ORM schema + connection (SQLite/LibSQL)
-│   │   │   │   ├── stream/              # SSE encoding, transformer, types
+│   │   │   │   ├── stream/              # SSE encoding, chunk transformer, types
 │   │   │   │   ├── processors/          # Input (context injection) + Output (PII redaction)
 │   │   │   │   ├── rag/                 # Action history indexing + semantic search
 │   │   │   │   ├── identity.ts          # Channel-agnostic user resolution
@@ -59,18 +60,18 @@ foreman/
 │   │   │   │   ├── prompt-template.ts   # Dynamic system prompt builder
 │   │   │   │   └── api-auth.ts          # Auth middleware
 │   │   │   ├── routes/                  # Hono API routes
-│   │   │   │   ├── conversations.ts     # CRUD + SSE streaming
+│   │   │   │   ├── conversations.ts     # CRUD + SSE streaming (savePerStep, prepareStep)
 │   │   │   │   ├── proposals.ts         # Approve/decline/field-choices
-│   │   │   │   ├── middleware.ts        # Auth middleware
+│   │   │   │   ├── middleware.ts        # Clerk JWT auth middleware
 │   │   │   │   ├── webhooks.ts          # Channel webhook routes
 │   │   │   │   └── zapier-connect.ts    # OAuth flow for non-web channels
 │   │   │   ├── workflows/               # Mastra workflows
 │   │   │   │   ├── daily-summary.ts     # Cron: 24h activity digest
 │   │   │   │   ├── health-check.ts      # Cron: Zapier connection health
 │   │   │   │   └── webhook-handler.ts   # HTTP trigger workflow
+│   │   │   ├── discord/bot.ts           # Discord adapter (Chat SDK + Gateway)
 │   │   │   ├── slack/bot.ts             # Slack adapter (Chat SDK)
 │   │   │   ├── telegram/bot.ts          # Telegram adapter (Chat SDK)
-│   │   │   ├── discord/bot.ts           # Discord adapter (Chat SDK + Gateway)
 │   │   │   ├── teams/bot.ts             # Teams adapter (Chat SDK)
 │   │   │   ├── gchat/bot.ts             # Google Chat adapter (Chat SDK)
 │   │   │   ├── whatsapp/bot.ts          # WhatsApp adapter (Chat SDK)
@@ -84,13 +85,14 @@ foreman/
 │   │   └── tsconfig.json
 │   └── web/                 # Next.js frontend (:3000)
 │       ├── src/
-│       │   ├── app/                     # Pages: chat, sign-in, sign-up
-│       │   ├── components/              # Chat shell, approval cards, message components
+│       │   ├── app/                     # Pages: chat, sign-in, sign-up, workflows
+│       │   ├── components/              # Chat shell, approval cards, message components, voice
 │       │   └── lib/
-│       │       └── api-client.ts        # Calls agent server via NEXT_PUBLIC_AGENT_SERVER_URL
+│       │       ├── api-client.ts        # Calls agent server via NEXT_PUBLIC_AGENT_SERVER_URL
+│       │       └── types.ts             # Shared types
 │       ├── package.json
 │       └── tsconfig.json
-├── package.json             # Workspace root
+├── package.json             # Workspace root (npm workspaces)
 ├── tsconfig.json            # Base TypeScript config
 ├── CLAUDE.md                # AI assistant instructions
 └── .beads/                  # Issue tracking (Dolt-backed)
@@ -106,32 +108,75 @@ When running `npm run dev` in `packages/agents`, Mastra provides a built-in dev 
 - Inspect workflows and trigger runs
 - See observability traces (when `OTEL_ENABLED=true`)
 
-In production on Vercel, Mastra Studio is also available at the deployed URL when `studio: true` is set in the deployer config.
-
 ## Features
 
-### Agent Capabilities
+### Tools — Zapier SDK MCP
 
-| Feature | Description |
-|---------|-------------|
-| **Zapier Integration** | Discover connections, list actions, get schemas, execute actions across 9,000+ apps |
-| **Human-in-the-Loop** | Action proposals with approve/decline flow before execution |
-| **Semantic Memory** | LibSQLVector-powered recall of past conversations (topK: 4) |
-| **Working Memory** | Persistent user preferences and session context |
-| **Observational Memory** | Learns from interaction patterns over time |
-| **RAG** | Action history indexing + semantic search via `MDocument` chunking |
-| **Processors** | Input: context injection (connected apps). Output: PII redaction |
-| **Evals** | Answer relevancy (30%), toxicity scoring (20%) |
-| **Multi-Agent** | Supervisor pattern with discovery, execution, and history subagents |
-| **Workflows** | Daily summary digest, health checks, webhook handler |
-| **Voice I/O** | Speech-to-text (Whisper) + text-to-speech (ElevenLabs/OpenAI), per-user toggle |
-| **Dynamic Prompts** | System prompt adapts based on user's connected apps and recent actions |
+Foreman gets its Zapier capabilities from the **Zapier SDK's built-in MCP server** (`@zapier/zapier-sdk`), connected via `@mastra/mcp` MCPClient over stdio transport. This provides ~33 tools covering actions, apps, connections, tables, and authenticated HTTP.
+
+**Dynamic tool search (ToolSearchProcessor):** With 33+ MCP tools, loading all schemas into every request wastes ~6-8K tokens. Instead, Foreman uses `ToolSearchProcessor` from `@mastra/core/processors` — the agent receives `search_tools` and `load_tool` meta-tools to discover and load only the tools it needs per request.
+
+**toModelOutput:** Each MCP tool result passes through a summarizer that compresses verbose API responses before they reach the model — capping lists at 20 items, stripping unnecessary fields, and trimming long strings.
+
+**requireApproval:** 10 write/delete MCP tools require human approval before execution:
+`run-action`, `fetch`, `request`, `create-table`, `delete-table`, `create-table-records`, `update-table-records`, `delete-table-records`, `create-table-fields`, `delete-table-fields`
+
+**Custom tools (always loaded, not behind search):**
+
+| Tool | Description |
+|------|-------------|
+| `connect_zapier` | Generate a one-time Zapier connect URL for non-web channels |
+| `search_history` | Semantic search across past action results |
+| `fork_conversation` | Branch a conversation for parallel exploration |
+
+### Memory
+
+Mastra Memory with LibSQL storage and vector search. Messages are stored in **Mastra threads** (not a custom message table). Each conversation maps to a `mastraThreadId`.
+
+| Feature | Config |
+|---------|--------|
+| Working memory | Enabled — persistent user preferences and session context |
+| Semantic recall | `topK: 2`, `messageRange: 1`, `scope: "resource"` — cross-thread recall by user |
+| Observational memory | Enabled — learns from interaction patterns |
+| Embedder | `openai/text-embedding-3-small` |
+| Last messages | 20 |
+
+All 9 channel bots use `savePerStep: true` so memory is persisted after each tool step, not just at the end.
+
+### Streaming
+
+Mastra does not provide a `toUIMessageStreamResponse` method. Foreman implements a custom SSE layer:
+
+1. The conversations route calls `agent.stream()` with `savePerStep` and `prepareStep`
+2. `prepareStep` uses the fast model (`claude-haiku-4-5`) for the first 2 tool discovery steps, then switches to the default model for reasoning
+3. `createChunkTransformer` converts Mastra `fullStream` chunks into `AppChunk` SSE events (`text-delta`, `tool-call`, `proposal-created`, `action-executed`, `error`, `done`)
+4. The frontend consumes these via a custom SSE client
+
+### Processors
+
+| Processor | Type | What It Does |
+|-----------|------|-------------|
+| `contextInjector` | Input | Injects connected apps context into the prompt |
+| `ToolSearchProcessor` | Input | Provides `search_tools`/`load_tool` meta-tools for dynamic MCP tool loading |
+| `piiRedactor` | Output | Strips emails, API keys, Bearer tokens, phones, cards, SSNs from output |
+
+### Multi-Agent
+
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| Foreman (primary) | `claude-sonnet-4-6` | Main conversation + tool calling |
+| Discovery | `claude-haiku-4-5` | Fast app/action discovery |
+| Execution | `claude-sonnet-4-6` | Action execution with validation |
+| History | `claude-haiku-4-5` | Fast history search |
+| Supervisor | `claude-sonnet-4-6` | Multi-agent coordination |
 
 ### Channels
 
+9 adapters via [Chat SDK](https://chat-sdk.dev), plus MCP and A2A protocols.
+
 | Channel | Adapter | How It Works |
 |---------|---------|-------------|
-| **Web** | Next.js frontend | Clerk sessions, SSE streaming |
+| **Web** | Next.js frontend | Clerk sessions, custom SSE streaming |
 | **Slack** | `@chat-adapter/slack` | Webhook on `:4112/slack/webhook` |
 | **Telegram** | `@chat-adapter/telegram` | Webhook or polling mode |
 | **Discord** | `@chat-adapter/discord` | Gateway WebSocket + Interactions endpoint |
@@ -146,11 +191,11 @@ In production on Vercel, Mastra Studio is also available at the deployed URL whe
 
 ### Authentication
 
-Foreman uses [Clerk](https://clerk.com) for user authentication and `@mastra/auth-clerk` for agent server JWT verification.
+Foreman uses [Clerk](https://clerk.com) for user authentication.
 
 | Auth Method | Use Case |
 |-------------|----------|
-| Clerk (Google OAuth, email, etc.) | Web frontend sign-in/sign-up |
+| Clerk (`@clerk/nextjs`) | Web frontend sign-in/sign-up, org switching |
 | `@mastra/auth-clerk` (JWKS JWT verification) | Agent server validates Clerk session tokens |
 | API key (`x-api-key` header, `fmn_` prefix, SHA-256 hashed) | MCP, A2A, programmatic access |
 | Channel identity | Auto-registered per platform (Slack, Discord, Telegram, etc.) |
@@ -180,19 +225,12 @@ Per-user feature flags that control what actions the agent can perform. All capa
 
 Manage via `GET /capabilities` (list all) and `PUT /capabilities/:capability` (set `{ "enabled": true/false }`).
 
-### Zapier Tools
+### Evals
 
-| Tool | Description |
-|------|-------------|
-| `discover_connections` | List user's connected Zapier apps |
-| `list_actions` | Get available actions for an app (search, read, write) |
-| `get_action_schema` | Get input schema for a specific action |
-| `get_field_choices` | Get dynamic field options (e.g., Slack channels, project lists) |
-| `execute_action` | Run an action with human approval flow |
-| `raw_api_call` | Direct Zapier API call for advanced use cases |
-| `search_history` | Semantic search across past action results |
-| `fork_conversation` | Branch a conversation for parallel exploration |
-| `connect_zapier` | Generate a one-time Zapier connect URL for non-web channels |
+| Scorer | Sampling |
+|--------|----------|
+| Answer relevancy | 30% of requests |
+| Toxicity | 20% of requests |
 
 ### Workflows
 
@@ -209,19 +247,13 @@ API: `GET /workflows`, `GET /workflows/:id`, `POST /workflows/:id/run` (SSE stre
 
 Foreman supports voice input and output, controllable per-user via the `voice` capability flag.
 
-- **Speech-to-Text**: OpenAI Whisper for transcription
-- **Text-to-Speech**: ElevenLabs (primary, highest quality) with OpenAI TTS fallback
+- **Speech-to-Text**: OpenAI Whisper via `@mastra/voice-openai`
+- **Text-to-Speech**: ElevenLabs (`@mastra/voice-elevenlabs`, primary) with OpenAI TTS fallback
 - **Web UI**: Mic button next to chat input, speaker icon on agent messages
-- **Channels**: Telegram voice messages, Discord voice messages, WhatsApp voice messages (*Coming Soon*)
-- **Optional**: Disabled per-user via capabilities API
-
-Env vars: `ELEVENLABS_API_KEY` (optional, falls back to OpenAI TTS), `ELEVENLABS_VOICE_ID` (optional, defaults to "Rachel"), `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini)
 
 API: `POST /api/voice/transcribe` (multipart audio upload), `POST /api/voice/synthesize` (text → audio response)
 
 ### Guardrails
-
-Foreman includes a multi-layer guardrail system to prevent accidental or harmful actions:
 
 | Guardrail | Description | Default |
 |-----------|-------------|---------|
@@ -231,10 +263,6 @@ Foreman includes a multi-layer guardrail system to prevent accidental or harmful
 | **Bulk confirmation** | Requires approval for operations affecting >5 records | Enabled |
 | **Org admin controls** | Org admins can override guardrail settings for all members | Configurable |
 | **PII redaction** | Strips emails, API keys, phones, cards, SSNs from output | Always on |
-
-Sensitive app categories: Banking (Stripe, PayPal, Square, Plaid, Wise), HR (BambooHR, Gusto, Rippling, Workday, ADP), Security (Okta, Auth0, 1Password)
-
-API: `GET /api/guardrails/status`, `PUT /api/guardrails/app-access/:appKey`
 
 ## Foreman Modes
 
@@ -248,7 +276,7 @@ Foreman supports three operating modes, set via `FOREMAN_MODE` in `.env.local`:
 
 ## Zapier Configuration
 
-Foreman uses the [Zapier SDK](https://docs.zapier.com/sdk) to execute actions across 9,000+ apps on behalf of users.
+Foreman uses the [Zapier SDK](https://docs.zapier.com/sdk) (`@zapier/zapier-sdk`) to execute actions across 9,000+ apps. The SDK exposes an MCP server that Foreman connects to via stdio transport through `@mastra/mcp` MCPClient.
 
 ### Dev Mode (default)
 
@@ -326,7 +354,6 @@ AGENT_SERVER_URL=http://localhost:4111  # Used for Zapier OAuth callback URLs
 # Auth (Clerk)
 CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
-CLERK_JWKS_URI=https://<your-clerk-domain>.clerk.accounts.dev/.well-known/jwks.json
 
 # Zapier
 FOREMAN_MODE=dev                        # "dev", "production", or "self_hosted"
@@ -341,20 +368,16 @@ DISCORD_BOT_TOKEN=...
 DISCORD_PUBLIC_KEY=...
 DISCORD_APPLICATION_ID=...
 CRON_SECRET=...                         # Required for Discord Gateway
-TEAMS_APP_ID=...                        # Coming Soon
-TEAMS_APP_PASSWORD=...                  # Coming Soon
-TEAMS_APP_TENANT_ID=...                 # Coming Soon
 GOOGLE_CHAT_CREDENTIALS=...             # Service account JSON (single line)
 GITHUB_TOKEN=...
 GITHUB_WEBHOOK_SECRET=...
-LINEAR_API_KEY=lin_api_...              # Personal API key or use OAuth
-LINEAR_WEBHOOK_SECRET=lin_wh_...        # From Linear webhook creation
-LINEAR_BOT_USERNAME=...                 # Linear username for the API key
+LINEAR_API_KEY=lin_api_...
+LINEAR_WEBHOOK_SECRET=lin_wh_...
+LINEAR_BOT_USERNAME=...
 
 # Voice (optional — falls back to OpenAI TTS if ElevenLabs not set)
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=...                 # Defaults to "Rachel"
-GOOGLE_GENERATIVE_AI_API_KEY=...        # Gemini
 ```
 
 **`packages/web/.env.local`:**
@@ -444,13 +467,11 @@ Discord uses a Gateway WebSocket connection for receiving messages. The webhook 
 3. Enable the Teams channel
 4. Set `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD`, `TEAMS_APP_TENANT_ID`
 5. Create a Teams app manifest and sideload or publish to your org
-6. Requires M365 license for testing
 
 ### WhatsApp -- *Coming Soon*
 
 1. Set up a Meta Business account and WhatsApp Business API
 2. Configure webhook URL: `https://<your-domain>/whatsapp/webhook`
-3. The webhook endpoint handles both GET (verification) and POST (messages)
 
 ### GitHub
 
@@ -463,7 +484,7 @@ Discord uses a Gateway WebSocket connection for receiving messages. The webhook 
 1. Create an OAuth app or use a personal API key
 2. Set webhook URL: `https://<your-domain>/linear/webhook`
 3. Set `LINEAR_API_KEY` (personal) or `LINEAR_CLIENT_ID` + `LINEAR_CLIENT_SECRET` (OAuth)
-4. Set `LINEAR_WEBHOOK_SECRET` (from webhook creation) and `LINEAR_BOT_USERNAME`
+4. Set `LINEAR_WEBHOOK_SECRET` and `LINEAR_BOT_USERNAME`
 
 ### iMessage -- *Coming Soon*
 
@@ -499,10 +520,10 @@ curl -X POST http://localhost:4111/a2a/foreman \
 | `GET` | `/api/agents` | List registered agents |
 | `POST` | `/a2a/foreman` | Agent-to-agent protocol |
 | `GET` | `/mcp/*` | Model Context Protocol |
-| `POST` | `/api/conversations` | Create conversation |
+| `POST` | `/api/conversations` | Create conversation (creates Mastra thread) |
 | `GET` | `/api/conversations` | List conversations |
-| `GET` | `/api/conversations/:id` | Get conversation with messages |
-| `POST` | `/api/conversations/:id/messages` | Send message (SSE stream) |
+| `GET` | `/api/conversations/:id` | Get conversation with messages (from Mastra Memory thread) |
+| `POST` | `/api/conversations/:id/messages` | Send message (SSE stream with savePerStep + prepareStep) |
 | `PATCH` | `/api/proposals/:id` | Update proposal |
 | `POST` | `/api/proposals/:id/approve` | Approve action proposal |
 | `POST` | `/api/proposals/:id/decline` | Decline action proposal |
@@ -535,31 +556,22 @@ curl -X POST http://localhost:4111/a2a/foreman \
 
 ## Database
 
-Foreman uses SQLite locally via [Drizzle ORM](https://orm.drizzle.team) + [@libsql/client](https://github.com/tursodatabase/libsql-client-ts). For production on Vercel, use [Turso](https://turso.tech) (hosted LibSQL) --- same driver, zero code changes.
+Foreman uses SQLite locally via [Drizzle ORM](https://orm.drizzle.team) + [@libsql/client](https://github.com/tursodatabase/libsql-client-ts). For production, use [Turso](https://turso.tech) (hosted LibSQL) --- same driver, zero code changes.
 
 **Local:** `DATABASE_URL=file:./foreman.db`
 **Production:** `DATABASE_URL=libsql://foreman-<your-org>.turso.io?authToken=<token>`
-
-Turso is available in the [Vercel Marketplace](https://vercel.com/marketplace) — one-click install auto-provisions the database and injects `DATABASE_URL` into your Vercel project.
-
-**Free tier comparison:**
-
-| Provider | Storage | Best for |
-|----------|---------|----------|
-| [Turso](https://turso.tech) (LibSQL) | 5 GB, 500M reads/mo | **Recommended** — zero code changes, same @libsql/client |
-| [Neon](https://neon.com) (Postgres) | 0.5 GB, 100 CU-hours/mo | Requires Drizzle adapter swap to Postgres |
 
 ### Tables
 
 | Table | Purpose |
 |-------|---------|
 | `user` | User accounts (synced from Clerk) |
-| `session` | Active sessions |
+| `session` | Active sessions (legacy, kept for migration compatibility) |
 | `account` | OAuth provider links |
 | `verification` | Email verification tokens |
 | `zapier_identity` | Per-user Zapier OAuth tokens (encrypted) |
-| `conversation` | Chat conversations |
-| `message` | Conversation messages |
+| `conversation` | Chat conversations (links to `mastraThreadId` for memory) |
+| `message` | Conversation messages (legacy — messages primarily stored in Mastra threads) |
 | `action_proposal` | Pending/approved/declined action proposals |
 | `action_run` | Executed action results |
 | `workflow` | Saved workflows (from conversation patterns) |
@@ -611,8 +623,6 @@ cd packages/agents
 DEPLOY_TARGET=vercel npm run build:vercel
 ```
 
-When deployed to Vercel with `studio: true`, Mastra Studio is available at the deployed URL for browsing agents, testing conversations, and viewing traces in production.
-
 ### Cloudflare Workers
 
 ```bash
@@ -620,22 +630,9 @@ cd packages/agents
 DEPLOY_TARGET=cloudflare npm run build:cloudflare
 ```
 
-## Models
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| Foreman (primary) | `claude-sonnet-4-6` | Main conversation + tool calling |
-| Discovery | `claude-haiku-4-5` | Fast app/action discovery |
-| Execution | `claude-sonnet-4-6` | Action execution with validation |
-| History | `claude-haiku-4-5` | Fast history search |
-| Supervisor | `claude-sonnet-4-6` | Multi-agent coordination |
-| Title generation | `claude-haiku-4-5` | Conversation title extraction |
-
 ## Security
 
 ### Input Validation & Sanitization
-
-All API inputs are validated and sanitized before processing:
 
 - **Zod schemas** on every route — type-safe validation with descriptive error messages
 - **JSON parse protection** — malformed request bodies return 400, never crash the server
@@ -646,7 +643,6 @@ All API inputs are validated and sanitized before processing:
 ### Output Sanitization
 
 - **PII redaction** — output processor strips emails, API keys, Bearer tokens, phone numbers, credit card numbers, and SSNs before responses leave the system
-- **Content filtering** — guardrails assess action risk and block dangerous operations
 
 ### Authentication & Encryption
 
@@ -654,13 +650,14 @@ All API inputs are validated and sanitized before processing:
 - **Token encryption** — Zapier OAuth tokens encrypted at rest with AES-256-GCM
 - **API key hashing** — keys are SHA-256 hashed, never stored in plaintext
 - **Webhook signatures** — Slack, Discord, Linear, and other webhooks verify request signatures
+- **requireApproval** — 10 write/delete MCP tools require human approval before execution
 - **Guardrails** — rate limiting, sensitive app blocking, bulk operation confirmation
 
 ## Development
 
 ### Testing
 
-Foreman has three layers of testing: unit tests, integration tests, and E2E tests. **142 total tests (135 passing, 7 skipped) across 17 test files.**
+Foreman has three layers of testing: unit tests, integration tests, and E2E tests.
 
 #### Unit Tests (Vitest)
 
@@ -672,14 +669,15 @@ cd packages/agents && npm test
 
 | Test File | What It Tests |
 |-----------|---------------|
-| `capabilities.test.ts` | Feature flags CRUD, default-on behavior, all 6 capability types |
+| `capabilities.test.ts` | Feature flags CRUD, default-on behavior |
 | `context-injector.test.ts` | Input processor: connected apps context injection |
+| `cross-channel-memory.test.ts` | Cross-channel memory recall (same user, different platforms) |
 | `crypto.test.ts` | AES-256-GCM token encryption/decryption |
 | `env.test.ts` | Environment variable validation |
 | `guardrails.test.ts` | Rate limiting, risk assessment, sensitive app blocking, bulk confirmation |
 | `guardrails-config.test.ts` | Org-level guardrail defaults and configuration |
 | `identity.test.ts` | Clerk JWT parsing, orgId extraction, API key resolution, channel identity |
-| `mastra-agent.test.ts` | Agent initialization, tool registration (8 tools), model routing |
+| `mastra-agent.test.ts` | Agent initialization, tool registration, model routing |
 | `model-routing.test.ts` | Model selection (sonnet/haiku/opus per agent role) |
 | `pii-redactor.test.ts` | Output processor: email, API key, phone, card, SSN redaction |
 | `prompt-template.test.ts` | Dynamic system prompt generation |
@@ -687,6 +685,7 @@ cd packages/agents && npm test
 | `telegram-bot.test.ts` | Telegram bot initialization and handler wiring |
 | `voice.test.ts` | STT/TTS functions, ElevenLabs primary, OpenAI fallback |
 | `zapier-errors.test.ts` | Zapier SDK error classification and retry logic |
+| `zapier-mcp.test.ts` | MCP client creation, toModelOutput summarizers, requireApproval mapping |
 
 #### Integration Tests
 
@@ -698,34 +697,20 @@ cd packages/agents && npm test -- tests/integration
 
 | Test File | What It Tests |
 |-----------|---------------|
-| `api-routes.test.ts` | All API endpoints (capabilities, guardrails, workflows, voice), auth gating, mock JWT |
+| `api-routes.test.ts` | All API endpoints, auth gating, mock JWT |
 | `protocols.test.ts` | REST API, A2A, and MCP protocol endpoints |
 
 #### E2E Tests (Playwright)
 
-Located in `packages/web/tests/e2e/`. Tests the full user flow through the web UI:
+Located in `packages/web/tests/e2e/`:
 
 ```bash
 cd packages/web && npx playwright test
 ```
 
-| Test File | What It Tests |
-|-----------|---------------|
-| `smoke.spec.ts` | Sign up, sign in, create chat, send message, receive response |
-
 #### AIMock (Deterministic AI Testing)
 
-Foreman uses [`@copilotkit/aimock`](https://aimock.copilotkit.dev) for comprehensive mock infrastructure. It replaces real API calls with predictable, fixture-driven responses — not just LLMs, but voice, MCP, A2A, and more.
-
-| Mock | What it covers |
-|------|---------------|
-| **LLM** | Claude, OpenAI, Gemini — chat completions with streaming |
-| **Multimedia** | Whisper transcription, TTS synthesis |
-| **MCP** | Tool definitions, resources, prompts |
-| **A2A** | Agent cards, message routing, SSE streaming |
-| **Vector** | Embedding responses for RAG pipeline |
-
-Test fixtures are in `packages/agents/tests/fixtures/aimock/`. Config in `aimock.json`.
+Foreman uses [`@copilotkit/aimock`](https://aimock.copilotkit.dev) for mock infrastructure — LLM, voice, MCP, A2A, and vector DB mocking with fixture-driven responses.
 
 ```bash
 # Start agent server with AIMock (all APIs mocked)
@@ -735,12 +720,13 @@ cd packages/agents && npm run dev:mock
 npx @copilotkit/aimock --config aimock.json --port 4010
 ```
 
-Useful for:
-- Running tests in CI without API keys
-- Reproducing specific conversation flows
-- Testing tool-calling sequences deterministically
-- Voice testing without hitting OpenAI/ElevenLabs
-- Chaos testing (error injection, mid-stream disconnects)
+### Linting & Formatting
+
+```bash
+npm run lint           # biome check .
+npm run lint:fix       # biome check --fix .
+npm run format         # biome format --write .
+```
 
 ### Local Tunnel (ngrok)
 
@@ -751,31 +737,25 @@ ngrok http 4112
 # Update webhook URLs in platform developer portals
 ```
 
-Channels that need ngrok for local testing:
-- **Slack** — Event Subscriptions URL
-- **Telegram** — Webhook URL (or use polling mode instead)
-- **Discord** — Interactions Endpoint URL (Gateway handles messages without ngrok)
-- **Google Chat** — App webhook URL
-- **Teams** — Messaging endpoint
-- **Linear** — Webhook URL
-- **GitHub** — Webhook URL
-
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| Agent framework | [Mastra](https://mastra.ai) |
-| Chat channels | [Vercel Chat SDK](https://chat-sdk.dev) |
+| Agent framework | [Mastra](https://mastra.ai) (`@mastra/core`, `@mastra/memory`, `@mastra/mcp`, `@mastra/evals`) |
+| Chat channels | [Chat SDK](https://chat-sdk.dev) (`chat`, `@chat-adapter/*`) |
+| Zapier integration | `@zapier/zapier-sdk` via MCP (stdio transport) |
 | LLM | Claude (Anthropic) via Mastra |
-| Embeddings | OpenAI (text-embedding-3-small) |
-| Voice TTS | [ElevenLabs](https://elevenlabs.io) (primary) + OpenAI TTS (fallback) |
-| Database | SQLite / LibSQL (Turso for cloud) |
-| ORM | Drizzle |
-| Auth | Clerk + @mastra/auth-clerk |
-| Frontend | Next.js 16, React, Tailwind |
-| API layer | Hono (via Mastra server) |
-| Automation | Zapier SDK |
-| Secrets | Infisical |
+| Embeddings | OpenAI (`text-embedding-3-small`) |
+| Voice TTS | [ElevenLabs](https://elevenlabs.io) (`@mastra/voice-elevenlabs`) + OpenAI TTS (`@mastra/voice-openai`) fallback |
+| Database | SQLite / LibSQL ([Turso](https://turso.tech) for cloud) |
+| ORM | [Drizzle](https://orm.drizzle.team) |
+| Auth | [Clerk](https://clerk.com) (`@clerk/nextjs` + `@mastra/auth-clerk`) |
+| Frontend | [Next.js](https://nextjs.org) 16, React 19, Tailwind 4 |
+| Markdown rendering | [Streamdown](https://github.com/nichochar/streamdown) (code, math, mermaid plugins) |
+| API layer | [Hono](https://hono.dev) (via Mastra server) |
+| Linting | [Biome](https://biomejs.dev) |
+| Testing | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [AIMock](https://aimock.copilotkit.dev) |
+| Monorepo | npm workspaces |
 
 ## License
 
