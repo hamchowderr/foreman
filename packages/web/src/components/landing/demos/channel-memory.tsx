@@ -2,8 +2,14 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Brain } from "lucide-react";
-import { SlackIcon, TelegramIcon, DiscordIcon, GlobeIcon } from "@/components/icons";
+import { Brain, Globe } from "@/components/icons/hi";
+import {
+  SlackBrand,
+  TelegramBrand,
+  DiscordBrand,
+  BRAND_COLORS,
+} from "@/components/icons/brands";
+import type { ComponentType } from "react";
 
 type ChannelId = "slack" | "telegram" | "discord" | "web";
 
@@ -41,43 +47,40 @@ const FRAMES: Frame[] = [
   },
 ];
 
+type IconComp = ComponentType<{ size?: number; color?: string; className?: string }>;
+
 const CHANNELS: Record<
   ChannelId,
   {
     label: string;
-    Icon: typeof SlackIcon;
+    Icon: IconComp;
     brand: string;
     brandText: string;
-    position: string;
   }
 > = {
   slack: {
     label: "Slack",
-    Icon: SlackIcon,
-    brand: "#4A154B",
+    Icon: SlackBrand,
+    brand: BRAND_COLORS.slack,
     brandText: "#ffffff",
-    position: "top-0 left-0",
   },
   telegram: {
     label: "Telegram",
-    Icon: TelegramIcon,
-    brand: "#26A5E4",
+    Icon: TelegramBrand,
+    brand: BRAND_COLORS.telegram,
     brandText: "#ffffff",
-    position: "top-0 right-0",
   },
   discord: {
     label: "Discord",
-    Icon: DiscordIcon,
-    brand: "#5865F2",
+    Icon: DiscordBrand,
+    brand: BRAND_COLORS.discord,
     brandText: "#ffffff",
-    position: "bottom-0 left-0",
   },
   web: {
     label: "Web",
-    Icon: GlobeIcon,
-    brand: "var(--accent)",
-    brandText: "var(--accent-foreground)",
-    position: "bottom-0 right-0",
+    Icon: Globe,
+    brand: BRAND_COLORS.zapier,
+    brandText: "#ffffff",
   },
 };
 
@@ -161,7 +164,7 @@ export function ChannelMemory() {
                   className="px-2.5 py-1.5 flex items-center gap-1.5 shrink-0"
                   style={{ backgroundColor: ch.brand, color: ch.brandText }}
                 >
-                  <ch.Icon size={12} />
+                  <ch.Icon size={13} color={ch.brandText} />
                   <span className="text-[10px] sm:text-[11px] font-semibold truncate">{ch.label}</span>
                 </div>
                 {/* Chat body */}

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "@/components/icons/hi";
 
 type Scene = {
   id: string;

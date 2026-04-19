@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Shield, Lock } from "lucide-react";
+import { Shield, Lock } from "@/components/icons/hi";
 
 type Token = {
   text: string;

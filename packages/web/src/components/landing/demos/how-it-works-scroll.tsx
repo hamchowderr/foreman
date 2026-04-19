@@ -2,7 +2,7 @@
 
 import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import { useRef } from "react";
-import { MessageSquare, Eye, Check } from "lucide-react";
+import { MessageSquare, Eye, Check } from "@/components/icons/hi";
 
 const STEPS = [
   {

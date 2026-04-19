@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Check, ExternalLink, Zap } from "lucide-react";
+import { Check, ExternalLink, Zap } from "@/components/icons/hi";
 
 type Step = "idle" | "click" | "window" | "authorizing" | "success" | "ready";
 

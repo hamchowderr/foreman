@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Check, RotateCcw } from "lucide-react";
+import { Check, RotateCcw } from "@/components/icons/hi";
 
 type ZapStep =
   | { id: "pick-trigger"; label: "Pick a trigger" }

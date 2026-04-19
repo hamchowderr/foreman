@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { GitBranch, Play, Sparkles, Check, ChevronRight } from "lucide-react";
+import { GitBranch, Play, Sparkles, Check, ChevronRight } from "@/components/icons/hi";
 
 type Phase = "chat" | "highlight" | "extracting" | "extracted" | "running" | "done";
 

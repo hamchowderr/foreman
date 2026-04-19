@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
-import { Shield, Eye, Lock, Gauge, Users, Ban, Check, ChevronDown } from "lucide-react";
+import { Shield, Eye, Lock, Gauge, Users, Ban, Check, ChevronDown } from "@/components/icons/hi";
 
 type Guardrail = {
   id: string;
@@ -78,7 +78,7 @@ export function GuardrailCards() {
             >
               <button
                 type="button"
-                onClick={() => setActiveId(selected ? "" : g.id)}
+                onClick={() => setActiveId(g.id)}
                 aria-expanded={selected}
                 className="w-full text-left p-4 flex items-start gap-3 min-h-[44px]"
               >

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Show, SignInButton } from "@clerk/nextjs";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "@/components/icons/hi";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useState } from "react";

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Search, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "@/components/icons/hi";
 
 // 33 MCP tools loosely modeled after zapier-sdk
 const ALL_TOOLS = [

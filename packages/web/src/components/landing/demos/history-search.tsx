@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Search, History, Mail, Calendar, CreditCard, FileText } from "lucide-react";
+import { Search, History, Mail, Calendar, CreditCard, FileText } from "@/components/icons/hi";
 
 type Result = {
   icon: typeof Mail;

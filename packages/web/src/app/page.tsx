@@ -27,7 +27,21 @@ import {
   Server,
   Cloud,
   ExternalLink,
-} from "lucide-react";
+  Globe,
+  Terminal,
+  Cpu,
+} from "@/components/icons/hi";
+import {
+  SlackBrand,
+  DiscordBrand,
+  TelegramBrand,
+  GithubBrand,
+  GoogleBrand,
+  MicrosoftBrand,
+  WhatsappBrand,
+  AppleBrand,
+  BRAND_COLORS,
+} from "@/components/icons/brands";
 
 export default function LandingPage() {
   return (
@@ -229,30 +243,42 @@ function Channels() {
           <Reveal delay={0.1}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {[
-                { name: "Slack", avail: true },
-                { name: "Discord", avail: true },
-                { name: "Telegram", avail: true },
-                { name: "Google Chat", avail: true },
-                { name: "GitHub", avail: true },
-                { name: "Linear", avail: true },
-                { name: "Web", avail: true },
-                { name: "MCP", avail: true },
-                { name: "A2A", avail: true },
-                { name: "Teams", avail: false },
-                { name: "WhatsApp", avail: false },
-                { name: "iMessage", avail: false },
+                { name: "Slack", avail: true, Icon: SlackBrand },
+                { name: "Discord", avail: true, Icon: DiscordBrand },
+                { name: "Telegram", avail: true, Icon: TelegramBrand },
+                { name: "Google Chat", avail: true, Icon: GoogleBrand },
+                { name: "GitHub", avail: true, Icon: GithubBrand },
+                { name: "Linear", avail: true, Icon: null, letter: "L", color: BRAND_COLORS.linear },
+                { name: "Web", avail: true, Icon: Globe },
+                { name: "MCP", avail: true, Icon: Terminal },
+                { name: "A2A", avail: true, Icon: Cpu },
+                { name: "Teams", avail: false, Icon: MicrosoftBrand },
+                { name: "WhatsApp", avail: false, Icon: WhatsappBrand },
+                { name: "iMessage", avail: false, Icon: AppleBrand },
               ].map((c) => (
                 <div
                   key={c.name}
-                  className={`rounded-lg border px-3 py-2.5 text-xs sm:text-sm transition-colors ${
+                  className={`rounded-lg border px-3 py-2.5 text-xs sm:text-sm transition-colors flex items-center gap-2 ${
                     c.avail
                       ? "border-border bg-surface hover:border-accent/40"
                       : "border-border/40 bg-surface/40 text-muted"
                   }`}
                 >
-                  <span className="font-medium">{c.name}</span>
+                  <span className={`shrink-0 ${c.avail ? "" : "opacity-50"}`}>
+                    {c.Icon ? (
+                      <c.Icon size={18} />
+                    ) : (
+                      <span
+                        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded text-[10px] font-bold text-white"
+                        style={{ backgroundColor: c.color }}
+                      >
+                        {c.letter}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-medium flex-1 truncate">{c.name}</span>
                   {!c.avail && (
-                    <span className="ml-1.5 text-[10px] uppercase tracking-wider text-muted">
+                    <span className="text-[10px] uppercase tracking-wider text-muted shrink-0">
                       soon
                     </span>
                   )}

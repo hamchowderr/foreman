@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons/hi";
 
 type Step =
   | { kind: "user"; text: string }
