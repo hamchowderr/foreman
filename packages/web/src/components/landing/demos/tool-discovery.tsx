@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Search, Sparkles } from "@/components/icons/hi";
+import { Search, Toolbox } from "@/components/icons/hi";
 
 // 33 MCP tools loosely modeled after zapier-sdk
 const ALL_TOOLS = [
@@ -90,8 +90,9 @@ export function ToolDiscovery() {
   return (
     <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden">
       <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-accent" />
-        <span className="text-xs font-mono text-muted">tool-search-processor</span>
+        <Toolbox className="h-4 w-4 text-accent" />
+        <Search className="h-3 w-3 text-muted" />
+        <span className="text-xs font-medium text-muted">Toolbox search</span>
       </div>
 
       {/* Input */}
@@ -114,11 +115,11 @@ export function ToolDiscovery() {
               exit={{ opacity: 0, y: -2 }}
               transition={{ duration: 0.2 }}
             >
-              {phase === "typing" && "Typing your request…"}
-              {phase === "matching" && "Searching 33 tools…"}
+              {phase === "typing" && "Reading your request…"}
+              {phase === "matching" && "Looking through the toolbox…"}
               {phase === "loaded" && (
                 <span className="text-accent font-medium">
-                  Loaded {prompt.matches.length} tools · saved ~6.5K tokens
+                  Grabbed {prompt.matches.length} tools for this
                 </span>
               )}
             </motion.span>

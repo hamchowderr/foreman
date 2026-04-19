@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Shield, Lock } from "@/components/icons/hi";
+import { ScanEye, Lock } from "@/components/icons/hi";
 
 type Token = {
   text: string;
@@ -87,9 +87,9 @@ export function PiiTypewriter() {
       <div className="rounded-2xl border border-border bg-surface overflow-hidden shadow-xl shadow-black/5">
         <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
-            <Shield className="h-3.5 w-3.5 text-accent shrink-0" />
-            <span className="text-xs font-mono text-muted truncate">
-              output-processor.ts
+            <ScanEye className="h-4 w-4 text-accent shrink-0" />
+            <span className="text-xs font-medium text-muted truncate">
+              Sensitive data filter
             </span>
           </div>
           <motion.span

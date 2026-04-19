@@ -34,6 +34,9 @@ import {
   DashboardSpeed01Icon,
   LinkSquare01Icon,
   Activity01Icon,
+  ToolboxIcon,
+  FilterIcon,
+  ScanEyeIcon,
 } from "@hugeicons/core-free-icons";
 import type { SVGProps } from "react";
 
@@ -91,3 +94,6 @@ export const Cpu = make(CpuIcon);
 export const Gauge = make(DashboardSpeed01Icon);
 export const ExternalLink = make(LinkSquare01Icon);
 export const History = make(Activity01Icon);
+export const Toolbox = make(ToolboxIcon);
+export const Filter = make(FilterIcon);
+export const ScanEye = make(ScanEyeIcon);
