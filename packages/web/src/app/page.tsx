@@ -169,21 +169,22 @@ function ToolDiscoverySection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
         <div className="grid md:grid-cols-[1fr_1.3fr] gap-10 md:gap-12 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">Dynamic tool discovery</Badge>
+            <Badge variant="accent" className="mb-4">Picks the right tool for the job</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              33 tools. Load only what the task needs.
+              Smart enough to know what to use.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              Stuffing every MCP tool into every request burns ~6.5K tokens per
-              turn. The <code className="px-1.5 py-0.5 rounded bg-surface text-[0.9em] font-mono">ToolSearchProcessor</code> gives
-              the agent a <code className="px-1.5 py-0.5 rounded bg-surface text-[0.9em] font-mono">search_tools</code> meta-tool — it picks the handful it needs, per turn.
+              Foreman has a toolbox of ways to talk to your apps. Instead of
+              picking through all of them every time, it reads what you asked
+              and pulls out only the tools it actually needs. Faster responses,
+              and nothing clutters the conversation.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "33 tools across apps, connections, tables, auth",
-                "Semantic search over tool descriptions",
-                "~6.5K token savings per request",
-                "Zero wasted context",
+                "Understands what you're asking, not just what you typed",
+                "Grabs the handful of tools needed for your request",
+                "Ignores the rest — no noise, faster replies",
+                "Works across all 9,000+ Zapier apps",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
                   <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
@@ -475,10 +476,7 @@ function Hosting() {
           <Reveal delay={0.1}>
             <TiltCard max={4}>
               <Card className="border-2 border-accent/20 bg-accent/[0.02] h-full flex flex-col relative overflow-hidden">
-                <div className="absolute -top-px left-8 bg-accent text-accent-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-b-md">
-                  Recommended
-                </div>
-                <CardContent className="p-6 sm:p-8 pt-10 flex flex-col flex-1">
+                <CardContent className="p-6 sm:p-8 flex flex-col flex-1">
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">

@@ -37,9 +37,10 @@ export function ZapVsForemanRace() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [zapElapsed, setZapElapsed] = useState(0);
   const [foremanElapsed, setForemanElapsed] = useState(0);
+  const [runKey, setRunKey] = useState(0);
 
   useEffect(() => {
-    if (!inView || phase !== "idle") return;
+    if (!inView) return;
 
     setPhase("running");
     setZapStep(0);
@@ -73,9 +74,9 @@ export function ZapVsForemanRace() {
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [inView, phase]);
+  }, [inView, runKey]);
 
-  const restart = () => setPhase("idle");
+  const restart = () => setRunKey((k) => k + 1);
 
   const zapProgress = Math.min((zapElapsed / TOTAL_ZAP_TIME) * 100, 100);
   const foremanProgress = Math.min((foremanElapsed / FOREMAN_TIME) * 100, 100);

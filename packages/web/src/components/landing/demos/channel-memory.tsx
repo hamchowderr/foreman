@@ -2,12 +2,14 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Brain, MessageSquare } from "lucide-react";
+import { Brain } from "lucide-react";
 import { SlackIcon, TelegramIcon, DiscordIcon, GlobeIcon } from "@/components/icons";
 
+type ChannelId = "slack" | "telegram" | "discord" | "web";
+
 type Frame = {
-  from: "slack" | "telegram" | "discord" | "web";
-  to: "slack" | "telegram" | "discord" | "web";
+  from: ChannelId;
+  to: ChannelId;
   userMsg: string;
   agentMsg: string;
 };
@@ -16,234 +18,274 @@ const FRAMES: Frame[] = [
   {
     from: "slack",
     to: "telegram",
-    userMsg: "Who do I meet with on Thursday?",
-    agentMsg: "Calendar shows Priya and Noah at 2pm.",
+    userMsg: "Who am I meeting Thursday?",
+    agentMsg: "Priya and Noah at 2pm in Conference Room B.",
   },
   {
     from: "telegram",
     to: "web",
-    userMsg: "Move the Priya meeting to 3pm",
-    agentMsg: "Moved to 3pm. Priya notified.",
+    userMsg: "Move Priya to 3pm",
+    agentMsg: "Moved to 3pm. Priya confirmed.",
   },
   {
     from: "web",
     to: "discord",
     userMsg: "Any updates from Priya?",
-    agentMsg: "Confirmed 3pm. She replied 10 min ago.",
+    agentMsg: "She confirmed the 3pm slot 10 min ago.",
+  },
+  {
+    from: "discord",
+    to: "slack",
+    userMsg: "Reschedule Noah too",
+    agentMsg: "Done. Noah now at 3:30pm. Both notified.",
   },
 ];
 
-const CHANNELS = [
-  { id: "slack", label: "Slack", Icon: SlackIcon, angle: 0 },
-  { id: "telegram", label: "Telegram", Icon: TelegramIcon, angle: 90 },
-  { id: "web", label: "Web", Icon: GlobeIcon, angle: 180 },
-  { id: "discord", label: "Discord", Icon: DiscordIcon, angle: 270 },
-] as const;
+const CHANNELS: Record<
+  ChannelId,
+  {
+    label: string;
+    Icon: typeof SlackIcon;
+    brand: string;
+    brandText: string;
+    position: string;
+  }
+> = {
+  slack: {
+    label: "Slack",
+    Icon: SlackIcon,
+    brand: "#4A154B",
+    brandText: "#ffffff",
+    position: "top-0 left-0",
+  },
+  telegram: {
+    label: "Telegram",
+    Icon: TelegramIcon,
+    brand: "#26A5E4",
+    brandText: "#ffffff",
+    position: "top-0 right-0",
+  },
+  discord: {
+    label: "Discord",
+    Icon: DiscordIcon,
+    brand: "#5865F2",
+    brandText: "#ffffff",
+    position: "bottom-0 left-0",
+  },
+  web: {
+    label: "Web",
+    Icon: GlobeIcon,
+    brand: "var(--accent)",
+    brandText: "var(--accent-foreground)",
+    position: "bottom-0 right-0",
+  },
+};
 
 export function ChannelMemory() {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.4, once: false });
+  const inView = useInView(ref, { amount: 0.3, once: false });
   const [frameIdx, setFrameIdx] = useState(0);
-  const [phase, setPhase] = useState<"user" | "to-brain" | "from-brain" | "agent">("user");
+  const [phase, setPhase] = useState<"idle" | "user-sent" | "brain-in" | "brain-out" | "agent-replied">("idle");
 
   useEffect(() => {
     if (!inView) return;
 
-    const sequence = [
-      { phase: "user" as const, delay: 1200 },
-      { phase: "to-brain" as const, delay: 800 },
-      { phase: "from-brain" as const, delay: 800 },
-      { phase: "agent" as const, delay: 1600 },
-    ];
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    let cancelled = false;
 
-    let i = 0;
-    let timeout: ReturnType<typeof setTimeout>;
+    const run = () => {
+      if (cancelled) return;
 
-    const step = () => {
-      const current = sequence[i % sequence.length];
-      setPhase(current.phase);
-      timeout = setTimeout(() => {
-        i++;
-        if (i % sequence.length === 0) {
+      setPhase("idle");
+      timers.push(setTimeout(() => !cancelled && setPhase("user-sent"), 600));
+      timers.push(setTimeout(() => !cancelled && setPhase("brain-in"), 1500));
+      timers.push(setTimeout(() => !cancelled && setPhase("brain-out"), 2500));
+      timers.push(setTimeout(() => !cancelled && setPhase("agent-replied"), 3200));
+      timers.push(
+        setTimeout(() => {
+          if (cancelled) return;
           setFrameIdx((f) => (f + 1) % FRAMES.length);
-        }
-        step();
-      }, current.delay);
+          run();
+        }, 5000),
+      );
     };
 
-    step();
-    return () => clearTimeout(timeout);
+    run();
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
   }, [inView]);
 
   const frame = FRAMES[frameIdx];
-  const fromChannel = CHANNELS.find((c) => c.id === frame.from)!;
-  const toChannel = CHANNELS.find((c) => c.id === frame.to)!;
 
   return (
-    <div ref={ref} className="relative rounded-2xl border border-border bg-surface overflow-hidden">
+    <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-mono text-muted">shared-memory</span>
+          <span className="text-xs font-mono text-muted">shared memory</span>
         </div>
-        <span className="text-[10px] uppercase tracking-widest text-muted">
-          same user · any channel
+        <span className="text-[10px] uppercase tracking-widest text-muted hidden sm:inline">
+          one user · any channel
         </span>
       </div>
 
-      <div className="relative aspect-[4/3] sm:aspect-[16/10] p-4 sm:p-8">
-        {/* Central brain */}
-        <div className="absolute inset-0 flex items-center justify-center">
+      <div className="relative aspect-square sm:aspect-[4/3] p-3 sm:p-5">
+        {/* 4 mini chat windows in a grid around the brain */}
+        <div className="relative grid grid-cols-2 grid-rows-2 gap-3 sm:gap-5 h-full">
+          {(Object.keys(CHANNELS) as ChannelId[]).map((id) => {
+            const ch = CHANNELS[id];
+            const isSource = id === frame.from;
+            const isTarget = id === frame.to;
+            const active = isSource || isTarget;
+
+            const showUserMsg = isSource && (phase === "user-sent" || phase === "brain-in" || phase === "brain-out" || phase === "agent-replied");
+            const showAgentMsg = isTarget && phase === "agent-replied";
+
+            return (
+              <motion.div
+                key={id}
+                animate={{
+                  opacity: active ? 1 : 0.55,
+                  scale: active ? 1 : 0.97,
+                }}
+                transition={{ duration: 0.35 }}
+                className={`rounded-xl overflow-hidden border transition-colors min-h-0 flex flex-col ${
+                  active ? "border-accent/30 bg-background shadow-md" : "border-border bg-background/50"
+                }`}
+              >
+                {/* Channel header */}
+                <div
+                  className="px-2.5 py-1.5 flex items-center gap-1.5 shrink-0"
+                  style={{ backgroundColor: ch.brand, color: ch.brandText }}
+                >
+                  <ch.Icon size={12} />
+                  <span className="text-[10px] sm:text-[11px] font-semibold truncate">{ch.label}</span>
+                </div>
+                {/* Chat body */}
+                <div className="flex-1 min-h-0 p-2 sm:p-2.5 flex flex-col justify-end gap-1.5 overflow-hidden">
+                  <AnimatePresence>
+                    {showUserMsg && (
+                      <motion.div
+                        key={`user-${frameIdx}`}
+                        initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="self-end max-w-[90%] rounded-lg rounded-br-sm bg-foreground text-background px-2 py-1 text-[9px] sm:text-[10px] leading-snug"
+                      >
+                        {frame.userMsg}
+                      </motion.div>
+                    )}
+                    {showAgentMsg && (
+                      <motion.div
+                        key={`agent-${frameIdx}`}
+                        initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="self-start max-w-[92%] rounded-lg rounded-bl-sm bg-accent/15 text-accent border border-accent/25 px-2 py-1 text-[9px] sm:text-[10px] leading-snug"
+                      >
+                        {frame.agentMsg}
+                      </motion.div>
+                    )}
+                    {!showUserMsg && !showAgentMsg && (
+                      <motion.div
+                        key={`placeholder-${id}-${frameIdx}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: active ? 0 : 0.3 }}
+                        exit={{ opacity: 0 }}
+                        className="self-center my-auto text-[9px] text-muted/40 italic"
+                      >
+                        {active ? "" : "·"}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Central brain, layered on top */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <motion.div
             animate={{
-              scale: phase === "to-brain" || phase === "from-brain" ? 1.08 : 1,
+              scale: phase === "brain-in" || phase === "brain-out" ? 1.12 : 1,
               boxShadow:
-                phase === "to-brain" || phase === "from-brain"
-                  ? "0 0 40px 8px rgba(255, 74, 0, 0.4)"
-                  : "0 0 20px 2px rgba(255, 74, 0, 0.15)",
+                phase === "brain-in" || phase === "brain-out"
+                  ? "0 0 40px 10px rgba(255, 74, 0, 0.45)"
+                  : "0 0 18px 3px rgba(255, 74, 0, 0.2)",
             }}
             transition={{ duration: 0.4 }}
-            className="relative z-10 h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center"
+            className="relative h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center ring-4 ring-background"
           >
-            <Brain className="h-6 w-6 sm:h-9 sm:w-9 text-white" />
+            <Brain className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
           </motion.div>
         </div>
 
-        {/* Channel nodes */}
-        {CHANNELS.map((ch) => {
-          const isSource = ch.id === frame.from;
-          const isTarget = ch.id === frame.to;
-          const active = isSource || isTarget;
-
-          // Position: top, right, bottom, left based on angle
-          const positions: Record<number, string> = {
-            0: "top-2 sm:top-6 left-1/2 -translate-x-1/2",
-            90: "right-2 sm:right-6 top-1/2 -translate-y-1/2",
-            180: "bottom-2 sm:bottom-6 left-1/2 -translate-x-1/2",
-            270: "left-2 sm:left-6 top-1/2 -translate-y-1/2",
-          };
-
-          return (
-            <motion.div
-              key={ch.id}
-              animate={{
-                scale: active ? 1.05 : 1,
-                opacity: active ? 1 : 0.55,
-              }}
-              transition={{ duration: 0.3 }}
-              className={`absolute ${positions[ch.angle]} flex flex-col items-center gap-1.5`}
-            >
-              <div
-                className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl border flex items-center justify-center transition-colors ${
-                  active
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-border bg-background text-muted"
-                }`}
-              >
-                <ch.Icon size={18} />
-              </div>
-              <span className="text-[10px] sm:text-xs text-muted font-medium">
-                {ch.label}
-              </span>
-            </motion.div>
-          );
-        })}
-
-        {/* SVG lines between source/target and brain */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden>
-          <defs>
-            <linearGradient id="flow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0" />
-              <stop offset="50%" stopColor="var(--accent)" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <AnimatePresence>
-            {phase === "to-brain" && (
-              <motion.line
-                key={`in-${fromChannel.id}-${frameIdx}`}
-                x1={`${nodeXPct(fromChannel.angle)}%`}
-                y1={`${nodeYPct(fromChannel.angle)}%`}
-                x2="50%"
-                y2="50%"
-                stroke="var(--accent)"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-              />
-            )}
-            {phase === "from-brain" && (
-              <motion.line
-                key={`out-${toChannel.id}-${frameIdx}`}
-                x1="50%"
-                y1="50%"
-                x2={`${nodeXPct(toChannel.angle)}%`}
-                y2={`${nodeYPct(toChannel.angle)}%`}
-                stroke="var(--accent)"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-              />
-            )}
-          </AnimatePresence>
-        </svg>
+        {/* Flowing particle between source and target through the brain */}
+        <AnimatePresence>
+          {phase === "brain-in" && <FlowParticle from={frame.from} to="center" key={`in-${frameIdx}`} />}
+          {phase === "brain-out" && <FlowParticle from="center" to={frame.to} key={`out-${frameIdx}`} />}
+        </AnimatePresence>
       </div>
 
-      {/* Transcript */}
-      <div className="px-4 sm:px-5 py-4 border-t border-border bg-background/50 space-y-2 min-h-[110px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`transcript-${frameIdx}`}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-2"
-          >
-            <div className="flex items-start gap-2 text-sm">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted mt-1 w-16 shrink-0">
-                {fromChannel.label}
-              </span>
-              <span className="flex-1 truncate">
-                <MessageSquare className="inline h-3 w-3 text-muted mr-1" />
-                {frame.userMsg}
-              </span>
-            </div>
-            {(phase === "agent" || phase === "from-brain") && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-2 text-sm"
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-accent mt-1 w-16 shrink-0">
-                  {toChannel.label}
-                </span>
-                <span className="flex-1 text-muted">
-                  <Brain className="inline h-3 w-3 text-accent mr-1" />
-                  {frame.agentMsg}
-                </span>
-              </motion.div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+      {/* Footer caption */}
+      <div className="px-4 sm:px-5 py-3 border-t border-border bg-background/50 text-xs text-muted flex items-center justify-between gap-3">
+        <span className="flex items-center gap-1.5 truncate">
+          <span
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: CHANNELS[frame.from].brand }}
+          />
+          <span className="font-medium">{CHANNELS[frame.from].label}</span>
+          <span>→</span>
+          <Brain className="h-3 w-3 text-accent shrink-0" />
+          <span>→</span>
+          <span
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: CHANNELS[frame.to].brand }}
+          />
+          <span className="font-medium">{CHANNELS[frame.to].label}</span>
+        </span>
+        <span className="text-[10px] uppercase tracking-widest shrink-0">same user</span>
       </div>
     </div>
   );
 }
 
-function nodeXPct(angle: number): number {
-  if (angle === 0 || angle === 180) return 50;
-  if (angle === 90) return 88;
-  return 12;
-}
-function nodeYPct(angle: number): number {
-  if (angle === 90 || angle === 270) return 50;
-  if (angle === 0) return 15;
-  return 85;
+function FlowParticle({
+  from,
+  to,
+}: {
+  from: ChannelId | "center";
+  to: ChannelId | "center";
+}) {
+  const positions: Record<ChannelId | "center", { x: string; y: string }> = {
+    slack: { x: "25%", y: "28%" },
+    telegram: { x: "75%", y: "28%" },
+    discord: { x: "25%", y: "72%" },
+    web: { x: "75%", y: "72%" },
+    center: { x: "50%", y: "50%" },
+  };
+  const start = positions[from];
+  const end = positions[to];
+
+  return (
+    <motion.div
+      className="absolute pointer-events-none"
+      style={{ left: start.x, top: start.y }}
+      initial={{ x: "-50%", y: "-50%", opacity: 0 }}
+      animate={{
+        left: end.x,
+        top: end.y,
+        opacity: [0, 1, 1, 0],
+      }}
+      transition={{ duration: 0.8, ease: "easeInOut", times: [0, 0.2, 0.8, 1] }}
+    >
+      <div className="h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_12px_rgba(255,74,0,0.8)]" />
+    </motion.div>
+  );
 }

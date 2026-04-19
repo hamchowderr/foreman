@@ -25,19 +25,35 @@ type Prompt = {
 const PROMPTS: Prompt[] = [
   {
     text: "Email Jake the Q3 deck",
-    matches: ["search-actions", "find-field-choices", "run-action"],
+    matches: ["search-actions", "get-action-schema", "find-field-choices", "upload-file", "run-action"],
   },
   {
-    text: "Find last week's invoices in Gmail",
-    matches: ["search-actions", "run-action"],
+    text: "Create a Stripe invoice for $4,900",
+    matches: ["list-apps", "search-actions", "get-action-schema", "find-field-choices", "run-action"],
   },
   {
-    text: "Create a Trello card for client follow-up",
-    matches: ["search-actions", "find-field-choices", "run-action"],
+    text: "What apps am I connected to?",
+    matches: ["list-apps", "list-connections", "get-account"],
   },
   {
-    text: "List my connected apps",
-    matches: ["list-apps", "list-connections"],
+    text: "Log a Slack channel's messages to Notion",
+    matches: ["list-connections", "search-actions", "poll-trigger", "run-action"],
+  },
+  {
+    text: "Set up a webhook when a Stripe charge succeeds",
+    matches: ["list-apps", "search-actions", "list-webhooks", "create-webhook", "auth-check"],
+  },
+  {
+    text: "Add a new row to my leads spreadsheet",
+    matches: ["search-actions", "find-field-choices", "create-table-records", "run-action"],
+  },
+  {
+    text: "Post the latest blog to Twitter",
+    matches: ["list-apps", "search-actions", "get-action-schema", "run-action"],
+  },
+  {
+    text: "Delete duplicate Trello cards",
+    matches: ["search-actions", "read-table-records", "delete-table-records", "run-action"],
   },
 ];
 

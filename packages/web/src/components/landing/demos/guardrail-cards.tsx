@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Shield, Eye, Lock, Gauge, Users, Ban, Check } from "lucide-react";
 
 type Guardrail = {
@@ -60,18 +60,32 @@ const GUARDRAILS: Guardrail[] = [
 export function GuardrailCards() {
   const [activeId, setActiveId] = useState<string>(GUARDRAILS[0].id);
   const active = GUARDRAILS.find((g) => g.id === activeId)!;
+  const demoRef = useRef<HTMLDivElement>(null);
+
+  const handleSelect = (id: string) => {
+    setActiveId(id);
+    if (typeof window === "undefined") return;
+    // On mobile (below lg), scroll the demo panel into view so users
+    // see the reaction immediately instead of hunting for it below the fold.
+    if (window.matchMedia("(max-width: 1023px)").matches && demoRef.current) {
+      // slight delay so the state update renders first
+      requestAnimationFrame(() => {
+        demoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  };
 
   return (
     <div className="grid lg:grid-cols-[1fr_1.1fr] gap-4 items-start">
       {/* Card list */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 order-2 lg:order-1">
         {GUARDRAILS.map((g) => {
           const selected = g.id === activeId;
           return (
             <button
               key={g.id}
               type="button"
-              onClick={() => setActiveId(g.id)}
+              onClick={() => handleSelect(g.id)}
               className={`text-left rounded-xl border p-4 transition-all duration-200 min-h-[44px] ${
                 selected
                   ? "border-accent/40 bg-accent/5 shadow-sm"
@@ -94,8 +108,11 @@ export function GuardrailCards() {
         })}
       </div>
 
-      {/* Demo panel */}
-      <div className="rounded-2xl border border-border bg-surface overflow-hidden lg:sticky lg:top-20">
+      {/* Demo panel — shown above cards on mobile so taps have an instant reaction */}
+      <div
+        ref={demoRef}
+        className="rounded-2xl border border-border bg-surface overflow-hidden lg:sticky lg:top-20 order-1 lg:order-2"
+      >
         <div className="px-5 py-3 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <active.icon className="h-3.5 w-3.5 text-accent" />
