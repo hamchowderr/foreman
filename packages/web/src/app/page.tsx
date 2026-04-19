@@ -17,12 +17,31 @@ import {
   Eye,
   Gauge,
   Users,
-  ChevronRight,
   Terminal,
   Server,
   Cloud,
   ExternalLink,
+  Cpu,
 } from "lucide-react";
+import {
+  SlackIcon,
+  DiscordIcon,
+  TelegramIcon,
+  GithubIcon,
+  GlobeIcon as HoverGlobeIcon,
+  ShieldCheckIcon,
+  BrainCircuitIcon,
+  EyeIcon as HoverEyeIcon,
+  LockIcon as HoverLockIcon,
+  MessageCircleIcon,
+  MailIcon,
+  GaugeIcon as HoverGaugeIcon,
+  UsersIcon as HoverUsersIcon,
+  CpuIcon as HoverCpuIcon,
+  SendIcon as HoverSendIcon,
+  CloudIcon as HoverCloudIcon,
+  TerminalIcon as HoverTerminalIcon,
+} from "@/components/icons";
 
 export default function LandingPage() {
   return (
@@ -330,19 +349,19 @@ function HowItWorks() {
 /* ─── Channels ─── */
 
 function Channels() {
-  const channels = [
-    { name: "Web", desc: "Full chat UI with voice", available: true },
-    { name: "Slack", desc: "DM or @mention", available: true },
-    { name: "Discord", desc: "Gateway + slash commands", available: true },
-    { name: "Telegram", desc: "Bot with inline approvals", available: true },
-    { name: "Google Chat", desc: "Workspace-native", available: true },
-    { name: "GitHub", desc: "On issues and PRs", available: true },
-    { name: "Linear", desc: "Triage and follow-ups", available: true },
-    { name: "Teams", desc: "Coming soon", available: false },
-    { name: "WhatsApp", desc: "Coming soon", available: false },
-    { name: "iMessage", desc: "Coming soon", available: false },
-    { name: "MCP", desc: "Claude Code, ChatGPT", available: true },
-    { name: "A2A", desc: "Agent-to-agent", available: true },
+  const channels: Array<{ name: string; desc: string; available: boolean; icon: React.ReactNode }> = [
+    { name: "Web", desc: "Full chat UI with voice", available: true, icon: <HoverGlobeIcon size={18} /> },
+    { name: "Slack", desc: "DM or @mention", available: true, icon: <SlackIcon size={18} /> },
+    { name: "Discord", desc: "Gateway + slash commands", available: true, icon: <DiscordIcon size={18} /> },
+    { name: "Telegram", desc: "Bot with inline approvals", available: true, icon: <TelegramIcon size={18} /> },
+    { name: "Google Chat", desc: "Workspace-native", available: true, icon: <MessageCircleIcon size={18} /> },
+    { name: "GitHub", desc: "On issues and PRs", available: true, icon: <GithubIcon size={18} /> },
+    { name: "Linear", desc: "Triage and follow-ups", available: true, icon: <HoverSendIcon size={18} /> },
+    { name: "Teams", desc: "Coming soon", available: false, icon: <MessageCircleIcon size={18} /> },
+    { name: "WhatsApp", desc: "Coming soon", available: false, icon: <MessageCircleIcon size={18} /> },
+    { name: "iMessage", desc: "Coming soon", available: false, icon: <MailIcon size={18} /> },
+    { name: "MCP", desc: "Claude Code, ChatGPT", available: true, icon: <HoverTerminalIcon size={18} /> },
+    { name: "A2A", desc: "Agent-to-agent", available: true, icon: <HoverCpuIcon size={18} /> },
   ];
 
   return (
@@ -363,19 +382,26 @@ function Channels() {
           {channels.map((c) => (
             <div
               key={c.name}
-              className={`rounded-xl border px-4 py-3.5 transition-all duration-150 ${
+              className={`group rounded-xl border px-4 py-4 transition-all duration-150 ${
                 c.available
                   ? "border-border/60 bg-background hover:border-accent/30 hover:shadow-sm cursor-default"
                   : "border-border/30 bg-surface/50 opacity-60"
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-sm">{c.name}</span>
-                {!c.available && (
-                  <span className="text-[10px] text-muted bg-surface rounded px-1.5 py-0.5">soon</span>
-                )}
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center text-foreground/70 group-hover:text-accent transition-colors">
+                  {c.icon}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-sm">{c.name}</span>
+                    {!c.available && (
+                      <span className="text-[10px] text-muted bg-surface rounded px-1.5 py-0.5">soon</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">{c.desc}</div>
+                </div>
               </div>
-              <div className="text-xs text-muted mt-0.5">{c.desc}</div>
             </div>
           ))}
         </div>

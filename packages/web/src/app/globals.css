@@ -34,8 +34,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
 body {
