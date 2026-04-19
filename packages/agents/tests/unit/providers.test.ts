@@ -28,6 +28,11 @@ const AGENT_ENV_KEYS = [
   "HISTORY_TEMPERATURE",
   "HISTORY_MAX_OUTPUT_TOKENS",
   "HISTORY_TOP_P",
+  "FOREMAN_PROMPT_CACHING",
+  "DISCOVERY_PROMPT_CACHING",
+  "EXECUTION_PROMPT_CACHING",
+  "SUPERVISOR_PROMPT_CACHING",
+  "HISTORY_PROMPT_CACHING",
 ] as const;
 
 function clearEnv() {
@@ -189,5 +194,61 @@ describe("providers/params", () => {
       temperature: 0,
       maxOutputTokens: 2048,
     });
+  });
+});
+
+describe("providers/caching", () => {
+  it("returns plain string system prompt when caching is disabled", async () => {
+    const { systemPromptFor } = await import("@/lib/providers");
+    expect(systemPromptFor("foreman", "hello")).toBe("hello");
+  });
+
+  it("wraps in SystemModelMessage with anthropic.cacheControl when opted in", async () => {
+    process.env.FOREMAN_PROMPT_CACHING = "true";
+    const { systemPromptFor } = await import("@/lib/providers");
+    expect(systemPromptFor("foreman", "hello")).toEqual({
+      role: "system",
+      content: "hello",
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
+    });
+  });
+
+  it("accepts '1' and 'yes' as truthy values", async () => {
+    process.env.DISCOVERY_PROMPT_CACHING = "1";
+    process.env.EXECUTION_PROMPT_CACHING = "yes";
+    const { AGENT_PROMPT_CACHING } = await import("@/lib/providers");
+    expect(AGENT_PROMPT_CACHING.discovery).toBe(true);
+    expect(AGENT_PROMPT_CACHING.execution).toBe(true);
+  });
+
+  it("treats anything else as false (including 'false', 'no', unset)", async () => {
+    process.env.FOREMAN_PROMPT_CACHING = "false";
+    process.env.DISCOVERY_PROMPT_CACHING = "no";
+    const { AGENT_PROMPT_CACHING } = await import("@/lib/providers");
+    expect(AGENT_PROMPT_CACHING.foreman).toBe(false);
+    expect(AGENT_PROMPT_CACHING.discovery).toBe(false);
+    expect(AGENT_PROMPT_CACHING.execution).toBe(false);
+  });
+
+  it("adds prompt-caching to AGENT_REQUIREMENTS when opted in", async () => {
+    process.env.FOREMAN_PROMPT_CACHING = "true";
+    const { AGENT_REQUIREMENTS } = await import("@/lib/providers");
+    expect(AGENT_REQUIREMENTS.foreman).toContain("prompt-caching");
+    expect(AGENT_REQUIREMENTS.discovery).not.toContain("prompt-caching");
+  });
+
+  it("passes validation on Anthropic models that support caching", async () => {
+    process.env.FOREMAN_PROMPT_CACHING = "true";
+    const { validateAgentCapabilities } = await import("@/lib/providers");
+    expect(() => validateAgentCapabilities()).not.toThrow();
+  });
+
+  it("fails validation when caching is enabled on a non-supporting model", async () => {
+    process.env.FOREMAN_PROMPT_CACHING = "true";
+    process.env.FOREMAN_MODEL = "openai/gpt-4o";
+    const { validateAgentCapabilities } = await import("@/lib/providers");
+    expect(() => validateAgentCapabilities()).toThrow(/prompt-caching/);
   });
 });

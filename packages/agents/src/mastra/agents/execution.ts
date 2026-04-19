@@ -1,6 +1,10 @@
 import { Agent } from "@mastra/core/agent";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { AGENT_MODELS, modelSettingsFor } from "../../lib/providers";
+import {
+  AGENT_MODELS,
+  modelSettingsFor,
+  systemPromptFor,
+} from "../../lib/providers";
 import { createZapierMCPClient } from "../../lib/zapier-mcp";
 
 const EXECUTION_PROMPT = `You are the Execution Agent, responsible for running Zapier actions on behalf of users. You handle action execution, raw API calls, and Zapier account connections.
@@ -34,7 +38,7 @@ export async function createExecutionAgent() {
     name: "Execution Agent",
     description:
       "Executes Zapier actions, makes raw API calls, and manages Zapier account connections. Use this agent when you need to run an action, make an API request, or connect a user to Zapier.",
-    instructions: EXECUTION_PROMPT,
+    instructions: systemPromptFor("execution", EXECUTION_PROMPT),
     model: AGENT_MODELS.execution,
     defaultOptions: { modelSettings: modelSettingsFor("execution") },
     tools: {

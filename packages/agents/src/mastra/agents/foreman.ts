@@ -17,7 +17,12 @@ import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { createZapierMCPClient, addModelOutputTransformers } from "../../lib/zapier-mcp";
-import { AGENT_MODELS, MODELS, modelSettingsFor } from "../../lib/providers";
+import {
+  AGENT_MODELS,
+  MODELS,
+  modelSettingsFor,
+  systemPromptFor,
+} from "../../lib/providers";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -68,7 +73,7 @@ export async function createForemanAgent(databaseUrl: string) {
     name: "Foreman",
     description:
       "AI assistant that helps users take actions across 9000+ apps via Zapier",
-    instructions: buildSystemPrompt(),
+    instructions: systemPromptFor("foreman", buildSystemPrompt()),
     model: AGENT_MODELS.foreman,
     defaultOptions: { modelSettings: modelSettingsFor("foreman") },
     tools: {

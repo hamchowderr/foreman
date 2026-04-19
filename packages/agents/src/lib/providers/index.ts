@@ -16,4 +16,8 @@ export {
   modelSettingsFor,
   type AgentParams,
 } from "./params";
+export {
+  AGENT_PROMPT_CACHING,
+  systemPromptFor,
+} from "./caching";
 export { validateAgentCapabilities } from "./validate";

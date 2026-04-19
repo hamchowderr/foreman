@@ -81,6 +81,14 @@ const envSchema = z.object({
   HISTORY_TEMPERATURE: z.string().optional(),
   HISTORY_MAX_OUTPUT_TOKENS: z.string().optional(),
   HISTORY_TOP_P: z.string().optional(),
+  // Per-agent Anthropic prompt-caching opt-in (see src/lib/providers/caching.ts).
+  // Boolean strings: "true" / "1" / "yes" enable. Fails startup validation
+  // if enabled on an agent whose configured model doesn't support caching.
+  FOREMAN_PROMPT_CACHING: z.string().optional(),
+  DISCOVERY_PROMPT_CACHING: z.string().optional(),
+  EXECUTION_PROMPT_CACHING: z.string().optional(),
+  SUPERVISOR_PROMPT_CACHING: z.string().optional(),
+  HISTORY_PROMPT_CACHING: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
