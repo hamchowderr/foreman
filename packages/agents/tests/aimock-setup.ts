@@ -10,8 +10,11 @@ export default async function setup() {
   const { aimock: instance, url } = await startFromConfig(config, { port: 0 });
   aimock = instance;
 
-  // Anthropic SDK expects base URL without /v1 — aimock serves /v1/messages natively
-  process.env.ANTHROPIC_BASE_URL = url;
+  // Matches AIMock's official Vitest plugin (`useAimock`) — both providers
+  // get `/v1` appended. Mastra's bundled Anthropic SDK uses
+  // api.anthropic.com/v1 as its default base and appends /messages, so the
+  // mock base URL must include /v1 too.
+  process.env.ANTHROPIC_BASE_URL = `${url}/v1`;
   process.env.OPENAI_BASE_URL = `${url}/v1`;
   // Store for teardown
   (globalThis as Record<string, unknown>).__aimock = aimock;
