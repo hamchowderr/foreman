@@ -595,40 +595,47 @@ npx drizzle-kit migrate
 
 ## Deployment
 
-### Deployment Targets
+### Live URLs
 
-| Component | Target | Notes |
-|-----------|--------|-------|
-| Web frontend | Vercel | Standard Next.js deployment |
-| Agent server API | Vercel or VPS | Vercel uses `VercelDeployer({ studio: true, maxDuration: 300 })` |
-| Webhook server + Discord Gateway | VPS | Long-running processes, not suited for serverless |
+| Component | URL | Platform |
+|-----------|-----|----------|
+| Web frontend | https://foreman.otakusolutions.io | Vercel |
+| Agent server | https://foreman-agents.otakusolutions.io | Coolify (Hostinger VPS) |
 
-**Important:** SQLite is ephemeral on Vercel's filesystem. For Vercel deployments, use [Turso](https://turso.tech) (hosted LibSQL) by setting `DATABASE_URL` to a Turso URL --- same driver, no code changes.
+### Architecture
 
-### VPS
+| Component | Target | Why |
+|-----------|--------|-----|
+| Web frontend | **Vercel** | Standard Next.js deployment, Clerk auth, static + dynamic pages |
+| Agent server | **VPS (Coolify)** | MCP stdio transport needs persistent child processes; LibSQL needs persistent filesystem; streaming conversations need long-running connections |
+| Webhook server | **VPS (Coolify)** | Discord Gateway WebSocket + channel webhooks need persistent processes |
 
-The agent server is a standard Node.js process. Deploy with PM2, systemd, or Docker.
+**Why the agent server can't run on Vercel:** The Zapier SDK MCP server uses stdio transport — it spawns `npx zapier-sdk mcp` as a child process and communicates over stdin/stdout. Vercel serverless functions can't maintain persistent child processes, have ephemeral filesystems (breaks LibSQL `file:` URLs), and cold starts would re-spawn the MCP server on every invocation (~5s overhead). If the Zapier SDK adds HTTP/SSE MCP transport in the future, Vercel deployment becomes viable (with Turso for hosted LibSQL).
+
+### VPS (Coolify)
+
+The agent server runs as a Docker container managed by Coolify. Coolify app UUID: `oqshe32xh3v8zva7tt6r4aff`.
+
+**Dockerfile** (`Dockerfile.agents`): Multi-stage build with `node:22-slim`. Stage 1 installs all deps (dev included for `mastra build`), runs `npx mastra build`. Stage 2 copies `.mastra/output/` and `node_modules/` to a clean image. LibSQL data persisted via Docker volume at `/app/data`.
 
 ```bash
+# Manual VPS deploy (without Coolify)
 cd packages/agents
 npm run build          # mastra build
 npm run start          # node .mastra/output/index.mjs
 npm run start:webhooks # Webhook server (separate process)
 ```
 
-### Vercel
+### Vercel (Web Frontend)
+
+Configured via `vercel.json`:
 
 ```bash
-cd packages/agents
-DEPLOY_TARGET=vercel npm run build:vercel
+npx vercel --prod      # Deploy to production
+npx vercel env ls      # List env vars
 ```
 
-### Cloudflare Workers
-
-```bash
-cd packages/agents
-DEPLOY_TARGET=cloudflare npm run build:cloudflare
-```
+Required env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_AGENT_SERVER_URL`
 
 ## Security
 
