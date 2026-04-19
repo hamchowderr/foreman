@@ -325,21 +325,22 @@ function PiiSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">PII redaction, always on</Badge>
+            <Badge variant="accent" className="mb-4">Sensitive info stays out of sight</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              Sensitive data never reaches the model.
+              Personal details get hidden before you see them.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              Emails, API keys, Bearer tokens, phone numbers, credit cards, and
-              SSNs are stripped from every output before it touches your chat.
-              Built into the processor pipeline — can't be turned off by accident.
+              When Foreman pulls data back from your apps, it scans the answer
+              for anything sensitive — email addresses, phone numbers, card
+              numbers, API keys — and blanks them out. You still get the
+              answer. You just don't get the raw data spilled into your chat.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "Regex + entropy-based detection",
-                "Runs on every agent output",
-                "Zero config, no prompt required",
-                "Works with voice responses too",
+                "Catches emails, phone numbers, cards, SSNs, API keys",
+                "Runs on every reply Foreman sends you",
+                "Works across chat, voice, and webhook responses",
+                "On by default. Nothing to configure.",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
                   <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
@@ -367,21 +368,22 @@ function BringYourOwnZapier() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">Bring your own Zapier</Badge>
+            <Badge variant="accent" className="mb-4">Connect Zapier in one click</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              Your account. Your connections. Your usage.
+              Uses the Zapier account you already have.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              One-click OAuth to your existing Zapier account. Everything you've
-              already connected — Gmail, Slack, Trello — is instantly available.
-              Actions run against your Zapier tasks, billed by Zapier.
+              Sign in with Zapier once and Foreman can see everything you've
+              already hooked up — Gmail, Slack, Trello, all of them. Actions
+              run through your Zapier and count against your plan. Nothing new
+              to set up on their side.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "No re-connecting apps",
-                "No extra per-action fees",
-                "Works alongside your existing Zaps",
-                "Revoke access in one click",
+                "One OAuth click to connect",
+                "No re-connecting your existing apps",
+                "Works alongside any Zaps you already have",
+                "Revoke access anytime from Zapier",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
                   <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">

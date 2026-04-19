@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { useRef, useState } from "react";
-import { Shield, Eye, Lock, Gauge, Users, Ban, Check } from "lucide-react";
+import { useState } from "react";
+import { Shield, Eye, Lock, Gauge, Users, Ban, Check, ChevronDown } from "lucide-react";
 
 type Guardrail = {
   id: string;
@@ -60,82 +60,128 @@ const GUARDRAILS: Guardrail[] = [
 export function GuardrailCards() {
   const [activeId, setActiveId] = useState<string>(GUARDRAILS[0].id);
   const active = GUARDRAILS.find((g) => g.id === activeId)!;
-  const demoRef = useRef<HTMLDivElement>(null);
-
-  const handleSelect = (id: string) => {
-    setActiveId(id);
-    if (typeof window === "undefined") return;
-    // On mobile (below lg), scroll the demo panel into view so users
-    // see the reaction immediately instead of hunting for it below the fold.
-    if (window.matchMedia("(max-width: 1023px)").matches && demoRef.current) {
-      // slight delay so the state update renders first
-      requestAnimationFrame(() => {
-        demoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
-    }
-  };
 
   return (
-    <div className="grid lg:grid-cols-[1fr_1.1fr] gap-4 items-start">
-      {/* Card list */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 order-2 lg:order-1">
+    <>
+      {/* Mobile / tablet (below lg): accordion. Tapping a card expands it to reveal its demo inline. */}
+      <div className="lg:hidden space-y-2">
         {GUARDRAILS.map((g) => {
           const selected = g.id === activeId;
           return (
-            <button
+            <div
               key={g.id}
-              type="button"
-              onClick={() => handleSelect(g.id)}
-              className={`text-left rounded-xl border p-4 transition-all duration-200 min-h-[44px] ${
+              className={`rounded-xl border overflow-hidden transition-colors ${
                 selected
-                  ? "border-accent/40 bg-accent/5 shadow-sm"
-                  : "border-border/60 bg-background hover:border-border"
+                  ? "border-accent/40 bg-accent/[0.03]"
+                  : "border-border/60 bg-background"
               }`}
             >
-              <div
-                className={`inline-flex items-center justify-center h-8 w-8 rounded-lg mb-3 transition-colors ${
-                  selected
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-foreground/5 text-foreground/70"
-                }`}
+              <button
+                type="button"
+                onClick={() => setActiveId(selected ? "" : g.id)}
+                aria-expanded={selected}
+                className="w-full text-left p-4 flex items-start gap-3 min-h-[44px]"
               >
-                <g.icon className="h-4 w-4" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">{g.title}</h3>
-              <p className="text-xs text-muted leading-relaxed">{g.body}</p>
-            </button>
+                <div
+                  className={`inline-flex items-center justify-center h-8 w-8 rounded-lg shrink-0 transition-colors ${
+                    selected
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-foreground/5 text-foreground/70"
+                  }`}
+                >
+                  <g.icon className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm">{g.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed mt-0.5">{g.body}</p>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 text-muted shrink-0 transition-transform duration-200 mt-1 ${
+                    selected ? "rotate-180 text-accent" : ""
+                  }`}
+                />
+              </button>
+              <AnimatePresence initial={false}>
+                {selected && (
+                  <motion.div
+                    key="demo"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                      opacity: { duration: 0.25 },
+                    }}
+                    className="overflow-hidden"
+                  >
+                    <div className="border-t border-border/60 bg-background/50 p-4">
+                      {g.demo()}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           );
         })}
       </div>
 
-      {/* Demo panel — shown above cards on mobile so taps have an instant reaction */}
-      <div
-        ref={demoRef}
-        className="rounded-2xl border border-border bg-surface overflow-hidden lg:sticky lg:top-20 order-1 lg:order-2"
-      >
-        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <active.icon className="h-3.5 w-3.5 text-accent" />
-            <span className="text-xs font-medium">{active.title}</span>
-          </div>
-          <span className="text-[10px] uppercase tracking-widest text-muted">live</span>
+      {/* Desktop (lg+): grid of cards + sticky side panel */}
+      <div className="hidden lg:grid grid-cols-[1fr_1.1fr] gap-4 items-start">
+        <div className="grid grid-cols-2 gap-2">
+          {GUARDRAILS.map((g) => {
+            const selected = g.id === activeId;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setActiveId(g.id)}
+                className={`text-left rounded-xl border p-4 transition-all duration-200 ${
+                  selected
+                    ? "border-accent/40 bg-accent/5 shadow-sm"
+                    : "border-border/60 bg-background hover:border-border"
+                }`}
+              >
+                <div
+                  className={`inline-flex items-center justify-center h-8 w-8 rounded-lg mb-3 transition-colors ${
+                    selected
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-foreground/5 text-foreground/70"
+                  }`}
+                >
+                  <g.icon className="h-4 w-4" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1">{g.title}</h3>
+                <p className="text-xs text-muted leading-relaxed">{g.body}</p>
+              </button>
+            );
+          })}
         </div>
-        <div className="p-5 min-h-[260px] flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeId}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="w-full"
-            >
-              {active.demo()}
-            </motion.div>
-          </AnimatePresence>
+
+        <div className="rounded-2xl border border-border bg-surface overflow-hidden sticky top-20">
+          <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <active.icon className="h-3.5 w-3.5 text-accent" />
+              <span className="text-xs font-medium">{active.title}</span>
+            </div>
+            <span className="text-[10px] uppercase tracking-widest text-muted">live</span>
+          </div>
+          <div className="p-5 min-h-[260px] flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeId}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                className="w-full"
+              >
+                {active.demo()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
