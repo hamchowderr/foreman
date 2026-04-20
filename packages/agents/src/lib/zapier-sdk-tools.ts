@@ -17,7 +17,6 @@ import { z } from "zod";
 const APPROVAL_REQUIRED = new Set([
   "runAction",
   "fetch",
-  "request",
   "createTable",
   "deleteTable",
   "createTableRecords",
@@ -27,10 +26,45 @@ const APPROVAL_REQUIRED = new Set([
   "deleteTableFields",
 ]);
 
+/**
+ * Deprecated SDK methods that are thin wrappers around other methods.
+ * Excluded to avoid duplicate tools confusing the agent.
+ *
+ * - *Authentication methods are deprecated aliases for *Connection methods
+ * - request is a deprecated alias for fetch
+ */
+const DEPRECATED_METHODS = new Set([
+  "listAuthentications",
+  "findFirstAuthentication",
+  "findUniqueAuthentication",
+  "getAuthentication",
+  "request",
+]);
+
 /** Convert camelCase to kebab-case (matching MCP server convention). */
 function toKebab(name: string): string {
   return name.replace(/([A-Z])/g, "-$1").toLowerCase();
 }
+
+/**
+ * List methods that support pagination via .items() async iterator.
+ * For these, we auto-paginate and collect all results (capped at maxItems).
+ */
+const PAGINATED_METHODS = new Set([
+  "listActions",
+  "listApps",
+  "listConnections",
+  "listClientCredentials",
+  "listTables",
+  "listTableRecords",
+  "listTableFields",
+  "listInputFields",
+  "listInputFieldChoices",
+  "listAuthentications",
+]);
+
+/** Default max items to collect when auto-paginating. */
+const DEFAULT_MAX_ITEMS = 100;
 
 /**
  * Generate all Zapier SDK tools as Mastra createTool() instances.
@@ -48,6 +82,8 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
   for (const fn of registry.functions) {
+    if (DEPRECATED_METHODS.has(fn.name)) continue;
+
     const toolName = toKebab(fn.name);
     const description =
       fn.description ||
@@ -65,6 +101,17 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
         ...(APPROVAL_REQUIRED.has(fn.name) ? { requireApproval: true } : {}),
         toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
+          // For list methods, auto-paginate and collect all results
+          if (PAGINATED_METHODS.has(fn.name)) {
+            const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
+            const items: any[] = [];
+            const result = await sdkFn.call(sdk, { ...input, maxItems });
+            // If result has .data array, it's a paginated response
+            if (result?.data && Array.isArray(result.data)) {
+              return { data: result.data, count: result.data.length, nextCursor: result.nextCursor };
+            }
+            return result;
+          }
           const result = await sdkFn.call(sdk, input);
           return result;
         },
