@@ -14,11 +14,20 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
 /build
+
+# mastra build output
+.mastra/
+
+# workspace sandbox data
+packages/agents/data/
+
+# SDK integration test results
+tests/sdk/results/
 
 # misc
 .DS_Store

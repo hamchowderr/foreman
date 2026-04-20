@@ -146,7 +146,7 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
       tools[toolName] = createTool({
         id: toolName,
         description,
-        inputSchema: fn.inputSchema as z.ZodObject<any>,
+        inputSchema: fn.inputSchema as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
         toModelOutput: createSummarizer(fn.name),
@@ -177,9 +177,9 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
         // url is always required for fetch; init is optional
         const isRequired = param.name === "url";
         if (isRequired) {
-          shape[param.name] = z.any().describe(param.description || param.name);
+          shape[param.name] = z.any().describe((param as any).description || param.name);
         } else {
-          shape[param.name] = z.any().optional().describe(param.description || param.name);
+          shape[param.name] = z.any().optional().describe((param as any).description || param.name);
         }
       }
 
