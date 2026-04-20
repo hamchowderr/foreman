@@ -31,10 +31,54 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
   if (!embedOnly) {
     log("Fetching app catalog from Zapier SDK...");
     const sdk = createZapierSdk({});
-    const maxItems = limit ?? 10000;
-    const appsResult = await sdk.listApps({ maxItems });
-    const apps = appsResult.data;
-    log(`  Fetched ${apps.length} apps`);
+
+    // listApps returns max ~100 apps per call. To get broader coverage,
+    // we also search by category keywords and aggregate unique results.
+    const seen = new Map<string, any>();
+
+    // 1. Default list (top 100)
+    const defaultApps = await sdk.listApps({ maxItems: 200 });
+    for (const app of defaultApps.data) seen.set(app.key, app);
+    log(`  Default list: ${defaultApps.data.length} apps`);
+
+    // 2. Search by category keywords to discover more
+    if (!limit) {
+      const searchTerms = [
+        "email", "crm", "database", "spreadsheet", "calendar", "accounting",
+        "project management", "social media", "ecommerce", "payment",
+        "marketing", "analytics", "automation", "forms", "documents",
+        "chat", "video", "invoicing", "hr", "support", "helpdesk",
+        "sms", "notifications", "file storage", "cloud", "ai",
+        "surveys", "scheduling", "recruiting", "shipping", "inventory",
+        "sales", "finance", "education", "healthcare", "real estate",
+        "legal", "restaurant", "construction", "travel", "fitness",
+        "music", "gaming", "news", "weather", "maps", "translation",
+        "design", "photo", "podcast", "webinar", "membership",
+      ];
+
+      for (const term of searchTerms) {
+        try {
+          const result = await sdk.listApps({ search: term, maxItems: 100 });
+          let newCount = 0;
+          for (const app of result.data) {
+            if (!seen.has(app.key)) {
+              seen.set(app.key, app);
+              newCount++;
+            }
+          }
+          if (newCount > 0) {
+            log(`  Search "${term}": +${newCount} new (${seen.size} total)`);
+          }
+        } catch {
+          // Some searches may fail — continue
+        }
+        await sleep(200); // Rate limit between searches
+      }
+    }
+
+    const apps = [...seen.values()];
+    if (limit) apps.splice(limit);
+    log(`  Total unique apps: ${apps.length}`);
 
     // Process apps in batches
     const BATCH = 20;
