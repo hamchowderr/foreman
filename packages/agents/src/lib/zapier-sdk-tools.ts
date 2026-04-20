@@ -74,9 +74,13 @@ const DEFAULT_MAX_ITEMS = 100;
  * @returns Record of tool-name → Tool instances
  */
 export function generateZapierTools(credentials?: string | (() => Promise<string>)) {
-  const sdk = createZapierSdk(
-    credentials ? { credentials } : undefined
-  );
+  const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
+  const sdk = createZapierSdk({
+    ...(credentials ? { credentials } : {}),
+    debug: isDebug,
+    maxNetworkRetries: 3,
+    maxNetworkRetryDelayMs: 30000,
+  });
 
   const registry = sdk.getRegistry({ package: "mcp" });
   const tools: Record<string, ReturnType<typeof createTool>> = {};
@@ -101,19 +105,20 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
         ...(APPROVAL_REQUIRED.has(fn.name) ? { requireApproval: true } : {}),
         toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
-          // For list methods, auto-paginate and collect all results
-          if (PAGINATED_METHODS.has(fn.name)) {
-            const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
-            const items: any[] = [];
-            const result = await sdkFn.call(sdk, { ...input, maxItems });
-            // If result has .data array, it's a paginated response
-            if (result?.data && Array.isArray(result.data)) {
-              return { data: result.data, count: result.data.length, nextCursor: result.nextCursor };
+          try {
+            // For list methods, auto-paginate and collect all results
+            if (PAGINATED_METHODS.has(fn.name)) {
+              const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
+              const result = await sdkFn.call(sdk, { ...input, maxItems });
+              if (result?.data && Array.isArray(result.data)) {
+                return { data: result.data, count: result.data.length, nextCursor: result.nextCursor };
+              }
+              return result;
             }
-            return result;
+            return await sdkFn.call(sdk, input);
+          } catch (err) {
+            return handleSdkError(err, fn.name);
           }
-          const result = await sdkFn.call(sdk, input);
-          return result;
         },
       });
     } else if (fn.inputParameters) {
@@ -137,10 +142,12 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
         ...(APPROVAL_REQUIRED.has(fn.name) ? { requireApproval: true } : {}),
         toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
-          // Reconstruct positional args from the flat object
-          const args = fn.inputParameters!.map((p: any) => input[p.name]);
-          const result = await sdkFn.call(sdk, ...args);
-          return result;
+          try {
+            const args = fn.inputParameters!.map((p: any) => input[p.name]);
+            return await sdkFn.call(sdk, ...args);
+          } catch (err) {
+            return handleSdkError(err, fn.name);
+          }
         },
       });
     }
@@ -155,6 +162,38 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
  */
 export function generateUserZapierTools(credentials: string) {
   return generateZapierTools(credentials);
+}
+
+/**
+ * Handle SDK errors and return structured error objects to the agent
+ * instead of throwing. This lets the agent explain the error to the user.
+ */
+function handleSdkError(err: unknown, methodName: string): { error: string; code: string; retryable: boolean } {
+  const message = err instanceof Error ? err.message : String(err);
+  const name = err instanceof Error ? err.name : "";
+
+  // Auth errors
+  if (message.includes("credentials") || message.includes("Unauthorized") || message.includes("401")) {
+    return { error: `Zapier authentication failed for ${methodName}. The user may need to reconnect their Zapier account.`, code: "AUTH_FAILED", retryable: false };
+  }
+
+  // Rate limiting
+  if (message.includes("429") || message.includes("rate limit") || message.includes("Rate")) {
+    return { error: `Zapier rate limit hit for ${methodName}. Try again in a moment.`, code: "RATE_LIMITED", retryable: true };
+  }
+
+  // Not found
+  if (message.includes("404") || message.includes("not found") || message.includes("Not Found")) {
+    return { error: `Resource not found for ${methodName}: ${message}`, code: "NOT_FOUND", retryable: false };
+  }
+
+  // Validation
+  if (name === "ZodError" || message.includes("Validation")) {
+    return { error: `Invalid input for ${methodName}: ${message}`, code: "VALIDATION_ERROR", retryable: false };
+  }
+
+  // Generic
+  return { error: `${methodName} failed: ${message}`, code: "SDK_ERROR", retryable: false };
 }
 
 /**
