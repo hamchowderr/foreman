@@ -53,12 +53,16 @@ export const contextInjector: InputProcessor = {
                   .join(" ")
               : "";
 
-        if (userText && hasDiscoveryIntent(userText)) {
+        if (userText && userText.length >= 10) {
           try {
             const catalogResults = await searchAppCatalog(userText, 5);
-            if (catalogResults.length > 0) {
-              const suggestions = catalogResults
-                .map((r) => `${r.title} (${r.categories || "uncategorized"})`)
+            // Only inject suggestions when the top result has a strong match.
+            // Low scores (< 0.4) mean the query isn't about app discovery —
+            // e.g., "I can manage, thanks" returns low-scoring noise.
+            const relevant = catalogResults.filter((r) => r.score >= 0.4);
+            if (relevant.length >= 2) {
+              const suggestions = relevant
+                .map((r) => `${r.title} (${r.categories || "uncategorized"}) [${r.score.toFixed(2)}]`)
                 .join(", ");
               extraMessages.push({
                 role: "system" as const,
@@ -82,8 +86,3 @@ export const contextInjector: InputProcessor = {
   },
 };
 
-const DISCOVERY_KEYWORDS = /\b(find|discover|suggest|recommend|looking for|need an? app|integration|connect|which app|what app|automate|track|manage|sync|monitor)\b/i;
-
-function hasDiscoveryIntent(text: string): boolean {
-  return DISCOVERY_KEYWORDS.test(text);
-}
