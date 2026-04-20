@@ -1,5 +1,18 @@
 import { createTool } from "@mastra/core/tools";
-import { createZapierSdk } from "@zapier/zapier-sdk";
+import {
+  createZapierSdk,
+  ZapierError,
+  ZapierAuthenticationError,
+  ZapierRateLimitError,
+  ZapierNotFoundError,
+  ZapierAppNotFoundError,
+  ZapierResourceNotFoundError,
+  ZapierActionError,
+  ZapierTimeoutError,
+  ZapierRelayError,
+  ZapierValidationError,
+  ZapierConfigurationError,
+} from "@zapier/zapier-sdk";
 import { z } from "zod";
 
 /**
@@ -26,12 +39,31 @@ const APPROVAL_REQUIRED = new Set([
   "deleteTableFields",
 ]);
 
+/** Read-only tools — used for MCP annotations. */
+const READ_ONLY = new Set([
+  "listApps",
+  "getApp",
+  "listActions",
+  "getAction",
+  "listConnections",
+  "findFirstConnection",
+  "findUniqueConnection",
+  "getConnection",
+  "getInputFieldsSchema",
+  "listInputFields",
+  "listInputFieldChoices",
+  "listTables",
+  "getTable",
+  "listTableFields",
+  "listTableRecords",
+  "getTableRecord",
+  "listClientCredentials",
+  "getProfile",
+]);
+
 /**
  * Deprecated SDK methods that are thin wrappers around other methods.
  * Excluded to avoid duplicate tools confusing the agent.
- *
- * - *Authentication methods are deprecated aliases for *Connection methods
- * - request is a deprecated alias for fetch
  */
 const DEPRECATED_METHODS = new Set([
   "listAuthentications",
@@ -47,8 +79,8 @@ function toKebab(name: string): string {
 }
 
 /**
- * List methods that support pagination via .items() async iterator.
- * For these, we auto-paginate and collect all results (capped at maxItems).
+ * List methods that return paginated results.
+ * We pass maxItems to the SDK so it auto-paginates up to the cap.
  */
 const PAGINATED_METHODS = new Set([
   "listActions",
@@ -60,7 +92,7 @@ const PAGINATED_METHODS = new Set([
   "listTableFields",
   "listInputFields",
   "listInputFieldChoices",
-  "listAuthentications",
+  "runAction", // search/read actions return paginated results
 ]);
 
 /** Default max items to collect when auto-paginating. */
@@ -80,6 +112,7 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
     debug: isDebug,
     maxNetworkRetries: 3,
     maxNetworkRetryDelayMs: 30000,
+    canDeleteTables: true, // Gated by requireApproval on the tool
   });
 
   const registry = sdk.getRegistry({ package: "mcp" });
@@ -94,19 +127,31 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
       fn.inputSchema?.description ||
       `Execute ${fn.name}`;
 
+    const isReadOnly = READ_ONLY.has(fn.name);
+    const isDestructive = APPROVAL_REQUIRED.has(fn.name);
+
+    const mcpAnnotations = {
+      mcp: {
+        annotations: {
+          readOnlyHint: isReadOnly,
+          destructiveHint: isDestructive,
+          openWorldHint: true,
+        },
+      },
+    };
+
     if (fn.inputSchema) {
-      // Zod-schema based function (33 of 34)
       const sdkFn = (sdk as any)[fn.name] as (args: any) => Promise<any>;
 
       tools[toolName] = createTool({
         id: toolName,
         description,
         inputSchema: fn.inputSchema as z.ZodObject<any>,
-        ...(APPROVAL_REQUIRED.has(fn.name) ? { requireApproval: true } : {}),
+        ...(isDestructive ? { requireApproval: true } : {}),
+        ...mcpAnnotations,
         toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
           try {
-            // For list methods, auto-paginate and collect all results
             if (PAGINATED_METHODS.has(fn.name)) {
               const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
               const result = await sdkFn.call(sdk, { ...input, maxItems });
@@ -125,10 +170,13 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
       // Positional-params function (fetch)
       const sdkFn = (sdk as any)[fn.name] as (...args: any[]) => Promise<any>;
 
-      // Build a Zod schema from input parameters
+      // Build a Zod schema from input parameters.
+      // fetch has url (required) and init (optional).
       const shape: Record<string, z.ZodTypeAny> = {};
       for (const param of fn.inputParameters) {
-        if (param.required) {
+        // url is always required for fetch; init is optional
+        const isRequired = param.name === "url";
+        if (isRequired) {
           shape[param.name] = z.any().describe(param.description || param.name);
         } else {
           shape[param.name] = z.any().optional().describe(param.description || param.name);
@@ -139,7 +187,8 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
         id: toolName,
         description,
         inputSchema: z.object(shape).describe(description),
-        ...(APPROVAL_REQUIRED.has(fn.name) ? { requireApproval: true } : {}),
+        ...(isDestructive ? { requireApproval: true } : {}),
+        ...mcpAnnotations,
         toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
           try {
@@ -165,40 +214,113 @@ export function generateUserZapierTools(credentials: string) {
 }
 
 /**
- * Handle SDK errors and return structured error objects to the agent
- * instead of throwing. This lets the agent explain the error to the user.
+ * Handle SDK errors using instanceof checks against the SDK's typed error classes.
+ * Returns structured error objects so the agent can explain errors to users.
  */
 function handleSdkError(err: unknown, methodName: string): { error: string; code: string; retryable: boolean } {
+  // Use instanceof for type-safe error handling against the SDK's error hierarchy
+  if (err instanceof ZapierAuthenticationError) {
+    return {
+      error: `Zapier authentication failed for ${methodName}. The user may need to reconnect their Zapier account.`,
+      code: "AUTH_FAILED",
+      retryable: false,
+    };
+  }
+
+  if (err instanceof ZapierRateLimitError) {
+    return {
+      error: `Zapier rate limit hit for ${methodName}. Try again in a moment.`,
+      code: "RATE_LIMITED",
+      retryable: true,
+    };
+  }
+
+  if (err instanceof ZapierTimeoutError) {
+    return {
+      error: `${methodName} timed out. The request may still be processing — try again.`,
+      code: "TIMEOUT",
+      retryable: true,
+    };
+  }
+
+  if (err instanceof ZapierRelayError) {
+    return {
+      error: `Zapier infrastructure error for ${methodName}. Try again in a moment.`,
+      code: "RELAY_ERROR",
+      retryable: true,
+    };
+  }
+
+  if (err instanceof ZapierActionError) {
+    const ae = err as any;
+    const detail = ae.actionErrors
+      ? JSON.stringify(ae.actionErrors)
+      : ae.message;
+    return {
+      error: `Action failed (${ae.appKey ?? "unknown"}/${ae.actionKey ?? "unknown"}): ${detail}`,
+      code: "ACTION_FAILED",
+      retryable: false,
+    };
+  }
+
+  if (err instanceof ZapierAppNotFoundError) {
+    const anfe = err as any;
+    return {
+      error: `App not found: "${anfe.appKey ?? "unknown"}". Check the app key with list-apps.`,
+      code: "APP_NOT_FOUND",
+      retryable: false,
+    };
+  }
+
+  if (err instanceof ZapierResourceNotFoundError) {
+    const rnfe = err as any;
+    return {
+      error: `${rnfe.resourceType ?? "Resource"} not found (ID: ${rnfe.resourceId ?? "unknown"}).`,
+      code: "NOT_FOUND",
+      retryable: false,
+    };
+  }
+
+  if (err instanceof ZapierNotFoundError) {
+    return {
+      error: `Resource not found for ${methodName}: ${(err as Error).message}`,
+      code: "NOT_FOUND",
+      retryable: false,
+    };
+  }
+
+  if (err instanceof ZapierValidationError) {
+    return {
+      error: `Invalid input for ${methodName}: ${(err as Error).message}`,
+      code: "VALIDATION_ERROR",
+      retryable: false,
+    };
+  }
+
+  if (err instanceof ZapierConfigurationError) {
+    return {
+      error: `Configuration error for ${methodName}: ${(err as Error).message}`,
+      code: "CONFIG_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Catch-all for any ZapierError subclass we didn't handle
+  if (err instanceof ZapierError) {
+    return {
+      error: `${methodName} failed: ${(err as Error).message}`,
+      code: (err as any).code ?? "SDK_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Non-SDK errors (network, etc.)
   const message = err instanceof Error ? err.message : String(err);
-  const name = err instanceof Error ? err.name : "";
-
-  // Auth errors
-  if (message.includes("credentials") || message.includes("Unauthorized") || message.includes("401")) {
-    return { error: `Zapier authentication failed for ${methodName}. The user may need to reconnect their Zapier account.`, code: "AUTH_FAILED", retryable: false };
-  }
-
-  // Rate limiting
-  if (message.includes("429") || message.includes("rate limit") || message.includes("Rate")) {
-    return { error: `Zapier rate limit hit for ${methodName}. Try again in a moment.`, code: "RATE_LIMITED", retryable: true };
-  }
-
-  // Not found
-  if (message.includes("404") || message.includes("not found") || message.includes("Not Found")) {
-    return { error: `Resource not found for ${methodName}: ${message}`, code: "NOT_FOUND", retryable: false };
-  }
-
-  // Validation
-  if (name === "ZodError" || message.includes("Validation")) {
-    return { error: `Invalid input for ${methodName}: ${message}`, code: "VALIDATION_ERROR", retryable: false };
-  }
-
-  // Generic
-  return { error: `${methodName} failed: ${message}`, code: "SDK_ERROR", retryable: false };
+  return { error: `${methodName} failed: ${message}`, code: "UNKNOWN_ERROR", retryable: false };
 }
 
 /**
  * Summarize tool results to reduce context usage.
- * Same logic as the MCP toModelOutput transformers.
  */
 function createSummarizer(fnName: string) {
   return (output: unknown): unknown => {
