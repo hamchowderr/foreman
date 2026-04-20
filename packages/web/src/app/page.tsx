@@ -395,22 +395,22 @@ function BringYourOwnZapier() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">Your Zapier, one click away</Badge>
+            <Badge variant="accent" className="mb-4">Your Zapier account, your rules</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              Plug Foreman into your Zapier account.
+              Your account. Your clients. Your data.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              Sign in with your Zapier once. Every app, connection, and
-              Zapier Table you already have is immediately available.
-              Execute actions, create and query tables, discover new apps —
-              all through your existing account. Nothing new to install.
+              Connect your Zapier account once — or your clients' accounts
+              in multi-tenant mode. Every app, connection, and Zapier Table
+              is immediately available. Execute actions, manage tables,
+              discover new integrations. Nothing new to install.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {[
-                "One click to connect your Zapier account",
+                "One click to connect — yours or your clients' accounts",
                 "Existing apps, connections, and tables — all available",
-                "Create new tables, add fields, query records via chat",
-                "Works alongside your existing Zaps and workflows",
+                "Create tables, add fields, query records via chat",
+                "Works alongside existing Zaps and workflows",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
                   <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
@@ -461,89 +461,86 @@ function Hosting() {
   return (
     <section id="hosting" className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <Reveal className="max-w-2xl mb-10 sm:mb-14">
-          <Badge variant="accent" className="mb-4">Hosting</Badge>
+        {/* Cloud — primary */}
+        <Reveal className="max-w-3xl mx-auto text-center mb-10">
+          <Badge variant="accent" className="mb-4">Get started</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-            Cloud or your own hardware.
+            Start chatting in 30 seconds.
           </h2>
+          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+            Sign in, connect your Zapier account, and start giving Foreman
+            instructions. No setup, no infrastructure, no credit card.
+          </p>
         </Reveal>
 
-        <Stagger className="grid md:grid-cols-2 gap-4 sm:gap-5" staggerDelay={0.12}>
-          <Reveal>
-            <TiltCard max={4}>
-              <Card className="bg-background border-border/60 h-full flex flex-col">
-                <CardContent className="p-6 sm:p-8 flex flex-col flex-1">
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-foreground/5 flex items-center justify-center">
-                        <Cloud className="h-5 w-5 text-muted" />
-                      </div>
-                      <h3 className="text-xl font-semibold">Cloud</h3>
+        <Reveal delay={0.1}>
+          <TiltCard max={3}>
+            <Card className="bg-background border-border/60 max-w-2xl mx-auto">
+              <CardContent className="p-6 sm:p-8">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <Cloud className="h-5 w-5 text-accent" />
                     </div>
-                    <Badge variant="outline">Alpha</Badge>
+                    <div>
+                      <h3 className="text-xl font-semibold">Foreman Cloud</h3>
+                      <p className="text-xs text-muted">Free during alpha</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted mb-6 leading-relaxed">
-                    Sign in, connect your Zapier, start chatting. We host it,
-                    you use it.
-                  </p>
-                  <ul className="space-y-2.5 text-sm mb-8 flex-1">
-                    {["Managed upgrades and backups", "All 9 chat channels included", "Usage billed by Zapier"].map((line) => (
-                      <li key={line} className="flex items-center gap-2.5">
-                        <Check className="h-3.5 w-3.5 text-accent shrink-0" />
-                        <span>{line}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button asChild className="w-full">
-                    <Link href="/chat">Start free</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </TiltCard>
-          </Reveal>
+                  <Badge variant="outline">Alpha</Badge>
+                </div>
+                <ul className="space-y-2.5 text-sm mb-6">
+                  {[
+                    "Managed upgrades, backups, and monitoring",
+                    "All 9 chat channels + MCP + A2A included",
+                    "Multi-tenant — connect your account or your clients'",
+                    "Zapier usage billed by Zapier, not us",
+                  ].map((line) => (
+                    <li key={line} className="flex items-center gap-2.5">
+                      <Check className="h-3.5 w-3.5 text-accent shrink-0" />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button variant="accent" asChild className="w-full">
+                  <Link href="/chat">
+                    Start free <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </TiltCard>
+        </Reveal>
 
-          <Reveal delay={0.1}>
-            <TiltCard max={4}>
-              <Card className="border-2 border-accent/20 bg-accent/[0.02] h-full flex flex-col relative overflow-hidden">
-                <CardContent className="p-6 sm:p-8 flex flex-col flex-1">
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                        <Server className="h-5 w-5 text-accent" />
-                      </div>
-                      <h3 className="text-xl font-semibold">Self-host</h3>
-                    </div>
-                    <Badge variant="accent">MIT</Badge>
+        {/* Self-host — secondary, separated */}
+        <Reveal delay={0.2}>
+          <div className="max-w-2xl mx-auto mt-12 rounded-xl border border-border/40 bg-surface/30 p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-foreground/5 flex items-center justify-center">
+                  <Server className="h-4 w-4 text-muted" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">Self-host</h3>
+                    <Badge variant="accent" className="text-[10px]">MIT</Badge>
                   </div>
-                  <p className="text-sm text-muted mb-4 leading-relaxed">
-                    One Docker container. Run it on your laptop or on a VPS —
-                    your data, your box.
+                  <p className="text-xs text-muted mt-0.5">
+                    One Docker container. Your server, your data. Full source on GitHub.
                   </p>
-                  <div className="rounded-lg bg-background border border-accent/15 p-3 mb-6 font-mono text-xs text-muted overflow-x-auto">
-                    <span className="text-accent">$</span> docker run -p 3000:3000 foreman
-                  </div>
-                  <ul className="space-y-2.5 text-sm mb-8 flex-1">
-                    {[
-                      "Runs locally or on any VPS",
-                      "MIT-licensed — the full app",
-                      "Your data never leaves your server",
-                    ].map((line) => (
-                      <li key={line} className="flex items-center gap-2.5">
-                        <Check className="h-3.5 w-3.5 text-accent shrink-0" />
-                        <span>{line}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button variant="outline" asChild className="w-full">
-                    <a href="https://github.com/hamchowderr/foreman" target="_blank" rel="noreferrer">
-                      View on GitHub <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </TiltCard>
-          </Reveal>
-        </Stagger>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild className="shrink-0">
+                <a href="https://github.com/hamchowderr/foreman" target="_blank" rel="noreferrer">
+                  View on GitHub <ExternalLink className="h-3 w-3" />
+                </a>
+              </Button>
+            </div>
+            <div className="mt-4 rounded-lg bg-background border border-border/40 p-3 font-mono text-xs text-muted overflow-x-auto">
+              <span className="text-accent">$</span> docker run -p 4111:4111 foreman
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

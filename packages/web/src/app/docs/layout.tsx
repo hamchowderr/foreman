@@ -1,16 +1,15 @@
 import "./docs.css";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import { Banner } from "fumadocs-ui/components/banner";
 import { source } from "@/lib/source";
 import type { ReactNode } from "react";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <RootProvider>
-      <Banner variant="rainbow" id="alpha-banner">
+      <div className="bg-gradient-to-r from-accent/80 via-accent to-orange-500 text-white text-center text-xs sm:text-sm py-2 px-4 font-medium">
         Foreman is in alpha — self-hostable today, cloud in beta.
-      </Banner>
+      </div>
       <DocsLayout
         tree={source.pageTree}
         githubUrl="https://github.com/hamchowderr/foreman"
