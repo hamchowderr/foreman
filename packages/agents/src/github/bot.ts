@@ -27,7 +27,7 @@ export async function getGitHubBot() {
     logger: "info",
   });
 
-  const mastra = await getMastra();
+  const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
 
   async function generateReply(

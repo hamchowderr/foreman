@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { MODELS } from "./foreman";
-import { createZapierMCPClient } from "../../lib/zapier-mcp";
+import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 
 const EXECUTION_PROMPT = `You are the Execution Agent, responsible for running Zapier actions on behalf of users. You handle action execution, raw API calls, and Zapier account connections.
 
@@ -12,20 +12,19 @@ Guidelines:
 - If the user is not connected to Zapier, use connect_zapier to generate a connection URL.
 - You will receive pre-resolved action schemas and inputs from the supervisor. Do not re-discover — just execute.`;
 
-let _mcpTools: Record<string, any> | undefined;
+let _executionTools: Record<string, any> | undefined;
 
-export async function createExecutionAgent() {
-  if (!_mcpTools) {
-    const mcp = createZapierMCPClient();
-    const allTools = await mcp.listTools();
+export function createExecutionAgent() {
+  if (!_executionTools) {
+    const allTools = generateZapierTools();
     const executionToolNames = [
-      "zapier_run-action",
-      "zapier_fetch",
-      "zapier_request",
+      "run-action",
+      "fetch",
+      "request",
     ];
-    _mcpTools = {};
+    _executionTools = {};
     for (const name of executionToolNames) {
-      if (allTools[name]) _mcpTools[name] = allTools[name];
+      if (allTools[name]) _executionTools[name] = allTools[name];
     }
   }
 
@@ -37,7 +36,7 @@ export async function createExecutionAgent() {
     instructions: EXECUTION_PROMPT,
     model: MODELS.default,
     tools: {
-      ...(_mcpTools ?? {}),
+      ...(_executionTools ?? {}),
       connect_zapier: connectZapierTool,
     },
   });

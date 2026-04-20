@@ -16,7 +16,7 @@ import { OpenAIVoice } from "@mastra/voice-openai";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { createZapierMCPClient, addModelOutputTransformers } from "../../lib/zapier-mcp";
+import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 
 /** Model routing constants — use the right model for the job */
 export const MODELS = {
@@ -30,14 +30,15 @@ export const MODELS = {
 
 export { buildSystemPrompt, type PromptContext };
 
-// Shared MCP client — initialized once, reused across agent calls
-let _zapierMcp: ReturnType<typeof createZapierMCPClient> | undefined;
-function getZapierMcp() {
-  if (!_zapierMcp) _zapierMcp = createZapierMCPClient();
-  return _zapierMcp;
+// Shared SDK tools — generated once at startup, reused across agent calls.
+// No child process, no MCP transport — direct library import.
+let _sdkTools: Record<string, any> | undefined;
+function getZapierTools() {
+  if (!_sdkTools) _sdkTools = generateZapierTools();
+  return _sdkTools;
 }
 
-export async function createForemanAgent(databaseUrl: string) {
+export function createForemanAgent(databaseUrl: string) {
   const workspacePath = "./data/workspace";
 
   const workspace = new Workspace({
@@ -59,16 +60,16 @@ export async function createForemanAgent(databaseUrl: string) {
     },
   });
 
-  // Get all tools from Zapier SDK MCP server (replaces 13 custom tools)
-  // toModelOutput transformers reduce verbose API responses before they hit the model
-  const zapierMcp = getZapierMcp();
-  const mcpTools = addModelOutputTransformers(await zapierMcp.listTools());
+  // Generate all 34 Zapier tools directly from SDK registry.
+  // No MCP, no child process — pure library import.
+  // toModelOutput and requireApproval are baked into each tool.
+  const sdkTools = getZapierTools();
 
-  // Use ToolSearchProcessor for MCP tools — with 33+ tools, loading all schemas
-  // into context every call wastes ~6-8K tokens. The agent gets search_tools and
+  // Use ToolSearchProcessor for SDK tools — with 34 tools, loading all schemas
+  // into context every call wastes tokens. The agent gets search_tools and
   // load_tool meta-tools to discover and load only what it needs per request.
   const zapierToolSearch = new ToolSearchProcessor({
-    tools: mcpTools,
+    tools: sdkTools,
     search: { topK: 8, minScore: 0.1 },
   });
 
@@ -115,7 +116,7 @@ export async function createForemanAgent(databaseUrl: string) {
         semanticRecall: {
           topK: 2,
           messageRange: 1,
-          scope: "resource", // Cross-thread recall for user preferences, but limited to reduce noise
+          scope: "resource",
         },
         observationalMemory: true,
       },

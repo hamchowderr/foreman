@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { MODELS } from "./foreman";
-import { createZapierMCPClient } from "../../lib/zapier-mcp";
+import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 
 const DISCOVERY_PROMPT = `You are the Discovery Agent, a specialist in exploring Zapier integrations. Your job is to help users discover what apps they have connected, what actions are available, and what inputs those actions require.
 
@@ -13,27 +13,25 @@ When asked about available integrations:
 
 Return structured, concise results. Do not execute actions — only discover and describe them.`;
 
-let _mcpTools: Record<string, any> | undefined;
+let _discoveryTools: Record<string, any> | undefined;
 
-export async function createDiscoveryAgent() {
-  if (!_mcpTools) {
-    const mcp = createZapierMCPClient();
-    const allTools = await mcp.listTools();
-    // Only include discovery-related MCP tools
+export function createDiscoveryAgent() {
+  if (!_discoveryTools) {
+    const allTools = generateZapierTools();
     const discoveryToolNames = [
-      "zapier_list-connections",
-      "zapier_find-first-connection",
-      "zapier_list-actions",
-      "zapier_get-action",
-      "zapier_get-input-fields-schema",
-      "zapier_list-input-fields",
-      "zapier_list-input-field-choices",
-      "zapier_list-apps",
-      "zapier_get-app",
+      "list-connections",
+      "find-first-connection",
+      "list-actions",
+      "get-action",
+      "get-input-fields-schema",
+      "list-input-fields",
+      "list-input-field-choices",
+      "list-apps",
+      "get-app",
     ];
-    _mcpTools = {};
+    _discoveryTools = {};
     for (const name of discoveryToolNames) {
-      if (allTools[name]) _mcpTools[name] = allTools[name];
+      if (allTools[name]) _discoveryTools[name] = allTools[name];
     }
   }
 
@@ -44,6 +42,6 @@ export async function createDiscoveryAgent() {
       "Explores Zapier integrations — discovers connected apps, lists available actions, retrieves action schemas and field choices. Use this agent for any question about what apps or actions are available.",
     instructions: DISCOVERY_PROMPT,
     model: MODELS.fast,
-    tools: _mcpTools,
+    tools: _discoveryTools,
   });
 }
