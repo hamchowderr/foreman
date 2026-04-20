@@ -44,6 +44,9 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
     // 2. Search by category keywords to discover more
     if (!limit) {
       const searchTerms = [
+        // Alphabetical sweep (catches apps by name regardless of category)
+        ..."abcdefghijklmnopqrstuvwxyz".split(""),
+        // Core categories
         "email", "crm", "database", "spreadsheet", "calendar", "accounting",
         "project management", "social media", "ecommerce", "payment",
         "marketing", "analytics", "automation", "forms", "documents",
@@ -54,6 +57,37 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
         "legal", "restaurant", "construction", "travel", "fitness",
         "music", "gaming", "news", "weather", "maps", "translation",
         "design", "photo", "podcast", "webinar", "membership",
+        // Niche categories
+        "agriculture", "church", "veterinary", "dental", "nonprofit",
+        "event", "ticketing", "printing", "insurance", "logistics",
+        "warehouse", "manufacturing", "erp", "pos", "booking",
+        "appointment", "signature", "contract", "proposal", "quote",
+        "lead", "affiliate", "seo", "ads", "conversion",
+        "feedback", "review", "loyalty", "reward", "referral",
+        "backup", "monitoring", "devops", "cicd", "testing",
+        "api", "webhook", "integration", "connector", "sync",
+        "task", "todo", "kanban", "gantt", "scrum",
+        "wiki", "knowledge base", "faq", "documentation", "notes",
+        "time tracking", "timesheet", "payroll", "expense", "billing",
+        "donation", "fundraising", "volunteer", "petition", "advocacy",
+        "learning", "lms", "course", "quiz", "certification",
+        "telecom", "voip", "phone", "call center", "ivr",
+        "iot", "smart home", "sensor", "gps", "fleet",
+        "crypto", "blockchain", "nft", "wallet", "exchange",
+        "security", "password", "identity", "compliance", "audit",
+        "media", "press", "journalism", "publishing", "content",
+        "animation", "render", "cad", "architecture", "engineering",
+        "pharmacy", "lab", "clinical", "patient", "telemedicine",
+        "property", "tenant", "lease", "mortgage", "appraisal",
+        "catering", "recipe", "food", "delivery", "grocery",
+        "salon", "spa", "beauty", "tattoo", "barber",
+        "pet", "animal", "breeding", "kennel", "grooming",
+        "sports", "coaching", "gym", "yoga", "martial arts",
+        "photography", "studio", "gallery", "portfolio", "model",
+        "wedding", "planner", "dj", "florist", "venue",
+        "cleaning", "landscaping", "plumbing", "hvac", "electrical",
+        "auto", "mechanic", "dealer", "rental", "carwash",
+        "aviation", "marine", "railroad", "trucking", "courier",
       ];
 
       for (const term of searchTerms) {
