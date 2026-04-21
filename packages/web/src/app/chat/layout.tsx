@@ -8,6 +8,7 @@ import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { DevConsolePanel } from "@/components/chat/dev-console";
 import { ChatShell } from "@/components/chat/shell";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { DevConsoleProvider } from "@/hooks/use-dev-console";
 
@@ -18,14 +19,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"
         strategy="lazyOnload"
       />
-      <DevConsoleProvider>
-        <DataStreamProvider>
-          <Suspense fallback={<div className="flex h-dvh bg-sidebar" />}>
-            <SidebarShell>{children}</SidebarShell>
-          </Suspense>
-        </DataStreamProvider>
-        <DevConsolePanel />
-      </DevConsoleProvider>
+      <TooltipProvider delayDuration={0}>
+        <DevConsoleProvider>
+          <DataStreamProvider>
+            <Suspense fallback={<div className="flex h-dvh bg-sidebar" />}>
+              <SidebarShell>{children}</SidebarShell>
+            </Suspense>
+          </DataStreamProvider>
+          <DevConsolePanel />
+        </DevConsoleProvider>
+      </TooltipProvider>
     </>
   );
 }

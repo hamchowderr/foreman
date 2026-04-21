@@ -47,7 +47,10 @@
       "Bash(DATABASE_URL=\"file:./src/mastra/public/foreman.db\" npx drizzle-kit push --force)",
       "Bash(DATABASE_URL=\"file:./src/mastra/public/foreman.db\" npx drizzle-kit migrate)",
       "Skill(commit-commands:commit)",
-      "Bash(wmic process:*)"
+      "Bash(wmic process:*)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"mastra dev\")",
+      "Bash(PORT=4111 npx mastra *)"
     ]
   }
 }

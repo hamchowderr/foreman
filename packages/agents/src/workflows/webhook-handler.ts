@@ -9,7 +9,7 @@ const zapierEventSchema = z.enum([
 
 const webhookPayloadSchema = z.object({
   event: zapierEventSchema,
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
   timestamp: z.string().optional(),
   source: z.string().optional(),
 });
@@ -22,7 +22,7 @@ const validatePayload = createStep({
   inputSchema: webhookPayloadSchema,
   outputSchema: z.object({
     event: zapierEventSchema,
-    data: z.record(z.unknown()),
+    data: z.record(z.string(), z.unknown()),
     timestamp: z.string(),
     source: z.string(),
   }),
@@ -41,7 +41,7 @@ const processEvent = createStep({
   description: "Route and process the webhook event based on its type",
   inputSchema: z.object({
     event: zapierEventSchema,
-    data: z.record(z.unknown()),
+    data: z.record(z.string(), z.unknown()),
     timestamp: z.string(),
     source: z.string(),
   }),
