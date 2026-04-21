@@ -131,7 +131,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       );
     },
     transport: new DefaultChatTransport({
-      api: `${process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111"}/conversations/chat`,
+      api: `${process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111"}/chat/foreman`,
       fetch: async (input, init) => {
         const token = await getTokenRef.current();
         logRef.current("info", "transport", `POST ${typeof input === "string" ? input : (input as Request).url}`, {
@@ -159,16 +159,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
           throw err;
         }
       },
-      prepareSendMessagesRequest(request) {
-        const lastMessage = request.messages.at(-1);
-        return {
-          body: {
-            id: request.id,
-            message: lastMessage,
-            ...request.body,
-          },
-        };
-      },
+      // Mastra's chatRoute expects standard AI SDK message format — no custom reshaping needed
     }),
     onData: (dataPart) => {
       logRef.current("debug", "stream", `data: ${dataPart.type}`, dataPart);

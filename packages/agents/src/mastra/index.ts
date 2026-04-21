@@ -2,6 +2,7 @@ import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
 import { MastraAuthClerk } from "@mastra/auth-clerk";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
+import { chatRoute } from "@mastra/ai-sdk";
 import { createForemanAgent } from "./agents/foreman";
 import { createDiscoveryAgent } from "./agents/discovery";
 import { createExecutionAgent } from "./agents/execution";
@@ -72,6 +73,15 @@ export function getMastra(): Mastra {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
       middleware: [customMiddleware],
+      apiRoutes: [
+        // Mastra's built-in chat route — handles streaming, tool approval/resume, memory
+        chatRoute({
+          path: "/chat/:agentId",
+          defaultOptions: {
+            maxSteps: 15,
+          },
+        }),
+      ],
       auth: new MastraAuthClerk({
         publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY,
         secretKey: process.env.CLERK_SECRET_KEY,
