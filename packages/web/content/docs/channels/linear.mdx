@@ -1,0 +1,122 @@
+---
+title: Linear
+description: Triage, comments, and follow-ups in Linear.
+---
+
+## Cloud
+
+<Steps>
+  <Step>
+    ### Authorize Foreman in Linear
+
+    Visit [foreman.otakusolutions.io/install/linear](https://foreman.otakusolutions.io/install/linear)
+    and click **Authorize**. Linear will ask to allow Foreman to read and
+    comment on issues.
+  </Step>
+
+  <Step>
+    ### Link your account
+
+    First time you tag `@foreman` in a Linear comment, the bot replies
+    with a one-time link. Open it, sign in, confirm.
+  </Step>
+
+  <Step>
+    ### Talk to it
+
+    In any issue comment:
+
+    ```
+    @foreman what was the last thing we shipped for this epic?
+    ```
+
+    Or for write actions:
+
+    ```
+    @foreman close all sub-issues that are in Done state
+    ```
+
+    Foreman previews and waits for approval.
+  </Step>
+</Steps>
+
+## Self-host
+
+<Tabs items={["API key (easiest)", "OAuth app"]}>
+  <Tab value="API key (easiest)">
+    <Steps>
+      <Step>
+        ### Create an API key
+
+        Linear → **Settings → API** → **Create key**. Copy the `lin_api_...`
+        key.
+      </Step>
+
+      <Step>
+        ### Create a webhook
+
+        Same settings page → **Webhooks** → **Create webhook**. URL:
+
+        ```
+        https://foreman.yourdomain.com/linear/webhook
+        ```
+
+        Resource: **Comment**. Copy the `lin_wh_...` signing secret.
+      </Step>
+
+      <Step>
+        ### Set env vars
+
+        ```bash
+        LINEAR_API_KEY=lin_api_...
+        LINEAR_WEBHOOK_SECRET=lin_wh_...
+        LINEAR_BOT_USERNAME=foreman   # whatever you'd @mention
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab value="OAuth app">
+    <Steps>
+      <Step>
+        ### Create an OAuth application
+
+        Linear → **Settings → API → OAuth applications** → **Create new**.
+        Redirect URL:
+
+        ```
+        https://foreman.yourdomain.com/api/linear/callback
+        ```
+      </Step>
+
+      <Step>
+        ### Set env vars
+
+        ```bash
+        LINEAR_CLIENT_ID=...
+        LINEAR_CLIENT_SECRET=...
+        LINEAR_WEBHOOK_SECRET=lin_wh_...
+        LINEAR_BOT_USERNAME=foreman
+        ```
+      </Step>
+
+      <Step>
+        ### Users install it themselves
+
+        Each user links their own Linear via `/install/linear` in the web UI.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+<Callout type="info">
+  `LINEAR_BOT_USERNAME` is what users `@mention` to summon Foreman. Match
+  it to whatever username you gave the user associated with your API key
+  (or the OAuth app user on your Linear workspace).
+</Callout>
+
+## Using it
+
+<Cards>
+  <Card title="GitHub" href="/docs/channels/github" description="Often paired with Linear for dev work." />
+  <Card title="Workflows" href="/docs/core-concepts/workflows" description="Save triage and sprint-close patterns." />
+</Cards>

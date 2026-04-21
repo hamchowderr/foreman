@@ -1,0 +1,11 @@
+{
+  "fixtures": [
+    {
+      "match": {},
+      "response": {
+        "audio": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=",
+        "format": "wav"
+      }
+    }
+  ]
+}

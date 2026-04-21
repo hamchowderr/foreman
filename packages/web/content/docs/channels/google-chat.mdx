@@ -1,0 +1,93 @@
+---
+title: Google Chat
+description: Workspace-native Foreman with service-account auth.
+---
+
+## Cloud
+
+<Steps>
+  <Step>
+    ### Add to your workspace
+
+    In Google Chat: **Apps** → **Find apps** → search *Foreman* → **Add**.
+    Your Workspace admin may need to approve — share
+    [foreman.otakusolutions.io/install/google-chat](https://foreman.otakusolutions.io/install/google-chat)
+    with them.
+  </Step>
+
+  <Step>
+    ### Link your account
+
+    On first message, Foreman sends a chip with a link to confirm. One
+    click, that Google identity is tied to your Foreman user.
+  </Step>
+
+  <Step>
+    ### Talk to it
+
+    DM the Foreman app or `@mention` it in a space.
+  </Step>
+</Steps>
+
+## Self-host
+
+<Steps>
+  <Step>
+    ### Create a GCP project
+
+    Go to [console.cloud.google.com](https://console.cloud.google.com) →
+    **New Project** → name it *Foreman*.
+  </Step>
+
+  <Step>
+    ### Enable the Chat API
+
+    **APIs & Services** → **Enable APIs** → search **Google Chat API** →
+    **Enable**.
+  </Step>
+
+  <Step>
+    ### Create a service account
+
+    **IAM & Admin** → **Service Accounts** → **Create Service Account**.
+    Role: **Chat Bot**. Create a key (JSON format), download it.
+
+    <Callout type="warn">
+      The JSON key is a credential. Store it somewhere only your server
+      can read.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Configure the Chat app
+
+    In **Google Chat API** → **Configuration**:
+
+    - App name: *Foreman*
+    - Avatar URL, description
+    - Functionality: **Receive 1:1 messages** and **Join spaces**
+    - Connection settings → **App URL** (HTTP endpoint):
+
+      ```
+      https://foreman.yourdomain.com/gchat/webhook
+      ```
+  </Step>
+
+  <Step>
+    ### Set env var
+
+    ```bash
+    # Paste the entire JSON on a single line (or use a file loader)
+    GOOGLE_CHAT_CREDENTIALS='{"type":"service_account",...}'
+    ```
+
+    Restart Foreman. Add the app to your workspace and start chatting.
+  </Step>
+</Steps>
+
+## Using it
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Connect Zapier and run your first action." />
+  <Card title="Channels" href="/docs/channels" description="Other channels Foreman supports." />
+</Cards>

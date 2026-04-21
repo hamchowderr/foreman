@@ -1,0 +1,91 @@
+---
+title: Memory
+description: How Foreman remembers you across conversations and channels.
+---
+
+Foreman keeps three different kinds of memory that work together. All of them
+are tied to **your identity** (not your thread), so they travel with you
+between Slack, Discord, Telegram, the web, and anywhere else.
+
+<Callout>
+  The underlying library is [Mastra Memory](https://mastra.ai/docs/memory)
+  with a LibSQL vector store. Cloud uses Turso. Self-host uses a local
+  SQLite file under `/app/data`.
+</Callout>
+
+## Working memory
+
+Persistent preferences Foreman should always have in mind — your name, your
+team, the boards you use most, the way you like emails signed off.
+
+Working memory:
+
+- Is editable at any time via chat ("remember that I sign emails Best, Tylan")
+- Is included in every prompt as part of the system message
+- Has a budget of roughly 500 tokens; older entries are summarized
+
+## Semantic recall
+
+When you ask something, Foreman does a quick similarity search over past
+messages to find the 1–2 most relevant snippets. It uses `topK: 2`,
+`messageRange: 1`, `scope: "resource"` — which means it searches *your*
+entire message history, not just the current thread.
+
+That's how you can say *"do that again but in Trello"* a week later and
+have Foreman know what *"that"* was.
+
+| Setting | Default |
+| --- | --- |
+| Embedder | `openai/text-embedding-3-small` |
+| Top K | `2` |
+| Message range | `1` |
+| Scope | `resource` (searches all of your messages, not just this thread) |
+
+## Observational memory
+
+Foreman watches what you actually do and notes patterns. Over time it
+builds up facts like *"this user only uses Gmail for external email, Slack
+for internal"* or *"always picks the Personal Trello board unless
+otherwise specified."*
+
+This is different from working memory in two ways:
+
+1. **You don't tell Foreman** — it's learned, not declared.
+2. **It's advisory, not mandatory** — observations nudge defaults but don't
+   override explicit requests.
+
+## One identity, many channels
+
+Your memory is scoped by **user**, not by channel. A single
+`channel_identity` table maps Slack IDs, Discord IDs, Telegram chat IDs,
+etc. to your Foreman user. So:
+
+- Ask something in Slack → remembered
+- Follow up from Telegram → Foreman finds the Slack context via semantic recall
+- Approve from your phone → it's still you
+
+## Internals
+
+<Files>
+  <Folder name="packages/agents/src/mastra/" defaultOpen>
+    <File name="agents/foreman.ts" />
+    <Folder name="memory">
+      <File name="config.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="packages/agents/src/lib/">
+    <File name="identity.ts" />
+  </Folder>
+</Files>
+
+- Messages are stored in **Mastra threads**, not a custom `message` table.
+- Each conversation maps to a `mastraThreadId`.
+- `savePerStep: true` on every channel adapter — memory persists after each
+  tool step, not just at the end.
+
+## Next
+
+<Cards>
+  <Card title="Toolbox search" href="/docs/core-concepts/tool-discovery" description="How Foreman picks which tools to load per request." />
+  <Card title="Architecture: Mastra" href="/docs/architecture/mastra" description="The full Mastra stack Foreman runs on." />
+</Cards>

@@ -1,0 +1,84 @@
+---
+title: Workflows
+description: Do it once. Save the pattern. Re-run it anytime.
+---
+
+Anything you tell Foreman can become a saved, reusable workflow. It's the
+closest thing to a Zap — built from a conversation instead of a canvas.
+
+## Creating one
+
+<Steps>
+  <Step>
+    ### Have the conversation first
+
+    ```
+    You: Every Monday, email the standup link to the team and
+         open a Linear issue for blockers.
+    Foreman: [sends email, creates LIN-4821]
+    ```
+  </Step>
+
+  <Step>
+    ### Select and save
+
+    In the web UI, highlight the message range you want to templatize and
+    click **Save as workflow**. Foreman extracts:
+
+    - The trigger (message you sent)
+    - Each tool invocation as a step
+    - Field mappings, referencing inputs by variable name
+  </Step>
+
+  <Step>
+    ### Run it anytime
+
+    ```bash
+    POST /workflows/:id/run
+    ```
+
+    The response streams step-by-step progress over SSE.
+  </Step>
+</Steps>
+
+## Anatomy
+
+<Files>
+  <Folder name="workflow" defaultOpen>
+    <File name="id, name, user_id" />
+    <File name="source_conversation_id" />
+  </Folder>
+  <Folder name="workflow_step" defaultOpen>
+    <File name="app, action, fields_json" />
+  </Folder>
+  <Folder name="workflow_run">
+    <File name="status, started_at, completed_at" />
+  </Folder>
+</Files>
+
+## Approvals still apply
+
+Even a saved workflow respects `requireApproval` on its steps. The first
+time you run it, each write step surfaces an approval card. Subsequent
+runs re-use your decision **only** for the same specific parameters.
+
+<Callout>
+  Want truly unattended runs? Pair workflows with org-admin "auto-approve
+  for this workflow" setting. Only admins can grant this, only for
+  specific workflow IDs.
+</Callout>
+
+## Run history
+
+Every execution is logged:
+
+- `GET /workflows/:id/runs` — list past runs with status
+- SSE stream during a run — step-by-step progress
+- Re-run or fork from any past run
+
+## When to use Zaps instead
+
+Workflows are great for repeatable sequences you kick off yourself or via
+a scheduled cron. For pure **triggered** automation (a Zap fires on a
+calendar invite and creates a doc), a Zap is still the right tool — and
+since Foreman sits on top of your Zapier, it happily coexists.

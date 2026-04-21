@@ -1,0 +1,143 @@
+---
+title: Mastra framework
+description: The agent runtime Foreman is built on.
+---
+
+Foreman is a [Mastra](https://mastra.ai) agent. Everything you see —
+memory, tool search, multi-agent routing, processors, workflows, evals —
+comes from Mastra's primitives. Foreman's job is mostly to compose them.
+
+<Callout>
+  This page is the "what's running" tour. If you want to extend Foreman
+  or debug something, start here.
+</Callout>
+
+## Frontend and agent server are decoupled
+
+Foreman ships as two separate packages:
+
+- **`packages/agents`** — the Mastra agent server. REST API, A2A, MCP,
+  memory, tools, workflows. No UI.
+- **`packages/web`** — the Next.js frontend. Pure UI. Calls the agent
+  server over HTTP via `NEXT_PUBLIC_AGENT_SERVER_URL`.
+
+The split is deliberate.
+
+<Callout type="info">
+  If you self-host, you're not locked into our frontend. You can point
+  any UI, CLI, or other agent at the agent server and it'll work.
+  `packages/web` is just one consumer of the public API.
+</Callout>
+
+**Why it's worth it:**
+
+- **No vendor lock** — swap the frontend for your own, use MCP from
+  Claude Code, use A2A from another Mastra agent, or just curl it. All
+  valid.
+- **Flexible hosting** — agent server goes on a VPS (Mastra needs a
+  persistent process for the MCP stdio transport). Frontend can live on
+  Vercel, Cloudflare, your laptop, or the same box. The interface
+  between them is just HTTP + SSE.
+- **Mastra is simple** — the agent file is under 200 lines of TypeScript.
+  Advanced users can fork, drop in their own models, tools, or processors,
+  and ship the same public API surface without touching anything else.
+
+## The agent graph
+
+Foreman is actually **five agents** working together.
+
+| Agent | Model | Job |
+| --- | --- | --- |
+| Foreman | `claude-sonnet-4-6` | Primary. Main conversation + tool calling. |
+| Discovery | `claude-haiku-4-5` | Fast app/action search. |
+| Execution | `claude-sonnet-4-6` | Runs actions with validation. |
+| History | `claude-haiku-4-5` | Fast semantic history search. |
+| Supervisor | `claude-sonnet-4-6` | Routes between the above. |
+
+The first 2 turns of every conversation use Haiku (cheap + fast) to narrow
+down which tools and apps to load. Then we switch to Sonnet for the
+reasoning. This is done via Mastra's `prepareStep`.
+
+## Memory
+
+<Files>
+  <Folder name="packages/agents/src/" defaultOpen>
+    <Folder name="mastra">
+      <File name="agents/foreman.ts" />
+      <File name="index.ts" />
+    </Folder>
+    <Folder name="lib">
+      <File name="identity.ts" />
+      <File name="rag/" />
+    </Folder>
+  </Folder>
+</Files>
+
+See [Memory](/docs/core-concepts/memory) for the behaviour. Under the
+hood: Mastra Memory with LibSQL vector storage, `savePerStep: true` on
+every channel adapter, cross-channel identity resolution in
+`lib/identity.ts`.
+
+## Processors
+
+Mastra runs a pipeline of `InputProcessor`s before the prompt reaches the
+model and `OutputProcessor`s after the model replies.
+
+| Processor | Type | Job |
+| --- | --- | --- |
+| `contextInjector` | input | Inject connected apps list into the system prompt |
+| `ToolSearchProcessor` | input | Give the agent `search_tools`/`load_tool` meta-tools |
+| `piiRedactor` | output | Strip PII before the reply ships |
+
+## Tools
+
+Three custom tools (always loaded):
+
+<Files>
+  <Folder name="packages/agents/src/mastra/tools/">
+    <File name="connect_zapier.ts" />
+    <File name="search_history.ts" />
+    <File name="fork_conversation.ts" />
+  </Folder>
+</Files>
+
+Plus 33 MCP tools from the Zapier SDK, behind `search_tools`. See
+[Zapier SDK](/docs/architecture/zapier-sdk).
+
+## Where requests come in
+
+```
+Channel adapter → /conversations/:id/messages (SSE)
+                      ↓
+                  agent.stream() with savePerStep + prepareStep
+                      ↓
+                  createChunkTransformer → AppChunk SSE events
+                      ↓
+                  Frontend SSE consumer
+```
+
+See [Streaming](/docs/architecture/streaming) for the full pipeline.
+
+## Workflows
+
+Mastra has its own `Workflow` primitive. Foreman uses it for three cron
+jobs:
+
+| Workflow | Purpose |
+| --- | --- |
+| `daily-summary` | 24h activity digest |
+| `health-check` | Zapier connection health |
+| `webhook-handler` | HTTP trigger workflow |
+
+User-saved workflows are stored in the `workflow` + `workflow_step` tables
+and compiled into Mastra Workflow objects on demand.
+
+## Evals
+
+Two scorers, sampled so we don't burn budget:
+
+- **Answer relevancy** — 30% of requests
+- **Toxicity** — 20% of requests
+
+Results land in the Mastra observability dashboard (enable
+`OTEL_ENABLED=true`).

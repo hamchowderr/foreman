@@ -1,0 +1,7 @@
+.mastra/
+node_modules/
+*.db
+*.db-shm
+*.db-wal
+data/
+.env.local

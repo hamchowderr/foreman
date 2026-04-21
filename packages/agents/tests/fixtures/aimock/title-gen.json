@@ -1,0 +1,8 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "Generate a" },
+      "response": { "content": "Zapier Automation Help" }
+    }
+  ]
+}

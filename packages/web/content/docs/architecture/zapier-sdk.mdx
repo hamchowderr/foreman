@@ -1,0 +1,92 @@
+---
+title: Zapier SDK via MCP
+description: How Foreman actually talks to Zapier.
+---
+
+Foreman's 9,000+-app coverage is the Zapier SDK's MCP server. Mastra's
+`MCPClient` speaks to it over stdio transport.
+
+## The wire
+
+<Files>
+  <Folder name="process" defaultOpen>
+    <Folder name="foreman (Next.js + Mastra)">
+      <File name="MCPClient" />
+    </Folder>
+    <Folder name="npx zapier-sdk mcp (child process)">
+      <File name="33 MCP tools, stdio" />
+    </Folder>
+  </Folder>
+</Files>
+
+On boot, Foreman spawns `npx @zapier/zapier-sdk mcp` as a child process
+and pipes JSON-RPC requests/responses over stdin/stdout. Tools surface to
+the agent as `run-action`, `search-actions`, etc.
+
+<Callout type="warn">
+  Stdio transport is why Foreman's agent server **can't run on Vercel**.
+  Serverless functions can't keep a persistent child process. That's why
+  the agent server lives on a VPS (Coolify/Docker) and only the web
+  frontend lives on Vercel.
+</Callout>
+
+## requireApproval
+
+10 of the 33 MCP tools are write/delete operations. Mastra's MCPClient
+takes a `requireApproval` option that intercepts those calls and surfaces
+an **action proposal** instead of running them.
+
+The approval-gated tools:
+
+| Tool | Kind |
+| --- | --- |
+| `run-action` | write |
+| `fetch` | write |
+| `request` | write |
+| `create-table` | write |
+| `delete-table` | write |
+| `create-table-records` | write |
+| `update-table-records` | write |
+| `delete-table-records` | write |
+| `create-table-fields` | write |
+| `delete-table-fields` | write |
+
+## toModelOutput
+
+Every MCP tool response passes through a summarizer before reaching the
+agent. This compresses verbose API responses:
+
+- Lists cap at 20 items
+- Unnecessary fields strip out
+- Long strings trim to their most useful prefix
+
+Saves hundreds of tokens per tool call, and makes the agent's context
+window go a lot further.
+
+## Modes
+
+Foreman runs in one of three modes:
+
+<Tabs items={["dev", "production", "self_hosted"]}>
+  <Tab value="dev">
+    Uses your personal Zapier CLI login. One-time
+    `npx @zapier/zapier-sdk-cli login` and you're done.
+  </Tab>
+  <Tab value="production">
+    Multi-tenant. Each user connects their own Zapier account. Requires
+    `ZAPIER_CLIENT_ID` and `ZAPIER_CLIENT_SECRET` (from
+    `npx zapier-sdk create-client-credentials`).
+  </Tab>
+  <Tab value="self_hosted">
+    Single shared Zapier account for everyone in your install. Easiest
+    for personal use.
+  </Tab>
+</Tabs>
+
+Set `FOREMAN_MODE=dev|production|self_hosted` in `.env`.
+
+## Encryption
+
+For the `production` mode, per-user Zapier OAuth tokens live in the
+`zapier_identity` table, encrypted with **AES-256-GCM** using
+`ENCRYPTION_KEY` from env. Key rotation rewrites every row.

@@ -1,0 +1,12 @@
+{
+  "title": "Core concepts",
+  "pages": [
+    "index",
+    "memory",
+    "tool-discovery",
+    "approvals",
+    "guardrails",
+    "workflows",
+    "voice"
+  ]
+}

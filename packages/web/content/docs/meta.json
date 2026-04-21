@@ -1,0 +1,15 @@
+{
+  "title": "Foreman Docs",
+  "pages": [
+    "index",
+    "getting-started",
+    "channels",
+    "self-hosting",
+    "---Core concepts---",
+    "core-concepts",
+    "---Integrations---",
+    "integrations",
+    "---Architecture---",
+    "architecture"
+  ]
+}

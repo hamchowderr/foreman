@@ -1,0 +1,66 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "send email" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "list_actions",
+            "arguments": { "app": "gmail" }
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "send.*gmail" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "execute_action",
+            "arguments": {
+              "action_id": "gmail_send_email",
+              "params": {
+                "to": "test@example.com",
+                "subject": "Test Email",
+                "body": "This is a test email sent via Foreman."
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "create task" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "list_actions",
+            "arguments": { "app": "todoist" }
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "slack message" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "list_actions",
+            "arguments": { "app": "slack" }
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "schema" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "get_action_schema",
+            "arguments": { "action_id": "gmail_send_email" }
+          }
+        ]
+      }
+    }
+  ]
+}

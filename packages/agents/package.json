@@ -1,0 +1,61 @@
+{
+  "name": "@foreman/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "mastra dev",
+    "build": "mastra build",
+    "build:vercel": "DEPLOY_TARGET=vercel mastra build",
+    "build:cloudflare": "DEPLOY_TARGET=cloudflare mastra build",
+    "start": "node .mastra/output/index.mjs",
+    "start:webhooks": "npx tsx src/webhook-server.ts",
+    "dev:mock": "npx @copilotkit/aimock --config aimock.json --port 4010",
+    "dev:telegram": "npx tsx src/telegram/start-polling.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chat-adapter/discord": "^4.26.0",
+    "@chat-adapter/gchat": "^4.26.0",
+    "@chat-adapter/github": "^4.26.0",
+    "@chat-adapter/linear": "^4.26.0",
+    "@chat-adapter/slack": "^4.26.0",
+    "@chat-adapter/state-memory": "^4.26.0",
+    "@chat-adapter/teams": "^4.26.0",
+    "@chat-adapter/telegram": "^4.26.0",
+    "@chat-adapter/whatsapp": "^4.26.0",
+    "@hono/node-server": "^1.19.14",
+    "@libsql/client": "^0.17.2",
+    "@mastra/auth-clerk": "^1.0.2",
+    "@mastra/core": "^1.25.0",
+    "@mastra/evals": "^1.2.1",
+    "@mastra/libsql": "^1.8.1",
+    "@mastra/mcp": "^1.5.0",
+    "@mastra/memory": "^1.15.1",
+    "@mastra/observability": "^1.9.1",
+    "@mastra/rag": "^2.2.0",
+    "@mastra/voice-elevenlabs": "^0.12.0",
+    "@mastra/voice-openai": "^0.12.1",
+    "@zapier/zapier-sdk": "^0.41.0",
+    "ai": "^6.0.168",
+    "chat": "^4.26.0",
+    "chat-adapter-imessage": "^0.1.1",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.7.0",
+    "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "@mastra/deployer-cloudflare": "^1.0.0",
+    "@mastra/deployer-vercel": "^1.0.0"
+  },
+  "devDependencies": {
+    "@copilotkit/aimock": "^1.14.3",
+    "@types/node": "^20",
+    "@zapier/zapier-sdk-cli": "^0.39.9",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5",
+    "vitest": "^4.1.4"
+  }
+}
