@@ -10,9 +10,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useCallback } from "react";
 
-export type SuggestionsProps = ComponentProps<typeof ScrollArea>;
+type SuggestionsProps = ComponentProps<typeof ScrollArea>;
 
-export const Suggestions = ({
+const Suggestions = ({
   className,
   children,
   ...props
@@ -25,7 +25,7 @@ export const Suggestions = ({
   </ScrollArea>
 );
 
-export type SuggestionProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
+type SuggestionProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
   suggestion: string;
   onClick?: (suggestion: string) => void;
 };
