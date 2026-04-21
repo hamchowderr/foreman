@@ -211,6 +211,19 @@ export const channelIdentity = sqliteTable(
   ]
 );
 
+// ─── App Catalog (embedded for semantic search) ───
+
+export const appCatalog = sqliteTable("app_catalog", {
+  appKey: text("app_key").primaryKey(),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  categories: text("categories").notNull(), // JSON array: [{ id, name, slug }]
+  authType: text("auth_type"),
+  actionCount: integer("action_count"),
+  embeddingText: text("embedding_text"), // pre-built text for vector embedding
+  syncedAt: integer("synced_at", { mode: "timestamp" }).notNull(),
+});
+
 // ─── API Keys (MCP/A2A access) ───
 
 export const apiKey = sqliteTable("api_key", {

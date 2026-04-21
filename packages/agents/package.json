@@ -17,7 +17,10 @@
     "test": "vitest run --exclude tests/sdk/**",
     "test:sdk": "vitest run --config vitest.sdk.config.ts",
     "test:sdk:read": "vitest run --config vitest.sdk.config.ts -t 'SDK Read'",
-    "test:sdk:write": "vitest run --config vitest.sdk.config.ts -t 'SDK Write'"
+    "test:sdk:write": "vitest run --config vitest.sdk.config.ts -t 'SDK Write'",
+    "catalog:seed": "npx tsx scripts/seed-catalog.ts",
+    "catalog:seed:quick": "npx tsx scripts/seed-catalog.ts --apps-only",
+    "catalog:embed": "npx tsx scripts/seed-catalog.ts --embed-only"
   },
   "dependencies": {
     "@chat-adapter/discord": "^4.26.0",
