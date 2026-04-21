@@ -48,6 +48,7 @@
     "ai": "^6.0.168",
     "chat": "^4.26.0",
     "chat-adapter-imessage": "^0.1.1",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.7.0",
     "postgres": "^3.4.9",

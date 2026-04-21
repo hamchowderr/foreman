@@ -1,4 +1,4 @@
-export const BotIcon = () => {
+const BotIcon = () => {
   return (
     <svg
       height="16"
@@ -17,7 +17,7 @@ export const BotIcon = () => {
   );
 };
 
-export const UserIcon = () => {
+const UserIcon = () => {
   return (
     <svg
       data-testid="geist-icon"
@@ -37,7 +37,7 @@ export const UserIcon = () => {
   );
 };
 
-export const AttachmentIcon = () => {
+const AttachmentIcon = () => {
   return (
     <svg
       height="16"
@@ -56,7 +56,7 @@ export const AttachmentIcon = () => {
   );
 };
 
-export const VercelIcon = ({ size = 17 }) => {
+const VercelIcon = ({ size = 17 }) => {
   return (
     <svg
       height={size}
@@ -75,7 +75,7 @@ export const VercelIcon = ({ size = 17 }) => {
   );
 };
 
-export const GitIcon = () => {
+const GitIcon = () => {
   return (
     <svg
       height="16"
@@ -101,7 +101,7 @@ export const GitIcon = () => {
   );
 };
 
-export const BoxIcon = ({ size = 16 }: { size: number }) => {
+const BoxIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -120,7 +120,7 @@ export const BoxIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-export const HomeIcon = ({ size = 16 }: { size: number }) => {
+const HomeIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -139,7 +139,7 @@ export const HomeIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-export const GPSIcon = ({ size = 16 }: { size: number }) => {
+const GPSIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -160,7 +160,7 @@ export const GPSIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-export const InvoiceIcon = ({ size = 16 }: { size: number }) => {
+const InvoiceIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -179,7 +179,7 @@ export const InvoiceIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-export const LogoOpenAI = ({ size = 16 }: { size?: number }) => {
+const LogoOpenAI = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -196,7 +196,7 @@ export const LogoOpenAI = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const LogoGoogle = ({ size = 16 }: { size?: number }) => {
+const LogoGoogle = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       data-testid="geist-icon"
@@ -226,7 +226,7 @@ export const LogoGoogle = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const LogoAnthropic = () => {
+const LogoAnthropic = () => {
   return (
     <svg
       height="18px"
@@ -246,7 +246,7 @@ export const LogoAnthropic = () => {
   );
 };
 
-export const RouteIcon = ({ size = 16 }: { size?: number }) => {
+const RouteIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -359,7 +359,7 @@ export const LoaderIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const UploadIcon = ({ size = 16 }: { size?: number }) => {
+const UploadIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       data-testid="geist-icon"
@@ -379,7 +379,7 @@ export const UploadIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const MenuIcon = ({ size = 16 }: { size?: number }) => {
+const MenuIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -417,7 +417,7 @@ export const PencilEditIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const CheckedSquare = ({ size = 16 }: { size?: number }) => {
+const CheckedSquare = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -436,7 +436,7 @@ export const CheckedSquare = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const UncheckedSquare = ({ size = 16 }: { size?: number }) => {
+const UncheckedSquare = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -458,7 +458,7 @@ export const UncheckedSquare = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const MoreIcon = ({ size = 16 }: { size?: number }) => {
+const MoreIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -496,7 +496,7 @@ export const TrashIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const InfoIcon = ({ size = 16 }: { size?: number }) => {
+const InfoIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -690,7 +690,7 @@ export const RedoIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-export const DeltaIcon = ({ size = 16 }: { size?: number }) => (
+const DeltaIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
@@ -707,7 +707,7 @@ export const DeltaIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-export const CpuIcon = ({ size = 16 }: { size?: number }) => (
+const CpuIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     fill="none"
     height={size}
@@ -768,7 +768,7 @@ export const SummarizeIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-export const SidebarLeftIcon = ({ size = 16 }: { size?: number }) => (
+const SidebarLeftIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
@@ -785,7 +785,7 @@ export const SidebarLeftIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-export const PlusIcon = ({ size = 16 }: { size?: number }) => (
+const PlusIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
@@ -950,7 +950,7 @@ export const LockIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const EyeIcon = ({ size = 16 }: { size?: number }) => {
+const EyeIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -1026,7 +1026,7 @@ export const PlayIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const PythonIcon = ({ size = 16 }: { size?: number }) => {
+const PythonIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -1066,7 +1066,7 @@ export const TerminalWindowIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const TerminalIcon = ({ size = 16 }: { size?: number }) => {
+const TerminalIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -1159,7 +1159,7 @@ export const FullscreenIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-export const DownloadIcon = ({ size = 16 }: { size?: number }) => (
+const DownloadIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
