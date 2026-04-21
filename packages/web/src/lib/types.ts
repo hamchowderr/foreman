@@ -1,33 +1,34 @@
-// App-native SSE chunk types sent to the client
+import type { UIMessage } from "ai";
+import { z } from "zod";
+import type { Suggestion } from "./db/schema";
 
-export type AppChunk =
-  | { type: "text-delta"; text: string }
-  | { type: "tool-call"; toolName: string; args: Record<string, unknown> }
-  | {
-      type: "proposal-created";
-      proposal: {
-        id: string;
-        app_key: string;
-        action_type: string;
-        action_key: string;
-        human_label: string;
-        inputs: Record<string, unknown>;
-        input_schema: Record<string, unknown>;
-        connection_id: string | null;
-        status: string;
-      };
-    }
-  | {
-      type: "action-executed";
-      proposalId: string;
-      summary: string;
-      result: unknown;
-    }
-  | {
-      type: "error";
-      code: string;
-      message: string;
-      proposalId?: string;
-    }
-  | { type: "title-updated"; title: string }
-  | { type: "done"; runId: string };
+export const messageMetadataSchema = z.object({
+  createdAt: z.string(),
+});
+
+export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
+
+export type ChatTools = Record<string, unknown>;
+
+export type CustomUIDataTypes = {
+  textDelta: string;
+  imageDelta: string;
+  sheetDelta: string;
+  codeDelta: string;
+  suggestion: Suggestion;
+  appendMessage: string;
+  id: string;
+  title: string;
+  kind: string;
+  clear: null;
+  finish: null;
+  "chat-title": string;
+};
+
+export type ChatMessage = UIMessage<MessageMetadata, CustomUIDataTypes>;
+
+export type Attachment = {
+  name: string;
+  url: string;
+  contentType: string;
+};

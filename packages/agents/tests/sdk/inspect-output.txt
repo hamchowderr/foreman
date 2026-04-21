@@ -1,0 +1,80 @@
+=== 5 CONNECTIONS ===
+KEYS: ["id","date","account_id","is_invite_only","is_private","shared_with_all","title","lastchanged","is_stale","is_shared","identifier","groups","members","permissions","implementation_id","profile_id","is_expired","expired_at","app_key","app_version"]
+FIRST: {
+  "id": "02dad18c-1105-8afb-b3dc-46d9db6e3725",
+  "date": "2026-04-18T22:42:46Z",
+  "account_id": "03ca6759-8d97-8994-a7ce-3f3b13d73043",
+  "is_invite_only": false,
+  "is_private": false,
+  "shared_with_all": false,
+  "title": "admin@otakusolutions.io (id: oaaGIW3QnUFO7kyMl)",
+  "lastchanged": "2026-04-18T22:42:46Z",
+  "is_stale": "false",
+  "is_shared": "false",
+  "identifier": null,
+  "groups": [],
+  "members": "",
+  "permissions": {
+    "delete": true,
+    "edit": true,
+    "reconnect": true,
+    "share": true,
+    "test": true,
+    "transfer": true,
+    "use": true
+  },
+  "implementation_id": "AirtableCLIAPI@3.12.1",
+  "profile_id": "012c8c5b-edc9-85e0-88aa-45610b8697d2",
+  "is_expired": "false",
+  "expired_at": null,
+  "app_key": "AirtableCLIAPI",
+  "app_version": "3.12.1"
+}
+  CONN: {"title":"admin@otakusolutions.io (id: oaaGIW3QnUFO7kyMl)","app_key":"AirtableCLIAPI"}
+  CONN: {"title":"tylan@otakusolutions.io","app_key":"GoogleSheetsV2CLIAPI"}
+  CONN: {"title":"kawaiichowderr@gmail.com","app_key":"GoogleMailV2CLIAPI"}
+  CONN: {"title":"AITable.ai","app_key":"APITableCLIAPI"}
+  CONN: {"title":"Skool","app_key":"SkoolCLIAPI"}
+
+=== APPS (first 5 of ?) ===
+nextCursor: undefined
+  APP: {"key":"100HiresCLIAPI","slug":"100hires-ats","title":"100Hires ATS"}
+  APP: {"key":"1SaaSCoCLIAPI","slug":"0codekit","title":"0CodeKit"}
+  APP: {"key":"1stThings1stCLIAPI","slug":"1st-things-1st","title":"1st things 1st"}
+  APP: {"key":"360DialogCLIAPI","slug":"360dialog","title":"360dialog"}
+  APP: {"key":"7ShiftsCLIAPI","slug":"7shifts","title":"7shifts"}
+
+=== SCHEMA PARAMS ===
+createClientCredentials: name, allowedScopes
+createTable: name, description
+createTableFields: table, fields
+createTableRecords: table, records, keyMode
+deleteClientCredentials: clientId
+deleteTable: table
+deleteTableFields: table, fields
+deleteTableRecords: table, records
+fetch (positional): url, init
+findFirstAuthentication: search, title, owner, app, appKey, account, accountId, includeShared, isExpired, expired
+findFirstConnection: search, title, owner, app, appKey, account, accountId, includeShared, isExpired, expired
+findUniqueAuthentication: search, title, owner, app, appKey, account, accountId, includeShared, isExpired, expired
+findUniqueConnection: search, title, owner, app, appKey, account, accountId, includeShared, isExpired, expired
+getAction: app, actionType, action
+getApp: app
+getAuthentication: connection, connectionId, authenticationId
+getConnection: connection, connectionId, authenticationId
+getInputFieldsSchema: app, actionType, action, connection, connectionId, authenticationId, inputs
+getTable: table
+getTableRecord: table, record, keyMode
+listActions: app, actionType, pageSize, maxItems, cursor
+listApps: appKeys, search, pageSize, apps, maxItems, cursor
+listAuthentications: search, title, owner, app, appKey, connections, connectionIds, authenticationIds, account, accountId, includeShared, isExpired, expired, pageSize, maxItems, cursor
+listClientCredentials: pageSize, maxItems, cursor
+listConnections: search, title, owner, app, appKey, connections, connectionIds, authenticationIds, account, accountId, includeShared, isExpired, expired, pageSize, maxItems, cursor
+listInputFieldChoices: app, actionType, action, inputField, connection, connectionId, authenticationId, inputs, page, pageSize, maxItems, cursor
+listInputFields: app, actionType, action, connection, connectionId, authenticationId, inputs, pageSize, maxItems, cursor
+listTableFields: table, fields, fieldKeys
+listTableRecords: table, filters, sort, pageSize, maxItems, cursor, keyMode
+listTables: tables, tableIds, kind, search, owner, includeShared, pageSize, maxItems, cursor
+request: url, method, body, connection, connectionId, authenticationId, callbackUrl, headers
+runAction: app, actionType, action, connection, connectionId, authenticationId, inputs, timeoutMs, pageSize, maxItems, cursor
+updateTableRecords: table, records, keyMode

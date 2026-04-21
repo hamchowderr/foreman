@@ -10,6 +10,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-foreground text-background hover:bg-foreground/90 shadow-sm",
         accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm shadow-accent/20",
+        secondary: "bg-surface text-foreground hover:bg-surface/80",
         outline: "border border-border bg-transparent hover:bg-surface hover:border-foreground/20",
         ghost: "hover:bg-surface",
         link: "text-accent underline-offset-4 hover:underline",
@@ -20,6 +21,7 @@ const buttonVariants = cva(
         lg: "h-12 rounded-xl px-8 text-base",
         // min-44px on mobile per iOS HIG, tighter on desktop
         icon: "h-11 w-11 md:h-9 md:w-9",
+        "icon-sm": "h-8 w-8",
       },
     },
     defaultVariants: {

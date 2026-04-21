@@ -24,6 +24,14 @@ import { z } from "zod";
  *
  * The SDK's getRegistry() returns the same function list the MCP server uses
  * internally — we're just cutting out the MCP transport layer.
+ *
+ * NOTE: The SDK also exposes an ergonomic "app proxy" — `zapier.apps[appKey][actionType][actionKey]({...})`
+ * with optional connection binding (`zapier.apps[appKey]({ connection })`).
+ * We don't use it here: the agent picks tools by name/schema at runtime, so the
+ * runAction shape (app/actionType/action as string fields) is easier for an LLM
+ * to fill than a chained property path. If we later hand-write workflow steps
+ * that always target the same action (e.g., `sheets.write.add_row(...)`), the
+ * app proxy is the right pattern — use it there, not here.
  */
 
 /** Tools that execute real actions and should require user approval. */
@@ -217,13 +225,19 @@ export function generateUserZapierTools(credentials: string) {
  * Handle SDK errors using instanceof checks against the SDK's typed error classes.
  * Returns structured error objects so the agent can explain errors to users.
  */
-function handleSdkError(err: unknown, methodName: string): { error: string; code: string; retryable: boolean } {
+function handleSdkError(err: unknown, methodName: string): { error: string; code: string; retryable: boolean; suggestedRecovery?: { action: string; appKey: string | null } } {
   // Use instanceof for type-safe error handling against the SDK's error hierarchy
   if (err instanceof ZapierAuthenticationError) {
+    const ae = err as any;
+    const appKey = ae.appKey ?? ae.app ?? null;
     return {
-      error: `Zapier authentication failed for ${methodName}. The user may need to reconnect their Zapier account.`,
+      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`is-expired: true\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
       code: "AUTH_FAILED",
       retryable: false,
+      suggestedRecovery: {
+        action: "reconnect",
+        appKey,
+      },
     };
   }
 

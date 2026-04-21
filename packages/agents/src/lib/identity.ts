@@ -49,6 +49,34 @@ export async function resolveFromClerkJwt(
   }
 }
 
+// ─── User Auto-Creation ───
+
+async function ensureUserExists(clerkUserId: string): Promise<void> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.id, clerkUserId))
+    .limit(1);
+
+  if (rows.length > 0) return;
+
+  // Create user row for Clerk user
+  const now = new Date();
+  try {
+    await db.insert(schema.user).values({
+      id: clerkUserId,
+      name: clerkUserId,
+      email: `${clerkUserId}@clerk.local`,
+      emailVerified: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch {
+    // Race condition — another request may have created it
+  }
+}
+
 // ─── API Key Resolution ───
 
 function hashApiKey(key: string): string {
@@ -181,7 +209,11 @@ export async function resolveFromRequest(
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
     const result = await resolveFromClerkJwt(token);
-    if (result) return { userId: result.userId, orgId: result.orgId, channel: "web" };
+    if (result) {
+      // Ensure user row exists (Clerk users may not have a row yet)
+      await ensureUserExists(result.userId);
+      return { userId: result.userId, orgId: result.orgId, channel: "web" };
+    }
   }
 
   // 2. API key

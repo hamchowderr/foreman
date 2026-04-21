@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import conversations from "./conversations";
 import proposals from "./proposals";
 import workflows from "./workflows";
@@ -20,6 +21,14 @@ import { handleDiscordWebhook } from "../discord/webhook";
  * /telegram, /slack, and /discord (not /api/* which is reserved by Mastra).
  */
 const app = new Hono();
+
+// CORS for web frontend direct access
+app.use("/*", cors({
+  origin: ["http://localhost:3000", "https://foreman.otakusolutions.io"],
+  allowHeaders: ["Content-Type", "Authorization"],
+  allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  credentials: true,
+}));
 app.route("/conversations", conversations);
 app.route("/proposals", proposals);
 app.route("/workflows", workflows);
