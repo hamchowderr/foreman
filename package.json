@@ -22,6 +22,9 @@
     "lint:fix": "biome check --fix .",
     "format": "biome format --write ."
   },
+  "overrides": {
+    "esbuild": "^0.25.0"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
     "@copilotkit/aimock": "^1.14.3",
