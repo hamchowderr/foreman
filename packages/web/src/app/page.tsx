@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { SiteNav } from "@/components/landing/site-nav";
 import { HeroDemo } from "@/components/landing/hero-demo";
 import { Reveal, Stagger, staggerItem } from "@/components/landing/reveal";
@@ -701,7 +702,7 @@ function SiteFooter() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted">
-          <span>&copy; <CurrentYear /> Otaku Solutions. MIT-licensed.</span>
+          <span>&copy; <Suspense fallback={null}><CurrentYear /></Suspense> Otaku Solutions. MIT-licensed.</span>
           <span className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
               <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
