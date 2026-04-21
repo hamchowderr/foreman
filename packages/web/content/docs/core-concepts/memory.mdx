@@ -9,8 +9,9 @@ between Slack, Discord, Telegram, the web, and anywhere else.
 
 <Callout>
   The underlying library is [Mastra Memory](https://mastra.ai/docs/memory)
-  with a LibSQL vector store. Cloud uses Turso. Self-host uses a local
-  SQLite file under `/app/data`.
+  backed by `PostgresStore` + `PgVector` from `@mastra/pg`. Cloud uses
+  hosted Postgres (Supabase/Neon). Self-host points `DATABASE_URL` at any
+  Postgres instance with the `vector` extension enabled.
 </Callout>
 
 ## Working memory

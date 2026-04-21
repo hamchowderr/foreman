@@ -1,56 +1,58 @@
 import {
-  sqliteTable,
+  pgTable,
   text,
   integer,
+  boolean,
+  timestamp,
   primaryKey,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/pg-core";
 
 // ─── User table (Clerk-managed, auto-created on first auth) ───
 
-export const user = sqliteTable("user", {
+export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  emailVerified: integer("emailVerified", { mode: "boolean" }).notNull(),
+  emailVerified: boolean("emailVerified").notNull(),
   image: text("image"),
-  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull(),
 });
 
 // ─── Zapier Identity ───
 
-export const zapierIdentity = sqliteTable("zapier_identity", {
+export const zapierIdentity = pgTable("zapier_identity", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .unique()
     .references(() => user.id),
-  orgId: text("org_id"), // nullable — when set, this is a shared org connection
+  orgId: text("org_id"),
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token").notNull(),
-  expiresAt: integer("expires_at", { mode: "timestamp" }),
+  expiresAt: timestamp("expires_at", { mode: "date", withTimezone: true }),
   scopes: text("scopes").notNull(), // JSON stringified array
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
 // ─── Conversation (links to Mastra Memory thread) ───
 
-export const conversation = sqliteTable("conversation", {
+export const conversation = pgTable("conversation", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id),
-  orgId: text("org_id"), // nullable — when set, this is an org-scoped conversation
+  orgId: text("org_id"),
   mastraThreadId: text("mastra_thread_id"),
   title: text("title"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
 // ─── Action Proposals & Runs ───
 
-export const actionProposal = sqliteTable("action_proposal", {
+export const actionProposal = pgTable("action_proposal", {
   id: text("id").primaryKey(),
   conversationId: text("conversation_id")
     .notNull()
@@ -68,23 +70,23 @@ export const actionProposal = sqliteTable("action_proposal", {
   status: text("status", {
     enum: ["pending", "approved", "declined", "executed", "failed"],
   }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
-export const actionRun = sqliteTable("action_run", {
+export const actionRun = pgTable("action_run", {
   id: text("id").primaryKey(),
   proposalId: text("proposal_id")
     .notNull()
     .references(() => actionProposal.id),
   result: text("result").notNull(), // JSON
   error: text("error"), // JSON, nullable
-  executedAt: integer("executed_at", { mode: "timestamp" }).notNull(),
+  executedAt: timestamp("executed_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
 // ─── Workflows ───
 
-export const workflow = sqliteTable("workflow", {
+export const workflow = pgTable("workflow", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
@@ -94,11 +96,11 @@ export const workflow = sqliteTable("workflow", {
     () => conversation.id
   ),
   parameters: text("parameters").notNull(), // JSON
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
-export const workflowStep = sqliteTable("workflow_step", {
+export const workflowStep = pgTable("workflow_step", {
   id: text("id").primaryKey(),
   workflowId: text("workflow_id")
     .notNull()
@@ -107,7 +109,7 @@ export const workflowStep = sqliteTable("workflow_step", {
   proposalTemplate: text("proposal_template").notNull(), // JSON
 });
 
-export const workflowRun = sqliteTable("workflow_run", {
+export const workflowRun = pgTable("workflow_run", {
   id: text("id").primaryKey(),
   workflowId: text("workflow_id")
     .notNull()
@@ -116,50 +118,47 @@ export const workflowRun = sqliteTable("workflow_run", {
   status: text("status", {
     enum: ["pending", "running", "success", "failed", "declined"],
   }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  completedAt: integer("completed_at", { mode: "timestamp" }),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
 });
 
 // ─── Capability Flags ───
 
-export const capabilityFlag = sqliteTable(
+export const capabilityFlag = pgTable(
   "capability_flag",
   {
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
     capability: text("capability").notNull(),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    enabled: boolean("enabled").notNull().default(false),
   },
   (table) => [primaryKey({ columns: [table.userId, table.capability] })]
 );
 
 // ─── Channel Identity (multi-channel user linking) ───
 
-export const channelIdentity = sqliteTable(
+export const channelIdentity = pgTable(
   "channel_identity",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
-    orgId: text("org_id"), // nullable — links channel user to an org
+    orgId: text("org_id"),
     channel: text("channel", {
       enum: ["web", "telegram", "slack", "discord", "mcp", "a2a", "teams", "gchat", "whatsapp", "github", "linear", "imessage"],
     }).notNull(),
     channelUserId: text("channel_user_id").notNull(),
     displayName: text("display_name"),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
   },
-  (table) => [
-    // One identity per channel per external user
-    // Note: Drizzle SQLite unique constraints via composite index
-  ]
+  () => []
 );
 
 // ─── App Catalog (embedded for semantic search) ───
 
-export const appCatalog = sqliteTable("app_catalog", {
+export const appCatalog = pgTable("app_catalog", {
   appKey: text("app_key").primaryKey(),
   slug: text("slug").notNull(),
   title: text("title").notNull(),
@@ -167,12 +166,12 @@ export const appCatalog = sqliteTable("app_catalog", {
   authType: text("auth_type"),
   actionCount: integer("action_count"),
   embeddingText: text("embedding_text"), // pre-built text for vector embedding
-  syncedAt: integer("synced_at", { mode: "timestamp" }).notNull(),
+  syncedAt: timestamp("synced_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
 // ─── API Keys (MCP/A2A access) ───
 
-export const apiKey = sqliteTable("api_key", {
+export const apiKey = pgTable("api_key", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
@@ -180,6 +179,6 @@ export const apiKey = sqliteTable("api_key", {
   keyHash: text("key_hash").notNull().unique(),
   name: text("name").notNull(),
   scopes: text("scopes").notNull(), // JSON array: ["read", "write", "execute"]
-  lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  lastUsedAt: timestamp("last_used_at", { mode: "date", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
 });

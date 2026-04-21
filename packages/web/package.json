@@ -20,7 +20,6 @@
     "@codemirror/view": "^6.35.3",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
-    "@libsql/client": "^0.17.2",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-use-controllable-state": "^1.2.2",

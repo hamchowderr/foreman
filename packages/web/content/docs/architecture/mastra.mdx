@@ -74,9 +74,10 @@ reasoning. This is done via Mastra's `prepareStep`.
 </Files>
 
 See [Memory](/docs/core-concepts/memory) for the behaviour. Under the
-hood: Mastra Memory with LibSQL vector storage, `savePerStep: true` on
-every channel adapter, cross-channel identity resolution in
-`lib/identity.ts`.
+hood: Mastra Memory backed by `PostgresStore` + `PgVector` from
+`@mastra/pg` (Postgres with the `vector` extension),
+`savePerStep: true` on every channel adapter, cross-channel identity
+resolution in `lib/identity.ts`.
 
 ## Processors
 

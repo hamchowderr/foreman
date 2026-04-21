@@ -49,7 +49,7 @@ foreman/
 │   │   │   ├── lib/
 │   │   │   │   ├── zapier/               # SDK wrapper, discovery, execution, errors, connect
 │   │   │   │   ├── zapier-sdk-tools.ts   # Direct SDK import → auto-generated Mastra tools + toModelOutput + requireApproval
-│   │   │   │   ├── db/                   # Drizzle ORM schema + connection (SQLite/LibSQL)
+│   │   │   │   ├── db/                   # Drizzle ORM schema + connection (Postgres/pgvector via Supabase)
 │   │   │   │   ├── stream/              # SSE encoding, chunk transformer, types
 │   │   │   │   ├── processors/          # Input (context injection) + Output (PII redaction)
 │   │   │   │   ├── rag/                 # Action history indexing + semantic search
@@ -146,7 +146,7 @@ Foreman has a sandboxed file workspace (`./data/workspace`) via Mastra's `Worksp
 
 ### Memory
 
-Mastra Memory with LibSQL storage and vector search. Messages are stored in **Mastra threads** (not a custom message table). Each conversation maps to a `mastraThreadId`.
+Mastra Memory with Postgres storage (`PostgresStore` from `@mastra/pg`) and pgvector search (`PgVector` from `@mastra/pg`). Messages are stored in **Mastra threads** (not a custom message table). Each conversation maps to a `mastraThreadId`.
 
 | Feature | Config |
 |---------|--------|
@@ -360,7 +360,7 @@ npm install
 
 ```bash
 # Required
-DATABASE_URL=file:./foreman.db
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres  # local Supabase
 ENCRYPTION_KEY=<64-char hex string>
 ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-proj-...              # For embeddings and voice STT
@@ -403,12 +403,22 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
 ```
 
-### 3. Run database migrations
+### 3. Start local Supabase & run database migrations
+
+Foreman uses a local Supabase instance (Postgres + pgvector) for development. Ports are shifted +100 to avoid colliding with other Supabase projects on the same machine.
 
 ```bash
+# Boots Postgres (:54422), API (:54421), Studio (:54423)
+npx supabase start
+
+# Apply schema (includes CREATE EXTENSION vector)
 cd packages/agents
 npx drizzle-kit migrate
 ```
+
+Studio UI: http://127.0.0.1:54423 · Stop with `npx supabase stop`.
+
+> `supabase/config.toml` disables storage, auth, realtime, inbucket, analytics, and edge_runtime — Foreman doesn't use them, and they fail health checks on Windows.
 
 ### 4. Generate encryption key
 
@@ -571,10 +581,14 @@ curl -X POST http://localhost:4111/a2a/foreman \
 
 ## Database
 
-Foreman uses SQLite locally via [Drizzle ORM](https://orm.drizzle.team) + [@libsql/client](https://github.com/tursodatabase/libsql-client-ts). For production, use [Turso](https://turso.tech) (hosted LibSQL) --- same driver, zero code changes.
+Foreman uses **Postgres with pgvector** via [Drizzle ORM](https://orm.drizzle.team) (dialect: `postgresql`, driver: [`postgres-js`](https://github.com/porsager/postgres)). Mastra storage and vector search use `PostgresStore` and `PgVector` from [`@mastra/pg`](https://mastra.ai/docs).
 
-**Local:** `DATABASE_URL=file:./foreman.db`
-**Production:** `DATABASE_URL=libsql://foreman-<your-org>.turso.io?authToken=<token>`
+Local development uses the [Supabase CLI](https://supabase.com/docs/guides/cli) to run Postgres + pgvector in Docker. Production can use hosted Supabase, Neon, or any Postgres provider with the `vector` extension.
+
+**Local:** `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres`
+**Production:** `DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>`
+
+The initial migration (`drizzle/0000_init.sql`) prepends `CREATE EXTENSION IF NOT EXISTS vector` so pgvector is enabled before any vector columns are created.
 
 ### Tables
 
@@ -622,17 +636,17 @@ npx drizzle-kit migrate
 | Component | Target | Why |
 |-----------|--------|-----|
 | Web frontend | **Vercel** | Standard Next.js deployment, Clerk auth, static + dynamic pages |
-| Agent server | **VPS (Coolify)** | Persistent filesystem for LibSQL; streaming conversations need long-running connections |
-| Agent server | **Vercel** (alternative) | Viable with Turso for hosted LibSQL — no more stdio dependency. Build with `npm run build:vercel`. |
+| Agent server | **VPS (Coolify)** | Streaming conversations need long-running connections |
+| Agent server | **Vercel** (alternative) | Viable with hosted Postgres (Supabase/Neon). Build with `npm run build:vercel`. |
 | Webhook server | **VPS (Coolify)** | Discord Gateway WebSocket + channel webhooks need persistent processes |
 
-**Deployment flexibility:** The agent server uses a direct SDK import (no child processes or stdio transport), making it deployable to Vercel, Cloudflare Workers, or any VPS. The main constraint is database — local LibSQL (`file:` URLs) requires a persistent filesystem (VPS), while [Turso](https://turso.tech) (hosted LibSQL) enables serverless deployment with zero code changes.
+**Deployment flexibility:** The agent server uses a direct SDK import (no child processes or stdio transport), making it deployable to Vercel, Cloudflare Workers, or any VPS. Database-wise, any Postgres provider with the `vector` extension (Supabase, Neon, RDS, etc.) works — just point `DATABASE_URL` at it.
 
 ### VPS (Coolify)
 
 The agent server runs as a Docker container managed by Coolify. Coolify app UUID: `oqshe32xh3v8zva7tt6r4aff`.
 
-**Dockerfile** (`Dockerfile.agents`): Multi-stage build with `node:22-slim`. Stage 1 installs all deps (dev included for `mastra build`), runs `npx mastra build`. Stage 2 copies `.mastra/output/` and `node_modules/` to a clean image. LibSQL data persisted via Docker volume at `/app/data`.
+**Dockerfile** (`Dockerfile.agents`): Multi-stage build with `node:22-slim`. Stage 1 installs all deps (dev included for `mastra build`), runs `npx mastra build`. Stage 2 copies `.mastra/output/` and `node_modules/` to a clean image. Postgres is provided externally (hosted Supabase/Neon or a sibling container) — point `DATABASE_URL` at it.
 
 ```bash
 # Manual VPS deploy (without Coolify)
@@ -770,8 +784,9 @@ ngrok http 4112
 | LLM | Claude (Anthropic) via Mastra |
 | Embeddings | OpenAI (`text-embedding-3-small`) |
 | Voice TTS | [ElevenLabs](https://elevenlabs.io) (`@mastra/voice-elevenlabs`) + OpenAI TTS (`@mastra/voice-openai`) fallback |
-| Database | SQLite / LibSQL ([Turso](https://turso.tech) for cloud) |
-| ORM | [Drizzle](https://orm.drizzle.team) |
+| Database | Postgres + [pgvector](https://github.com/pgvector/pgvector) (local via [Supabase CLI](https://supabase.com/docs/guides/cli); hosted via Supabase/Neon/RDS) |
+| ORM | [Drizzle](https://orm.drizzle.team) (`postgres-js` driver) |
+| Mastra storage/vector | `@mastra/pg` (`PostgresStore`, `PgVector`) |
 | Auth | [Clerk](https://clerk.com) (`@clerk/nextjs` + `@mastra/auth-clerk`) |
 | Frontend | [Next.js](https://nextjs.org) 16, React 19, Tailwind 4 |
 | Markdown rendering | [Streamdown](https://github.com/nichochar/streamdown) (code, math, mermaid plugins) |

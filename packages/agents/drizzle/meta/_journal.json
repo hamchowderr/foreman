@@ -1,33 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1776443854576,
-      "tag": "0000_whole_nick_fury",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1776489319402,
-      "tag": "0001_eminent_colleen_wing",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1776533105354,
-      "tag": "0002_optimal_midnight",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1776661111130,
-      "tag": "0003_outgoing_wither",
+      "version": "7",
+      "when": 1776760762652,
+      "tag": "0000_init",
       "breakpoints": true
     }
   ]

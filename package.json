@@ -9,8 +9,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "cd packages/agents && npx drizzle-kit generate",
+    "db:migrate": "cd packages/agents && npx drizzle-kit migrate",
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:status": "npx supabase status",
     "test": "vitest run",
     "test:api": "vitest run --config vitest.api.config.ts",
     "test:e2e": "npx playwright test",
@@ -18,6 +21,9 @@
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --write ."
+  },
+  "overrides": {
+    "esbuild": ">=0.25.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",

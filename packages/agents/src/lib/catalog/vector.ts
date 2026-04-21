@@ -1,20 +1,20 @@
 import { embedMany } from "ai";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
-import { LibSQLVector } from "@mastra/libsql";
+import { PgVector } from "@mastra/pg";
 import { getEnv } from "../env";
 
 const INDEX_NAME = "catalog_vectors";
 const EMBEDDING_MODEL = "openai/text-embedding-3-small";
 const EMBEDDING_DIMENSION = 1536;
 
-let _vector: LibSQLVector | undefined;
+let _vector: PgVector | undefined;
 
-function getVector(): LibSQLVector {
+function getVector(): PgVector {
   if (_vector) return _vector;
   const env = getEnv();
-  _vector = new LibSQLVector({
+  _vector = new PgVector({
     id: "foreman-catalog",
-    url: env.DATABASE_URL,
+    connectionString: env.DATABASE_URL,
   });
   return _vector;
 }
