@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
-import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
+import { PostgresStore, PgVector } from "@mastra/pg";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import { MODELS } from "./foreman";
 
@@ -43,13 +43,13 @@ export function createSupervisorAgent({ databaseUrl, discoveryAgent, executionAg
     inputProcessors: [contextInjector],
     outputProcessors: [piiRedactor],
     memory: new Memory({
-      storage: new LibSQLStore({
+      storage: new PostgresStore({
         id: "supervisor-memory",
-        url: databaseUrl,
+        connectionString: databaseUrl,
       }),
-      vector: new LibSQLVector({
+      vector: new PgVector({
         id: "supervisor-memory-vector",
-        url: databaseUrl,
+        connectionString: databaseUrl,
       }),
       embedder: "openai/text-embedding-3-small",
       options: {

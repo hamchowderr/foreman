@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { Workspace, LocalFilesystem, LocalSandbox } from "@mastra/core/workspace";
 import { Memory } from "@mastra/memory";
-import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
+import { PostgresStore, PgVector } from "@mastra/pg";
 import {
   createAnswerRelevancyScorer,
   createToxicityScorer,
@@ -122,13 +122,13 @@ export function createForemanAgent(databaseUrl: string) {
     outputProcessors: [piiRedactor],
     workspace,
     memory: new Memory({
-      storage: new LibSQLStore({
+      storage: new PostgresStore({
         id: "foreman-memory",
-        url: databaseUrl,
+        connectionString: databaseUrl,
       }),
-      vector: new LibSQLVector({
+      vector: new PgVector({
         id: "foreman-memory-vector",
-        url: databaseUrl,
+        connectionString: databaseUrl,
       }),
       embedder: "openai/text-embedding-3-small",
       options: {

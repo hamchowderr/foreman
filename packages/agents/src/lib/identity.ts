@@ -141,7 +141,7 @@ export async function resolveFromChannel(
     .from(schema.channelIdentity)
     .where(
       and(
-        eq(schema.channelIdentity.channel, channel),
+        eq(schema.channelIdentity.channel, channel as typeof schema.channelIdentity.channel.enumValues[number]),
         eq(schema.channelIdentity.channelUserId, channelUserId)
       )
     )
@@ -178,7 +178,7 @@ export async function registerChannelUser(
   await db.insert(schema.channelIdentity).values({
     id: randomUUID(),
     userId,
-    channel,
+    channel: channel as typeof schema.channelIdentity.channel.enumValues[number],
     channelUserId,
     displayName,
     createdAt: now,

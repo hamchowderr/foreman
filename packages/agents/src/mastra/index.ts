@@ -1,5 +1,5 @@
 import { Mastra } from "@mastra/core";
-import { LibSQLStore } from "@mastra/libsql";
+import { PostgresStore } from "@mastra/pg";
 import { MastraAuthClerk } from "@mastra/auth-clerk";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { toAISdkStream } from "@mastra/ai-sdk";
@@ -22,9 +22,9 @@ export function getMastra(): Mastra {
 
   const databaseUrl = process.env.DATABASE_URL!;
 
-  const storage = new LibSQLStore({
+  const storage = new PostgresStore({
     id: "foreman-storage",
-    url: databaseUrl,
+    connectionString: databaseUrl,
   });
 
   const foremanAgent = createForemanAgent(databaseUrl);

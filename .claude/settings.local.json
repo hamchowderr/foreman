@@ -50,7 +50,17 @@
       "Bash(wmic process:*)",
       "Bash(pkill -f \"next dev\")",
       "Bash(pkill -f \"mastra dev\")",
-      "Bash(PORT=4111 npx mastra *)"
+      "Bash(PORT=4111 npx mastra *)",
+      "Bash(winget list *)",
+      "Bash(scoop list *)",
+      "Bash(DATABASE_URL=\"postgres://placeholder\" npx drizzle-kit generate)",
+      "Bash(DATABASE_URL=\"postgres://postgres:postgres@127.0.0.1:54422/postgres\" npx --workspace packages/agents drizzle-kit generate --name=init)",
+      "Bash(awk '{print $5}')",
+      "Bash(DATABASE_URL=\"postgres://postgres:postgres@127.0.0.1:54422/postgres\" npx drizzle-kit migrate)",
+      "Bash(awk ' /^\\\\[storage\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } /^\\\\[auth\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } /^\\\\[realtime\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } /^\\\\[inbucket\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } { print } ' supabase/config.toml)",
+      "Bash(tee /tmp/test-output.txt)",
+      "Bash(tee /c/Users/HamCh/AppData/Local/Temp/mastra-dev.log)",
+      "Bash(tee /tmp/test-output2.txt)"
     ]
   }
 }

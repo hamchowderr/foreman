@@ -63,9 +63,18 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 - **Clerk config**: `@mastra/auth-clerk` in `agents/src/mastra/index.ts`
 
 ### Database
-- **Schema**: `agents/src/lib/db/schema.ts` (Drizzle ORM, SQLite/LibSQL)
-- **Migrations**: `agents/drizzle/`
+- **Schema**: `agents/src/lib/db/schema.ts` (Drizzle ORM, Postgres/pgvector via Supabase)
+- **Dialect**: `postgresql` (driver: `postgres-js`)
+- **Mastra storage**: `PostgresStore` from `@mastra/pg`
+- **Vector**: `PgVector` from `@mastra/pg`
+- **Migrations**: `agents/drizzle/` (initial: `0000_init.sql` with `CREATE EXTENSION vector` prepended)
 - **Connection**: `agents/src/lib/db/index.ts`
+- **Local dev**: Supabase CLI — `npx supabase start` (ports shifted +100 to avoid collisions)
+  - API: http://127.0.0.1:54421
+  - Postgres: 127.0.0.1:54422 (user: `postgres`, pass: `postgres`, db: `postgres`)
+  - Studio: http://127.0.0.1:54423
+  - `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres`
+  - `supabase/config.toml` disables unused services (storage, auth, realtime, inbucket, analytics, edge_runtime) — they fail health checks on Windows and Foreman doesn't use them
 - Tables: user, session, account, verification, zapier_identity, conversation, action_proposal, action_run, workflow, workflow_step, workflow_run, capability_flag, channel_identity, api_key
 
 ### Key Lib Files
@@ -92,9 +101,22 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 | API client | `web/src/lib/api-client.ts` — all agent server calls |
 | Workflows page | `web/src/app/workflows/` |
 
+## Getting Started
+
+First-time setup requires a running local Supabase instance before `npm run dev`:
+
+```bash
+npx supabase start                         # Boots local Postgres/pgvector on :54422
+cd packages/agents && npx drizzle-kit migrate   # Apply schema + vector extension
+```
+
 ## Dev Commands
 
 ```bash
+# Prereq: local DB
+npx supabase start                         # Supabase (Postgres :54422, Studio :54423)
+npx supabase stop                          # Shut it down
+
 # Dev servers
 cd packages/agents && npm run dev          # Mastra dev (:4111)
 cd packages/web && npm run dev             # Next.js (:3000)

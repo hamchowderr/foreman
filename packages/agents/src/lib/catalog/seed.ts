@@ -1,7 +1,7 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "../db";
-import { indexAppCatalog } from "./index";
+import { indexAppCatalog } from "./vector";
 
 interface SeedOptions {
   /** Max apps to pull (for testing). Default: all. */

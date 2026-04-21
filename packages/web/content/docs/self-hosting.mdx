@@ -11,6 +11,15 @@ leaves your box.
   OpenAI. Foreman never ships with credentials baked in.
 </Callout>
 
+<Callout>
+  Foreman requires a Postgres instance with the
+  [`vector`](https://github.com/pgvector/pgvector) extension enabled —
+  [Supabase](https://supabase.com), [Neon](https://neon.tech), or a
+  self-hosted `postgres` + `pgvector` both work. Point `DATABASE_URL` at
+  it; the initial migration runs `CREATE EXTENSION IF NOT EXISTS vector`
+  before creating any vector columns.
+</Callout>
+
 ## One-command start
 
 <Steps>
@@ -32,7 +41,7 @@ leaves your box.
     ```bash
     ANTHROPIC_API_KEY=sk-ant-...
     OPENAI_API_KEY=sk-...
-    DATABASE_URL=file:./foreman.db
+    DATABASE_URL=postgres://user:pass@host:5432/foreman
     ENCRYPTION_KEY=<64-char hex>
     CLERK_SECRET_KEY=sk_...
     CLERK_PUBLISHABLE_KEY=pk_...
@@ -90,7 +99,7 @@ cloud load balancer):
 | | Cloud | Self-host |
 | --- | --- | --- |
 | **Upgrades** | Automatic | `docker pull && docker restart` |
-| **Backups** | Managed | Your own SQLite file |
+| **Backups** | Managed | Your own Postgres instance (`pg_dump`, provider snapshots) |
 | **Telemetry** | Opt-in | None |
 | **Auth** | Clerk (managed) | Clerk (free tier) |
 | **Zapier** | Your personal account | Your personal account |
