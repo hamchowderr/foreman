@@ -41,7 +41,13 @@
       "Bash(nslookup foreman.otakusolutions.io)",
       "Bash(nslookup foreman-agents.otakusolutions.io)",
       "Bash(nslookup:*)",
-      "Read(//c/c/Users/HamCh/**)"
+      "Read(//c/c/Users/HamCh/**)",
+      "Bash(cp:*)",
+      "Bash(powershell:*)",
+      "Bash(DATABASE_URL=\"file:./src/mastra/public/foreman.db\" npx drizzle-kit push --force)",
+      "Bash(DATABASE_URL=\"file:./src/mastra/public/foreman.db\" npx drizzle-kit migrate)",
+      "Skill(commit-commands:commit)",
+      "Bash(wmic process:*)"
     ]
   }
 }

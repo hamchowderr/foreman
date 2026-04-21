@@ -34,6 +34,7 @@
     "@chat-adapter/whatsapp": "^4.26.0",
     "@hono/node-server": "^1.19.14",
     "@libsql/client": "^0.17.2",
+    "@mastra/ai-sdk": "^1.4.0",
     "@mastra/auth-clerk": "^1.0.2",
     "@mastra/core": "^1.25.0",
     "@mastra/evals": "^1.2.1",

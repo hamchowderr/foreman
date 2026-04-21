@@ -29,12 +29,13 @@ export function createChunkTransformer(conversationId: string) {
         }
 
         case "tool-call": {
-          const { toolName, args } = chunk.payload;
+          const { toolCallId, toolName, args } = chunk.payload;
           // For non-approval tools (read-only ones), surface them to the UI
           if (toolName !== "execute_action") {
             controller.enqueue({
               type: "tool-call",
               toolName,
+              toolCallId: toolCallId ?? `call-${Date.now()}`,
               args: args ?? {},
             });
           }
@@ -70,12 +71,18 @@ export function createChunkTransformer(conversationId: string) {
         }
 
         case "tool-result": {
-          const { toolName, result } = chunk.payload;
-          if (toolName === "execute_action" && result) {
-            // After tool execution, emit action-executed
-            // The proposal would have been updated by the approve flow
+          const { toolCallId, toolName, result } = chunk.payload;
+          if (toolName === "execute_action") {
+            // execute_action results are handled via the approval flow
             break;
           }
+          // Emit tool results for read-only tools
+          controller.enqueue({
+            type: "tool-result",
+            toolName,
+            toolCallId: toolCallId ?? `call-${Date.now()}`,
+            result: result ?? null,
+          });
           break;
         }
 

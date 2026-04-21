@@ -4,18 +4,26 @@ import { createMDX } from "fumadocs-mdx/next";
 const withMDX = createMDX();
 
 const nextConfig: NextConfig = {
-  // Allow requests to the agent server (CORS headers for API proxy)
-  async headers() {
-    return [
-      {
-        source: "/api/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, PATCH, DELETE, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-        ],
-      },
-    ];
+  devIndicators: false,
+  poweredByHeader: false,
+  // reactCompiler: true, // requires babel-plugin-react-compiler
+  logging: {
+    fetches: { fullUrl: false },
+    incomingRequests: false,
+  },
+  images: {
+    remotePatterns: [
+      { hostname: "avatar.vercel.sh" },
+      { hostname: "img.clerk.com" },
+    ],
+  },
+  cacheComponents: true,
+  experimental: {
+    prefetchInlining: true,
+    cachedNavigations: true,
+    appNewScrollHandler: true,
+    inlineCss: true,
+    turbopackFileSystemCacheForDev: true,
   },
 };
 

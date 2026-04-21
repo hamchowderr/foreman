@@ -2,7 +2,8 @@
 
 export type AppChunk =
   | { type: "text-delta"; text: string }
-  | { type: "tool-call"; toolName: string; args: Record<string, unknown> }
+  | { type: "tool-call"; toolName: string; toolCallId: string; args: Record<string, unknown> }
+  | { type: "tool-result"; toolName: string; toolCallId: string; result: unknown }
   | {
       type: "proposal-created";
       proposal: {

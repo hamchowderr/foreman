@@ -2,7 +2,11 @@ import { Mastra } from "@mastra/core";
 import { LibSQLStore } from "@mastra/libsql";
 import { MastraAuthClerk } from "@mastra/auth-clerk";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
-import { chatRoute } from "@mastra/ai-sdk";
+import { toAISdkStream } from "@mastra/ai-sdk";
+import { registerApiRoute } from "@mastra/core/server";
+import { RequestContext } from "@mastra/core/request-context";
+import { createUIMessageStreamResponse } from "ai";
+import type { Agent } from "@mastra/core/agent";
 import { createForemanAgent } from "./agents/foreman";
 import { createDiscoveryAgent } from "./agents/discovery";
 import { createExecutionAgent } from "./agents/execution";
@@ -56,6 +60,35 @@ export function getMastra(): Mastra {
       })
     : undefined;
 
+  /**
+   * Fix the stream format mismatch between @mastra/ai-sdk and the AI SDK v6 protocol.
+   *
+   * toAISdkStream emits { type: "data-tool-call-approval", data: { runId, toolCallId } }
+   * but the AI SDK client expects { type: "tool-approval-request", approvalId, toolCallId }.
+   * Without this transform, approval-required tools stay stuck in "Running" state.
+   */
+  function fixApprovalStream(stream: ReadableStream): ReadableStream {
+    return stream.pipeThrough(
+      new TransformStream({
+        transform(chunk: any, controller) {
+          if (chunk.type === "data-tool-call-approval") {
+            // Convert to the format the AI SDK client expects.
+            // Use the Mastra runId as the approvalId — the frontend will send
+            // this back when the user approves/declines so we can call
+            // agent.approveToolCall({ runId }) / agent.declineToolCall({ runId }).
+            controller.enqueue({
+              type: "tool-approval-request",
+              approvalId: chunk.data.runId,
+              toolCallId: chunk.data.toolCallId,
+            });
+          } else {
+            controller.enqueue(chunk);
+          }
+        },
+      }),
+    );
+  }
+
   _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
@@ -74,11 +107,65 @@ export function getMastra(): Mastra {
       host: "0.0.0.0",
       middleware: [customMiddleware],
       apiRoutes: [
-        // Mastra's built-in chat route — handles streaming, tool approval/resume, memory
-        chatRoute({
-          path: "/chat/:agentId",
-          defaultOptions: {
-            maxSteps: 15,
+        registerApiRoute("/chat/:agentId", {
+          method: "POST",
+          handler: async (c: any) => {
+            try {
+              const mastra = c.get("mastra");
+              const agentId = c.req.param("agentId");
+              const body = await c.req.json();
+
+              const agent = mastra.getAgent(agentId) as Agent;
+              if (!agent) return c.json({ error: "Agent not found" }, 404);
+
+              // Handle tool approval/decline responses.
+              // The frontend sends { approveRunId, approved } when the user
+              // responds to a tool-approval-request.
+              if (body.approveRunId) {
+                const result = body.approved
+                  ? await agent.approveToolCall({ runId: body.approveRunId })
+                  : await agent.declineToolCall({ runId: body.approveRunId });
+
+                return createUIMessageStreamResponse({
+                  stream: fixApprovalStream(
+                    toAISdkStream(result, { from: "agent" }),
+                  ),
+                });
+              }
+
+              // Normal chat message flow
+              const lastMsg = Array.isArray(body.messages) ? body.messages.at(-1) : null;
+              const text = lastMsg?.parts
+                ? lastMsg.parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("")
+                : typeof lastMsg?.content === "string" ? lastMsg.content
+                : typeof body.messages === "string" ? body.messages : "";
+
+              const tid = body.threadId || body.id || crypto.randomUUID();
+              const rid = body.resourceId || "";
+
+              const rctx = new RequestContext([
+                ["threadId", tid],
+                ["userId", rid],
+              ]);
+
+              const result = await agent.stream(
+                [{ role: "user" as const, content: text }],
+                {
+                  maxSteps: 15,
+                  memory: { thread: tid, resource: rid },
+                  requestContext: rctx,
+                }
+              );
+
+              return createUIMessageStreamResponse({
+                stream: fixApprovalStream(
+                  toAISdkStream(result, { from: "agent" }),
+                ),
+              });
+            } catch (err: any) {
+              console.error("[chat] Error:", err?.message, err?.stack?.slice(0, 500));
+              return c.json({ error: err?.message || "Internal error", stack: err?.stack?.slice(0, 300) }, 500);
+            }
           },
         }),
       ],
