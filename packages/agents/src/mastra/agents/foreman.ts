@@ -65,11 +65,30 @@ export function createForemanAgent(databaseUrl: string) {
   // toModelOutput and requireApproval are baked into each tool.
   const sdkTools = getZapierTools();
 
-  // Use ToolSearchProcessor for SDK tools — with 34 tools, loading all schemas
-  // into context every call wastes tokens. The agent gets search_tools and
-  // load_tool meta-tools to discover and load only what it needs per request.
+  // Core tools the agent needs for every action — always loaded, no search required.
+  // This avoids wasting steps on search_tools + load_tool for common operations.
+  const coreToolNames = [
+    "list-connections",
+    "find-first-connection",
+    "list-actions",
+    "get-action",
+    "get-input-fields-schema",
+    "list-input-field-choices",
+    "run-action",
+  ];
+  const coreTools: Record<string, any> = {};
+  const searchableTools: Record<string, any> = {};
+  for (const [name, tool] of Object.entries(sdkTools)) {
+    if (coreToolNames.includes(name)) {
+      coreTools[name] = tool;
+    } else {
+      searchableTools[name] = tool;
+    }
+  }
+
+  // Only put non-core tools behind search (tables, fetch, app listing, etc.)
   const zapierToolSearch = new ToolSearchProcessor({
-    tools: sdkTools,
+    tools: searchableTools,
     search: { topK: 8, minScore: 0.1 },
   });
 
@@ -81,10 +100,12 @@ export function createForemanAgent(databaseUrl: string) {
     instructions: buildSystemPrompt(),
     model: MODELS.default,
     tools: {
-      // Custom tools always available (not behind search)
+      // Custom tools always available
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
+      // Core Zapier tools always available (no search/load needed)
+      ...coreTools,
     },
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {

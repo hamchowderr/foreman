@@ -243,14 +243,8 @@ conversations.post("/:id/messages", async (c) => {
       memory: conv.mastraThreadId
         ? { thread: conv.mastraThreadId, resource: userId }
         : undefined,
+      maxSteps: 15,
       savePerStep: true,
-      // Use fast model for initial tool discovery steps, default for reasoning
-      prepareStep: async ({ stepNumber }) => {
-        if (stepNumber <= 2) {
-          return { model: MODELS.fast };
-        }
-        return {};
-      },
     }
   );
 
@@ -454,11 +448,8 @@ conversations.post("/chat", async (c) => {
       {
         requestContext: rctx,
         memory: { thread: threadId, resource: userId },
+        maxSteps: 15,
         savePerStep: true,
-        prepareStep: async ({ stepNumber }) => {
-          if (stepNumber <= 2) return { model: MODELS.fast };
-          return {};
-        },
       }
     );
 
