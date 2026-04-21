@@ -112,6 +112,10 @@ export function createForemanAgent(databaseUrl: string) {
       embedder: "openai/text-embedding-3-small",
       options: {
         lastMessages: 20,
+        generateTitle: {
+          model: MODELS.fast,
+          instructions: "Generate a concise 3-6 word title for this conversation.",
+        },
         workingMemory: { enabled: true },
         semanticRecall: {
           topK: 2,

@@ -5,7 +5,7 @@ import {
   primaryKey,
 } from "drizzle-orm/sqlite-core";
 
-// ─── Auth tables (legacy BetterAuth, kept for migration compatibility) ───
+// ─── User table (Clerk-managed, auto-created on first auth) ───
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -15,50 +15,6 @@ export const user = sqliteTable("user", {
   image: text("image"),
   createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
-});
-
-export const session = sqliteTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
-  token: text("token").notNull().unique(),
-  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
-  ipAddress: text("ipAddress"),
-  userAgent: text("userAgent"),
-  userId: text("userId")
-    .notNull()
-    .references(() => user.id),
-});
-
-export const account = sqliteTable("account", {
-  id: text("id").primaryKey(),
-  accountId: text("accountId").notNull(),
-  providerId: text("providerId").notNull(),
-  userId: text("userId")
-    .notNull()
-    .references(() => user.id),
-  accessToken: text("accessToken"),
-  refreshToken: text("refreshToken"),
-  idToken: text("idToken"),
-  accessTokenExpiresAt: integer("accessTokenExpiresAt", {
-    mode: "timestamp",
-  }),
-  refreshTokenExpiresAt: integer("refreshTokenExpiresAt", {
-    mode: "timestamp",
-  }),
-  scope: text("scope"),
-  password: text("password"),
-  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
-});
-
-export const verification = sqliteTable("verification", {
-  id: text("id").primaryKey(),
-  identifier: text("identifier").notNull(),
-  value: text("value").notNull(),
-  expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
-  createdAt: integer("createdAt", { mode: "timestamp" }),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }),
 });
 
 // ─── Zapier Identity ───
@@ -78,7 +34,7 @@ export const zapierIdentity = sqliteTable("zapier_identity", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-// ─── Conversation & Messages ───
+// ─── Conversation (links to Mastra Memory thread) ───
 
 export const conversation = sqliteTable("conversation", {
   id: text("id").primaryKey(),
@@ -90,16 +46,6 @@ export const conversation = sqliteTable("conversation", {
   title: text("title"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-});
-
-export const message = sqliteTable("message", {
-  id: text("id").primaryKey(),
-  conversationId: text("conversation_id")
-    .notNull()
-    .references(() => conversation.id),
-  role: text("role", { enum: ["user", "assistant", "agent", "system"] }).notNull(),
-  content: text("content").notNull(), // JSON stringified
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
 // ─── Action Proposals & Runs ───

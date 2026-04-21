@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { z } from "zod";
 import { getDb, schema } from "@/lib/db";
 import { getMastra } from "@/mastra";
 import { MODELS, buildSystemPrompt } from "@/mastra/agents/foreman";
@@ -8,13 +7,12 @@ import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
 import { desc, eq, and } from "drizzle-orm";
 import { RequestContext } from "@mastra/core/request-context";
+import { toAISdkStream } from "@mastra/ai-sdk";
+import { toAISdkV5Messages } from "@mastra/ai-sdk/ui";
+import { createUIMessageStreamResponse } from "ai";
 import { contentSchema, validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
-
-const titleSchema = z.object({
-  title: z.string().max(80),
-});
 
 const conversations = new Hono<AppEnv>();
 
@@ -34,7 +32,10 @@ conversations.post("/", async (c) => {
     resourceId: userId,
   });
 
-  const id = crypto.randomUUID();
+  // Accept client-provided id, or generate one
+  let body: any = {};
+  try { body = await c.req.json(); } catch {}
+  const id = body.id || crypto.randomUUID();
   const now = new Date();
 
   await db.insert(schema.conversation).values({
@@ -114,39 +115,69 @@ conversations.get("/:id", async (c) => {
   // Load messages from Mastra Memory thread (single source of truth)
   const mastra = getMastra();
   const memory = await mastra.getAgent("foreman").getMemory();
-  let messages: Array<{ id: string; role: string; content: string; created_at: string }> = [];
+  let messages: unknown[] = [];
 
   if (conv.mastraThreadId && memory) {
     const recalled = await memory.recall({
       threadId: conv.mastraThreadId,
+      perPage: false, // Return all messages, no pagination
     });
-    messages = recalled.messages.map((m) => ({
-      id: m.id,
-      role: m.role === "assistant" ? "agent" : m.role,
-      content: typeof m.content === "string"
-        ? m.content
-        : Array.isArray(m.content?.parts)
-          ? m.content.parts
-              .filter((p: any) => p.type === "text")
-              .map((p: any) => p.text)
-              .join("")
-          : JSON.stringify(m.content),
-      created_at: m.createdAt instanceof Date
-        ? m.createdAt.toISOString()
-        : String(m.createdAt ?? ""),
-    }));
+
+    // Convert MastraDBMessage[] to AI SDK UIMessage format using the official converter.
+    // This preserves text parts, tool calls, tool results, and all message metadata.
+    messages = toAISdkV5Messages(recalled.messages);
+  }
+
+  // Also fetch the thread to get Memory-managed title
+  let memoryTitle = conv.title;
+  if (conv.mastraThreadId && memory) {
+    try {
+      const thread = await memory.getThreadById({ threadId: conv.mastraThreadId });
+      if (thread?.title) memoryTitle = thread.title;
+    } catch {
+      // Fall back to conversation table title
+    }
   }
 
   return c.json({
     conversation: {
       id: conv.id,
       mastra_thread_id: conv.mastraThreadId,
-      title: conv.title,
+      title: memoryTitle,
       created_at: conv.createdAt.toISOString(),
       updated_at: conv.updatedAt.toISOString(),
     },
     messages,
   });
+});
+
+// PATCH /:id — update conversation (title, etc.)
+conversations.patch("/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) return c.json({ error: "Invalid conversation id" }, 400);
+  const db = getDb();
+
+  const rows = await db
+    .select()
+    .from(schema.conversation)
+    .where(and(eq(schema.conversation.id, id), eq(schema.conversation.userId, userId)))
+    .limit(1);
+
+  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: "Invalid JSON" }, 400); }
+
+  const title = typeof body.title === "string" ? body.title.trim().slice(0, 80) : undefined;
+  if (!title) return c.json({ error: "title is required" }, 400);
+
+  await db
+    .update(schema.conversation)
+    .set({ title, updatedAt: new Date() })
+    .where(eq(schema.conversation.id, id));
+
+  return c.json({ id, title });
 });
 
 // POST /:id/messages — stream agent response via SSE
@@ -199,7 +230,10 @@ conversations.post("/:id/messages", async (c) => {
   const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
 
-  const rctx = new RequestContext([["userId", userId]]);
+  const rctx = new RequestContext([
+    ["userId", userId],
+    ...(conv.mastraThreadId ? [["threadId", conv.mastraThreadId] as [string, string]] : []),
+  ]);
 
   const result = await agent.stream(
     [{ role: "user" as const, content: userContent }],
@@ -278,39 +312,26 @@ conversations.post("/:id/messages", async (c) => {
           controller.enqueue(encodeSSE(chunk));
 
           // On done, Mastra Memory has already persisted messages to the thread.
-          // We only need to handle title generation and conversation metadata updates.
-          if (chunk.type === "done" && accumulatedText) {
-            // Generate conversation title from first exchange if not set
-            if (!conv.title && accumulatedText.length > 0) {
-              let title = userContent.slice(0, 60);
-              try {
-                const titleResult = await agent.generate(
-                  `Generate a 3-5 word title for this conversation. The user said: "${userContent}". The assistant replied: "${accumulatedText.slice(0, 200)}".`,
-                  {
-                    model: MODELS.fast,
-                    structuredOutput: { schema: titleSchema },
-                  }
-                );
-                const generated = titleResult.object?.title?.trim();
-                if (generated && generated.length > 0) {
-                  title = generated;
-                }
-              } catch {
-                // Fall back to truncated user content
-              }
-
+          // Title generation is handled by Memory's generateTitle option.
+          // Sync the Memory-managed title back to our conversation table.
+          if (chunk.type === "done") {
+            try {
+              const memory = await agent.getMemory();
+              const thread = memory ? await memory.getThreadById({ threadId: conv.mastraThreadId! }) : null;
+              const title = thread?.title || conv.title;
               await db
                 .update(schema.conversation)
                 .set({ title, updatedAt: new Date() })
                 .where(eq(schema.conversation.id, conversationId));
 
-              // Notify client of the new title
-              const titleChunk: AppChunk = {
-                type: "title-updated",
-                title,
-              };
-              controller.enqueue(encodeSSE(titleChunk));
-            } else {
+              if (title && title !== conv.title) {
+                const titleChunk: AppChunk = {
+                  type: "title-updated",
+                  title,
+                };
+                controller.enqueue(encodeSSE(titleChunk));
+              }
+            } catch {
               await db
                 .update(schema.conversation)
                 .set({ updatedAt: new Date() })
@@ -333,6 +354,145 @@ conversations.post("/:id/messages", async (c) => {
 
   const headers = sseHeaders();
   return new Response(sseStream, { headers });
+});
+
+// POST /chat — UIMessageStream-compatible endpoint for AI SDK useChat
+// Creates conversation if needed, streams response in AI SDK format
+conversations.post("/chat", async (c) => {
+  const userId = c.get("userId");
+  const db = getDb();
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  // Extract user message from AI SDK format
+  const lastMessage = body.message || body.messages?.at(-1);
+  let userContent = "";
+  if (lastMessage?.parts) {
+    userContent = lastMessage.parts
+      .filter((p: any) => p.type === "text")
+      .map((p: any) => p.text)
+      .join("");
+  } else if (typeof lastMessage?.content === "string") {
+    userContent = lastMessage.content;
+  }
+
+  if (!userContent) {
+    return c.json({ error: "No message content" }, 400);
+  }
+
+  try {
+    const mastra = getMastra();
+    const agent = mastra.getAgent("foreman");
+    const memory = await agent.getMemory();
+
+    // Check if conversation exists (reuse thread for continuity)
+    const clientId = body.id;
+    let convId: string;
+    let threadId: string;
+
+    if (clientId) {
+      const existing = await db
+        .select()
+        .from(schema.conversation)
+        .where(
+          and(
+            eq(schema.conversation.id, clientId),
+            eq(schema.conversation.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (existing[0]?.mastraThreadId) {
+        // Reuse existing conversation and thread
+        convId = existing[0].id;
+        threadId = existing[0].mastraThreadId;
+      } else {
+        // Create new conversation with client-provided ID
+        const thread = await memory!.createThread({ resourceId: userId });
+        convId = clientId;
+        threadId = thread.id;
+        const now = new Date();
+        await db.insert(schema.conversation).values({
+          id: convId,
+          userId,
+          orgId: null,
+          mastraThreadId: threadId,
+          title: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    } else {
+      // No client ID — create fresh conversation
+      const thread = await memory!.createThread({ resourceId: userId });
+      convId = crypto.randomUUID();
+      threadId = thread.id;
+      const now = new Date();
+      await db.insert(schema.conversation).values({
+        id: convId,
+        userId,
+        orgId: null,
+        mastraThreadId: threadId,
+        title: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const rctx = new RequestContext([
+      ["userId", userId],
+      ["threadId", threadId],
+    ]);
+
+    const result = await agent.stream(
+      [{ role: "user" as const, content: userContent }],
+      {
+        requestContext: rctx,
+        memory: { thread: threadId, resource: userId },
+        savePerStep: true,
+        prepareStep: async ({ stepNumber }) => {
+          if (stepNumber <= 2) return { model: MODELS.fast };
+          return {};
+        },
+      }
+    );
+
+    // Title generation is handled by Mastra Memory's generateTitle option.
+    // After the stream completes, sync the Memory-generated title back to our
+    // conversation table so the sidebar can show it.
+    result.fullStream
+      .pipeTo(new WritableStream({ close: async () => {
+        try {
+          const memory = await agent.getMemory();
+          if (memory) {
+            const thread = await memory.getThreadById({ threadId });
+            // Use Memory-generated title, or fall back to first user message
+            const title = thread?.title || userContent.slice(0, 80) || "New conversation";
+            await db
+              .update(schema.conversation)
+              .set({ title, updatedAt: new Date() })
+              .where(eq(schema.conversation.id, convId));
+          }
+        } catch {}
+      }}))
+      .catch(() => {}); // Fire-and-forget, don't block the response
+
+    // Convert Mastra stream to AI SDK UIMessageStream format
+    return createUIMessageStreamResponse({
+      stream: toAISdkStream(result, { from: "agent" }),
+    });
+  } catch (err) {
+    console.error("[chat] Error:", err);
+    return c.json(
+      { error: err instanceof Error ? err.message : "Internal error" },
+      500
+    );
+  }
 });
 
 export default conversations;
