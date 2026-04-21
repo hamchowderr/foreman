@@ -1,0 +1,77 @@
+---
+title: A2A · cloud
+description: Call cloud Foreman from another Mastra agent.
+---
+
+Foreman exposes an [Agent-to-Agent](https://mastra.ai/docs/agents/a2a)
+endpoint. Other Mastra agents can call Foreman just like they'd call any
+other model — ask a question, get a reply, approve side effects in
+Foreman's own UI.
+
+## Endpoint
+
+```
+https://foreman-agents.otakusolutions.io/a2a/foreman
+```
+
+## Authentication
+
+Same `x-api-key` header as MCP. Create one in **Settings → API keys**.
+
+## Example: calling from another Mastra agent
+
+```ts
+import { createAgent } from "@mastra/core";
+
+const myAgent = createAgent({
+  name: "my-agent",
+  instructions: "When you need to actually run something, delegate to foreman.",
+  tools: {
+    foreman: {
+      description: "Runs real actions across 9,000+ apps via Zapier",
+      execute: async ({ message }) => {
+        const res = await fetch(
+          "https://foreman-agents.otakusolutions.io/a2a/foreman",
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": process.env.FOREMAN_API_KEY!,
+            },
+            body: JSON.stringify({ message }),
+          }
+        );
+        return res.json();
+      },
+    },
+  },
+});
+```
+
+## Example: raw curl
+
+```bash
+curl -X POST https://foreman-agents.otakusolutions.io/a2a/foreman \
+  -H "content-type: application/json" \
+  -H "x-api-key: fmn_your_key_here" \
+  -d '{"message": "List my connected apps"}'
+```
+
+## Approvals still apply
+
+An A2A caller isn't a trusted identity that bypasses approvals. Write
+actions still surface in the calling user's Foreman UI for approval.
+Read-only queries return immediately.
+
+<Callout type="info">
+  If you want a fully unattended agent-to-agent integration, pair A2A
+  with a saved [workflow](/docs/core-concepts/workflows) that has
+  admin-granted auto-approve for specific workflow IDs.
+</Callout>
+
+## Related
+
+<Cards>
+  <Card title="A2A (self-hosted)" href="/docs/integrations/a2a-self-hosted" description="Same endpoint, your own URL." />
+  <Card title="MCP (cloud)" href="/docs/integrations/mcp-cloud" description="For AI clients instead of agents." />
+</Cards>

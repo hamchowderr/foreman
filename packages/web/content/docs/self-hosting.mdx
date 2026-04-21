@@ -1,0 +1,104 @@
+---
+title: Self-hosting
+description: Run Foreman on your laptop or your own VPS.
+---
+
+Foreman is MIT-licensed. Run it locally or on any VPS — your data never
+leaves your box.
+
+<Callout type="info">
+  You'll still need your own Zapier account and API keys from Anthropic and
+  OpenAI. Foreman never ships with credentials baked in.
+</Callout>
+
+## One-command start
+
+<Steps>
+  <Step>
+    ### Pull and run
+
+    ```bash
+    docker run -p 3000:3000 --env-file .env foreman/foreman:latest
+    ```
+
+    Open `http://localhost:3000` and you're in.
+  </Step>
+
+  <Step>
+    ### Set environment variables
+
+    Create a `.env` file:
+
+    ```bash
+    ANTHROPIC_API_KEY=sk-ant-...
+    OPENAI_API_KEY=sk-...
+    DATABASE_URL=file:./foreman.db
+    ENCRYPTION_KEY=<64-char hex>
+    CLERK_SECRET_KEY=sk_...
+    CLERK_PUBLISHABLE_KEY=pk_...
+    ```
+
+    Generate the encryption key:
+
+    ```bash
+    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+    ```
+  </Step>
+
+  <Step>
+    ### Connect Zapier
+
+    Sign in via Clerk and click **Connect Zapier** in the web UI. Same flow
+    as the cloud version.
+  </Step>
+</Steps>
+
+## Running on a VPS
+
+Any $5/month Docker-capable VPS works. Behind HTTPS (Caddy, Traefik, or a
+cloud load balancer):
+
+<Tabs items={["Caddyfile", "docker-compose.yaml"]}>
+  <Tab value="Caddyfile">
+    ```
+    foreman.yourdomain.com {
+      reverse_proxy foreman:3000
+    }
+    ```
+  </Tab>
+  <Tab value="docker-compose.yaml">
+    ```yaml
+    services:
+      foreman:
+        image: foreman/foreman:latest
+        restart: unless-stopped
+        env_file: .env
+        volumes:
+          - ./data:/app/data
+        ports:
+          - "3000:3000"
+    ```
+  </Tab>
+</Tabs>
+
+## What's different vs cloud
+
+<Callout>
+  Feature parity is the goal. These differences are mostly about ops.
+</Callout>
+
+| | Cloud | Self-host |
+| --- | --- | --- |
+| **Upgrades** | Automatic | `docker pull && docker restart` |
+| **Backups** | Managed | Your own SQLite file |
+| **Telemetry** | Opt-in | None |
+| **Auth** | Clerk (managed) | Clerk (free tier) |
+| **Zapier** | Your personal account | Your personal account |
+
+## Next
+
+<Cards>
+  <Card title="MCP (self-hosted)" href="/docs/integrations/mcp-self-hosted" description="Point Claude Code at your local Foreman." />
+  <Card title="A2A (self-hosted)" href="/docs/integrations/a2a-self-hosted" description="Let other agents call your Foreman." />
+  <Card title="Architecture" href="/docs/architecture/mastra" description="What's running inside the container." />
+</Cards>

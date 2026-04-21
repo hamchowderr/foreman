@@ -1,0 +1,106 @@
+---
+title: Discord
+description: Gateway + slash commands, in any server.
+---
+
+## Cloud
+
+<Steps>
+  <Step>
+    ### Invite the bot
+
+    Visit [foreman.otakusolutions.io/install/discord](https://foreman.otakusolutions.io/install/discord)
+    and pick the server. Permissions requested: **Send Messages**, **Read
+    Messages**, **Use Slash Commands**.
+  </Step>
+
+  <Step>
+    ### Link your account
+
+    First interaction takes you back to Foreman to confirm the link — same
+    pattern as Slack. Your Discord identity gets tied to your Foreman user.
+  </Step>
+
+  <Step>
+    ### Talk to it
+
+    - **DM**: open a DM with the Foreman bot.
+    - **Server**: `@Foreman what apps do I have connected?` or use slash
+      commands like `/foreman email ...`.
+    - Approval buttons render as Discord message components.
+  </Step>
+</Steps>
+
+## Self-host
+
+<Steps>
+  <Step>
+    ### Create a Discord app
+
+    Go to [discord.com/developers/applications](https://discord.com/developers/applications)
+    → **New Application**. Name it *Foreman*.
+  </Step>
+
+  <Step>
+    ### Create a bot user
+
+    **Bot** → **Add Bot**. Copy the **Token**. Enable **Message Content
+    Intent** under Privileged Gateway Intents.
+  </Step>
+
+  <Step>
+    ### Set the Interactions Endpoint URL
+
+    Under **General Information**, set the Interactions Endpoint URL:
+
+    <Tabs items={["Local + ngrok", "VPS"]}>
+      <Tab value="Local + ngrok">
+        ```
+        https://<your-ngrok>.ngrok.io/discord/webhook
+        ```
+      </Tab>
+      <Tab value="VPS">
+        ```
+        https://foreman.yourdomain.com/discord/webhook
+        ```
+      </Tab>
+    </Tabs>
+
+    Copy the **Public Key** and the **Application ID**.
+  </Step>
+
+  <Step>
+    ### Invite to your server
+
+    OAuth2 → URL Generator → Scopes: `bot`, `applications.commands`. Bot
+    permissions: Send Messages, Read Messages, Use Slash Commands. Paste
+    the generated URL in your browser, pick a server.
+  </Step>
+
+  <Step>
+    ### Set env vars
+
+    ```bash
+    DISCORD_BOT_TOKEN=...
+    DISCORD_PUBLIC_KEY=...
+    DISCORD_APPLICATION_ID=...
+    CRON_SECRET=...  # required for Gateway WebSocket
+    ```
+
+    Restart Foreman. The webhook server auto-starts the Discord Gateway
+    listener on boot when `DISCORD_BOT_TOKEN` is set.
+  </Step>
+</Steps>
+
+<Callout type="info">
+  Discord uses a persistent WebSocket (Gateway) for receiving messages,
+  plus the Interactions Endpoint for slash commands. That's why you need
+  both the webhook URL and the bot token.
+</Callout>
+
+## Using it
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Connect Zapier and run your first action." />
+  <Card title="Channels" href="/docs/channels" description="Other channels you can use." />
+</Cards>

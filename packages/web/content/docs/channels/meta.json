@@ -1,0 +1,12 @@
+{
+  "title": "Channels",
+  "pages": [
+    "index",
+    "slack",
+    "discord",
+    "telegram",
+    "google-chat",
+    "github",
+    "linear"
+  ]
+}

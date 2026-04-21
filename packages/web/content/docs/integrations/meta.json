@@ -1,0 +1,10 @@
+{
+  "title": "Integrations",
+  "pages": [
+    "index",
+    "mcp-cloud",
+    "mcp-self-hosted",
+    "a2a-cloud",
+    "a2a-self-hosted"
+  ]
+}

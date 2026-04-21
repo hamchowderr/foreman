@@ -1,0 +1,110 @@
+---
+title: GitHub
+description: Tag @foreman in issues and PRs.
+---
+
+## Cloud
+
+<Steps>
+  <Step>
+    ### Install the GitHub App
+
+    Visit [github.com/apps/foreman](https://github.com/apps/foreman) and
+    click **Install**. Pick the org and repos you want it to see.
+
+    <Callout>
+      Foreman's GitHub app only requests: **Read** issues, **Read & Write**
+      pull request comments, **Read** metadata. That's it.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Link your account
+
+    First time you `@foreman` on an issue, Foreman replies with a link.
+    Open it, sign in, confirm — your GitHub identity is tied to your
+    Foreman user.
+  </Step>
+
+  <Step>
+    ### Talk to it
+
+    On any issue or PR comment:
+
+    ```
+    @foreman summarize this thread and open a Linear ticket for the fix
+    ```
+
+    Foreman replies inline. For write actions, it posts a preview comment
+    and waits for you to approve (reply `approve`) or decline.
+  </Step>
+</Steps>
+
+## Self-host
+
+<Tabs items={["GitHub App (recommended)", "Personal access token"]}>
+  <Tab value="GitHub App (recommended)">
+    <Steps>
+      <Step>
+        ### Create a GitHub App
+
+        Go to **Settings → Developer settings → GitHub Apps → New GitHub App**.
+
+        - Homepage URL: your Foreman URL
+        - Webhook URL: `https://foreman.yourdomain.com/github/webhook`
+        - Webhook secret: generate a random string
+        - Permissions: Read issues; Read & Write PR comments; Read metadata
+        - Subscribe to events: `issue_comment`, `pull_request_review_comment`
+      </Step>
+
+      <Step>
+        ### Set env vars
+
+        ```bash
+        GITHUB_APP_ID=...
+        GITHUB_PRIVATE_KEY=<paste PEM contents, keep newlines>
+        GITHUB_WEBHOOK_SECRET=...
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab value="Personal access token">
+    <Steps>
+      <Step>
+        ### Create a PAT
+
+        **Settings → Developer settings → Personal access tokens**. Scopes:
+        `repo`, `read:org`.
+      </Step>
+
+      <Step>
+        ### Register a webhook per repo
+
+        Repo **Settings → Webhooks → Add webhook**. Payload URL:
+
+        ```
+        https://foreman.yourdomain.com/github/webhook
+        ```
+
+        Content type: `application/json`. Pick events: Issue comments,
+        Pull request review comments.
+      </Step>
+
+      <Step>
+        ### Set env vars
+
+        ```bash
+        GITHUB_TOKEN=ghp_...
+        GITHUB_WEBHOOK_SECRET=<same secret you set on the webhook>
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Using it
+
+<Cards>
+  <Card title="Linear" href="/docs/channels/linear" description="Often paired with GitHub for issue tracking." />
+  <Card title="Workflows" href="/docs/core-concepts/workflows" description="Save triage patterns as reusable workflows." />
+</Cards>

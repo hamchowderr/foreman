@@ -1,0 +1,75 @@
+---
+title: MCP · self-hosted
+description: Connect MCP clients to your own Foreman instance.
+---
+
+Same protocol, same client setup — just point at your instance.
+
+## Endpoint
+
+<Tabs items={["Local", "VPS"]}>
+  <Tab value="Local">
+    ```
+    http://localhost:3000/mcp
+    ```
+  </Tab>
+  <Tab value="VPS">
+    ```
+    https://foreman.yourdomain.com/mcp
+    ```
+  </Tab>
+</Tabs>
+
+## Authentication
+
+Create an API key in **Settings → API keys** inside your Foreman web UI,
+same as cloud.
+
+<Callout>
+  Self-host only: you can disable API key auth entirely by setting
+  `DISABLE_API_AUTH=true` in your `.env`. Only do this if Foreman is
+  behind a VPN or similar — MCP tools can send real emails and delete
+  real data.
+</Callout>
+
+## Claude Code
+
+<Tabs items={["Local", "VPS"]}>
+  <Tab value="Local">
+    ```bash
+    claude mcp add foreman http://localhost:3000/mcp \
+      --header "x-api-key: fmn_your_key_here"
+    ```
+  </Tab>
+  <Tab value="VPS">
+    ```bash
+    claude mcp add foreman https://foreman.yourdomain.com/mcp \
+      --header "x-api-key: fmn_your_key_here"
+    ```
+  </Tab>
+</Tabs>
+
+## Running without API keys (lab only)
+
+If you're the only person who can reach your Foreman instance (localhost,
+home LAN, VPN), you can skip API keys entirely.
+
+<Callout type="warn">
+  This is fine on your laptop. It is not fine on a public VPS. Foreman's
+  MCP tools can run write actions in your Zapier account.
+</Callout>
+
+Set:
+
+```
+DISABLE_API_AUTH=true
+```
+
+And any MCP client can connect without headers.
+
+## Related
+
+<Cards>
+  <Card title="MCP (cloud)" href="/docs/integrations/mcp-cloud" description="The hosted version." />
+  <Card title="A2A (self-hosted)" href="/docs/integrations/a2a-self-hosted" description="If you want another agent calling yours." />
+</Cards>

@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { createMDX } from "fumadocs-mdx/next";
+
+const withMDX = createMDX();
 
 const nextConfig: NextConfig = {
   // Allow requests to the agent server (CORS headers for API proxy)
@@ -16,4 +19,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withMDX(nextConfig);

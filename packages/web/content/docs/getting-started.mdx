@@ -1,0 +1,75 @@
+---
+title: Getting started
+description: Sign in, connect Zapier, run your first action.
+---
+
+Three steps and you're running.
+
+<Steps>
+  <Step>
+    ### Sign in
+
+    Head to [foreman.otakusolutions.io](https://foreman.otakusolutions.io) and
+    click **Sign in**. We use Clerk, so you can use email, Google, or GitHub.
+  </Step>
+
+  <Step>
+    ### Connect your Zapier account
+
+    On first launch, Foreman asks for access to your existing Zapier account.
+    One click and you're connected — we don't store your password, just a
+    revocable access token (encrypted at rest with AES-256-GCM).
+
+    <Callout type="info">
+      Everything you've already wired up in Zapier — Gmail, Slack, Trello,
+      any of the 9,000+ apps — is instantly available. Nothing new to set up
+      on their side.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Just say it
+
+    Try any of these:
+
+    - *"What apps do I have connected?"*
+    - *"Email Jake the Q3 deck."*
+    - *"Create a Trello card for client follow-up in my To Do list."*
+
+    For every write action, Foreman shows you a draft and waits. Nothing
+    runs until you hit **Approve**.
+  </Step>
+</Steps>
+
+## FAQ
+
+<Accordions>
+  <Accordion title="Does Foreman see my email inbox?">
+    Only if you ask it to. It uses your Zapier connection, so it can see
+    whatever you've already authorized Zapier to see — no more, no less.
+  </Accordion>
+  <Accordion title="What if Foreman picks the wrong app?">
+    Every action has an approval step. You see the full draft before it
+    runs. If it's wrong, hit **Decline** and rephrase.
+  </Accordion>
+  <Accordion title="Can I use Foreman without connecting Zapier?">
+    You can sign in and chat, but no actions will actually run. Zapier is
+    the connection layer — without it there's nothing to automate.
+  </Accordion>
+  <Accordion title="Does it work with my existing Zaps?">
+    Yes. Foreman uses your Zapier account alongside whatever Zaps you
+    already have. It doesn't modify them.
+  </Accordion>
+  <Accordion title="What about rate limits?">
+    30 actions/minute per user, 200/hour. Bulk operations over 5 records
+    get an extra confirmation. See [Guardrails](/docs/core-concepts/guardrails).
+  </Accordion>
+</Accordions>
+
+## What's next
+
+<Cards>
+  <Card title="Channels" href="/docs/channels" description="Use the same Foreman from Slack, Discord, Telegram, and more." />
+  <Card title="Memory" href="/docs/core-concepts/memory" description="How Foreman remembers your preferences across conversations." />
+  <Card title="Self-hosting" href="/docs/self-hosting" description="Run Foreman on your own hardware." />
+</Cards>

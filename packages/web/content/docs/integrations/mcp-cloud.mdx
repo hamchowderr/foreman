@@ -1,0 +1,72 @@
+---
+title: MCP · cloud
+description: Connect Claude Code, ChatGPT, or any MCP client to cloud Foreman.
+---
+
+Foreman speaks the [Model Context Protocol](https://modelcontextprotocol.io).
+Any MCP-compatible client — Claude Code, ChatGPT's MCP support, Cursor,
+etc. — can connect and use Foreman's tools as if they were their own.
+
+## Endpoint
+
+```
+https://foreman-agents.otakusolutions.io/mcp
+```
+
+## Authentication
+
+You'll need an API key. Create one from **Settings → API keys** in the
+web UI.
+
+<Callout type="warn">
+  API keys are prefixed `fmn_` and shown only once. Store them somewhere
+  safe (password manager, vault) — Foreman stores only a SHA-256 hash.
+</Callout>
+
+## Claude Code
+
+<Steps>
+  <Step>
+    ### Add the server
+
+    ```bash
+    claude mcp add foreman https://foreman-agents.otakusolutions.io/mcp \
+      --header "x-api-key: fmn_your_key_here"
+    ```
+  </Step>
+
+  <Step>
+    ### Use it
+
+    In any Claude Code session, Foreman's tools appear as `foreman:*`. Ask
+    Claude Code:
+
+    ```
+    Using foreman, send an email to jake@acme.com with subject "Q3 deck"
+    ```
+
+    The approval flow still runs — Claude Code will show you the draft,
+    and you approve inside Claude Code.
+  </Step>
+</Steps>
+
+## ChatGPT
+
+Point ChatGPT's MCP connector at the same URL. Use the same `x-api-key`
+header.
+
+## Other MCP clients
+
+Anything that implements the MCP spec works. Just use:
+
+| Field | Value |
+| --- | --- |
+| URL | `https://foreman-agents.otakusolutions.io/mcp` |
+| Header | `x-api-key: fmn_...` |
+
+## Related
+
+<Cards>
+  <Card title="MCP (self-hosted)" href="/docs/integrations/mcp-self-hosted" description="Same client, your own URL." />
+  <Card title="A2A (cloud)" href="/docs/integrations/a2a-cloud" description="For agent-to-agent instead of AI-to-agent." />
+</Cards>
