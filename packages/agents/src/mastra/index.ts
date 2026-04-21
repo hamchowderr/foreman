@@ -10,32 +10,11 @@ import { createSupervisorAgent } from "./agents/supervisor";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import type { MiddlewareHandler } from "hono";
 
-// Conditional Vercel deployer (only imported when DEPLOY_TARGET=vercel)
-const getDeployer = async () => {
-  if (process.env.DEPLOY_TARGET === "vercel") {
-    const { VercelDeployer } = await import("@mastra/deployer-vercel");
-    return new VercelDeployer({
-      studio: true,
-      maxDuration: 300,
-      memory: 1024,
-    });
-  }
-  return undefined;
-};
-
 let _mastra: Mastra | undefined;
-let _mastraPromise: Promise<Mastra> | undefined;
 
-export async function getMastra(): Promise<Mastra> {
+export function getMastra(): Mastra {
   if (_mastra) return _mastra;
-  if (_mastraPromise) return _mastraPromise;
 
-  _mastraPromise = _initMastra();
-  _mastra = await _mastraPromise;
-  return _mastra;
-}
-
-async function _initMastra(): Promise<Mastra> {
   const databaseUrl = process.env.DATABASE_URL!;
 
   const storage = new LibSQLStore({
@@ -43,11 +22,9 @@ async function _initMastra(): Promise<Mastra> {
     url: databaseUrl,
   });
 
-  const [foremanAgent, discoveryAgent, executionAgent] = await Promise.all([
-    createForemanAgent(databaseUrl),
-    createDiscoveryAgent(),
-    createExecutionAgent(),
-  ]);
+  const foremanAgent = createForemanAgent(databaseUrl);
+  const discoveryAgent = createDiscoveryAgent();
+  const executionAgent = createExecutionAgent();
   const historyAgent = createHistoryAgent();
   const supervisorAgent = createSupervisorAgent({
     databaseUrl,
@@ -56,9 +33,6 @@ async function _initMastra(): Promise<Mastra> {
     historyAgent,
   });
 
-  // Webhooks run on a separate server (webhook-server.ts on :4112)
-  // to avoid Mastra's middleware consuming the request body before
-  // signature verification. Only API routes go through this middleware.
   const customMiddleware: MiddlewareHandler = async (c, next) => {
     const { default: customRoutes } = await import("../routes");
     const response = await customRoutes.fetch(c.req.raw);
@@ -81,7 +55,7 @@ async function _initMastra(): Promise<Mastra> {
       })
     : undefined;
 
-  return new Mastra({
+  _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
       discovery: discoveryAgent,
@@ -104,7 +78,9 @@ async function _initMastra(): Promise<Mastra> {
       }),
     },
   });
+
+  return _mastra;
 }
 
 // Default export for mastra build
-export const mastra = await getMastra();
+export const mastra = getMastra();

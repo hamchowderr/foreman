@@ -48,7 +48,7 @@ foreman/
 │   │   │   │   └── tools/                # 3 custom tools (connect_zapier, search_history, fork_conversation)
 │   │   │   ├── lib/
 │   │   │   │   ├── zapier/               # SDK wrapper, discovery, execution, errors, connect
-│   │   │   │   ├── zapier-mcp.ts         # MCPClient (stdio) → Zapier SDK MCP server + toModelOutput + requireApproval
+│   │   │   │   ├── zapier-sdk-tools.ts   # Direct SDK import → auto-generated Mastra tools + toModelOutput + requireApproval
 │   │   │   │   ├── db/                   # Drizzle ORM schema + connection (SQLite/LibSQL)
 │   │   │   │   ├── stream/              # SSE encoding, chunk transformer, types
 │   │   │   │   ├── processors/          # Input (context injection) + Output (PII redaction)
@@ -110,16 +110,20 @@ When running `npm run dev` in `packages/agents`, Mastra provides a built-in dev 
 
 ## Features
 
-### Tools — Zapier SDK MCP
+### Tools — Zapier SDK (Direct Import)
 
-Foreman gets its Zapier capabilities from the **Zapier SDK's built-in MCP server** (`@zapier/zapier-sdk`), connected via `@mastra/mcp` MCPClient over stdio transport. This provides ~33 tools covering actions, apps, connections, tables, and authenticated HTTP.
+Foreman gets its Zapier capabilities by importing `@zapier/zapier-sdk` directly and generating Mastra tools from its internal registry. The `generateZapierTools()` function calls `sdk.getRegistry({ package: "mcp" })` to get the same function list the MCP server uses internally, then wraps each as a `createTool()` instance — no child process, no MCP transport layer. This provides 34 tools covering actions, apps, connections, tables, and authenticated HTTP (5 deprecated methods are excluded).
 
-**Dynamic tool search (ToolSearchProcessor):** With 33+ MCP tools, loading all schemas into every request wastes ~6-8K tokens. Instead, Foreman uses `ToolSearchProcessor` from `@mastra/core/processors` — the agent receives `search_tools` and `load_tool` meta-tools to discover and load only the tools it needs per request.
+**Dynamic tool search (ToolSearchProcessor):** With 34 SDK tools, loading all schemas into every request wastes ~6-8K tokens. Instead, Foreman uses `ToolSearchProcessor` from `@mastra/core/processors` — the agent receives `search_tools` and `load_tool` meta-tools to discover and load only the tools it needs per request (top 8 results, min score 0.1).
 
-**toModelOutput:** Each MCP tool result passes through a summarizer that compresses verbose API responses before they reach the model — capping lists at 20 items, stripping unnecessary fields, and trimming long strings.
+**toModelOutput:** Each tool result passes through a summarizer that compresses verbose API responses before they reach the model — capping lists at 20 items, stripping unnecessary fields, and trimming long strings.
 
-**requireApproval:** 10 write/delete MCP tools require human approval before execution:
-`run-action`, `fetch`, `request`, `create-table`, `delete-table`, `create-table-records`, `update-table-records`, `delete-table-records`, `create-table-fields`, `delete-table-fields`
+**Auto-pagination:** List methods (`listActions`, `listApps`, `listConnections`, etc.) auto-paginate up to 100 items by default via the SDK's `maxItems` parameter.
+
+**Error handling:** Typed error classes from the SDK (`ZapierAuthenticationError`, `ZapierRateLimitError`, `ZapierNotFoundError`, etc.) with automatic retry (3 retries, 30s max delay). Debug mode (`FOREMAN_MODE=dev` or `DEBUG=true`) enables verbose SDK logging.
+
+**requireApproval:** 9 write/delete tools require human approval before execution:
+`run-action`, `fetch`, `create-table`, `delete-table`, `create-table-records`, `update-table-records`, `delete-table-records`, `create-table-fields`, `delete-table-fields`
 
 **Custom tools (always loaded, not behind search):**
 
@@ -128,6 +132,17 @@ Foreman gets its Zapier capabilities from the **Zapier SDK's built-in MCP server
 | `connect_zapier` | Generate a one-time Zapier connect URL for non-web channels |
 | `search_history` | Semantic search across past action results |
 | `fork_conversation` | Branch a conversation for parallel exploration |
+
+### Workspace
+
+Foreman has a sandboxed file workspace (`./data/workspace`) via Mastra's `Workspace` API — `LocalFilesystem` for file I/O and `LocalSandbox` for command execution, with BM25 search enabled. All write operations require human approval:
+
+| Tool | Approval Required |
+|------|:-:|
+| `mastra_workspace_write_file` | Yes |
+| `mastra_workspace_edit_file` | Yes |
+| `mastra_workspace_delete` | Yes |
+| `mastra_workspace_execute_command` | Yes |
 
 ### Memory
 
@@ -165,9 +180,9 @@ Mastra does not provide a `toUIMessageStreamResponse` method. Foreman implements
 | Agent | Model | Purpose |
 |-------|-------|---------|
 | Foreman (primary) | `claude-sonnet-4-6` | Main conversation + tool calling |
-| Discovery | `claude-haiku-4-5` | Fast app/action discovery |
+| Discovery | `claude-haiku-4-5-20251001` | Fast app/action discovery |
 | Execution | `claude-sonnet-4-6` | Action execution with validation |
-| History | `claude-haiku-4-5` | Fast history search |
+| History | `claude-haiku-4-5-20251001` | Fast history search |
 | Supervisor | `claude-sonnet-4-6` | Multi-agent coordination |
 
 ### Channels
@@ -276,7 +291,7 @@ Foreman supports three operating modes, set via `FOREMAN_MODE` in `.env.local`:
 
 ## Zapier Configuration
 
-Foreman uses the [Zapier SDK](https://docs.zapier.com/sdk) (`@zapier/zapier-sdk`) to execute actions across 9,000+ apps. The SDK exposes an MCP server that Foreman connects to via stdio transport through `@mastra/mcp` MCPClient.
+Foreman uses the [Zapier SDK](https://docs.zapier.com/sdk) (`@zapier/zapier-sdk`) to execute actions across 9,000+ apps. Foreman imports the SDK directly and generates Mastra tools from its internal registry — the same function list the MCP server uses, without the transport layer. No child process or stdio needed.
 
 ### Dev Mode (default)
 
@@ -607,10 +622,11 @@ npx drizzle-kit migrate
 | Component | Target | Why |
 |-----------|--------|-----|
 | Web frontend | **Vercel** | Standard Next.js deployment, Clerk auth, static + dynamic pages |
-| Agent server | **VPS (Coolify)** | MCP stdio transport needs persistent child processes; LibSQL needs persistent filesystem; streaming conversations need long-running connections |
+| Agent server | **VPS (Coolify)** | Persistent filesystem for LibSQL; streaming conversations need long-running connections |
+| Agent server | **Vercel** (alternative) | Viable with Turso for hosted LibSQL — no more stdio dependency. Build with `npm run build:vercel`. |
 | Webhook server | **VPS (Coolify)** | Discord Gateway WebSocket + channel webhooks need persistent processes |
 
-**Why the agent server can't run on Vercel:** The Zapier SDK MCP server uses stdio transport — it spawns `npx zapier-sdk mcp` as a child process and communicates over stdin/stdout. Vercel serverless functions can't maintain persistent child processes, have ephemeral filesystems (breaks LibSQL `file:` URLs), and cold starts would re-spawn the MCP server on every invocation (~5s overhead). If the Zapier SDK adds HTTP/SSE MCP transport in the future, Vercel deployment becomes viable (with Turso for hosted LibSQL).
+**Deployment flexibility:** The agent server uses a direct SDK import (no child processes or stdio transport), making it deployable to Vercel, Cloudflare Workers, or any VPS. The main constraint is database — local LibSQL (`file:` URLs) requires a persistent filesystem (VPS), while [Turso](https://turso.tech) (hosted LibSQL) enables serverless deployment with zero code changes.
 
 ### VPS (Coolify)
 
@@ -750,7 +766,7 @@ ngrok http 4112
 |-------|------------|
 | Agent framework | [Mastra](https://mastra.ai) (`@mastra/core`, `@mastra/memory`, `@mastra/mcp`, `@mastra/evals`) |
 | Chat channels | [Chat SDK](https://chat-sdk.dev) (`chat`, `@chat-adapter/*`) |
-| Zapier integration | `@zapier/zapier-sdk` via MCP (stdio transport) |
+| Zapier integration | `@zapier/zapier-sdk` (direct import, 34 auto-generated tools) |
 | LLM | Claude (Anthropic) via Mastra |
 | Embeddings | OpenAI (`text-embedding-3-small`) |
 | Voice TTS | [ElevenLabs](https://elevenlabs.io) (`@mastra/voice-elevenlabs`) + OpenAI TTS (`@mastra/voice-openai`) fallback |

@@ -25,7 +25,7 @@ export async function getLinearBot() {
     logger: "info",
   });
 
-  const mastra = await getMastra();
+  const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
 
   async function generateReply(

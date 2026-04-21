@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 
 // Mock the Mastra agent so we don't need a real DB or LLM
 vi.mock("@/mastra", () => ({
-  getMastra: vi.fn().mockResolvedValue({
+  getMastra: vi.fn().mockReturnValue({
     getAgent: () => ({
       generate: vi.fn().mockResolvedValue({ text: "mock reply" }),
     }),

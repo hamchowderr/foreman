@@ -1,43 +1,155 @@
 @AGENTS.md
 
-## Monorepo Structure
-
-This is a monorepo with two packages:
+## Monorepo Layout
 
 ```
-packages/
-  agents/   # Standalone Mastra/Hono agent server (port 4111)
-  web/      # Next.js frontend (port 3000, calls agent server)
+packages/agents/   → Mastra + Hono agent server (port 4111)
+packages/web/      → Next.js 16 frontend (port 3000)
 ```
 
-### packages/agents/ — Agent Server
-- Mastra + Hono, built with `mastra build`
-- Exposes: REST API, A2A (`/a2a/foreman`), MCP (`/mcp/*`)
-- Custom routes: `/conversations/*`, `/proposals/*`, `/telegram/webhook`
-- Auth: validates Clerk session tokens via `@mastra/auth-clerk`
-- Deploy targets: VPS (default), Vercel (`DEPLOY_TARGET=vercel`), Cloudflare
-- Memory: semantic recall (LibSQLVector), working memory, observational memory
-- Dev: `npm run dev` (mastra dev) or `npm run dev:mock` (with AIMock)
+## Where to Find Things
 
-### packages/web/ — Frontend
-- Next.js 16, UI-only — no agent logic
-- Calls agent server via `NEXT_PUBLIC_AGENT_SERVER_URL` (default: http://localhost:4111)
-- Auth: Clerk (`@clerk/nextjs`) — sign-up, sign-in, org switching, session management
-- Components: chat shell, approval cards, error surfaces, streaming
+### Agents
+| Agent | File | Model | Tools |
+|-------|------|-------|-------|
+| Foreman (primary) | `agents/src/mastra/agents/foreman.ts` | sonnet 4.6 | All SDK tools (via ToolSearchProcessor), 3 custom tools |
+| Supervisor | `agents/src/mastra/agents/supervisor.ts` | sonnet 4.6 | Routes to discovery/execution/history agents |
+| Discovery | `agents/src/mastra/agents/discovery.ts` | haiku 4.5 | 9 read-only SDK tools |
+| Execution | `agents/src/mastra/agents/execution.ts` | sonnet 4.6 | run-action, fetch, request, connect_zapier |
+| History | `agents/src/mastra/agents/history.ts` | haiku 4.5 | search_history |
 
-### Dev Workflow
+Mastra instance + server config: `agents/src/mastra/index.ts`
+
+### Zapier SDK Tools
+- **Generator**: `agents/src/lib/zapier-sdk-tools.ts` — direct `@zapier/zapier-sdk` import, no MCP/stdio
+- SDK method names are camelCase internally, converted to kebab-case for tool IDs
+- Parameter names come from the SDK's Zod schemas — read them from the registry, never guess
+  - Table operations use `table` (not `tableId`)
+  - Record creation uses `{ data: {...} }` wrapper per record
+- `APPROVAL_REQUIRED` set: 9 write/delete tools need human approval
+- `READ_ONLY` set: 17 discovery tools
+- `DEPRECATED_METHODS` set: 5 excluded (request, listAuthentications, etc.)
+- `zapier-mcp.ts` — old MCP stdio approach, deprecated but still in tree
+
+### Custom Tools
+| Tool | File |
+|------|------|
+| connect_zapier | `agents/src/mastra/tools/connect-zapier.ts` |
+| search_history | `agents/src/mastra/tools/search-history.ts` |
+| fork_conversation | `agents/src/mastra/tools/fork-conversation.ts` |
+
+### API Routes
+All custom routes: `agents/src/routes/index.ts` (Hono, mounted as Mastra middleware)
+
+| Route | File | Purpose |
+|-------|------|---------|
+| `/conversations/*` | `routes/conversations.ts` | CRUD + SSE message streaming |
+| `/proposals/*` | `routes/proposals.ts` | Approve/decline/field-choices |
+| `/workflows/*` | `routes/workflows.ts` | Workflow CRUD + SSE run |
+| `/zapier/*` | `routes/zapier-connect.ts` | OAuth callback flow |
+| `/capabilities` | `routes/capabilities.ts` | Per-user feature flags |
+| `/guardrails` | `routes/guardrails.ts` | Safety settings |
+| `/voice` | `routes/voice.ts` | STT/TTS endpoints |
+| `/telegram/webhook` | `telegram/webhook.ts` | Telegram bot |
+| `/slack/webhook` | `slack/webhook.ts` | Slack bot |
+| `/discord/webhook` | `discord/webhook.ts` | Discord bot |
+
+Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
+
+### Auth
+- **Middleware**: `agents/src/routes/middleware.ts` — Clerk JWT validation
+- **Identity resolution**: `agents/src/lib/identity.ts` — maps channel users to Foreman users
+- **API auth**: `agents/src/lib/api-auth.ts` — JWT + API key (`fmn_` prefix)
+- **Clerk config**: `@mastra/auth-clerk` in `agents/src/mastra/index.ts`
+
+### Database
+- **Schema**: `agents/src/lib/db/schema.ts` (Drizzle ORM, SQLite/LibSQL)
+- **Migrations**: `agents/drizzle/`
+- **Connection**: `agents/src/lib/db/index.ts`
+- Tables: user, session, account, verification, zapier_identity, conversation, action_proposal, action_run, workflow, workflow_step, workflow_run, capability_flag, channel_identity, api_key
+
+### Key Lib Files
+| File | What |
+|------|------|
+| `lib/crypto.ts` | AES-256-GCM token encryption |
+| `lib/env.ts` | Environment variable validation |
+| `lib/processors/` | Input (context injector) + Output (PII redactor) |
+| `lib/prompt-template.ts` | Dynamic system prompt builder |
+| `lib/proposals.ts` | Action proposal DB access |
+| `lib/stream/` | SSE encoding, chunk transformer |
+| `lib/rag/` | Action history indexing + semantic search |
+| `lib/validation.ts` | Shared Zod schemas |
+| `lib/voice.ts` | STT (Whisper) + TTS (ElevenLabs/OpenAI) |
+| `lib/guardrails.ts` | Rate limiting, risk assessment |
+| `lib/workflows/` | Daily summary, health check workflows |
+
+### Frontend
+| What | Where |
+|------|-------|
+| App layout | `web/src/app/layout.tsx` |
+| Chat UI | `web/src/components/chat-shell.tsx`, `chat-pane.tsx`, `chat-message.tsx` |
+| Approval cards | `web/src/components/approval-card.tsx` |
+| API client | `web/src/lib/api-client.ts` — all agent server calls |
+| Workflows page | `web/src/app/workflows/` |
+
+## Dev Commands
+
 ```bash
-# Terminal 1: agent server
-cd packages/agents && npm run dev
+# Dev servers
+cd packages/agents && npm run dev          # Mastra dev (:4111)
+cd packages/web && npm run dev             # Next.js (:3000)
+cd packages/agents && npm run start:webhooks  # Channel webhooks (:4112)
 
-# Terminal 2: web frontend
-cd packages/web && npm run dev
+# Build
+cd packages/agents && npm run build        # mastra build → .mastra/output/
+cd packages/agents && npm run build:vercel  # for Vercel deployment
+
+# Database
+cd packages/agents && npx drizzle-kit generate  # gen migration from schema
+cd packages/agents && npx drizzle-kit migrate   # apply migrations
+
+# Lint
+npm run lint && npm run format
 ```
 
-### Key Env Vars
-**agents/.env:** `DATABASE_URL`, `ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (embeddings), `TELEGRAM_BOT_TOKEN`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`
+## Testing
+
+```bash
+# Unit (mocked, fast)
+cd packages/agents && npm test
+
+# SDK integration (real Zapier API — needs `npx @zapier/zapier-sdk-cli login`)
+cd packages/agents && npm run test:sdk          # all
+cd packages/agents && npm run test:sdk:read     # read-only
+cd packages/agents && npm run test:sdk:write    # creates + deletes a real Zapier Table
+
+# Integration (API routes, protocols)
+cd packages/agents && npm test -- tests/integration
+
+# E2E (browser)
+cd packages/web && npx playwright test
+
+# Mock mode (no real LLM/API)
+cd packages/agents && npm run dev:mock
+```
+
+SDK tests use `vitest.sdk.config.ts` (no aimock). Unit/integration tests use `vitest.config.ts` (with aimock globalSetup).
+
+## Deploy
+
+| Component | Target | Config |
+|-----------|--------|--------|
+| Web | Vercel | `vercel.json` |
+| Agents | VPS (Coolify) | `Dockerfile.agents`, UUID: `oqshe32xh3v8zva7tt6r4aff` |
+| Agents | Vercel (alt) | `npm run build:vercel` + Turso for LibSQL |
+
+## Env Vars
+
+**agents/.env.local:** `DATABASE_URL`, `ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `FOREMAN_MODE` (dev/production/self_hosted), `ZAPIER_CLIENT_ID`, `ZAPIER_CLIENT_SECRET`
+
 **web/.env.local:** `NEXT_PUBLIC_AGENT_SERVER_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
 
+Channel tokens (optional): `TELEGRAM_BOT_TOKEN`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID`
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker

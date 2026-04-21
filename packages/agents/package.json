@@ -14,7 +14,10 @@
     "dev:telegram": "npx tsx src/telegram/start-polling.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "vitest run"
+    "test": "vitest run --exclude tests/sdk/**",
+    "test:sdk": "vitest run --config vitest.sdk.config.ts",
+    "test:sdk:read": "vitest run --config vitest.sdk.config.ts -t 'SDK Read'",
+    "test:sdk:write": "vitest run --config vitest.sdk.config.ts -t 'SDK Write'"
   },
   "dependencies": {
     "@chat-adapter/discord": "^4.26.0",
