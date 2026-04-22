@@ -7,6 +7,9 @@ export const metadata = {
   title: "Agent Editor — Foreman",
 };
 
+// Auth gate reads Clerk cookies; no point prerendering this route.
+export const dynamic = "force-dynamic";
+
 export default async function EditorLayout({
   children,
 }: {
