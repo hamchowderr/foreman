@@ -3,3 +3,17 @@
 @import "fumadocs-ui/css/preset.css";
 
 @source "../../../node_modules/fumadocs-ui/dist/**/*.js";
+
+/* Use the full viewport for the docs grid — default 97rem leaves huge
+   blank columns on wide screens. */
+:root {
+  --fd-layout-width: 100vw;
+}
+
+/* Widen the main content column — default 900px wastes big-screen space. */
+#nd-page:not([data-full="true"]) {
+  max-width: 1100px;
+}
+#nd-page[data-full="true"] {
+  max-width: 1400px;
+}

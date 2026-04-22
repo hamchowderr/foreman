@@ -1,4 +1,5 @@
 import { source } from "@/lib/source";
+import { getLastModified } from "@/lib/git-last-modified";
 import {
   DocsPage,
   DocsBody,
@@ -20,8 +21,20 @@ export default async function Page({
   const MDX = page.data.body;
   const mdxComponents = useMDXComponents();
 
+  const relPath = `packages/web/content/docs/${page.path}`;
+  const lastUpdate = getLastModified(relPath);
+
   return (
-    <DocsPage toc={page.data.toc}>
+    <DocsPage
+      toc={page.data.toc}
+      lastUpdate={lastUpdate}
+      editOnGithub={{
+        owner: "hamchowderr",
+        repo: "foreman",
+        sha: "main",
+        path: relPath,
+      }}
+    >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
@@ -43,8 +56,20 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) return {};
+  const ogImage = `/docs-og/${[...(slug ?? []), "image.png"].join("/")}`;
   return {
     title: `${page.data.title} · Foreman docs`,
     description: page.data.description,
+    openGraph: {
+      title: page.data.title,
+      description: page.data.description,
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page.data.title,
+      description: page.data.description,
+      images: [ogImage],
+    },
   };
 }
