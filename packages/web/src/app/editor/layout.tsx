@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Toaster } from "sonner";
 import { auth } from "@/lib/auth";
@@ -7,19 +8,11 @@ export const metadata = {
   title: "Agent Editor — Foreman",
 };
 
-// Auth gate reads Clerk cookies; no point prerendering this route.
-export const dynamic = "force-dynamic";
-
-export default async function EditorLayout({
+export default function EditorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/sign-in?redirect_url=/editor");
-  }
-
   return (
     <>
       <Toaster
@@ -29,9 +22,23 @@ export default async function EditorLayout({
           className: "!bg-card !text-foreground !border-border/50",
         }}
       />
-      <EditorShell user={{ id: session.user.id, email: session.user.email }}>
-        {children}
-      </EditorShell>
+      <Suspense fallback={<div className="h-dvh bg-background" />}>
+        <EditorAuthGate>{children}</EditorAuthGate>
+      </Suspense>
     </>
+  );
+}
+
+// Split out so the dynamic `auth()` read sits inside the Suspense boundary,
+// as required by Next 16's cacheComponents mode.
+async function EditorAuthGate({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/sign-in?redirect_url=/editor");
+  }
+  return (
+    <EditorShell user={{ id: session.user.id, email: session.user.email }}>
+      {children}
+    </EditorShell>
   );
 }

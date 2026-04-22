@@ -1,8 +1,6 @@
 import { Suspense } from "react";
 import { AgentEditor } from "@/components/editor/agent-editor";
 
-export const dynamic = "force-dynamic";
-
 export default function AgentEditorPage({
   params,
 }: {
