@@ -1,0 +1,121 @@
+---
+title: Connect your channels (cloud)
+description: Wire up Slack, Discord, Telegram and more in about 5 minutes on Foreman Cloud.
+---
+
+Foreman Cloud ships channels as one-click installs. Connect your Zapier
+account once, then pick which chat apps you want to reach Foreman from.
+Every channel shares the same memory and the same Zapier connections —
+start in Slack, follow up from Telegram, approve from your phone.
+
+## Before you start
+
+<Callout>
+  You'll need two things:
+
+  - A signed-in [Foreman Cloud](https://foreman.otakusolutions.io) account.
+  - A connected Zapier account. If you haven't done this yet, walk through
+    [Getting started](/docs/getting-started) first — it takes about a minute.
+</Callout>
+
+## Install a channel
+
+The flow is the same for every channel. Pick the one you want and follow
+these three steps.
+
+<Steps>
+  <Step>
+    ### Visit the installer URL
+
+    Open the installer for the channel you want to add:
+
+    | Channel | Installer URL |
+    | --- | --- |
+    | Slack | [foreman.otakusolutions.io/install/slack](https://foreman.otakusolutions.io/install/slack) |
+    | Discord | [foreman.otakusolutions.io/install/discord](https://foreman.otakusolutions.io/install/discord) |
+    | Telegram | [foreman.otakusolutions.io/install/telegram](https://foreman.otakusolutions.io/install/telegram) |
+    | Google Chat | [foreman.otakusolutions.io/install/google-chat](https://foreman.otakusolutions.io/install/google-chat) |
+    | GitHub | [foreman.otakusolutions.io/install/github](https://foreman.otakusolutions.io/install/github) |
+    | Linear | [foreman.otakusolutions.io/install/linear](https://foreman.otakusolutions.io/install/linear) |
+
+    You'll be bounced to the channel's own OAuth screen (Slack, Discord,
+    etc.) to authorize the Foreman app.
+  </Step>
+
+  <Step>
+    ### Grant the requested scopes
+
+    Review what Foreman is asking for, then click **Allow** / **Authorize**.
+
+    <Callout>
+      We only ask for what's needed to send and receive messages and to
+      respond to mentions. The exact scopes for each channel are listed on
+      that channel's dedicated docs page (linked below).
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Say hello
+
+    Send your first message to the bot — DM, `@mention`, or `/foreman`
+    depending on the channel. Foreman links that channel identity to your
+    Foreman user automatically. No extra configuration, no tokens to paste.
+  </Step>
+</Steps>
+
+## Per-channel notes
+
+Each channel has its own quirks — scopes, invite flow, slash commands.
+These pages cover the specifics:
+
+<Cards>
+  <Card title="Slack" href="/docs/channels/slack" description="DM the bot or @mention in a channel." />
+  <Card title="Discord" href="/docs/channels/discord" description="Gateway + slash commands in any server." />
+  <Card title="Telegram" href="/docs/channels/telegram" description="DM @foreman_bot or add to a group." />
+  <Card title="Google Chat" href="/docs/channels/google-chat" description="Workspace-native, service-account auth." />
+  <Card title="GitHub" href="/docs/channels/github" description="Tag @foreman in issues and PRs." />
+  <Card title="Linear" href="/docs/channels/linear" description="Triage, comments, follow-ups." />
+</Cards>
+
+## Test it
+
+Once you're installed, try one of these in your new channel:
+
+- Say `hello` — Foreman should reply in kind.
+- Ask `what apps do I have connected?` — you'll see the Zapier integrations
+  already linked to your account.
+
+<Callout>
+  Writes always trigger an inline approval card. Nothing gets sent,
+  posted, or changed until you click **Approve**.
+</Callout>
+
+## Where memory goes
+
+Every channel you add shares the same conversation history, the same
+Zapier connections, and the same preferences. Add Slack today, add
+Telegram tomorrow, and Foreman will remember what you were working on.
+See [Channels](/docs/channels) for more on the shared-memory model.
+
+## Troubleshooting
+
+<Accordions>
+  <Accordion title="Didn't get redirected back after OAuth">
+    Check your browser's popup blocker for the install page tab and allow pop-ups from `foreman.otakusolutions.io`.
+  </Accordion>
+  <Accordion title="Bot doesn't respond in a channel">
+    Most chat apps require explicitly inviting the bot to a channel. Re-invite it, or test by DMing the bot first.
+  </Accordion>
+  <Accordion title="No approval prompt appears">
+    The per-channel install page lists exact scopes and features. Confirm the scopes were granted; re-install if Slack/Discord workspace admins stripped scopes.
+  </Accordion>
+</Accordions>
+
+## Next
+
+<Callout>
+  - New here? Finish [Getting started](/docs/getting-started) to connect Zapier.
+  - Want the big picture? Read [Core concepts](/docs/core-concepts).
+  - Running your own copy? Each channel's dedicated doc has a **Self-host**
+    section with the webhook and env-var setup.
+</Callout>
