@@ -42,7 +42,7 @@ export function EditorShell({
             <div className="min-w-0 flex-1">
               <div className="truncate text-xs text-muted">{user.email}</div>
             </div>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </div>
       </aside>
@@ -56,7 +56,7 @@ export function EditorShell({
             <BotIcon className="size-4 text-accent" />
             Agent Editor
           </Link>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </div>
         {children}
       </main>
