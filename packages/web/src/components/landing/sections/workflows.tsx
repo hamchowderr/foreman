@@ -9,12 +9,10 @@ export function Workflows() {
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
           <Badge variant="accent" className="mb-4">Workflows</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-            Do it once. Save the pattern.
+            A workflow is just a conversation you saved.
           </h2>
           <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-            When a sequence repeats, Foreman extracts it as a reusable workflow
-            — with streamed progress and run history. Built from the
-            conversation, not a canvas.
+            When a sequence works, say &apos;save that.&apos; Foreman extracts the steps into a reusable workflow with streamed progress and run history. No canvas, no trigger picker, no 14-field mapping — just the chat you already had.
           </p>
         </Reveal>
         <Reveal delay={0.1}>

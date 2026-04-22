@@ -1,5 +1,6 @@
 import { Reveal } from "@/components/landing/reveal";
 import { ChannelMemory } from "@/components/landing/demos/channel-memory";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Terminal, Cpu } from "@/components/icons/hi";
 import {
@@ -44,41 +45,51 @@ export function Channels() {
           </p>
         </Reveal>
 
-        <div className="grid md:grid-cols-[1.1fr_1fr] gap-6 md:gap-10 items-start">
-          <Reveal>
-            <ChannelMemory />
+        <div className="grid md:grid-cols-[1.1fr_1fr] gap-6 md:gap-10 items-stretch">
+          <Reveal className="flex">
+            <TiltedSpotlight className="w-full">
+              <ChannelMemory />
+            </TiltedSpotlight>
           </Reveal>
 
-          <Reveal delay={0.1}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+          <Reveal delay={0.1} className="flex">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 auto-rows-fr w-full">
               {CHANNELS.map((c) => (
-                <div
+                <TiltedSpotlight
                   key={c.name}
-                  className={`rounded-lg border px-3 py-2.5 text-xs sm:text-sm transition-colors flex items-center gap-2 ${
-                    c.avail
-                      ? "border-border bg-surface hover:border-accent/40"
-                      : "border-border/40 bg-surface/40 text-muted"
-                  }`}
+                  borderEffect={false}
+                  spotlightEffect={false}
+                  radius="rounded-xl"
+                  maxTilt={3}
+                  className="w-full"
                 >
-                  <span className={`shrink-0 ${c.avail ? "" : "opacity-50"}`}>
-                    {c.Icon ? (
-                      <c.Icon size={18} />
-                    ) : (
-                      <span
-                        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded text-[10px] font-bold text-white"
-                        style={{ backgroundColor: c.color }}
-                      >
-                        {c.letter}
+                  <div
+                    className={`relative rounded-xl border flex flex-col items-center justify-center gap-2 p-3 text-xs sm:text-sm transition-colors ${
+                      c.avail
+                        ? "border-border bg-surface hover:border-accent/40"
+                        : "border-border/40 bg-surface/40 text-muted"
+                    }`}
+                  >
+                    <span className={`${c.avail ? "" : "opacity-50"}`}>
+                      {c.Icon ? (
+                        <c.Icon size={22} />
+                      ) : (
+                        <span
+                          className="inline-flex h-[22px] w-[22px] items-center justify-center rounded text-[11px] font-bold text-white"
+                          style={{ backgroundColor: c.color }}
+                        >
+                          {c.letter}
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-medium text-center leading-tight">{c.name}</span>
+                    {!c.avail && (
+                      <span className="absolute top-1.5 right-1.5 text-[9px] uppercase tracking-wider text-muted/70">
+                        soon
                       </span>
                     )}
-                  </span>
-                  <span className="font-medium flex-1 truncate">{c.name}</span>
-                  {!c.avail && (
-                    <span className="text-[10px] uppercase tracking-wider text-muted shrink-0">
-                      soon
-                    </span>
-                  )}
-                </div>
+                  </div>
+                </TiltedSpotlight>
               ))}
             </div>
           </Reveal>

@@ -54,7 +54,11 @@ export function HeroDemo() {
     mouseY.set(0);
   }
 
-  const visible = SCRIPT.slice(0, index + 1);
+  const visible = SCRIPT.slice(0, index + 1).filter((step, i, arr) => {
+    if (step.kind !== "thinking") return true;
+    const next = arr[i + 1];
+    return !next || next.kind === "thinking";
+  });
 
   return (
     <motion.div

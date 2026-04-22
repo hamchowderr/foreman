@@ -12,8 +12,7 @@ export function Guardrails() {
             An AI with a leash.
           </h2>
           <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-            Click a guardrail to see it in action. Agents that execute real
-            actions need real limits — Foreman ships them by default.
+            Driving real apps means real mistakes are possible. Foreman ships approval gates, PII redaction, rate limits, and an audit trail on by default — not as a setting you have to remember to turn on.
           </p>
         </Reveal>
         <Reveal delay={0.1}>

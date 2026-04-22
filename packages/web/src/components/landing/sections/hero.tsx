@@ -18,20 +18,20 @@ export function Hero() {
         <Reveal className="space-y-6 sm:space-y-8" direction="up">
           <Badge variant="accent" className="gap-1.5 py-1 px-3">
             <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-            Built on your Zapier account
+            A chat driver for your Zapier account
           </Badge>
 
           <h1 className="text-[2.25rem] sm:text-5xl lg:text-[3.5rem] font-semibold tracking-[-0.035em] leading-[1.08]">
-            Skip the Zap.
+            Don&apos;t build another agent.
             <br />
-            <span className="text-accent">Just say it.</span>
+            <span className="text-accent">Drive the one you already have.</span>
           </h1>
 
           <p className="text-base sm:text-lg text-muted max-w-lg leading-relaxed">
-            Foreman is the plain-language layer over your Zapier account.
-            Execute actions, manage Zapier Tables, discover connections —
-            all through natural language, with approval before anything runs.
-            From any chat app you already use.
+            Your Zapier account already has 9,000+ app connections.
+            Foreman drives them from chat — Slack, Discord, Telegram, MCP —
+            with approval gates and an audit trail. No agent builder,
+            no knowledge base to maintain, no per-agent config.
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -42,11 +42,6 @@ export function Hero() {
                 </Link>
               </Button>
             </MagneticButton>
-            <Button size="lg" variant="outline" asChild>
-              <a href="https://github.com/hamchowderr/foreman" target="_blank" rel="noreferrer">
-                Self-host on GitHub
-              </a>
-            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted pt-1">

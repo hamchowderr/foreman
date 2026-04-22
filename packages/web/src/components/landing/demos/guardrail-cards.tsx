@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { Shield, Eye, Lock, Gauge, Users, Ban, Check, ChevronDown } from "@/components/icons/hi";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 
 type Guardrail = {
   id: string;
@@ -126,38 +127,40 @@ export function GuardrailCards() {
       </div>
 
       {/* Desktop (lg+): grid of cards + sticky side panel */}
-      <div className="hidden lg:grid grid-cols-[1.2fr_1fr] gap-5 items-start">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="hidden lg:grid grid-cols-[1.2fr_1fr] gap-5 items-stretch">
+        <div className="grid grid-cols-2 gap-2 auto-rows-fr">
           {GUARDRAILS.map((g) => {
             const selected = g.id === activeId;
             return (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => setActiveId(g.id)}
-                className={`text-left rounded-xl border p-4 transition-all duration-200 ${
-                  selected
-                    ? "border-accent/40 bg-accent/5 shadow-sm"
-                    : "border-border/60 bg-background hover:border-border"
-                }`}
-              >
-                <div
-                  className={`inline-flex items-center justify-center h-8 w-8 rounded-lg mb-3 transition-colors ${
+              <TiltedSpotlight key={g.id} radius="rounded-xl" maxTilt={5} spotlightSize={220} className="h-full">
+                <button
+                  type="button"
+                  onClick={() => setActiveId(g.id)}
+                  className={`w-full h-full text-left rounded-xl border p-4 transition-all duration-200 ${
                     selected
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-foreground/5 text-foreground/70"
+                      ? "border-accent/40 bg-accent/5 shadow-sm"
+                      : "border-border/60 bg-background hover:border-border"
                   }`}
                 >
-                  <g.icon className="h-4 w-4" />
-                </div>
-                <h3 className="font-semibold text-sm mb-1">{g.title}</h3>
-                <p className="text-xs text-muted leading-relaxed">{g.body}</p>
-              </button>
+                  <div
+                    className={`inline-flex items-center justify-center h-8 w-8 rounded-lg mb-3 transition-colors ${
+                      selected
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-foreground/5 text-foreground/70"
+                    }`}
+                  >
+                    <g.icon className="h-4 w-4" />
+                  </div>
+                  <h3 className="font-semibold text-sm mb-1">{g.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed">{g.body}</p>
+                </button>
+              </TiltedSpotlight>
             );
           })}
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface overflow-hidden sticky top-20">
+        <TiltedSpotlight className="sticky top-20 self-start h-full flex">
+        <div className="rounded-2xl border border-border bg-surface overflow-hidden h-full w-full flex flex-col">
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
               <active.icon className="h-3.5 w-3.5 text-accent" />
@@ -165,7 +168,7 @@ export function GuardrailCards() {
             </div>
             <span className="text-[10px] uppercase tracking-widest text-muted">live</span>
           </div>
-          <div className="p-5 min-h-[260px] flex items-center justify-center">
+          <div className="p-5 min-h-[260px] flex-1 flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeId}
@@ -180,6 +183,7 @@ export function GuardrailCards() {
             </AnimatePresence>
           </div>
         </div>
+        </TiltedSpotlight>
       </div>
     </>
   );
