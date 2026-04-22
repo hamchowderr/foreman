@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Reveal } from "@/components/landing/reveal";
-import { TiltCard } from "@/components/landing/demos/tilt-card";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,19 +19,18 @@ export function Hosting() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Cloud — primary */}
         <Reveal className="max-w-3xl mx-auto text-center mb-10">
-          <Badge variant="accent" className="mb-4">Get started</Badge>
+          <Badge variant="accent" className="mb-4">Two ways to run it</Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-            Start chatting in 30 seconds.
+            Alpha-hosted or on your own server.
           </h2>
           <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-            Sign in, connect your Zapier account, and start giving Foreman
-            instructions. No setup, no infrastructure, no credit card.
+            Use our alpha to try it free. Self-host when you&apos;re ready to run it for your team or your clients — one Docker container, your data stays yours, full source on GitHub.
           </p>
         </Reveal>
 
-        <Reveal delay={0.1}>
-          <TiltCard max={3}>
-            <Card className="bg-background border-border/60 max-w-2xl mx-auto">
+        <Reveal delay={0.1} className="max-w-2xl mx-auto">
+          <TiltedSpotlight>
+            <Card className="bg-background border-border/60">
               <CardContent className="p-6 sm:p-8">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
@@ -60,12 +59,13 @@ export function Hosting() {
                 </Button>
               </CardContent>
             </Card>
-          </TiltCard>
+          </TiltedSpotlight>
         </Reveal>
 
         {/* Self-host — secondary, separated */}
-        <Reveal delay={0.2}>
-          <div className="max-w-2xl mx-auto mt-12 rounded-xl border border-border/40 bg-surface/30 p-6 sm:p-8">
+        <Reveal delay={0.2} className="max-w-2xl mx-auto mt-12">
+          <TiltedSpotlight radius="rounded-xl" maxTilt={2}>
+          <div className="rounded-xl border border-border/40 bg-surface/30 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-lg bg-foreground/5 flex items-center justify-center">
@@ -91,6 +91,7 @@ export function Hosting() {
               <span className="text-accent">$</span> docker run -p 4111:4111 foreman
             </div>
           </div>
+          </TiltedSpotlight>
         </Reveal>
       </div>
     </section>

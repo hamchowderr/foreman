@@ -2,12 +2,12 @@ import { SiteNav } from "@/components/landing/site-nav";
 import { Hero } from "@/components/landing/sections/hero";
 import { WhyNotZap } from "@/components/landing/sections/why-not-zap";
 import { HowItWorks } from "@/components/landing/sections/how-it-works";
+import { ReasoningTrace } from "@/components/landing/sections/reasoning-trace";
 import { ToolDiscoverySection } from "@/components/landing/sections/tool-discovery-section";
 import { Channels } from "@/components/landing/sections/channels";
 import { Guardrails } from "@/components/landing/sections/guardrails";
 import { HistorySection } from "@/components/landing/sections/history-section";
 import { PiiSection } from "@/components/landing/sections/pii-section";
-import { BringYourOwnZapier } from "@/components/landing/sections/bring-your-own-zapier";
 import { Workflows } from "@/components/landing/sections/workflows";
 import { Hosting } from "@/components/landing/sections/hosting";
 import { FiveThings } from "@/components/landing/sections/five-things";
@@ -22,12 +22,12 @@ export default function LandingPage() {
         <Hero />
         <WhyNotZap />
         <HowItWorks />
+        <ReasoningTrace />
         <ToolDiscoverySection />
         <Channels />
         <Guardrails />
         <HistorySection />
         <PiiSection />
-        <BringYourOwnZapier />
         <Workflows />
         <Hosting />
         <FiveThings />

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState, type ComponentType } from "react";
 import { Check, ChevronRight, Globe } from "@/components/icons/hi";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 import {
   SlackBrand,
   DiscordBrand,
@@ -238,6 +239,7 @@ export function FiveThingsReplay() {
       </div>
 
       {/* Replay pane */}
+      <TiltedSpotlight>
       <div className="rounded-2xl border border-border bg-surface overflow-hidden min-h-[400px] flex flex-col">
         {/* Channel-themed header */}
         <AnimatePresence mode="wait">
@@ -265,7 +267,13 @@ export function FiveThingsReplay() {
           </motion.div>
         </AnimatePresence>
         <div className="p-4 space-y-3 flex-1">
-          {scene.chat.slice(0, step + 1).map((msg, i) => (
+          {scene.chat
+            .slice(0, step + 1)
+            .filter((m, i, arr) => {
+              if (m.role !== "thinking") return true;
+              return i === arr.length - 1;
+            })
+            .map((msg, i) => (
             <motion.div
               key={`${activeId}-${i}`}
               initial={{ opacity: 0, y: 8 }}
@@ -346,6 +354,7 @@ export function FiveThingsReplay() {
           ))}
         </div>
       </div>
+      </TiltedSpotlight>
     </div>
   );
 }
