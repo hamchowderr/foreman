@@ -1,4 +1,5 @@
 import { Mastra } from "@mastra/core";
+import { MastraEditor } from "@mastra/editor";
 import { PostgresStore } from "@mastra/pg";
 import { MastraAuthClerk } from "@mastra/auth-clerk";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
@@ -101,6 +102,7 @@ export function getMastra(): Mastra {
       webhookHandler: webhookHandlerWorkflow,
     },
     storage,
+    editor: new MastraEditor(),
     observability,
     server: {
       port: Number(process.env.PORT) || 4111,
