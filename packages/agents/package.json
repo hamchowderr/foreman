@@ -42,7 +42,6 @@
     "@mastra/observability": "^1.9.1",
     "@mastra/pg": "^1.9.1",
     "@mastra/rag": "^2.2.0",
-    "@mastra/voice-elevenlabs": "^0.12.0",
     "@mastra/voice-openai": "^0.12.1",
     "@zapier/zapier-sdk": "^0.41.0",
     "ai": "^6.0.168",
