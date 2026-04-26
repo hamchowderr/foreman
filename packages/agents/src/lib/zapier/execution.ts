@@ -6,6 +6,7 @@ import {
 import { checkCapability } from "../capabilities";
 import { runGuardrails } from "../guardrails";
 import { resolveConnection } from "./aliases";
+import { normalizeAppKey } from "./normalize";
 
 type ActionType =
   | "search"
@@ -47,6 +48,7 @@ export async function runAction(
   inputs: Record<string, unknown>,
   connection?: string
 ) {
+  app = normalizeAppKey(app);
   const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
   await requireCapability(userId, capability);
 

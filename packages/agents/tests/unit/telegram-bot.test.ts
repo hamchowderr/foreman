@@ -1,6 +1,26 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { randomBytes } from "node:crypto";
 
+// Prevent real Telegram API calls during adapter init
+vi.mock("@chat-adapter/telegram", () => ({
+  createTelegramAdapter: vi.fn().mockReturnValue({
+    name: "telegram",
+    runtimeMode: "webhook",
+  }),
+}));
+
+vi.mock("chat", () => ({
+  Chat: vi.fn().mockImplementation(function () {
+    return {
+      onDirectMessage: vi.fn(),
+      onNewMention: vi.fn(),
+      onSubscribedMessage: vi.fn(),
+      webhooks: { telegram: vi.fn() },
+      initialize: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+}));
+
 // Mock the Mastra agent so we don't need a real DB or LLM
 vi.mock("@/mastra", () => ({
   getMastra: vi.fn().mockReturnValue({

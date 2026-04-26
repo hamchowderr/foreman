@@ -16,7 +16,7 @@ let _teamsAdapter: ReturnType<typeof createTeamsAdapter> | undefined;
 export async function getTeamsBot() {
   if (_bot) return _bot;
 
-  const teams = createTeamsAdapter({ appType: "singleTenant" });
+  const teams = createTeamsAdapter({ appType: "SingleTenant" });
   _teamsAdapter = teams;
 
   const bot = new Chat({

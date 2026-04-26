@@ -11,11 +11,6 @@ vi.mock("@/mastra", () => ({
   })),
 }));
 
-vi.mock("@/mastra/agents/foreman", () => ({
-  MODELS: { default: "test-model" },
-  buildSystemPrompt: vi.fn().mockReturnValue("test prompt"),
-}));
-
 // Mock channel webhook handlers
 vi.mock("@/telegram/webhook", () => ({
   handleTelegramWebhook: vi.fn((c: any) => c.json({ ok: true })),

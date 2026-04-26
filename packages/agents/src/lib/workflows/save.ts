@@ -1,5 +1,6 @@
 import { getDb, schema } from "@/lib/db";
 import { extractParams } from "./params";
+import { normalizeAppKey } from "@/lib/zapier/normalize";
 import { eq, and, asc } from "drizzle-orm";
 
 /** Heuristic: values that look like they should become parameters. */
@@ -101,7 +102,7 @@ export async function saveWorkflowFromConversation(
     }
 
     const template = {
-      appKey: p.appKey,
+      appKey: normalizeAppKey(p.appKey),
       actionType: p.actionType,
       actionKey: p.actionKey,
       humanLabel: p.humanLabel,
