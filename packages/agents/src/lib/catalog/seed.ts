@@ -1,6 +1,5 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../db";
+import { getSupabase } from "../db";
 import { indexAppCatalog } from "./vector";
 
 interface SeedOptions {
@@ -23,7 +22,6 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
   appsEmbedded: number;
 }> {
   const { limit, appsOnly = false, embedOnly = false, verbose = true } = options;
-  const db = getDb();
   const log = verbose ? console.log.bind(console) : () => {};
 
   let appsInserted = 0;
@@ -231,31 +229,20 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
         );
 
         // Upsert into app_catalog
-        const existing = await db
-          .select()
-          .from(schema.appCatalog)
-          .where(eq(schema.appCatalog.appKey, app.key))
-          .limit(1);
-
-        const row = {
-          appKey: app.key,
-          slug: app.slug ?? app.key.toLowerCase(),
-          title: app.title,
-          categories: JSON.stringify(app.categories ?? []),
-          authType: app.auth_type ?? null,
-          actionCount,
-          embeddingText,
-          syncedAt: new Date(),
-        };
-
-        if (existing.length > 0) {
-          await db
-            .update(schema.appCatalog)
-            .set(row)
-            .where(eq(schema.appCatalog.appKey, app.key));
-        } else {
-          await db.insert(schema.appCatalog).values(row);
-        }
+        const supabase = getSupabase();
+        await supabase.from("app_catalog").upsert(
+          {
+            app_key: app.key,
+            slug: app.slug ?? app.key.toLowerCase(),
+            title: app.title,
+            categories: JSON.stringify(app.categories ?? []),
+            auth_type: app.auth_type ?? null,
+            action_count: actionCount,
+            embedding_text: embeddingText,
+            synced_at: new Date().toISOString(),
+          },
+          { onConflict: "app_key" }
+        );
 
         appsInserted++;
       }
@@ -273,15 +260,16 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
 
   // Embed all apps in DB
   log("Embedding app catalog into vector index...");
-  const allApps = await db.select().from(schema.appCatalog);
-  const appsWithText = allApps.filter((a) => a.embeddingText);
+  const supabaseEmbed = getSupabase();
+  const { data: allApps } = await supabaseEmbed.from("app_catalog").select("*");
+  const appsWithText = (allApps ?? []).filter((a: any) => a.embedding_text);
 
   await indexAppCatalog(
-    appsWithText.map((a) => ({
-      appKey: a.appKey,
+    appsWithText.map((a: any) => ({
+      appKey: a.app_key,
       title: a.title,
       categories: a.categories,
-      embeddingText: a.embeddingText!,
+      embeddingText: a.embedding_text,
     })),
   );
 

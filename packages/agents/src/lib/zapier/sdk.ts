@@ -1,6 +1,5 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../db";
+import { getSupabase } from "../db";
 import { decryptToken, encryptToken } from "../crypto";
 import { getEnv } from "../env";
 import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
@@ -94,27 +93,28 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   }
 
   // Load from database — when orgId is set, try shared org connection first
-  type IdentityRow = typeof schema.zapierIdentity.$inferSelect;
-  const db = getDb();
-  let identity: IdentityRow | undefined;
+  const supabase = getSupabase();
+  let identity: Record<string, any> | null = null;
 
   if (orgId) {
-    const orgRows = await db
-      .select()
-      .from(schema.zapierIdentity)
-      .where(eq(schema.zapierIdentity.orgId, orgId))
-      .limit(1);
-    identity = orgRows[0];
+    const { data } = await supabase
+      .from("zapier_identity")
+      .select("*")
+      .eq("org_id", orgId)
+      .limit(1)
+      .maybeSingle();
+    identity = data;
   }
 
   // Fall back to user's personal connection
   if (!identity) {
-    const userRows = await db
-      .select()
-      .from(schema.zapierIdentity)
-      .where(eq(schema.zapierIdentity.userId, userId))
-      .limit(1);
-    identity = userRows[0];
+    const { data } = await supabase
+      .from("zapier_identity")
+      .select("*")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    identity = data;
   }
 
   if (!identity) {
@@ -129,21 +129,22 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   let tokenExpiry: number;
 
   // Refresh if expired
-  if (identity.expiresAt && identity.expiresAt.getTime() < Date.now()) {
+  const expiresAtMs = identity.expires_at ? new Date(identity.expires_at).getTime() : null;
+  if (expiresAtMs && expiresAtMs < Date.now()) {
     try {
-      const storedRefresh = decryptToken(identity.refreshToken);
+      const storedRefresh = decryptToken(identity.refresh_token);
       const refreshed = await refreshAccessToken(userId, storedRefresh);
 
       // Update DB with new tokens
-      await db
-        .update(schema.zapierIdentity)
-        .set({
-          accessToken: encryptToken(refreshed.accessToken),
-          refreshToken: encryptToken(refreshed.refreshToken),
-          expiresAt: refreshed.expiresAt,
-          updatedAt: new Date(),
+      await supabase
+        .from("zapier_identity")
+        .update({
+          access_token: encryptToken(refreshed.accessToken),
+          refresh_token: encryptToken(refreshed.refreshToken),
+          expires_at: refreshed.expiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        .where(eq(schema.zapierIdentity.userId, userId));
+        .eq("user_id", userId);
 
       accessToken = refreshed.accessToken;
       tokenExpiry = refreshed.expiresAt.getTime();
@@ -153,10 +154,8 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
       throw new ZapierReauthRequired(userId, "token refresh failed");
     }
   } else {
-    accessToken = decryptToken(identity.accessToken);
-    tokenExpiry = identity.expiresAt
-      ? identity.expiresAt.getTime()
-      : Date.now() + 5 * 60 * 1000;
+    accessToken = decryptToken(identity.access_token);
+    tokenExpiry = expiresAtMs ?? Date.now() + 5 * 60 * 1000;
   }
 
   const connectionsMap = await loadUserConnectionsMap(userId);

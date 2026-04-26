@@ -1,6 +1,5 @@
 import { randomUUID, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../db";
+import { getSupabase } from "../db";
 import { encryptToken } from "../crypto";
 import { getEnv } from "../env";
 
@@ -120,25 +119,23 @@ export async function exchangeCodeAndStore(
     scope?: string;
   };
 
-  const now = new Date();
+  const now = new Date().toISOString();
   const expiresIn = data.expires_in || 3600;
-  const expiresAt = new Date(Date.now() + expiresIn * 1000);
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  const db = getDb();
+  const supabase = getSupabase();
 
-  // Upsert: delete existing then insert
-  await db
-    .delete(schema.zapierIdentity)
-    .where(eq(schema.zapierIdentity.userId, userId));
-
-  await db.insert(schema.zapierIdentity).values({
-    id: randomUUID(),
-    userId,
-    accessToken: encryptToken(data.access_token),
-    refreshToken: encryptToken(data.refresh_token),
-    expiresAt,
-    scopes: JSON.stringify(data.scope?.split(" ") ?? []),
-    createdAt: now,
-    updatedAt: now,
-  });
+  await supabase.from("zapier_identity").upsert(
+    {
+      id: randomUUID(),
+      user_id: userId,
+      access_token: encryptToken(data.access_token),
+      refresh_token: encryptToken(data.refresh_token),
+      expires_at: expiresAt,
+      scopes: JSON.stringify(data.scope?.split(" ") ?? []),
+      created_at: now,
+      updated_at: now,
+    },
+    { onConflict: "user_id" }
+  );
 }

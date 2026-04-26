@@ -1,53 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the DB module
-vi.mock("@/lib/db", () => {
-  const mockSelect = vi.fn();
-  const mockFrom = vi.fn();
-  const mockWhere = vi.fn();
-  const mockLimit = vi.fn();
-  const mockInsert = vi.fn();
-  const mockValues = vi.fn();
-  const mockOnConflictDoUpdate = vi.fn();
+// ─── Supabase mock ───
 
-  const chain = {
-    select: mockSelect,
-    from: mockFrom,
-    where: mockWhere,
-    limit: mockLimit,
-    insert: mockInsert,
-    values: mockValues,
-    onConflictDoUpdate: mockOnConflictDoUpdate,
-  };
+let nextResult: any = { data: null, error: null };
 
-  mockSelect.mockReturnValue(chain);
-  mockFrom.mockReturnValue(chain);
-  mockWhere.mockReturnValue(chain);
-  mockLimit.mockReturnValue(chain);
-  mockInsert.mockReturnValue(chain);
-  mockValues.mockReturnValue(chain);
-  mockOnConflictDoUpdate.mockResolvedValue(undefined);
+function createChain() {
+  const builder: any = {};
+  for (const m of ["select", "eq", "limit", "upsert"]) {
+    builder[m] = vi.fn().mockReturnValue(builder);
+  }
+  builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextResult));
+  builder.then = (resolve: any) => resolve(nextResult);
+  return builder;
+}
 
-  return {
-    getDb: () => chain,
-    schema: {
-      capabilityFlag: {
-        userId: "userId",
-        capability: "capability",
-        enabled: "enabled",
-      },
-    },
-    __mocks: { mockWhere, mockFrom, mockLimit, mockOnConflictDoUpdate },
-  };
-});
+const mockSupabase = {
+  from: vi.fn(() => createChain()),
+};
+
+vi.mock("@/lib/db", () => ({
+  getSupabase: () => mockSupabase,
+  getDb: () => mockSupabase,
+}));
 
 describe("capabilities", () => {
-  let mockDb: any;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.resetModules();
-    const dbModule = await import("@/lib/db");
-    mockDb = (dbModule as any).__mocks;
+    nextResult = { data: null, error: null };
   });
 
   describe("CAPABILITIES", () => {
@@ -65,10 +44,7 @@ describe("capabilities", () => {
 
   describe("getCapabilities", () => {
     it("returns all standard capabilities defaulting to true when no DB rows", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      // Return empty array (no rows in DB)
-      db.where.mockResolvedValueOnce([]);
+      nextResult = { data: [], error: null };
 
       const { getCapabilities } = await import("@/lib/capabilities");
       const caps = await getCapabilities("user-1");
@@ -82,12 +58,13 @@ describe("capabilities", () => {
     });
 
     it("overrides defaults with DB values", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.where.mockResolvedValueOnce([
-        { userId: "user-1", capability: "voice", enabled: false },
-        { userId: "user-1", capability: "raw_api", enabled: false },
-      ]);
+      nextResult = {
+        data: [
+          { capability: "voice", enabled: false },
+          { capability: "raw_api", enabled: false },
+        ],
+        error: null,
+      };
 
       const { getCapabilities } = await import("@/lib/capabilities");
       const caps = await getCapabilities("user-1");
@@ -100,9 +77,7 @@ describe("capabilities", () => {
 
   describe("setCapability", () => {
     it("inserts/upserts a capability flag", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.onConflictDoUpdate.mockResolvedValueOnce(undefined);
+      nextResult = { data: null, error: null };
 
       const { setCapability } = await import("@/lib/capabilities");
       await expect(setCapability("user-1", "voice", false)).resolves.toBeUndefined();
@@ -111,9 +86,7 @@ describe("capabilities", () => {
 
   describe("checkCapability", () => {
     it("returns true when no row exists (default-on)", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([]);
+      nextResult = { data: null, error: null };
 
       const { checkCapability } = await import("@/lib/capabilities");
       const result = await checkCapability("user-1", "search");
@@ -121,11 +94,7 @@ describe("capabilities", () => {
     });
 
     it("returns false when explicitly disabled", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([
-        { userId: "user-1", capability: "voice", enabled: false },
-      ]);
+      nextResult = { data: { enabled: false }, error: null };
 
       const { checkCapability } = await import("@/lib/capabilities");
       const result = await checkCapability("user-1", "voice");
@@ -133,11 +102,7 @@ describe("capabilities", () => {
     });
 
     it("returns true when explicitly enabled", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([
-        { userId: "user-1", capability: "write", enabled: true },
-      ]);
+      nextResult = { data: { enabled: true }, error: null };
 
       const { checkCapability } = await import("@/lib/capabilities");
       const result = await checkCapability("user-1", "write");

@@ -5,31 +5,33 @@ vi.mock("@/lib/capabilities", () => ({
   checkCapability: vi.fn().mockResolvedValue(true),
 }));
 
-// Mock the DB module (used by checkSensitiveAppCapability)
-vi.mock("@/lib/db", () => {
-  const mockLimit = vi.fn().mockResolvedValue([]);
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: mockLimit,
-  };
-  return {
-    getDb: () => chain,
-    schema: {
-      capabilityFlag: {
-        userId: "userId",
-        capability: "capability",
-        enabled: "enabled",
-      },
-    },
-    __mocks: { mockLimit },
-  };
-});
+// ─── Supabase mock ───
+
+let nextSensitiveResult: any = { data: null, error: null };
+
+function createChain() {
+  const builder: any = {};
+  for (const m of ["select", "eq", "limit"]) {
+    builder[m] = vi.fn().mockReturnValue(builder);
+  }
+  builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextSensitiveResult));
+  builder.then = (resolve: any) => resolve(nextSensitiveResult);
+  return builder;
+}
+
+const mockSupabase = {
+  from: vi.fn(() => createChain()),
+};
+
+vi.mock("@/lib/db", () => ({
+  getSupabase: () => mockSupabase,
+  getDb: () => mockSupabase,
+}));
 
 describe("guardrails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    nextSensitiveResult = { data: null, error: null };
   });
 
   describe("checkRateLimit", () => {
@@ -119,8 +121,8 @@ describe("guardrails", () => {
 
   describe("checkAppAccess", () => {
     it("blocks sensitive apps by default (no capability row)", async () => {
+      // nextSensitiveResult = { data: null } → checkSensitiveAppCapability returns false
       const { checkAppAccess } = await import("@/lib/guardrails");
-      // DB mock returns empty array (no row) → checkSensitiveAppCapability returns false
       const result = await checkAppAccess("user-1", "stripe");
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("banking");

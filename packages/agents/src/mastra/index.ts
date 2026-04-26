@@ -1,7 +1,6 @@
 import { Mastra } from "@mastra/core";
 import { MastraEditor } from "@mastra/editor";
 import { PostgresStore } from "@mastra/pg";
-import { MastraAuthClerk } from "@mastra/auth-clerk";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { toAISdkStream } from "@mastra/ai-sdk";
 import { registerApiRoute } from "@mastra/core/server";
@@ -66,20 +65,12 @@ export function getMastra(): Mastra {
 
   /**
    * Fix the stream format mismatch between @mastra/ai-sdk and the AI SDK v6 protocol.
-   *
-   * toAISdkStream emits { type: "data-tool-call-approval", data: { runId, toolCallId } }
-   * but the AI SDK client expects { type: "tool-approval-request", approvalId, toolCallId }.
-   * Without this transform, approval-required tools stay stuck in "Running" state.
    */
   function fixApprovalStream(stream: ReadableStream): ReadableStream {
     return stream.pipeThrough(
       new TransformStream({
         transform(chunk: any, controller) {
           if (chunk.type === "data-tool-call-approval") {
-            // Convert to the format the AI SDK client expects.
-            // Use the Mastra runId as the approvalId — the frontend will send
-            // this back when the user approves/declines so we can call
-            // agent.approveToolCall({ runId }) / agent.declineToolCall({ runId }).
             controller.enqueue({
               type: "tool-approval-request",
               approvalId: chunk.data.runId,
@@ -122,9 +113,6 @@ export function getMastra(): Mastra {
               const agent = mastra.getAgent(agentId) as Agent;
               if (!agent) return c.json({ error: "Agent not found" }, 404);
 
-              // Handle tool approval/decline responses.
-              // The frontend sends { approveRunId, approved } when the user
-              // responds to a tool-approval-request.
               if (body.approveRunId) {
                 const result = body.approved
                   ? await agent.approveToolCall({ runId: body.approveRunId })
@@ -137,7 +125,6 @@ export function getMastra(): Mastra {
                 });
               }
 
-              // Normal chat message flow
               const lastMsg = Array.isArray(body.messages) ? body.messages.at(-1) : null;
               const text = lastMsg?.parts
                 ? lastMsg.parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("")
@@ -147,35 +134,34 @@ export function getMastra(): Mastra {
               const rid = body.resourceId || "";
               const incomingTid = body.threadId || body.id;
 
-              // The frontend sends the conversation UUID as threadId, but Mastra
-              // Memory uses its own thread ID. Look up the mastra_thread_id from
-              // the conversation table so memory/history load from the correct thread.
+              // Look up mastra_thread_id from the conversation table so memory loads correctly.
               let tid: string;
               if (incomingTid) {
-                const { getDb, schema } = await import("../lib/db");
-                const { eq } = await import("drizzle-orm");
-                const db = getDb();
-                const rows = await db
-                  .select({ mastraThreadId: schema.conversation.mastraThreadId })
-                  .from(schema.conversation)
-                  .where(eq(schema.conversation.id, incomingTid))
-                  .limit(1);
-                if (rows[0]?.mastraThreadId) {
-                  tid = rows[0].mastraThreadId;
+                const { getSupabase } = await import("../lib/db");
+                const supabase = getSupabase();
+                const { data: conv } = await supabase
+                  .from("conversation")
+                  .select("mastra_thread_id")
+                  .eq("id", incomingTid)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (conv?.mastra_thread_id) {
+                  tid = conv.mastra_thread_id;
                 } else {
                   // No mapping — create a Mastra thread and persist the mapping
                   const memory = await agent.getMemory();
                   const thread = await memory!.createThread({ resourceId: rid });
                   tid = thread.id;
-                  const now = new Date();
-                  await db.insert(schema.conversation).values({
+                  const now = new Date().toISOString();
+                  await supabase.from("conversation").insert({
                     id: incomingTid,
-                    userId: rid,
-                    orgId: null,
-                    mastraThreadId: tid,
+                    user_id: rid,
+                    org_id: null,
+                    mastra_thread_id: tid,
                     title: null,
-                    createdAt: now,
-                    updatedAt: now,
+                    created_at: now,
+                    updated_at: now,
                   });
                 }
               } else {
@@ -209,14 +195,6 @@ export function getMastra(): Mastra {
           },
         }),
       ],
-      ...(process.env.NODE_ENV === "production" || process.env.FOREMAN_MODE === "production"
-        ? {
-            auth: new MastraAuthClerk({
-              publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY,
-              secretKey: process.env.CLERK_SECRET_KEY,
-            }),
-          }
-        : {}),
     },
   });
 
