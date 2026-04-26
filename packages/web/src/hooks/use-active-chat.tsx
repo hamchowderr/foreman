@@ -2,7 +2,8 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
-import { useAuth } from "@clerk/nextjs";
+import { useCallback } from "react";
+import { createClient } from "@/lib/client";
 import { DefaultChatTransport } from "ai";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { useDataStream } from "@/components/chat/data-stream-provider";
@@ -62,8 +64,17 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
-  const { getToken, userId } = useAuth();
   const { log } = useDevConsole();
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user.id ?? null);
+    });
+  }, []);
+  const getToken = useCallback(async () => {
+    const { data: { session } } = await createClient().auth.getSession();
+    return session?.access_token ?? null;
+  }, []);
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
   const userIdRef = useRef(userId);

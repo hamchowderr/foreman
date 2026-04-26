@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.118",
-    "@clerk/nextjs": "^7.2.3",
     "@codemirror/lang-python": "^6.1.6",
     "@codemirror/state": "^6.5.0",
     "@codemirror/theme-one-dark": "^6.1.2",
@@ -25,6 +24,8 @@
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.2",
     "@streamdown/mermaid": "^1.0.2",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.104.1",
     "ai": "^6.0.168",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",

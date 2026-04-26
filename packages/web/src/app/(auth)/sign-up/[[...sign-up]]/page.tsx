@@ -1,12 +1,5 @@
-import { SignUp } from "@clerk/nextjs";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
 export default function SignUpPage() {
-  return (
-    <div className="flex min-h-dvh items-center justify-center">
-      <Suspense>
-        <SignUp />
-      </Suspense>
-    </div>
-  );
+  redirect("/auth/sign-up");
 }
