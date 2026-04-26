@@ -74,7 +74,7 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 - **Client**: `agents/src/lib/db/index.ts` — `getSupabase()` returns supabase-js service_role client
 - **Mastra storage**: `PostgresStore` from `@mastra/pg` (direct `DATABASE_URL` connection, separate from supabase-js)
 - **Vector**: `PgVector` from `@mastra/pg`
-- **Migrations**: SQL files in `agents/drizzle/` — apply manually via Supabase Studio or `psql`
+- **Migrations**: `supabase/migrations/` — applied automatically by `npx supabase db reset`
 - **Local dev**: Supabase CLI — `npx supabase start` (ports shifted +100 to avoid collisions)
   - API: http://127.0.0.1:54421
   - Postgres: 127.0.0.1:54422 (user: `postgres`, pass: `postgres`, db: `postgres`)
@@ -134,8 +134,8 @@ cd packages/agents && npm run start:webhooks  # Channel webhooks (:4112)
 cd packages/agents && npm run build        # mastra build → .mastra/output/
 cd packages/agents && npm run build:vercel  # for Vercel deployment
 
-# Database (apply migrations manually via Studio or psql)
-# psql postgres://postgres:postgres@127.0.0.1:54422/postgres -f packages/agents/drizzle/0000_init.sql
+# Database
+npx supabase db reset                      # apply migrations from supabase/migrations/
 
 # Lint
 npm run lint && npm run format
