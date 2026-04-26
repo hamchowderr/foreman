@@ -6,7 +6,7 @@ import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observa
 import { toAISdkStream } from "@mastra/ai-sdk";
 import { registerApiRoute } from "@mastra/core/server";
 import { RequestContext } from "@mastra/core/request-context";
-import { createUIMessageStreamResponse } from "ai";
+import { createUIMessageStreamResponse, stepCountIs } from "ai";
 import type { Agent } from "@mastra/core/agent";
 import { createForemanAgent } from "./agents/foreman";
 import { createDiscoveryAgent } from "./agents/discovery";
@@ -14,7 +14,10 @@ import { createExecutionAgent } from "./agents/execution";
 import { createHistoryAgent } from "./agents/history";
 import { createSupervisorAgent } from "./agents/supervisor";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
+import { validateAgentCapabilities } from "../lib/providers";
 import type { MiddlewareHandler } from "hono";
+
+validateAgentCapabilities();
 
 let _mastra: Mastra | undefined;
 
@@ -102,7 +105,6 @@ export function getMastra(): Mastra {
       webhookHandler: webhookHandlerWorkflow,
     },
     storage,
-    editor: new MastraEditor(),
     observability,
     server: {
       port: Number(process.env.PORT) || 4111,
@@ -188,7 +190,7 @@ export function getMastra(): Mastra {
               const result = await agent.stream(
                 [{ role: "user" as const, content: text }],
                 {
-                  maxSteps: 15,
+                  stopWhen: stepCountIs(15),
                   memory: { thread: tid, resource: rid },
                   savePerStep: true,
                   requestContext: rctx,

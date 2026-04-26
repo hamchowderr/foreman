@@ -96,6 +96,8 @@ export const workflow = pgTable("workflow", {
     () => conversation.id
   ),
   parameters: text("parameters").notNull(), // JSON
+  isTemplate: boolean("is_template").notNull().default(false),
+  clonedFrom: text("cloned_from"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
 });
@@ -121,6 +123,22 @@ export const workflowRun = pgTable("workflow_run", {
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
   completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
 });
+
+// ─── Connection Aliases (portable workflow references) ───
+
+export const connectionAlias = pgTable(
+  "connection_alias",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    alias: text("alias").notNull(),
+    appKey: text("app_key").notNull(),
+    connectionId: integer("connection_id").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.alias] })]
+);
 
 // ─── Capability Flags ───
 

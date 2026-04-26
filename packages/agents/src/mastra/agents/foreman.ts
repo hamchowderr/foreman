@@ -17,16 +17,14 @@ import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
-
-/** Model routing constants — use the right model for the job */
-export const MODELS = {
-  /** Default model for conversation and execution approval */
-  default: "anthropic/claude-sonnet-4-6",
-  /** Fast/cheap model for title generation, scoring, lightweight tasks */
-  fast: "anthropic/claude-haiku-4-5-20251001",
-  /** Heavy reasoning for complex multi-step planning */
-  heavy: "anthropic/claude-opus-4-6",
-} as const;
+import {
+  MODELS,
+  AGENT_MODELS,
+  modelSettingsFor,
+  onFinishCostLogger,
+  systemPromptFor,
+  toolsWithCacheControl,
+} from "../../lib/providers";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -97,16 +95,18 @@ export function createForemanAgent(databaseUrl: string) {
     name: "Foreman",
     description:
       "AI assistant that helps users take actions across 9000+ apps via Zapier",
-    instructions: buildSystemPrompt(),
-    model: MODELS.default,
-    tools: {
-      // Custom tools always available
+    instructions: systemPromptFor("foreman", buildSystemPrompt()),
+    model: AGENT_MODELS.foreman,
+    defaultOptions: {
+      modelSettings: modelSettingsFor("foreman"),
+      onFinish: onFinishCostLogger("foreman"),
+    },
+    tools: toolsWithCacheControl("foreman", {
       search_history: searchHistoryTool,
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
-      // Core Zapier tools always available (no search/load needed)
       ...coreTools,
-    },
+    }),
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {

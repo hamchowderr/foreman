@@ -71,6 +71,139 @@ workflows.get("/", async (c) => {
   );
 });
 
+// GET /templates — list all public workflow templates (any user)
+workflows.get("/templates", async (c) => {
+  const db = getDb();
+
+  const rows = await db
+    .select()
+    .from(schema.workflow)
+    .where(eq(schema.workflow.isTemplate, true))
+    .orderBy(desc(schema.workflow.updatedAt));
+
+  return c.json(
+    rows.map((w) => ({
+      id: w.id,
+      name: w.name,
+      owner_user_id: w.userId,
+      parameters: JSON.parse(w.parameters),
+      created_at: w.createdAt.toISOString(),
+      updated_at: w.updatedAt.toISOString(),
+    }))
+  );
+});
+
+// PATCH /:id — update workflow metadata (currently: isTemplate flag)
+workflows.patch("/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid workflow id" }, 400);
+  }
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const db = getDb();
+  const existing = await db
+    .select()
+    .from(schema.workflow)
+    .where(and(eq(schema.workflow.id, id), eq(schema.workflow.userId, userId)))
+    .limit(1);
+
+  if (!existing[0]) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  const updates: { isTemplate?: boolean; updatedAt: Date } = {
+    updatedAt: new Date(),
+  };
+  if (typeof body.is_template === "boolean") {
+    updates.isTemplate = body.is_template;
+  }
+
+  await db
+    .update(schema.workflow)
+    .set(updates)
+    .where(eq(schema.workflow.id, id));
+
+  return c.json({ ok: true, id, is_template: updates.isTemplate ?? existing[0].isTemplate });
+});
+
+// POST /:id/clone — clone a template into caller's workspace.
+// Strips numeric connectionId values (importer's IDs won't match); preserves
+// string aliases, which resolve via the importer's connection_alias table.
+workflows.post("/:id/clone", async (c) => {
+  const userId = c.get("userId");
+  const sourceId = validateParam(c.req.param("id"), "id");
+  if (!sourceId) {
+    return c.json({ error: "Invalid workflow id" }, 400);
+  }
+  const db = getDb();
+
+  const sourceRows = await db
+    .select()
+    .from(schema.workflow)
+    .where(eq(schema.workflow.id, sourceId))
+    .limit(1);
+
+  const source = sourceRows[0];
+  if (!source) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  // Clone only permitted if it's a public template or the caller owns it
+  if (!source.isTemplate && source.userId !== userId) {
+    return c.json({ error: "Workflow is not a public template" }, 403);
+  }
+
+  const sourceSteps = await db
+    .select()
+    .from(schema.workflowStep)
+    .where(eq(schema.workflowStep.workflowId, sourceId))
+    .orderBy(asc(schema.workflowStep.order));
+
+  const newWorkflowId = crypto.randomUUID();
+  const now = new Date();
+
+  await db.insert(schema.workflow).values({
+    id: newWorkflowId,
+    userId,
+    name: source.name,
+    sourceConversationId: null,
+    parameters: source.parameters,
+    isTemplate: false,
+    clonedFrom: sourceId,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const newSteps = sourceSteps.map((s) => {
+    const template = JSON.parse(s.proposalTemplate) as Record<string, unknown>;
+    const rawConnection = template.connectionId;
+    // Drop numeric connection IDs; keep string aliases (resolver looks them up)
+    if (typeof rawConnection === "number" || (typeof rawConnection === "string" && /^\d+$/.test(rawConnection))) {
+      delete template.connectionId;
+    }
+    return {
+      id: crypto.randomUUID(),
+      workflowId: newWorkflowId,
+      order: s.order,
+      proposalTemplate: JSON.stringify(template),
+    };
+  });
+
+  if (newSteps.length > 0) {
+    await db.insert(schema.workflowStep).values(newSteps);
+  }
+
+  return c.json({ id: newWorkflowId, cloned_from: sourceId }, 201);
+});
+
 // GET /:id — get workflow with steps
 workflows.get("/:id", async (c) => {
   const userId = c.get("userId");

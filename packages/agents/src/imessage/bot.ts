@@ -1,3 +1,4 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createiMessageAdapter } from "chat-adapter-imessage";
 import { createMemoryState } from "@chat-adapter/state-memory";
@@ -45,7 +46,7 @@ export async function getiMessageBot() {
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from iMessage, because resource is the same userId.
     const result = await agent.generate(text, {
-      maxSteps: 5,
+      stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `imessage-${threadId}`,
