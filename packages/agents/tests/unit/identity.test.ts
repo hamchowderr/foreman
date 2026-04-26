@@ -27,7 +27,6 @@ const mockSupabase = {
 
 vi.mock("@/lib/db", () => ({
   getSupabase: () => mockSupabase,
-  getDb: () => mockSupabase,
   __mocks: { mockAuth, mockSupabase, setNextResult: (r: any) => { nextQueryResult = r; } },
 }));
 

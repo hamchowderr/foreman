@@ -49,7 +49,7 @@ foreman/
 │   │   │   ├── lib/
 │   │   │   │   ├── zapier/               # SDK wrapper, discovery, execution, errors, connect
 │   │   │   │   ├── zapier-sdk-tools.ts   # Direct SDK import → auto-generated Mastra tools + toModelOutput + requireApproval
-│   │   │   │   ├── db/                   # Drizzle ORM schema + connection (Postgres/pgvector via Supabase)
+│   │   │   │   ├── db/                   # supabase-js client + TypeScript table interfaces
 │   │   │   │   ├── stream/              # SSE encoding, chunk transformer, types
 │   │   │   │   ├── processors/          # Input (context injection) + Output (PII redaction)
 │   │   │   │   ├── rag/                 # Action history indexing + semantic search
@@ -62,7 +62,7 @@ foreman/
 │   │   │   ├── routes/                  # Hono API routes
 │   │   │   │   ├── conversations.ts     # CRUD + SSE streaming (savePerStep, prepareStep)
 │   │   │   │   ├── proposals.ts         # Approve/decline/field-choices
-│   │   │   │   ├── middleware.ts        # Clerk JWT auth middleware
+│   │   │   │   ├── middleware.ts        # Supabase JWT + API key auth middleware
 │   │   │   │   ├── webhooks.ts          # Channel webhook routes
 │   │   │   │   └── zapier-connect.ts    # OAuth flow for non-web channels
 │   │   │   ├── workflows/               # Mastra workflows
@@ -77,8 +77,7 @@ foreman/
 │   │   │   ├── linear/bot.ts            # Linear adapter (Chat SDK)
 │   │   │   ├── imessage/bot.ts          # iMessage adapter (Chat SDK)
 │   │   │   └── webhook-server.ts        # Standalone webhook server (:4112)
-│   │   ├── drizzle/                     # SQL migrations
-│   │   ├── drizzle.config.ts
+│   │   ├── drizzle/                     # Legacy SQL migrations (schema managed via Supabase)
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   └── web/                 # Next.js frontend (:3000)
@@ -208,14 +207,14 @@ Mastra does not provide a `toUIMessageStreamResponse` method. Foreman implements
 
 ### Authentication
 
-Foreman uses [Clerk](https://clerk.com) for user authentication.
+Foreman uses [Supabase Auth](https://supabase.com/docs/guides/auth) for user authentication.
 
-| Auth Method                                                 | Use Case                                                      |
-| ----------------------------------------------------------- | ------------------------------------------------------------- |
-| Clerk (`@clerk/nextjs`)                                     | Web frontend sign-in/sign-up, org switching                   |
-| `@mastra/auth-clerk` (JWKS JWT verification)                | Agent server validates Clerk session tokens                   |
-| API key (`x-api-key` header, `fmn_` prefix, SHA-256 hashed) | MCP, A2A, programmatic access                                 |
-| Channel identity                                            | Auto-registered per platform (Slack, Discord, Telegram, etc.) |
+| Auth Method                                                 | Use Case                                                             |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| Clerk (`@clerk/nextjs`)                                     | Web frontend sign-in/sign-up (Phase 2 migration to Supabase pending) |
+| Supabase JWT (`supabase.auth.getUser(token)`)               | Agent server validates session tokens                                |
+| API key (`x-api-key` header, `fmn_` prefix, SHA-256 hashed) | MCP, A2A, programmatic access                                        |
+| Channel identity                                            | Auto-registered per platform (Slack, Discord, Telegram, etc.)        |
 
 Users from chat channels get auto-created Foreman accounts. Multiple channel identities can be linked to a single user.
 
@@ -368,9 +367,10 @@ ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-proj-...              # For embeddings and voice STT
 AGENT_SERVER_URL=http://localhost:4111  # Used for Zapier OAuth callback URLs
 
-# Auth (Clerk)
-CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
+# Auth (Supabase)
+SUPABASE_URL=http://127.0.0.1:54421       # local; production: https://xxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service_role>  # from: npx supabase start
+SUPABASE_ANON_KEY=<anon_key>             # from: npx supabase start
 
 # Zapier
 FOREMAN_MODE=dev                        # "dev", "production", or "self_hosted"
@@ -412,11 +412,9 @@ Foreman uses a local Supabase instance (Postgres + pgvector) for development. Po
 ```bash
 # Boots Postgres (:54422), API (:54421), Studio (:54423)
 npx supabase start
-
-# Apply schema (includes CREATE EXTENSION vector)
-cd packages/agents
-npx drizzle-kit migrate
 ```
+
+After starting, copy the `service_role key` and `anon key` from the CLI output into `packages/agents/.env.local` as `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_ANON_KEY`.
 
 Studio UI: http://127.0.0.1:54423 · Stop with `npx supabase stop`.
 
@@ -583,20 +581,18 @@ curl -X POST http://localhost:4111/a2a/foreman \
 
 ## Database
 
-Foreman uses **Postgres with pgvector** via [Drizzle ORM](https://orm.drizzle.team) (dialect: `postgresql`, driver: [`postgres-js`](https://github.com/porsager/postgres)). Mastra storage and vector search use `PostgresStore` and `PgVector` from [`@mastra/pg`](https://mastra.ai/docs).
+Foreman uses **Postgres with pgvector** via [supabase-js](https://supabase.com/docs/reference/javascript) for all application tables. Mastra storage and vector search use `PostgresStore` and `PgVector` from [`@mastra/pg`](https://mastra.ai/docs) (direct `DATABASE_URL` connection, separate from supabase-js).
 
 Local development uses the [Supabase CLI](https://supabase.com/docs/guides/cli) to run Postgres + pgvector in Docker. Production can use hosted Supabase, Neon, or any Postgres provider with the `vector` extension.
 
 **Local:** `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres`
 **Production:** `DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>`
 
-The initial migration (`drizzle/0000_init.sql`) prepends `CREATE EXTENSION IF NOT EXISTS vector` so pgvector is enabled before any vector columns are created.
-
 ### Tables
 
 | Table              | Purpose                                                          |
 | ------------------ | ---------------------------------------------------------------- |
-| `user`             | User accounts (synced from Clerk)                                |
+| `user`             | User accounts                                                    |
 | `zapier_identity`  | Per-user Zapier OAuth tokens (encrypted)                         |
 | `conversation`     | Chat conversations (links to `mastraThreadId` for memory)        |
 | `action_proposal`  | Pending/approved/declined action proposals                       |
@@ -610,16 +606,16 @@ The initial migration (`drizzle/0000_init.sql`) prepends `CREATE EXTENSION IF NO
 | `app_catalog`      | Cached Zapier app metadata with embeddings for semantic search   |
 | `api_key`          | API keys for MCP/A2A access (`fmn_` prefixed, SHA-256 hashed)    |
 
-### Migrations
+### Schema Changes
+
+Application tables are managed via the Supabase CLI. Use Supabase Studio (`:54423`) or SQL editor to apply schema changes locally, then generate a migration:
 
 ```bash
-cd packages/agents
+# Generate migration from local schema changes
+npx supabase db diff -f my_migration_name
 
-# Generate migration from schema changes
-npx drizzle-kit generate
-
-# Apply migrations
-npx drizzle-kit migrate
+# Apply all pending migrations
+npx supabase db push
 ```
 
 ## Deployment
@@ -675,7 +671,7 @@ Required env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEX
 - **JSON parse protection** — malformed request bodies return 400, never crash the server
 - **Length limits** — message content (50KB max), voice text (10KB max), file uploads (25MB max)
 - **Parameter validation** — all URL params checked for existence and format
-- **SQL injection prevention** — Drizzle ORM uses parameterized queries (no raw SQL)
+- **SQL injection prevention** — supabase-js uses parameterized queries (no raw SQL)
 
 ### Output Sanitization
 
@@ -683,7 +679,7 @@ Required env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEX
 
 ### Authentication & Encryption
 
-- **Clerk JWT verification** — JWKS-based token validation via `@mastra/auth-clerk` on every API call
+- **Supabase JWT verification** — `supabase.auth.getUser(token)` validates session tokens on every API call
 - **Token encryption** — Zapier OAuth tokens encrypted at rest with AES-256-GCM
 - **API key hashing** — keys are SHA-256 hashed, never stored in plaintext
 - **Webhook signatures** — Slack, Discord, Linear, and other webhooks verify request signatures
@@ -694,48 +690,65 @@ Required env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEX
 
 ### Testing
 
-Foreman has three layers of testing: unit tests, integration tests, and E2E tests.
+Foreman has four tiers of testing. The first two run without any external services.
 
-#### Unit Tests (Vitest)
-
-Located in `packages/agents/tests/unit/`. Run with:
+#### Tier 1 — Unit + API Integration (always works, no external deps)
 
 ```bash
 cd packages/agents && npm test
 ```
 
-| Test File                      | What It Tests                                                             |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `capabilities.test.ts`         | Feature flags CRUD, default-on behavior                                   |
-| `context-injector.test.ts`     | Input processor: connected apps context injection                         |
-| `cross-channel-memory.test.ts` | Cross-channel memory recall (same user, different platforms)              |
-| `crypto.test.ts`               | AES-256-GCM token encryption/decryption                                   |
-| `env.test.ts`                  | Environment variable validation                                           |
-| `guardrails.test.ts`           | Rate limiting, risk assessment, sensitive app blocking, bulk confirmation |
-| `guardrails-config.test.ts`    | Org-level guardrail defaults and configuration                            |
-| `identity.test.ts`             | Clerk JWT parsing, orgId extraction, API key resolution, channel identity |
-| `mastra-agent.test.ts`         | Agent initialization, tool registration, model routing                    |
-| `model-routing.test.ts`        | Model selection (sonnet/haiku/opus per agent role)                        |
-| `pii-redactor.test.ts`         | Output processor: email, API key, phone, card, SSN redaction              |
-| `prompt-template.test.ts`      | Dynamic system prompt generation                                          |
-| `stream-types.test.ts`         | SSE stream encoding and type safety                                       |
-| `telegram-bot.test.ts`         | Telegram bot initialization and handler wiring                            |
-| `voice.test.ts`                | STT/TTS functions, ElevenLabs primary, OpenAI fallback                    |
-| `zapier-errors.test.ts`        | Zapier SDK error classification and retry logic                           |
-| `zapier-sdk-tools.test.ts`     | SDK tool generation, toModelOutput summarizers, requireApproval mapping   |
+Runs unit tests (`tests/unit/`) and API integration tests (`tests/integration/api-routes.test.ts`). DB is mocked via supabase-js mock pattern; LLM is served by [AIMock](https://aimock.copilotkit.dev) (`@copilotkit/aimock`) — no real Claude calls. `protocols.test.ts` is included but auto-skips when no dev server is running (~221 tests, 8 auto-skipped).
 
-#### Integration Tests
+| Test File                      | What It Tests                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------- |
+| `capabilities.test.ts`         | Feature flags CRUD, default-on behavior                                         |
+| `context-injector.test.ts`     | Input processor: connected apps context injection                               |
+| `cross-channel-memory.test.ts` | Cross-channel memory recall (same user, different platforms)                    |
+| `crypto.test.ts`               | AES-256-GCM token encryption/decryption                                         |
+| `env.test.ts`                  | Environment variable validation                                                 |
+| `guardrails.test.ts`           | Rate limiting, risk assessment, sensitive app blocking, bulk confirmation       |
+| `guardrails-config.test.ts`    | Org-level guardrail defaults and configuration                                  |
+| `identity.test.ts`             | Supabase JWT validation, orgId extraction, API key resolution, channel identity |
+| `mastra-agent.test.ts`         | Agent initialization, tool registration, model routing                          |
+| `model-routing.test.ts`        | Model selection (sonnet/haiku/opus per agent role)                              |
+| `pii-redactor.test.ts`         | Output processor: email, API key, phone, card, SSN redaction                    |
+| `prompt-template.test.ts`      | Dynamic system prompt generation                                                |
+| `stream-types.test.ts`         | SSE stream encoding and type safety                                             |
+| `telegram-bot.test.ts`         | Telegram bot initialization and handler wiring                                  |
+| `voice.test.ts`                | STT/TTS functions, ElevenLabs primary, OpenAI fallback                          |
+| `zapier-errors.test.ts`        | Zapier SDK error classification and retry logic                                 |
+| `zapier-sdk-tools.test.ts`     | SDK tool generation, toModelOutput summarizers, requireApproval mapping         |
+| `api-routes.test.ts`           | All API endpoints, auth gating, JWT expiry/malformed token rejection            |
 
-Located in `packages/agents/tests/integration/`:
+#### Tier 2 — Live Supabase (requires `npx supabase start`)
 
 ```bash
-cd packages/agents && npm test -- tests/integration
+npx supabase start
+cd packages/agents && npm run test:live
 ```
 
-| Test File            | What It Tests                             |
-| -------------------- | ----------------------------------------- |
-| `api-routes.test.ts` | All API endpoints, auth gating, mock JWT  |
-| `protocols.test.ts`  | REST API, A2A, and MCP protocol endpoints |
+Real DB connectivity, CRUD round-trips, and identity resolution against a live local Supabase instance. Auto-skips all tests if Supabase is not reachable — safe to run anytime.
+
+#### Tier 3 — Protocol Tests (requires dev server)
+
+```bash
+# Terminal 1
+cd packages/agents && npm run dev
+
+# Terminal 2
+cd packages/agents && npm test
+```
+
+`tests/integration/protocols.test.ts` auto-detects the dev server via `/.well-known/foreman/agent-card.json` and runs A2A (JSON-RPC), MCP, and agent-card discovery tests. Skips automatically in CI.
+
+#### Tier 4 — Zapier SDK (requires real Zapier account)
+
+```bash
+npx @zapier/zapier-sdk-cli login             # one-time setup
+cd packages/agents && npm run test:sdk:read  # safe, no side effects
+cd packages/agents && npm run test:sdk:write # creates + deletes a real Zapier Table
+```
 
 #### E2E Tests (Playwright)
 
@@ -747,14 +760,11 @@ cd packages/web && npx playwright test
 
 #### AIMock (Deterministic AI Testing)
 
-Foreman uses [`@copilotkit/aimock`](https://aimock.copilotkit.dev) for mock infrastructure — LLM, voice, MCP, A2A, and vector DB mocking with fixture-driven responses.
+Foreman uses [`@copilotkit/aimock`](https://aimock.copilotkit.dev) for mock infrastructure — LLM, voice, MCP, A2A, and vector DB mocking with fixture-driven responses. Tier 1 tests start AIMock automatically via `globalSetup`.
 
 ```bash
 # Start agent server with AIMock (all APIs mocked)
 cd packages/agents && npm run dev:mock
-
-# Or run aimock standalone
-npx @copilotkit/aimock --config aimock.json --port 4010
 ```
 
 ### Linting & Formatting
@@ -776,24 +786,23 @@ ngrok http 4112
 
 ## Tech Stack
 
-| Layer                 | Technology                                                                                                                                                 |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agent framework       | [Mastra](https://mastra.ai) (`@mastra/core`, `@mastra/memory`, `@mastra/mcp`, `@mastra/evals`)                                                             |
-| Chat channels         | [Chat SDK](https://chat-sdk.dev) (`chat`, `@chat-adapter/*`)                                                                                               |
-| Zapier integration    | `@zapier/zapier-sdk` (direct import, 34 auto-generated tools)                                                                                              |
-| LLM                   | Claude (Anthropic) via Mastra                                                                                                                              |
-| Embeddings            | OpenAI (`text-embedding-3-small`)                                                                                                                          |
-| Voice TTS             | [ElevenLabs](https://elevenlabs.io) (`@mastra/voice-elevenlabs`) + OpenAI TTS (`@mastra/voice-openai`) fallback                                            |
-| Database              | Postgres + [pgvector](https://github.com/pgvector/pgvector) (local via [Supabase CLI](https://supabase.com/docs/guides/cli); hosted via Supabase/Neon/RDS) |
-| ORM                   | [Drizzle](https://orm.drizzle.team) (`postgres-js` driver)                                                                                                 |
-| Mastra storage/vector | `@mastra/pg` (`PostgresStore`, `PgVector`)                                                                                                                 |
-| Auth                  | [Clerk](https://clerk.com) (`@clerk/nextjs` + `@mastra/auth-clerk`)                                                                                        |
-| Frontend              | [Next.js](https://nextjs.org) 16, React 19, Tailwind 4                                                                                                     |
-| Markdown rendering    | [Streamdown](https://github.com/nichochar/streamdown) (code, math, mermaid plugins)                                                                        |
-| API layer             | [Hono](https://hono.dev) (via Mastra server)                                                                                                               |
-| Linting               | [Biome](https://biomejs.dev)                                                                                                                               |
-| Testing               | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [AIMock](https://aimock.copilotkit.dev)                                                |
-| Monorepo              | npm workspaces                                                                                                                                             |
+| Layer              | Technology                                                                                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agent framework    | [Mastra](https://mastra.ai) (`@mastra/core`, `@mastra/memory`, `@mastra/mcp`, `@mastra/evals`)                                                             |
+| Chat channels      | [Chat SDK](https://chat-sdk.dev) (`chat`, `@chat-adapter/*`)                                                                                               |
+| Zapier integration | `@zapier/zapier-sdk` (direct import, 34 auto-generated tools)                                                                                              |
+| LLM                | Claude (Anthropic) via Mastra                                                                                                                              |
+| Embeddings         | OpenAI (`text-embedding-3-small`)                                                                                                                          |
+| Voice TTS          | [ElevenLabs](https://elevenlabs.io) (`@mastra/voice-elevenlabs`) + OpenAI TTS (`@mastra/voice-openai`) fallback                                            |
+| Database           | Postgres + [pgvector](https://github.com/pgvector/pgvector) (local via [Supabase CLI](https://supabase.com/docs/guides/cli); hosted via Supabase/Neon/RDS) |
+| DB client          | [supabase-js](https://supabase.com/docs/reference/javascript) (app tables) + `@mastra/pg` (`PostgresStore`, `PgVector` for Mastra internals)               |
+| Auth               | [Supabase Auth](https://supabase.com/docs/guides/auth) (agent server) + [Clerk](https://clerk.com) `@clerk/nextjs` (web frontend — migration pending)      |
+| Frontend           | [Next.js](https://nextjs.org) 16, React 19, Tailwind 4                                                                                                     |
+| Markdown rendering | [Streamdown](https://github.com/nichochar/streamdown) (code, math, mermaid plugins)                                                                        |
+| API layer          | [Hono](https://hono.dev) (via Mastra server)                                                                                                               |
+| Linting            | [Biome](https://biomejs.dev)                                                                                                                               |
+| Testing            | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [AIMock](https://aimock.copilotkit.dev)                                                |
+| Monorepo           | npm workspaces                                                                                                                                             |
 
 ## License
 

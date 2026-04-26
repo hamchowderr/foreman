@@ -128,7 +128,6 @@ const mockSupabase = {
 
 vi.mock("@/lib/db", () => ({
   getSupabase: () => mockSupabase,
-  getDb: () => mockSupabase, // alias for any remaining callsites
 }));
 
 // Mock capabilities (returns defaults: all enabled)

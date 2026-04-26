@@ -25,7 +25,6 @@ const mockSupabase = {
 
 vi.mock("@/lib/db", () => ({
   getSupabase: () => mockSupabase,
-  getDb: () => mockSupabase,
 }));
 
 describe("guardrails", () => {

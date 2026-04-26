@@ -12,5 +12,3 @@ export function getSupabase(): SupabaseClient {
   return _client;
 }
 
-// Alias for callsites being migrated
-export const getDb = getSupabase;
