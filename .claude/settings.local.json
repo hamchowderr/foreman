@@ -82,7 +82,19 @@
       "Bash(kill 441951)",
       "Skill(update-config)",
       "Bash(bash -c 'bd doctor --fix 2>/dev/null; bd hooks install --force 2>/dev/null; exit 0')",
-      "Bash(python3 -c \"import json,sys; issues=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]} [{i[\\\\\"priority\\\\\"]}] {i[\\\\\"title\\\\\"]}'\\) for i in issues]\")"
+      "Bash(python3 -c \"import json,sys; issues=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]} [{i[\\\\\"priority\\\\\"]}] {i[\\\\\"title\\\\\"]}'\\) for i in issues]\")",
+      "Bash(bash -c \"bd close foreman-qk1 --reason='Ported providers layer from claude/add-multiple-providers-wXhQJ: AGENT_MODELS, modelSettingsFor, systemPromptFor, toolsWithCacheControl, onFinishCostLogger, validateAgentCapabilities. Deleted request dead code from execution agent.' && bd close foreman-km8 --reason='AI Elements already bundled locally at src/components/ai-elements/ and wired into chat shell. No install needed.'\")",
+      "Bash(node_modules/.bin/vitest.cmd run *)",
+      "Bash(python3 -c \" import json, sys issues = json.load\\(sys.stdin\\) for i in issues: blocked = i.get\\('dependency_count', 0\\) > 0 print\\(f\\\\\"P{i['priority']} [{i['id']}] {i['title']}\\\\\"\\) \")",
+      "Bash(npx vitest *)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx tsc --noEmit --skipLibCheck)",
+      "Bash(python3 -c \" import json, sys issues = json.load\\(sys.stdin\\) for i in issues: deps = i.get\\('dependency_count', 0\\) blocked = '🔒' if deps > 0 else ' ' print\\(f\\\\\"{blocked} [{i['priority']}] {i['id']}: {i['title']}\\\\\"\\) \")",
+      "Bash(psql *)",
+      "Bash(mv 20260426000003_workspaces.sql 20260426000004_workspaces.sql)",
+      "Bash(mv 20260426000004_billing.sql 20260426000005_billing.sql)",
+      "Bash(mv 20260426000005_marketing.sql 20260426000006_marketing.sql)",
+      "Bash(mv 20260426000006_marketing_blog.sql 20260426000007_marketing_blog.sql)",
+      "Bash(mv 20260426000007_marketing_changelog.sql 20260426000008_marketing_changelog.sql)"
     ]
   }
 }
