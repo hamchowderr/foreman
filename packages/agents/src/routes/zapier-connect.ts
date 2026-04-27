@@ -10,8 +10,14 @@ import { getSupabase } from "@/lib/db";
 
 const zapierConnect = new Hono();
 
-// In-memory state → userId mapping for the OAuth round-trip
-const stateMap = new Map<string, { userId: string; expiresAt: number; isWeb?: boolean }>();
+// In-memory state → userId + PKCE verifier + redirectUri mapping for the OAuth round-trip
+const stateMap = new Map<string, {
+  userId: string;
+  expiresAt: number;
+  isWeb?: boolean;
+  codeVerifier: string;
+  redirectUri: string;
+}>();
 
 setInterval(() => {
   const now = Date.now();
@@ -33,12 +39,14 @@ zapierConnect.get("/web-connect", async (c) => {
   await ensureUserExists(identity.userId);
 
   const state = randomBytes(16).toString("hex");
-  const authorizeUrl = buildAuthorizeUrl(state);
+  const { authorizeUrl, codeVerifier, redirectUri } = await buildAuthorizeUrl(state);
 
   stateMap.set(state, {
     userId: identity.userId,
     expiresAt: Date.now() + 10 * 60 * 1000,
     isWeb: true,
+    codeVerifier,
+    redirectUri,
   });
 
   return c.json({ authorizeUrl });
@@ -79,16 +87,19 @@ zapierConnect.get("/connect/:token", async (c) => {
     );
   }
 
+  const { authorizeUrl, codeVerifier, redirectUri } = await buildAuthorizeUrl(pending.state);
   stateMap.set(pending.state, {
     userId: pending.userId,
     expiresAt: Date.now() + 10 * 60 * 1000,
+    codeVerifier,
+    redirectUri,
   });
 
-  return c.redirect(buildAuthorizeUrl(pending.state));
+  return c.redirect(authorizeUrl);
 });
 
 /**
- * Zapier OAuth callback — Zapier redirects here after user authorizes.
+ * Zapier OAuth PKCE callback — Zapier redirects here after user authorizes.
  * Also mounted at root /oauth via routes/index.ts.
  */
 async function handleCallback(c: any) {
@@ -121,7 +132,7 @@ async function handleCallback(c: any) {
   stateMap.delete(state);
 
   try {
-    await exchangeCodeAndStore(code, stateEntry.userId);
+    await exchangeCodeAndStore(code, stateEntry.userId, stateEntry.codeVerifier, stateEntry.redirectUri);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.html(
