@@ -1,10 +1,11 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/server'
 import { OnboardingFlow } from '@/components/onboarding/onboarding-flow'
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
 
-export default async function OnboardingPage({
+async function OnboardingContent({
   searchParams,
 }: {
   searchParams: Promise<{ step?: string; zapier_connected?: string; uses?: string }>
@@ -16,7 +17,6 @@ export default async function OnboardingPage({
   const params = await searchParams
   const returningFromOAuth = params.zapier_connected === 'true'
 
-  // Skip onboarding if already connected (unless returning from OAuth)
   if (!returningFromOAuth && !params.step) {
     try {
       const res = await fetch(`${AGENT_URL}/zapier/status`, {
@@ -36,5 +36,17 @@ export default async function OnboardingPage({
       initialUses={params.uses || ''}
       zapierJustConnected={returningFromOAuth}
     />
+  )
+}
+
+export default function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ step?: string; zapier_connected?: string; uses?: string }>
+}) {
+  return (
+    <Suspense>
+      <OnboardingContent searchParams={searchParams} />
+    </Suspense>
   )
 }

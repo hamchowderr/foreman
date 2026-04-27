@@ -81,7 +81,7 @@ interface Props {
 
 export function StepTry({ uses, onNext }: Props) {
   const prompt = getPrompt(uses)
-  const chatId = useRef(crypto.randomUUID()).current
+  const [chatId] = useState(() => crypto.randomUUID())
   const hasSent = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [done, setDone] = useState(false)
