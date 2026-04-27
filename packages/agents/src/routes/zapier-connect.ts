@@ -1,23 +1,17 @@
+import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
 import {
   consumeConnectToken,
   buildAuthorizeUrl,
   exchangeCodeAndStore,
 } from "@/lib/zapier/connect";
+import { resolveFromSupabaseJwt } from "@/lib/identity";
+import { getSupabase } from "@/lib/db";
 
-/**
- * Zapier OAuth connect routes for non-web channels.
- *
- * Flow:
- * 1. Agent generates a one-time URL: /zapier/connect/:token
- * 2. User opens URL in browser → redirected to Zapier OAuth
- * 3. Zapier redirects back to /zapier/callback with code + state
- * 4. We exchange code for tokens and store them
- */
 const zapierConnect = new Hono();
 
 // In-memory state → userId mapping for the OAuth round-trip
-const stateMap = new Map<string, { userId: string; expiresAt: number }>();
+const stateMap = new Map<string, { userId: string; expiresAt: number; isWeb?: boolean }>();
 
 // Clean expired state entries
 setInterval(() => {
@@ -28,8 +22,52 @@ setInterval(() => {
 }, 60_000);
 
 /**
- * Step 1: User clicks the one-time connect link.
- * Validates the token, stores state→userId mapping, redirects to Zapier.
+ * Web OAuth initiation — called from the onboarding flow.
+ * Reads the Supabase JWT from Authorization header, generates OAuth state,
+ * and returns the Zapier authorize URL for the browser to redirect to.
+ */
+zapierConnect.get("/web-connect", async (c) => {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  const identity = await resolveFromSupabaseJwt(authHeader.slice(7));
+  if (!identity) return c.json({ error: "Unauthorized" }, 401);
+
+  const state = randomBytes(16).toString("hex");
+  stateMap.set(state, {
+    userId: identity.userId,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    isWeb: true,
+  });
+
+  const authorizeUrl = buildAuthorizeUrl(state);
+  return c.json({ authorizeUrl });
+});
+
+/**
+ * Check if the current user has a connected Zapier account.
+ */
+zapierConnect.get("/status", async (c) => {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  const identity = await resolveFromSupabaseJwt(authHeader.slice(7));
+  if (!identity) return c.json({ error: "Unauthorized" }, 401);
+
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("zapier_identity")
+    .select("id")
+    .eq("user_id", identity.userId)
+    .maybeSingle();
+
+  return c.json({ connected: !!data });
+});
+
+/**
+ * Bot channel connect — agent generates a one-time URL: /zapier/connect/:token
  */
 zapierConnect.get("/connect/:token", async (c) => {
   const token = c.req.param("token");
@@ -42,10 +80,9 @@ zapierConnect.get("/connect/:token", async (c) => {
     );
   }
 
-  // Store state → userId for the callback
   stateMap.set(pending.state, {
     userId: pending.userId,
-    expiresAt: Date.now() + 10 * 60 * 1000, // 10 min for OAuth round-trip
+    expiresAt: Date.now() + 10 * 60 * 1000,
   });
 
   const authorizeUrl = buildAuthorizeUrl(pending.state);
@@ -53,7 +90,7 @@ zapierConnect.get("/connect/:token", async (c) => {
 });
 
 /**
- * Step 2: Zapier redirects back here after user authorizes.
+ * Zapier OAuth callback — handles both web onboarding and bot channel flows.
  */
 zapierConnect.get("/callback", async (c) => {
   const code = c.req.query("code");
@@ -62,7 +99,7 @@ zapierConnect.get("/callback", async (c) => {
 
   if (error) {
     return c.html(
-      `<html><body><h1>Connection Failed</h1><p>Zapier returned an error: ${escapeHtml(error)}</p><p>Please try again from the bot.</p></body></html>`,
+      `<html><body><h1>Connection Failed</h1><p>Zapier returned an error: ${escapeHtml(error)}</p><p>Please try again.</p></body></html>`,
       400
     );
   }
@@ -74,12 +111,11 @@ zapierConnect.get("/callback", async (c) => {
     );
   }
 
-  // Look up userId from state
   const stateEntry = stateMap.get(state);
   if (!stateEntry || stateEntry.expiresAt < Date.now()) {
     stateMap.delete(state!);
     return c.html(
-      `<html><body><h1>Session Expired</h1><p>The authorization session has expired. Please request a new connect link from the bot.</p></body></html>`,
+      `<html><body><h1>Session Expired</h1><p>The authorization session has expired. Please try connecting again.</p></body></html>`,
       400
     );
   }
@@ -88,12 +124,17 @@ zapierConnect.get("/callback", async (c) => {
   try {
     await exchangeCodeAndStore(code, stateEntry.userId);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : "Unknown error";
     return c.html(
-      `<html><body><h1>Connection Failed</h1><p>Could not complete the Zapier connection: ${escapeHtml(message)}</p><p>Please try again from the bot.</p></body></html>`,
+      `<html><body><h1>Connection Failed</h1><p>Could not complete the Zapier connection: ${escapeHtml(message)}</p></body></html>`,
       500
     );
+  }
+
+  // Web onboarding flow — redirect back to the onboarding page
+  if (stateEntry.isWeb) {
+    const webUrl = process.env.WEB_URL || "http://localhost:3000";
+    return c.redirect(`${webUrl}/onboarding?step=2&zapier_connected=true`);
   }
 
   return c.html(
