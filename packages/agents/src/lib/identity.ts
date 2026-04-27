@@ -31,16 +31,16 @@ export async function resolveFromSupabaseJwt(
 
 // ─── User Auto-Creation ───
 
-async function ensureUserExists(userId: string): Promise<void> {
+export async function ensureUserExists(userId: string): Promise<void> {
   const supabase = getSupabase();
   await supabase.from("user").upsert(
     {
       id: userId,
       name: userId,
       email: `${userId}@supabase.local`,
-      email_verified: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      emailVerified: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     { onConflict: "id", ignoreDuplicates: true }
   );
@@ -131,9 +131,9 @@ export async function registerChannelUser(
     id: userId,
     name: displayName || `${channel}-${channelUserId}`,
     email: `${channel}-${channelUserId}@foreman.local`,
-    email_verified: false,
-    created_at: now,
-    updated_at: now,
+    emailVerified: false,
+    createdAt: now,
+    updatedAt: now,
   });
 
   await supabase.from("channel_identity").insert({
