@@ -107,13 +107,30 @@ const PAGINATED_METHODS = new Set([
 const DEFAULT_MAX_ITEMS = 100;
 
 /**
+ * Resolve SDK credentials based on environment.
+ * - Explicit credentials passed in: use as-is (per-user token from PKCE flow).
+ * - Dev mode + no credentials: SDK auto-uses CLI login (~/.zapier-sdk/config.json).
+ * - Production + no credentials: Client Credentials from ZAPIER_CLIENT_ID/SECRET.
+ */
+function resolveCredentials(
+  explicit?: string | (() => Promise<string>)
+): Parameters<typeof createZapierSdk>[0]["credentials"] {
+  if (explicit) return explicit;
+  const isDev = process.env.FOREMAN_MODE === "dev";
+  if (!isDev) {
+    const clientId = process.env.ZAPIER_CLIENT_ID;
+    const clientSecret = process.env.ZAPIER_CLIENT_SECRET;
+    if (clientId && clientSecret) return { clientId, clientSecret };
+  }
+  return undefined; // dev: SDK uses CLI login
+}
+
+/**
  * Generate all Zapier SDK tools as Mastra createTool() instances.
  *
- * @param credentials - Optional credentials for the SDK. If not provided,
- *   the SDK reads from ZAPIER_CREDENTIALS env var or CLI login.
- * @param connections - Optional pre-seeded connection alias map. The SDK resolves
- *   string aliases (e.g. "sheets") to numeric connection IDs at call time, saving
- *   a find-unique-connection round-trip per action.
+ * @param credentials - Optional per-user token (from PKCE web OAuth). If omitted,
+ *   dev mode uses CLI login; production uses ZAPIER_CLIENT_ID/SECRET env vars.
+ * @param connections - Optional pre-seeded connection alias map.
  * @returns Record of tool-name → Tool instances
  */
 export function generateZapierTools(
@@ -122,13 +139,14 @@ export function generateZapierTools(
 ) {
   const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
   const hasConnections = connections && Object.keys(connections).length > 0;
+  const resolvedCredentials = resolveCredentials(credentials);
   const sdk = createZapierSdk({
-    ...(credentials ? { credentials } : {}),
+    ...(resolvedCredentials ? { credentials: resolvedCredentials } : {}),
     ...(hasConnections ? { manifest: { connections } } : {}),
     debug: isDebug,
     maxNetworkRetries: 3,
     maxNetworkRetryDelayMs: 30000,
-    canDeleteTables: true, // Gated by requireApproval on the tool
+    canDeleteTables: true,
   });
 
   const registry = sdk.getRegistry({ package: "mcp" });

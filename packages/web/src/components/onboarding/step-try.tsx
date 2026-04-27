@@ -82,9 +82,19 @@ interface Props {
 export function StepTry({ uses, onNext }: Props) {
   const prompt = getPrompt(uses)
   const [chatId] = useState(() => crypto.randomUUID())
+  const [userId, setUserId] = useState<string>('')
   const hasSent = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) setUserId(session.user.id)
+    })
+  }, [])
+
+  const userIdRef = useRef(userId)
+  useEffect(() => { userIdRef.current = userId }, [userId])
 
   const { messages, sendMessage, status } = useChat({
     id: chatId,
@@ -101,15 +111,34 @@ export function StepTry({ uses, onNext }: Props) {
           },
         })
       },
+      prepareSendMessagesRequest(request) {
+        const lastMsg = request.messages.at(-1) as any
+        // AI SDK may represent content as string or as parts array
+        const text: string =
+          (typeof lastMsg?.content === 'string' && lastMsg.content) ||
+          lastMsg?.parts
+            ?.filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text as string)
+            .join('') ||
+          prompt
+        return {
+          body: {
+            messages: [{ role: 'user', content: text }],
+            threadId: request.id,
+            resourceId: userIdRef.current,
+          },
+        }
+      },
     }),
   } as any)
 
+  // Wait for userId before sending — resourceId must be non-empty for Mastra memory
   useEffect(() => {
-    if (!hasSent.current) {
+    if (!hasSent.current && userId) {
       hasSent.current = true
       sendMessage({ role: 'user', content: prompt } as any)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (scrollRef.current) {

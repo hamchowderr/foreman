@@ -144,7 +144,8 @@ export async function buildAuthorizeUrl(
     redirectUri = env.ZAPIER_REDIRECT_URI;
   } else {
     const port = await findAvailablePort();
-    const mainOauthUrl = `${env.AGENT_SERVER_URL}/oauth`;
+    const localPort = Number(process.env.PORT) || 4111;
+    const mainOauthUrl = `http://localhost:${localPort}/oauth`;
     redirectUri = `http://localhost:${port}/oauth`;
     startRelayServer(port, mainOauthUrl);
   }
