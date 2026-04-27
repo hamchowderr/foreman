@@ -6,14 +6,15 @@ import { getEnv } from "../env";
 const ZAPIER_AUTHORIZE_URL = "https://zapier.com/oauth/authorize/";
 const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
 
-// In-memory store for pending connect requests.
-// Key: one-time token, Value: { userId, state, expiresAt }
+// Scopes required for the Zapier SDK to work
+const ZAPIER_SCOPE = "internal credentials offline_access";
+
+// In-memory store for pending connect requests (bot channel flow).
 const pendingConnects = new Map<
   string,
   { userId: string; state: string; expiresAt: number }
 >();
 
-// Clean up expired entries periodically
 setInterval(() => {
   const now = Date.now();
   for (const [token, entry] of pendingConnects) {
@@ -21,18 +22,20 @@ setInterval(() => {
   }
 }, 60_000);
 
-const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const TOKEN_TTL_MS = 15 * 60 * 1000;
+
+function getRedirectUri(): string {
+  const env = getEnv();
+  return env.ZAPIER_REDIRECT_URI || `${env.AGENT_SERVER_URL}/zapier/callback`;
+}
 
 /**
  * Generate a one-time connect URL for non-web channels.
- * The user opens this in their browser to start the Zapier OAuth flow.
  */
 export function generateConnectUrl(userId: string): string {
   const env = getEnv();
   const serverUrl = env.AGENT_SERVER_URL;
-  if (!serverUrl) {
-    throw new Error("AGENT_SERVER_URL is not configured");
-  }
+  if (!serverUrl) throw new Error("AGENT_SERVER_URL is not configured");
 
   const token = randomUUID();
   const state = randomBytes(16).toString("hex");
@@ -47,8 +50,7 @@ export function generateConnectUrl(userId: string): string {
 }
 
 /**
- * Validate a one-time connect token.
- * Returns the pending entry and removes it (one-time use).
+ * Validate and consume a one-time connect token.
  */
 export function consumeConnectToken(
   token: string
@@ -64,36 +66,32 @@ export function consumeConnectToken(
 }
 
 /**
- * Build the Zapier OAuth authorize URL.
+ * Build the Zapier OAuth authorize URL using Foreman's own OAuth app.
  */
 export function buildAuthorizeUrl(state: string): string {
   const env = getEnv();
-  const redirectUri =
-    env.ZAPIER_REDIRECT_URI ||
-    `${env.AGENT_SERVER_URL}/zapier/callback`;
+  const redirectUri = getRedirectUri();
 
   const params = new URLSearchParams({
     response_type: "code",
     client_id: env.ZAPIER_CLIENT_ID || "",
     redirect_uri: redirectUri,
     state,
-    scope: "profile zap zap:write action action:write",
+    scope: ZAPIER_SCOPE,
   });
 
   return `${ZAPIER_AUTHORIZE_URL}?${params.toString()}`;
 }
 
 /**
- * Exchange an authorization code for tokens and store them.
+ * Exchange an authorization code for tokens and store them in Supabase.
  */
 export async function exchangeCodeAndStore(
   code: string,
   userId: string
 ): Promise<void> {
   const env = getEnv();
-  const redirectUri =
-    env.ZAPIER_REDIRECT_URI ||
-    `${env.AGENT_SERVER_URL}/zapier/callback`;
+  const redirectUri = getRedirectUri();
 
   const res = await fetch(ZAPIER_TOKEN_URL, {
     method: "POST",
@@ -124,7 +122,6 @@ export async function exchangeCodeAndStore(
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
   const supabase = getSupabase();
-
   await supabase.from("zapier_identity").upsert(
     {
       id: randomUUID(),

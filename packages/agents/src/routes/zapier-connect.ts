@@ -5,7 +5,7 @@ import {
   buildAuthorizeUrl,
   exchangeCodeAndStore,
 } from "@/lib/zapier/connect";
-import { resolveFromSupabaseJwt } from "@/lib/identity";
+import { resolveFromSupabaseJwt, ensureUserExists } from "@/lib/identity";
 import { getSupabase } from "@/lib/db";
 
 const zapierConnect = new Hono();
@@ -13,7 +13,6 @@ const zapierConnect = new Hono();
 // In-memory state → userId mapping for the OAuth round-trip
 const stateMap = new Map<string, { userId: string; expiresAt: number; isWeb?: boolean }>();
 
-// Clean expired state entries
 setInterval(() => {
   const now = Date.now();
   for (const [state, entry] of stateMap) {
@@ -23,8 +22,6 @@ setInterval(() => {
 
 /**
  * Web OAuth initiation — called from the onboarding flow.
- * Reads the Supabase JWT from Authorization header, generates OAuth state,
- * and returns the Zapier authorize URL for the browser to redirect to.
  */
 zapierConnect.get("/web-connect", async (c) => {
   const authHeader = c.req.header("Authorization");
@@ -33,15 +30,17 @@ zapierConnect.get("/web-connect", async (c) => {
   }
   const identity = await resolveFromSupabaseJwt(authHeader.slice(7));
   if (!identity) return c.json({ error: "Unauthorized" }, 401);
+  await ensureUserExists(identity.userId);
 
   const state = randomBytes(16).toString("hex");
+  const authorizeUrl = buildAuthorizeUrl(state);
+
   stateMap.set(state, {
     userId: identity.userId,
     expiresAt: Date.now() + 10 * 60 * 1000,
     isWeb: true,
   });
 
-  const authorizeUrl = buildAuthorizeUrl(state);
   return c.json({ authorizeUrl });
 });
 
@@ -85,14 +84,14 @@ zapierConnect.get("/connect/:token", async (c) => {
     expiresAt: Date.now() + 10 * 60 * 1000,
   });
 
-  const authorizeUrl = buildAuthorizeUrl(pending.state);
-  return c.redirect(authorizeUrl);
+  return c.redirect(buildAuthorizeUrl(pending.state));
 });
 
 /**
- * Zapier OAuth callback — handles both web onboarding and bot channel flows.
+ * Zapier OAuth callback — Zapier redirects here after user authorizes.
+ * Also mounted at root /oauth via routes/index.ts.
  */
-zapierConnect.get("/callback", async (c) => {
+async function handleCallback(c: any) {
   const code = c.req.query("code");
   const state = c.req.query("state");
   const error = c.req.query("error");
@@ -131,7 +130,6 @@ zapierConnect.get("/callback", async (c) => {
     );
   }
 
-  // Web onboarding flow — redirect back to the onboarding page
   if (stateEntry.isWeb) {
     const webUrl = process.env.WEB_URL || "http://localhost:3000";
     return c.redirect(`${webUrl}/onboarding?step=2&zapier_connected=true`);
@@ -140,7 +138,9 @@ zapierConnect.get("/callback", async (c) => {
   return c.html(
     `<html><body style="font-family:system-ui;text-align:center;padding:4rem"><h1>Connected!</h1><p>Your Zapier account is now linked to Foreman. You can close this window and return to the bot.</p></body></html>`
   );
-});
+}
+
+zapierConnect.get("/callback", handleCallback);
 
 function escapeHtml(str: string): string {
   return str
@@ -150,4 +150,5 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export { handleCallback as handleOAuthCallback };
 export default zapierConnect;
