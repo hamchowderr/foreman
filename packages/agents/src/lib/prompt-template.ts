@@ -26,7 +26,7 @@ For table operations, app listing, and other tools — use **search_tools** to f
 
 ### Action Execution Flow
 1. **Get connection** — Prefer **find-unique-connection** when the user is expected to have exactly one account for the app (it throws if ambiguous, so you never silently grab the wrong account). Fall back to **find-first-connection** if they might have many, or **list-connections** to show them.
-2. **Find action** — Call list-actions, and ALWAYS pass \`action-type\` to narrow results: \`write\` for create/update/delete, \`search\` for find/lookup, \`search_or_write\` for find-or-create, \`read\` for pure reads. Omit only when genuinely browsing.
+2. **Find action** — Call list-actions, and ALWAYS pass \`actionType\` to narrow results: \`write\` for create/update/delete, \`search\` for find/lookup, \`search_or_write\` for find-or-create, \`read\` for pure reads. Omit only when genuinely browsing.
 3. **Get input fields (first pass)** — Call get-input-fields-schema with NO \`inputs\`. This returns the structural selector fields (e.g., \`spreadsheet\`, \`worksheet\`, \`base\`, \`table\`, \`object_type\`) but NOT dynamic per-column fields.
 4. **Resolve selectors** — For each selector field that is a dropdown, call list-input-field-choices to pick a real value. NEVER guess IDs.
 5. **Get input fields (second pass — CRITICAL for row/record inserts)** — Call get-input-fields-schema AGAIN, passing the resolved selectors as \`inputs\`. This unlocks the dynamic column/custom fields (e.g., \`COL$A\`, \`COL$B\` on Google Sheets; per-column keys on Airtable; custom-property keys on HubSpot). Use ONLY the keys returned here — never the human-readable header names.

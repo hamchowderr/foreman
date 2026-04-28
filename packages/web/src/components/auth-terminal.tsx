@@ -161,7 +161,7 @@ export function AuthTerminal() {
         <div className="h-2 w-2 rounded-full bg-[#ff4a00]/50" />
         <div className="h-2 w-2 rounded-full bg-yellow-500/30" />
         <div className="h-2 w-2 rounded-full bg-emerald-500/30" />
-        <span className="ml-2 text-[10px] text-white/20 tracking-widest uppercase">foreman chat</span>
+        <span className="ml-2 text-[10px] text-white/20 tracking-widest uppercase">Foreman</span>
         <div className="ml-auto flex items-center gap-1">
           {SCENARIOS.map((s, i) => (
             <div

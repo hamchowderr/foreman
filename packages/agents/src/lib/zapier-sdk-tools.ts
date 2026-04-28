@@ -272,7 +272,7 @@ function handleSdkError(err: unknown, methodName: string): { error: string; code
     const ae = err as any;
     const appKey = ae.appKey ?? ae.app ?? null;
     return {
-      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`is-expired: true\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
+      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`isExpired: true\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
       code: "AUTH_FAILED",
       retryable: false,
       suggestedRecovery: {
@@ -390,7 +390,8 @@ function createSummarizer(fnName: string) {
       const summarized = items.map((item: any) => {
         if (typeof item !== "object" || !item) return item;
         const {
-          id, name, title, key, app, appKey, slug, status, type, actionType,
+          id, name, title, key, app, appKey, app_name, app_key, account_type,
+          slug, status, type, actionType,
           ...rest
         } = item;
         const summary: Record<string, unknown> = {};
@@ -400,6 +401,9 @@ function createSummarizer(fnName: string) {
         if (key) summary.key = key;
         if (app) summary.app = app;
         if (appKey) summary.appKey = appKey;
+        if (app_name) summary.app_name = app_name;
+        if (app_key) summary.app_key = app_key;
+        if (account_type) summary.account_type = account_type;
         if (slug) summary.slug = slug;
         if (status) summary.status = status;
         if (type) summary.type = type;

@@ -178,7 +178,7 @@ export function StepTry({ uses, onNext }: Props) {
           <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#FFBF6E', opacity: 0.4 }} />
           <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#CDE4E1', opacity: 0.4 }} />
           <span className="ml-2 text-[10px] uppercase tracking-widest" style={{ color: '#FFBF6E', opacity: 0.6 }}>
-            foreman chat
+            Foreman
           </span>
           {status === 'streaming' && (
             <span className="ml-auto text-[10px] font-mono animate-pulse" style={{ color: '#FF4F00' }}>
