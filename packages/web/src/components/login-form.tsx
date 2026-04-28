@@ -25,23 +25,7 @@ export function LoginForm() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-
-      // Check if user has connected Zapier — if not, send to onboarding
-      const agentUrl = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
-      const { data: { session } } = await supabase.auth.getSession()
-      let destination = '/chat'
-      if (session?.access_token) {
-        try {
-          const res = await fetch(`${agentUrl}/zapier/status`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          })
-          if (res.ok) {
-            const { connected } = await res.json()
-            if (!connected) destination = '/onboarding'
-          }
-        } catch {}
-      }
-      router.push(destination)
+      router.push('/onboarding')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
