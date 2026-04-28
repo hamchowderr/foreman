@@ -37,7 +37,7 @@ export const contextInjector: InputProcessor = {
           .join(", ");
         extraMessages.push({
           role: "system" as const,
-          content: `[User Context] The user has ${connections.length} connected app(s): ${appSummary}. Use this to proactively suggest relevant actions without requiring a discovery tool call first.`,
+          content: `[Pre-fetch Hint — NOT authoritative] The user appears to have ~${connections.length} connected app(s) including: ${appSummary}. This is a background hint only — it may be stale. ALWAYS call list-connections for the live result. NEVER present this hint as the answer to a user question about their connections.`,
         });
       }
 
