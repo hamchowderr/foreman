@@ -1,5 +1,3 @@
-'use client'
-
 import { motion, type Variants } from 'framer-motion'
 import { ArrowRight, Zap, MessageSquare, ShieldCheck } from 'lucide-react'
 
@@ -131,9 +129,8 @@ export function StepDone() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
       >
-        <button
-          type="button"
-          onClick={() => { window.location.href = '/chat' }}
+        <a
+          href="/chat"
           className="group flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
           style={{ backgroundColor: '#FF4F00' }}
         >
@@ -145,7 +142,7 @@ export function StepDone() {
           </span>
           Open Foreman
           <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-        </button>
+        </a>
       </motion.div>
     </div>
   )
