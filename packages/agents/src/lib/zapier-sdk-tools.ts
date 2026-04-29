@@ -14,6 +14,8 @@ import {
   ZapierConfigurationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
+import { requestUserContext } from "./request-user-context";
+import { getSdkForUser } from "./zapier/sdk";
 
 /**
  * Auto-generate Mastra tools from the Zapier SDK's internal registry.
@@ -186,24 +188,28 @@ export function generateZapierTools(
           ? (raw as any)._zod.def.innerType
           : raw;
 
+      const summarize = createSummarizer(fn.name);
       tools[toolName] = createTool({
         id: toolName,
         description,
         inputSchema: unwrapped as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
-        toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
           try {
+            // Resolve per-user SDK if a user context is active (set by request handler).
+            // Falls back to the global SDK (CLI login / client credentials) when no
+            // user context is available — e.g., during channel webhook processing.
+            const userCtx = requestUserContext.getStore();
+            const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
+            const activeMethod = (activeSdk as any)[fn.name] as (args: any) => Promise<any>;
+
             if (PAGINATED_METHODS.has(fn.name)) {
               const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
-              const result = await sdkFn.call(sdk, { ...input, maxItems });
-              if (result?.data && Array.isArray(result.data)) {
-                return { data: result.data, count: result.data.length, nextCursor: result.nextCursor };
-              }
-              return result;
+              const result = await activeMethod.call(activeSdk, { ...input, maxItems });
+              return summarize(result);
             }
-            return await sdkFn.call(sdk, input);
+            return summarize(await activeMethod.call(activeSdk, input));
           } catch (err) {
             return handleSdkError(err, fn.name);
           }
@@ -226,17 +232,20 @@ export function generateZapierTools(
         }
       }
 
+      const summarizeFetch = createSummarizer(fn.name);
       tools[toolName] = createTool({
         id: toolName,
         description,
         inputSchema: z.object(shape).describe(description),
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
-        toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
           try {
+            const userCtx = requestUserContext.getStore();
+            const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
+            const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
             const args = fn.inputParameters!.map((p: any) => input[p.name]);
-            return await sdkFn.call(sdk, ...args);
+            return summarizeFetch(await activeMethod.call(activeSdk, ...args));
           } catch (err) {
             return handleSdkError(err, fn.name);
           }
