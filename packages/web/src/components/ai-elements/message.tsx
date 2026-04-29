@@ -19,7 +19,7 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CheckCircle, ChevronLeftIcon, ChevronRightIcon, Copy, ExternalLink } from "lucide-react";
 import {
   createContext,
   memo,
@@ -30,6 +30,7 @@ import {
   useState,
 } from "react";
 import { Streamdown } from "streamdown";
+import type { LinkSafetyConfig, LinkSafetyModalProps } from "streamdown";
 
 type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -322,6 +323,127 @@ type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+// Custom link renderer — breaks long URLs, adds hover transition
+const StreamdownLink = ({
+  href,
+  children,
+  node: _node,
+  ...props
+}: JSX.IntrinsicElements["a"] & { node?: unknown }) => (
+  <a
+    href={href}
+    className="break-all cursor-pointer text-[#007AFF] underline underline-offset-2 decoration-[#007AFF]/40 transition-[text-decoration-color] hover:decoration-[#007AFF] dark:text-[#0A84FF] dark:decoration-[#0A84FF]/40 dark:hover:decoration-[#0A84FF]"
+    {...props}
+  >
+    {children}
+  </a>
+);
+
+// iOS-style action sheet for link safety confirmation
+const StreamdownLinkModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  url,
+}: LinkSafetyModalProps) => {
+  const [copied, setCopied] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        onClose();
+      }, 900);
+    } catch {}
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-end"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" />
+      <div
+        className="relative mx-auto mb-8 w-full max-w-[380px] space-y-2 px-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* URL + actions card */}
+        <div className="overflow-hidden rounded-[16px] bg-white/95 shadow-2xl backdrop-blur-xl dark:bg-[#1C1C1E]/95">
+          <div className="px-4 pb-3 pt-4">
+            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-[#8E8E93]">
+              Link
+            </p>
+            <p className="line-clamp-3 break-all text-[13px] leading-[1.45] text-[#1C1C1E] dark:text-[#F2F2F7]">
+              {url}
+            </p>
+          </div>
+          <div className="h-px bg-[#E5E5EA] dark:bg-[#3A3A3C]" />
+          <button
+            className="flex w-full items-center gap-3 px-4 py-3.5 transition-colors hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/5"
+            onClick={onConfirm}
+            type="button"
+          >
+            <ExternalLink className="size-[18px] shrink-0 text-[#007AFF]" />
+            <span className="text-[16px] text-[#007AFF]">Open Link</span>
+          </button>
+          <div className="h-px bg-[#E5E5EA] dark:bg-[#3A3A3C]" />
+          <button
+            className="flex w-full items-center gap-3 px-4 py-3.5 transition-colors hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/5"
+            onClick={handleCopy}
+            type="button"
+          >
+            {copied ? (
+              <CheckCircle className="size-[18px] shrink-0 text-[#34C759]" />
+            ) : (
+              <Copy className="size-[18px] shrink-0 text-[#007AFF]" />
+            )}
+            <span
+              className={cn(
+                "text-[16px] transition-colors",
+                copied ? "text-[#34C759]" : "text-[#007AFF]"
+              )}
+            >
+              {copied ? "Copied!" : "Copy Link"}
+            </span>
+          </button>
+        </div>
+        {/* Cancel card */}
+        <div className="overflow-hidden rounded-[16px] bg-white/95 shadow-2xl backdrop-blur-xl dark:bg-[#1C1C1E]/95">
+          <button
+            className="w-full px-4 py-3.5 transition-colors hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/5"
+            onClick={onClose}
+            type="button"
+          >
+            <span className="text-[17px] font-semibold text-[#007AFF]">
+              Cancel
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Render paragraphs as <div> to avoid invalid HTML nesting when Streamdown's
+// link-safety overlay (a block element) fires inside a <p>.
+const streamdownComponents = {
+  p: "div" as const,
+  a: StreamdownLink,
+};
+
+const streamdownLinkSafety: LinkSafetyConfig = {
+  enabled: true,
+  onLinkCheck: (url: string) =>
+    url.startsWith("http://") || url.startsWith("https://"),
+  renderModal: (props: LinkSafetyModalProps) => (
+    <StreamdownLinkModal {...props} />
+  ),
+};
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
@@ -330,6 +452,8 @@ export const MessageResponse = memo(
         className
       )}
       plugins={streamdownPlugins}
+      components={streamdownComponents}
+      linkSafety={streamdownLinkSafety}
       {...props}
     />
   ),

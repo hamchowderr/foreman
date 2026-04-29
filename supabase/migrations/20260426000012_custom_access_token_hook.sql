@@ -3,7 +3,7 @@
 -- gate admin features without an extra DB lookup
 
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event jsonb)
-RETURNS jsonb LANGUAGE plpgsql IMMUTABLE AS $$
+RETURNS jsonb LANGUAGE plpgsql STABLE AS $$
 DECLARE
   claims jsonb;
   user_role public.app_role;

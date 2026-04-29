@@ -1,10 +1,10 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { useEffect } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
-import { Shimmer } from "../ai-elements/shimmer";
 import {
   Tool,
   ToolContent,
@@ -15,11 +15,135 @@ import {
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
-import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
+
+function getAlwaysAllowedTools(): Set<string> {
+  try {
+    const stored = localStorage.getItem("foreman:always-allow-tools");
+    return new Set(stored ? JSON.parse(stored) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function addAlwaysAllowedTool(toolName: string) {
+  try {
+    const tools = getAlwaysAllowedTools();
+    tools.add(toolName);
+    localStorage.setItem("foreman:always-allow-tools", JSON.stringify([...tools]));
+  } catch {}
+}
+
+const ApprovalButtons = ({
+  approvalId,
+  toolName,
+  addToolApprovalResponse,
+}: {
+  approvalId: string;
+  toolName: string;
+  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+}) => (
+  <div className="flex items-center justify-end gap-1.5 border-t border-[#C8C8CA]/60 px-3 py-2.5 dark:border-[#3A3A3C]">
+    <button
+      className="rounded-full px-3 py-1 text-[13px] text-[#FF3B30] transition-colors hover:bg-[#FF3B30]/10"
+      onClick={() => {
+        addToolApprovalResponse({
+          id: approvalId,
+          approved: false,
+          reason: "User denied this action",
+        });
+      }}
+      type="button"
+    >
+      Deny
+    </button>
+    <button
+      className="rounded-full px-3 py-1 text-[13px] text-[#8E8E93] transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+      onClick={() => {
+        addAlwaysAllowedTool(toolName);
+        addToolApprovalResponse({ id: approvalId, approved: true });
+      }}
+      type="button"
+    >
+      Always Allow
+    </button>
+    <button
+      className="rounded-full bg-[#007AFF] px-3 py-1 text-[13px] text-white transition-colors hover:bg-[#0A84FF] dark:bg-[#0A84FF]"
+      onClick={() => {
+        addToolApprovalResponse({ id: approvalId, approved: true });
+      }}
+      type="button"
+    >
+      Allow
+    </button>
+  </div>
+);
+
+const GenericToolCard = ({
+  part,
+  toolName,
+  addToolApprovalResponse,
+}: {
+  part: any;
+  toolName: string;
+  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+}) => {
+  const { toolCallId, state } = part;
+  const approvalId = (part as { approval?: { id: string } }).approval?.id;
+  const isDenied =
+    state === "output-denied" ||
+    (state === "approval-responded" &&
+      (part as { approval?: { approved?: boolean } }).approval?.approved === false);
+
+  useEffect(() => {
+    if (state === "approval-requested" && approvalId) {
+      if (getAlwaysAllowedTools().has(toolName)) {
+        addToolApprovalResponse({ id: approvalId, approved: true });
+      }
+    }
+  }, [state, approvalId, toolName, addToolApprovalResponse]);
+
+  const needsApproval = state === "approval-requested" && !!approvalId;
+
+  return (
+    <div className="w-[min(100%,500px)]">
+      <Tool className="w-full" defaultOpen={needsApproval}>
+        <ToolHeader state={state} toolName={toolName} type="dynamic-tool" />
+        <ToolContent>
+          {(state === "input-available" ||
+            state === "input-streaming" ||
+            state === "approval-requested" ||
+            state === "approval-responded") &&
+            part.input && <ToolInput input={part.input} />}
+          {state === "output-available" && (
+            <ToolOutput errorText={part.errorText} output={part.output} />
+          )}
+          {state === "output-error" && (
+            <ToolOutput
+              errorText={part.errorText ?? "Tool execution failed"}
+              output={part.output}
+            />
+          )}
+          {isDenied && (
+            <div className="px-4 py-3 text-sm text-muted-foreground">
+              Action was denied.
+            </div>
+          )}
+        </ToolContent>
+        {needsApproval && (
+          <ApprovalButtons
+            addToolApprovalResponse={addToolApprovalResponse}
+            approvalId={approvalId}
+            toolName={toolName}
+          />
+        )}
+      </Tool>
+    </div>
+  );
+};
 
 const PurePreviewMessage = ({
   addToolApprovalResponse,
@@ -114,12 +238,15 @@ const PurePreviewMessage = ({
     }
 
     if (type === "text") {
+      const isUserMsg = message.role === "user";
       return (
         <MessageContent
-          className={cn("text-[13px] leading-[1.65]", {
-            "w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-3.5 py-2 shadow-[var(--shadow-card)]":
-              message.role === "user",
-          })}
+          className={cn(
+            "text-[15px] leading-[1.5]",
+            isUserMsg
+              ? "w-fit max-w-[min(75%,52ch)] overflow-hidden break-words rounded-[18px] rounded-br-[4px] bg-[#007AFF] px-4 py-2.5 text-white dark:bg-[#0A84FF]"
+              : "w-fit max-w-full overflow-hidden break-words rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-2.5 text-[#1C1C1E] dark:bg-[#2C2C2E] dark:text-[#F2F2F7]"
+          )}
           data-testid="message-content"
           key={key}
         >
@@ -183,36 +310,14 @@ const PurePreviewMessage = ({
                 state === "approval-requested") && (
                 <ToolInput input={part.input} />
               )}
-              {state === "approval-requested" && approvalId && (
-                <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
-                  <button
-                    className="rounded-md px-3 py-1.5 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
-                    onClick={() => {
-                      addToolApprovalResponse({
-                        id: approvalId,
-                        approved: false,
-                        reason: "User denied weather lookup",
-                      });
-                    }}
-                    type="button"
-                  >
-                    Deny
-                  </button>
-                  <button
-                    className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground text-sm transition-colors hover:bg-primary/90"
-                    onClick={() => {
-                      addToolApprovalResponse({
-                        id: approvalId,
-                        approved: true,
-                      });
-                    }}
-                    type="button"
-                  >
-                    Allow
-                  </button>
-                </div>
-              )}
             </ToolContent>
+            {state === "approval-requested" && approvalId && (
+              <ApprovalButtons
+                addToolApprovalResponse={addToolApprovalResponse}
+                approvalId={approvalId}
+                toolName="getWeather"
+              />
+            )}
           </Tool>
         </div>
       );
@@ -303,83 +408,20 @@ const PurePreviewMessage = ({
 
     // Generic handler for all other tool types (Zapier SDK tools, etc.)
     if (type.startsWith("tool-")) {
-      const { toolCallId, state } = part;
       const toolName = type.replace(/^tool-/, "");
 
       // Internal memory tools — not meaningful to show users
       if (toolName === "updateWorkingMemory" || toolName === "recall") {
         return null;
       }
-      const approvalId = (part as { approval?: { id: string } }).approval?.id;
-      const isDenied =
-        state === "output-denied" ||
-        (state === "approval-responded" &&
-          (part as { approval?: { approved?: boolean } }).approval?.approved ===
-            false);
 
       return (
-        <div className="w-[min(100%,500px)]" key={toolCallId ?? key}>
-          <Tool className="w-full" defaultOpen={state === "approval-requested"}>
-            <ToolHeader
-              state={state}
-              toolName={toolName}
-              type="dynamic-tool"
-            />
-            <ToolContent>
-              {(state === "input-available" ||
-                state === "input-streaming" ||
-                state === "approval-requested" ||
-                state === "approval-responded") &&
-                part.input && <ToolInput input={part.input} />}
-              {state === "output-available" && (
-                <ToolOutput
-                  errorText={part.errorText}
-                  output={part.output}
-                />
-              )}
-              {state === "output-error" && (
-                <ToolOutput
-                  errorText={part.errorText ?? "Tool execution failed"}
-                  output={part.output}
-                />
-              )}
-              {isDenied && (
-                <div className="px-4 py-3 text-sm text-muted-foreground">
-                  Action was denied.
-                </div>
-              )}
-              {state === "approval-requested" && approvalId && (
-                <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
-                  <button
-                    className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    onClick={() => {
-                      addToolApprovalResponse({
-                        id: approvalId,
-                        approved: false,
-                        reason: "User denied this action",
-                      });
-                    }}
-                    type="button"
-                  >
-                    Deny
-                  </button>
-                  <button
-                    className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90"
-                    onClick={() => {
-                      addToolApprovalResponse({
-                        id: approvalId,
-                        approved: true,
-                      });
-                    }}
-                    type="button"
-                  >
-                    Allow
-                  </button>
-                </div>
-              )}
-            </ToolContent>
-          </Tool>
-        </div>
+        <GenericToolCard
+          addToolApprovalResponse={addToolApprovalResponse}
+          key={part.toolCallId ?? key}
+          part={part}
+          toolName={toolName}
+        />
       );
     }
 
@@ -398,10 +440,10 @@ const PurePreviewMessage = ({
   );
 
   const content = isThinking ? (
-    <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
-      <Shimmer className="font-medium" duration={1}>
-        Thinking...
-      </Shimmer>
+    <div className="flex w-fit items-center gap-1 rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-3 dark:bg-[#2C2C2E]">
+      <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
+      <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
+      <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
     </div>
   ) : (
     <>
@@ -422,18 +464,11 @@ const PurePreviewMessage = ({
     >
       <div
         className={cn(
-          isUser ? "flex flex-col items-end gap-2" : "flex items-start gap-3"
+          isUser ? "flex flex-col items-end gap-1.5" : "flex flex-col items-start gap-1.5"
         )}
       >
-        {isAssistant && (
-          <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-              <SparklesIcon size={13} />
-            </div>
-          </div>
-        )}
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
+          <div className="flex min-w-0 max-w-[80%] flex-col gap-1.5">{content}</div>
         ) : (
           content
         )}
@@ -451,17 +486,11 @@ export const ThinkingMessage = () => {
       data-role="assistant"
       data-testid="message-assistant-loading"
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-            <SparklesIcon size={13} />
-          </div>
-        </div>
-
-        <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
-          <Shimmer className="font-medium" duration={1}>
-            Thinking...
-          </Shimmer>
+      <div className="flex flex-col items-start">
+        <div className="flex w-fit items-center gap-1 rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-3 dark:bg-[#2C2C2E]">
+          <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
+          <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
+          <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
         </div>
       </div>
     </div>

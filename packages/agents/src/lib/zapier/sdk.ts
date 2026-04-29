@@ -5,6 +5,10 @@ import { getEnv } from "../env";
 import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
 import { loadUserConnectionsMap } from "./aliases";
 
+// Must match the client ID used during the PKCE OAuth flow in connect.ts.
+// Tokens issued to a PKCE public client can only be refreshed with the same client_id and no secret.
+const ZAPIER_PKCE_CLIENT_ID = "grwWZD5hUWGvb4V8ODBuOtXer3h0DBEZ2HR8aay6";
+
 type ZapierSdk = ReturnType<typeof createZapierSdk>;
 
 const sdkCache = new Map<string, { sdk: ZapierSdk; expiresAt: number }>();
@@ -38,15 +42,13 @@ async function refreshAccessToken(
   userId: string,
   refreshToken: string
 ): Promise<{ accessToken: string; refreshToken: string; expiresAt: Date }> {
-  const env = getEnv();
   const res = await fetch(ZAPIER_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: refreshToken,
-      client_id: env.ZAPIER_CLIENT_ID || "",
-      client_secret: env.ZAPIER_CLIENT_SECRET || "",
+      client_id: ZAPIER_PKCE_CLIENT_ID,
     }),
   });
 
@@ -149,7 +151,6 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
       accessToken = refreshed.accessToken;
       tokenExpiry = refreshed.expiresAt.getTime();
     } catch {
-      // Clear cache on refresh failure
       sdkCache.delete(userId);
       throw new ZapierReauthRequired(userId, "token refresh failed");
     }

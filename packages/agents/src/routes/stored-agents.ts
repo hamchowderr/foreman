@@ -101,7 +101,6 @@ storedAgents.get("/tools", async (c) => {
 // POST / — create agent and its initial v1 draft
 storedAgents.post("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
   const supabase = getSupabase();
 
   let body: any;
@@ -140,7 +139,6 @@ storedAgents.post("/", async (c) => {
   await supabase.from("stored_agent").insert({
     id: agentId,
     user_id: userId,
-    org_id: orgId ?? null,
     name: name.trim(),
     description: description ?? null,
     current_version_id: null,
@@ -165,23 +163,16 @@ storedAgents.post("/", async (c) => {
   return c.json(serializeAgent(agent!, latest), 201);
 });
 
-// GET / — list agents for current user/org
+// GET / — list agents for current user
 storedAgents.get("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
   const supabase = getSupabase();
 
-  let query = supabase
+  const { data: agents } = await supabase
     .from("stored_agent")
     .select("*")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
-
-  if (orgId) {
-    query = query.eq("org_id", orgId);
-  }
-
-  const { data: agents } = await query;
 
   const results = await Promise.all(
     (agents ?? []).map(async (a: any) => {

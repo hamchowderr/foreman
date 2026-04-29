@@ -15,16 +15,25 @@ const LOGIN_PORTS = [49505, 50575, 52804, 55981, 61010, 63851];
 // Scope that produces SDK-compatible tokens with offline_access (refresh token).
 const ZAPIER_SCOPE = "internal credentials offline_access";
 
-// In-memory store for pending connect requests.
+// In-memory store for pending connect requests (bot channel flow).
 const pendingConnects = new Map<
   string,
   { userId: string; state: string; expiresAt: number }
+>();
+
+// In-memory state map for web/agent PKCE flow (shared with route handler).
+export const webConnectStateMap = new Map<
+  string,
+  { userId: string; expiresAt: number; isWeb?: boolean; codeVerifier: string; redirectUri: string }
 >();
 
 setInterval(() => {
   const now = Date.now();
   for (const [token, entry] of pendingConnects) {
     if (entry.expiresAt < now) pendingConnects.delete(token);
+  }
+  for (const [state, entry] of webConnectStateMap) {
+    if (entry.expiresAt < now) webConnectStateMap.delete(state);
   }
 }, 60_000);
 
@@ -218,4 +227,21 @@ export async function exchangeCodeAndStore(
     },
     { onConflict: "user_id" }
   );
+}
+
+/**
+ * Generate a PKCE OAuth URL for a user — same flow as the web onboarding.
+ * Stores the state in webConnectStateMap so the callback handler can retrieve it.
+ */
+export async function buildWebConnectUrl(userId: string): Promise<string> {
+  const state = randomBytes(16).toString("hex");
+  const { authorizeUrl, codeVerifier, redirectUri } = await buildAuthorizeUrl(state);
+  webConnectStateMap.set(state, {
+    userId,
+    expiresAt: Date.now() + TOKEN_TTL_MS,
+    isWeb: true,
+    codeVerifier,
+    redirectUri,
+  });
+  return authorizeUrl;
 }

@@ -1,30 +1,15 @@
-import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
 import {
   consumeConnectToken,
   buildAuthorizeUrl,
   exchangeCodeAndStore,
+  webConnectStateMap,
 } from "@/lib/zapier/connect";
 import { resolveFromSupabaseJwt, ensureUserExists } from "@/lib/identity";
 import { getSupabase } from "@/lib/db";
+import { randomBytes } from "node:crypto";
 
 const zapierConnect = new Hono();
-
-// In-memory state → userId + PKCE verifier + redirectUri mapping for the OAuth round-trip
-const stateMap = new Map<string, {
-  userId: string;
-  expiresAt: number;
-  isWeb?: boolean;
-  codeVerifier: string;
-  redirectUri: string;
-}>();
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [state, entry] of stateMap) {
-    if (entry.expiresAt < now) stateMap.delete(state);
-  }
-}, 60_000);
 
 /**
  * Web OAuth initiation — called from the onboarding flow.
@@ -41,7 +26,7 @@ zapierConnect.get("/web-connect", async (c) => {
   const state = randomBytes(16).toString("hex");
   const { authorizeUrl, codeVerifier, redirectUri } = await buildAuthorizeUrl(state);
 
-  stateMap.set(state, {
+  webConnectStateMap.set(state, {
     userId: identity.userId,
     expiresAt: Date.now() + 10 * 60 * 1000,
     isWeb: true,
@@ -88,7 +73,7 @@ zapierConnect.get("/connect/:token", async (c) => {
   }
 
   const { authorizeUrl, codeVerifier, redirectUri } = await buildAuthorizeUrl(pending.state);
-  stateMap.set(pending.state, {
+  webConnectStateMap.set(pending.state, {
     userId: pending.userId,
     expiresAt: Date.now() + 10 * 60 * 1000,
     codeVerifier,
@@ -121,15 +106,15 @@ async function handleCallback(c: any) {
     );
   }
 
-  const stateEntry = stateMap.get(state);
+  const stateEntry = webConnectStateMap.get(state);
   if (!stateEntry || stateEntry.expiresAt < Date.now()) {
-    stateMap.delete(state!);
+    webConnectStateMap.delete(state!);
     return c.html(
       `<html><body><h1>Session Expired</h1><p>The authorization session has expired. Please try connecting again.</p></body></html>`,
       400
     );
   }
-  stateMap.delete(state);
+  webConnectStateMap.delete(state);
 
   try {
     await exchangeCodeAndStore(code, stateEntry.userId, stateEntry.codeVerifier, stateEntry.redirectUri);

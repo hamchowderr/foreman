@@ -4,6 +4,7 @@ import { createDiscordAdapter } from "@chat-adapter/discord";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
 import { registerChannelUser } from "../lib/identity";
+import { requestUserContext } from "../lib/request-user-context";
 
 let _bot: Chat<{ discord: ReturnType<typeof createDiscordAdapter> }> | undefined;
 let _discordAdapter: ReturnType<typeof createDiscordAdapter> | undefined;
@@ -47,7 +48,7 @@ export async function getDiscordBot() {
     // is available when they message from Discord, because resource is the same userId.
     let postedStepTexts: string[] = [];
 
-    const result = await agent.generate(text, {
+    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
       stopWhen: stepCountIs(10),
       savePerStep: true,
       memory: {
@@ -64,7 +65,7 @@ export async function getDiscordBot() {
           // Don't let posting errors crash the agent
         }
       },
-    });
+    }));
 
     // result.text contains ALL step texts concatenated.
     // Strip out anything we already posted to avoid duplicates.

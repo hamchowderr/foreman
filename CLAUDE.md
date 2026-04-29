@@ -118,6 +118,26 @@ npx supabase start                         # Boots local Postgres/pgvector on :5
 # Apply schema via Supabase Studio (:54423) or psql using agents/drizzle/*.sql
 ```
 
+## ngrok (optional — only for channel webhooks)
+
+ngrok is only needed if you're testing **incoming channel webhooks** (Slack, Discord, Telegram, Linear) that require a public URL. The Zapier OAuth callback uses `ZAPIER_REDIRECT_URI=http://localhost:4111/zapier/callback` (set in `.env.local`) — no ngrok required.
+
+If you do need ngrok (e.g., for channel webhooks):
+
+```bash
+ngrok http 4111                            # Get a new public URL
+```
+
+Then update `packages/agents/.env.local` → `AGENT_SERVER_URL=https://<new-url>.ngrok-free.app`
+
+Restart the agents server so it picks up the new URL:
+
+```bash
+cd packages/agents && npm run start        # NOT mastra dev — use npm run start on Windows
+```
+
+> **Note:** `mastra dev` hangs on Windows due to an IPC pipe issue. Always use `npm run build && npm run start` instead.
+
 ## Dev Commands
 
 ```bash
@@ -126,7 +146,8 @@ npx supabase start                         # Supabase (Postgres :54422, Studio :
 npx supabase stop                          # Shut it down
 
 # Dev servers
-cd packages/agents && npm run dev          # Mastra dev (:4111)
+cd packages/agents && npm run build        # Build first (mastra dev broken on Windows)
+cd packages/agents && npm run start        # Then start agents (:4111)
 cd packages/web && npm run dev             # Next.js (:3000)
 cd packages/agents && npm run start:webhooks  # Channel webhooks (:4112)
 

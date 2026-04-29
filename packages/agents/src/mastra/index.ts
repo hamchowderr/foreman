@@ -1,3 +1,6 @@
+import { enableFileLogging } from "../lib/file-logger";
+enableFileLogging();
+
 import { Mastra } from "@mastra/core";
 import { MastraEditor } from "@mastra/editor";
 import { PostgresStore } from "@mastra/pg";
@@ -14,6 +17,7 @@ import { createHistoryAgent } from "./agents/history";
 import { createSupervisorAgent } from "./agents/supervisor";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import { validateAgentCapabilities } from "../lib/providers";
+import { requestUserContext } from "../lib/request-user-context";
 import type { MiddlewareHandler } from "hono";
 
 validateAgentCapabilities();
@@ -134,6 +138,8 @@ export function getMastra(): Mastra {
               const rid = body.resourceId || "";
               const incomingTid = body.threadId || body.id;
 
+              console.log(`[chat] request agentId=${agentId} incomingTid=${incomingTid} rid=${rid || "(empty)"}`);
+
               // Look up mastra_thread_id from the conversation table so memory loads correctly.
               let tid: string;
               if (incomingTid) {
@@ -148,24 +154,40 @@ export function getMastra(): Mastra {
 
                 if (conv?.mastra_thread_id) {
                   tid = conv.mastra_thread_id;
+                  console.log(`[chat] found thread tid=${tid}`);
                 } else {
-                  // No mapping — create a Mastra thread and persist the mapping
-                  const memory = await agent.getMemory();
-                  const thread = await memory!.createThread({ resourceId: rid });
-                  tid = thread.id;
-                  const now = new Date().toISOString();
-                  await supabase.from("conversation").insert({
-                    id: incomingTid,
-                    user_id: rid,
-                    org_id: null,
-                    mastra_thread_id: tid,
-                    title: null,
-                    created_at: now,
-                    updated_at: now,
-                  });
+                  // No DB row yet — use incomingTid as the Mastra thread ID directly so the
+                  // same thread is used across all messages for this chat, even if the DB row
+                  // hasn't been written yet (e.g. userId not loaded on first message).
+                  // Mastra creates the thread on first use if it doesn't exist.
+                  tid = incomingTid;
+                  if (rid) {
+                    // userId is available — persist the mapping now
+                    const now = new Date().toISOString();
+                    const { error: insertErr } = await supabase.from("conversation").upsert(
+                      {
+                        id: incomingTid,
+                        user_id: rid,
+                        mastra_thread_id: tid,
+                        title: null,
+                        created_at: now,
+                        updated_at: now,
+                      },
+                      { onConflict: "id" }
+                    );
+                    if (insertErr) {
+                      console.error(`[chat] conversation upsert failed: ${insertErr.message} (code=${insertErr.code})`);
+                    } else {
+                      console.log(`[chat] created thread mapping conv=${incomingTid} tid=${tid}`);
+                    }
+                  } else {
+                    // rid empty — userId not yet loaded. Row will be written on next request.
+                    console.log(`[chat] rid empty, deferring row insert. Using incomingTid as tid=${tid}`);
+                  }
                 }
               } else {
                 tid = crypto.randomUUID();
+                console.log(`[chat] no incomingTid, using random tid=${tid}`);
               }
 
               const rctx = new RequestContext([
@@ -173,14 +195,16 @@ export function getMastra(): Mastra {
                 ["userId", rid],
               ]);
 
-              const result = await agent.stream(
-                [{ role: "user" as const, content: text }],
-                {
-                  stopWhen: stepCountIs(15),
-                  memory: { thread: tid, resource: rid },
-                  savePerStep: true,
-                  requestContext: rctx,
-                }
+              const result = await requestUserContext.run({ userId: rid }, () =>
+                agent.stream(
+                  [{ role: "user" as const, content: text }],
+                  {
+                    stopWhen: stepCountIs(15),
+                    memory: { thread: tid, resource: rid },
+                    savePerStep: true,
+                    requestContext: rctx,
+                  }
+                )
               );
 
               return createUIMessageStreamResponse({
