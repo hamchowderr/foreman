@@ -29,6 +29,8 @@ function getPrompt(uses: string[]): string {
   return 'What apps am I connected to in Zapier?'
 }
 
+const HIDDEN_TOOLS = new Set(['updateWorkingMemory', 'recall'])
+
 function ToolCallBubble({ part }: { part: any }) {
   const [expanded, setExpanded] = useState(false)
   // AI SDK v6: type is "tool-<toolName>", name extracted from type
@@ -83,7 +85,7 @@ export function StepTry({ uses, onNext }: Props) {
   const prompt = getPrompt(uses)
   const [chatId] = useState(() => crypto.randomUUID())
   const [userId, setUserId] = useState<string>('')
-  const hasSent = useRef(false)
+  const [started, setStarted] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [done, setDone] = useState(false)
 
@@ -132,19 +134,23 @@ export function StepTry({ uses, onNext }: Props) {
     }),
   } as any)
 
-  // Wait for userId before sending — resourceId must be non-empty for Mastra memory
-  useEffect(() => {
-    if (!hasSent.current && userId) {
-      hasSent.current = true
+  const handleStart = () => {
+    if (!started && userId) {
+      setStarted(true)
       sendMessage({ role: 'user', content: prompt } as any)
     }
-  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
+  // Scroll to bottom on any DOM change (fires during streaming, not just on new messages)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages])
+    const el = scrollRef.current
+    if (!el) return
+    const observer = new MutationObserver(() => {
+      el.scrollTop = el.scrollHeight
+    })
+    observer.observe(el, { childList: true, subtree: true, characterData: true })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (status === 'ready' && messages.length > 1) setDone(true)
@@ -193,6 +199,30 @@ export function StepTry({ uses, onNext }: Props) {
           className="p-4 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden"
           style={{ minHeight: 200, maxHeight: 320 }}
         >
+          {/* Pre-start: show prompt as a clickable suggestion */}
+          {!started && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 py-4">
+              <p className="text-xs text-center" style={{ color: '#FFBF6E' }}>
+                Press the button below to see Foreman in action
+              </p>
+              <button
+                onClick={handleStart}
+                disabled={!userId}
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium transition-all"
+                style={{
+                  backgroundColor: '#FFF3E6',
+                  border: '1px solid #FFBF6E',
+                  color: '#201515',
+                  opacity: userId ? 1 : 0.5,
+                  cursor: userId ? 'pointer' : 'wait',
+                }}
+              >
+                <span>{prompt}</span>
+                <ArrowRight className="h-3 w-3 shrink-0" style={{ color: '#FF4F00' }} />
+              </button>
+            </div>
+          )}
+
           {messages.map((msg) => {
             if (msg.role === 'user') {
               return (
@@ -213,6 +243,8 @@ export function StepTry({ uses, onNext }: Props) {
               <div key={msg.id} className="space-y-2">
                 {parts.map((part: any, i: number) => {
                   if (part.type?.startsWith('tool-')) {
+                    const tn = part.type.replace(/^tool-/, '')
+                    if (HIDDEN_TOOLS.has(tn)) return null
                     return <ToolCallBubble key={i} part={part} />
                   }
                   if (part.type === 'text' && part.text) {
@@ -282,8 +314,8 @@ export function StepTry({ uses, onNext }: Props) {
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <p className="text-sm" style={{ color: done ? '#4A7C2F' : '#FFBF6E' }}>
-          {done ? 'Foreman is working.' : 'Waiting for response…'}
+        <p className="text-sm" style={{ color: done ? '#4A7C2F' : started ? '#FFBF6E' : '#6B5050' }}>
+          {done ? 'Foreman is connected.' : started ? 'Waiting for response…' : 'Click the prompt above to start'}
         </p>
         <button
           onClick={onNext}

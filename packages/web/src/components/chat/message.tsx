@@ -305,6 +305,11 @@ const PurePreviewMessage = ({
     if (type.startsWith("tool-")) {
       const { toolCallId, state } = part;
       const toolName = type.replace(/^tool-/, "");
+
+      // Internal memory tools — not meaningful to show users
+      if (toolName === "updateWorkingMemory" || toolName === "recall") {
+        return null;
+      }
       const approvalId = (part as { approval?: { id: string } }).approval?.id;
       const isDenied =
         state === "output-denied" ||
