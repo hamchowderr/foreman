@@ -14,48 +14,52 @@ conversations.use("/*", authMiddleware);
 // POST / — create conversation
 conversations.post("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
   const supabase = getSupabase();
-  const mastra = getMastra();
-
-  const memory = await mastra.getAgent("foreman").getMemory();
-  const thread = await memory!.createThread({ resourceId: userId });
 
   let body: any = {};
   try { body = await c.req.json(); } catch {}
   const id = body.id || crypto.randomUUID();
   const now = new Date().toISOString();
 
+  // Check if conversation already exists (idempotent — frontend may retry)
+  const { data: existing } = await supabase
+    .from("conversation")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  if (existing) return c.json({ id, mastra_thread_id: id, title: null, created_at: now }, 200);
+
+  // Use chatId as the Mastra threadId so the frontend's threadId matches
+  const mastra = getMastra();
+  const memory = await mastra.getAgent("foreman").getMemory();
+  if (memory) {
+    try {
+      await memory.createThread({ threadId: id, resourceId: userId });
+    } catch {}
+  }
+
   await supabase.from("conversation").insert({
     id,
     user_id: userId,
-    org_id: orgId ?? null,
-    mastra_thread_id: thread.id,
+    mastra_thread_id: id,
     title: null,
     created_at: now,
     updated_at: now,
   });
 
-  return c.json({ id, mastra_thread_id: thread.id, title: null, created_at: now }, 201);
+  return c.json({ id, mastra_thread_id: id, title: null, created_at: now }, 201);
 });
 
 // GET / — list conversations
 conversations.get("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
   const supabase = getSupabase();
 
-  let query = supabase
+  const { data: rows } = await supabase
     .from("conversation")
     .select("*")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
-
-  if (orgId) {
-    query = query.eq("org_id", orgId);
-  }
-
-  const { data: rows } = await query;
 
   return c.json(
     (rows ?? []).map((conv: any) => ({

@@ -258,11 +258,23 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
     log(`Inserted/updated ${appsInserted} apps in app_catalog`);
   }
 
-  // Embed all apps in DB
+  // Embed all apps in DB — paginate to avoid Supabase's 1000-row default cap
   log("Embedding app catalog into vector index...");
   const supabaseEmbed = getSupabase();
-  const { data: allApps } = await supabaseEmbed.from("app_catalog").select("*");
-  const appsWithText = (allApps ?? []).filter((a: any) => a.embedding_text);
+  const PAGE = 1000;
+  let offset = 0;
+  const appsWithText: any[] = [];
+  while (true) {
+    const { data: page } = await supabaseEmbed
+      .from("app_catalog")
+      .select("*")
+      .not("embedding_text", "is", null)
+      .range(offset, offset + PAGE - 1);
+    if (!page || page.length === 0) break;
+    appsWithText.push(...page);
+    if (page.length < PAGE) break;
+    offset += PAGE;
+  }
 
   await indexAppCatalog(
     appsWithText.map((a: any) => ({
