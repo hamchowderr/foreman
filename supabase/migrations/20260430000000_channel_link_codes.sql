@@ -16,3 +16,16 @@ ALTER TABLE public.channel_link_code ADD CONSTRAINT channel_link_code_pkey PRIMA
 ALTER TABLE public.channel_link_code ADD CONSTRAINT channel_link_code_code_unique UNIQUE (code);
 
 REVOKE SELECT ON TABLE public.channel_link_code FROM anon;
+
+-- Slack workspace installations: persists per-workspace bot tokens across restarts.
+CREATE TABLE IF NOT EXISTS public.slack_installation (
+    team_id      text PRIMARY KEY,
+    team_name    text,
+    bot_token    text NOT NULL,
+    bot_user_id  text,
+    installed_at timestamptz NOT NULL DEFAULT now(),
+    updated_at   timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.slack_installation OWNER TO postgres;
+REVOKE ALL ON public.slack_installation FROM anon, authenticated;
