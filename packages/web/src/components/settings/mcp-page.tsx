@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/client'
 
 interface ApiKey {
@@ -13,7 +13,6 @@ interface ApiKey {
 
 interface Props {
   mcpUrl: string
-  initialKeys: ApiKey[]
 }
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
@@ -42,8 +41,9 @@ function CodeBlock({ code }: { code: string }) {
   )
 }
 
-export function McpPage({ mcpUrl, initialKeys }: Props) {
-  const [keys, setKeys] = useState<ApiKey[]>(initialKeys)
+export function McpPage({ mcpUrl }: Props) {
+  const [keys, setKeys] = useState<ApiKey[]>([])
+  const [loading, setLoading] = useState(true)
   const [newKeyName, setNewKeyName] = useState('')
   const [creating, setCreating] = useState(false)
   const [revealedKey, setRevealedKey] = useState<{ id: string; key: string } | null>(null)
@@ -54,6 +54,24 @@ export function McpPage({ mcpUrl, initialKeys }: Props) {
     const { data: { session } } = await supabase.auth.getSession()
     return session?.access_token ?? ''
   }
+
+  useEffect(() => {
+    async function fetchKeys() {
+      try {
+        const token = await getToken()
+        const res = await fetch(`${AGENT_URL}/api-keys`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setKeys(data.keys ?? [])
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchKeys()
+  }, [])
 
   async function createKey() {
     const name = newKeyName.trim()
@@ -168,7 +186,10 @@ export function McpPage({ mcpUrl, initialKeys }: Props) {
 
         {/* Key list */}
         <div className="space-y-2">
-          {keys.length === 0 && (
+          {loading && (
+            <p className="text-sm py-4 text-center" style={{ color: '#aaa' }}>Loading…</p>
+          )}
+          {!loading && keys.length === 0 && (
             <p className="text-sm py-4 text-center" style={{ color: '#aaa' }}>No API keys yet.</p>
           )}
           {keys.map((k) => (

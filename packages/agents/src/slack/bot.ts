@@ -5,6 +5,8 @@ import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
 import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { getSupabase } from "../lib/db";
+import { decryptToken } from "../lib/crypto";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;
 let _slackAdapter: ReturnType<typeof createSlackAdapter> | undefined;
@@ -142,7 +144,35 @@ export async function getSlackBot() {
   });
 
   _bot = bot;
+
+  // Rehydrate persisted installations from Supabase (fire-and-forget)
+  rehydrateInstallations(slack).catch((err) =>
+    console.error("[slack] DB rehydration failed:", err)
+  );
+
   return bot;
+}
+
+async function rehydrateInstallations(
+  adapter: ReturnType<typeof createSlackAdapter>
+): Promise<void> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("slack_installation")
+    .select("team_id, team_name, bot_token, bot_user_id");
+  if (error || !data?.length) return;
+  for (const row of data) {
+    try {
+      await adapter.setInstallation(row.team_id, {
+        botToken: decryptToken(row.bot_token),
+        botUserId: row.bot_user_id ?? undefined,
+        teamName: row.team_name ?? undefined,
+      });
+    } catch (err) {
+      console.error("[slack] Failed to rehydrate team", row.team_id, err);
+    }
+  }
+  console.log(`[slack] Rehydrated ${data.length} installation(s) from DB`);
 }
 
 /**

@@ -7,9 +7,10 @@ import { createClient } from '@/lib/client'
 interface Props {
   channel: string
   displayName: string
-  icon: string
+  icon: React.ReactNode
+  iconColor?: string
   description: string
-  botLink: string
+  botLink: string | null
   botLinkLabel: string
   steps: string[]
 }
@@ -31,7 +32,7 @@ function formatSecondsLeft(ms: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-export function ChannelConnectPage({ channel, displayName, icon, description, botLink, botLinkLabel, steps }: Props) {
+export function ChannelConnectPage({ channel, displayName, icon, iconColor, description, botLink, botLinkLabel, steps }: Props) {
   const [linked, setLinked] = useState(false)
   const [code, setCode] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<number | null>(null)
@@ -128,7 +129,12 @@ export function ChannelConnectPage({ channel, displayName, icon, description, bo
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{icon}</span>
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+            style={{ backgroundColor: iconColor ? `${iconColor}18` : '#f3f4f6' }}
+          >
+            {icon}
+          </div>
           <div>
             <h1 className="text-xl font-semibold" style={{ color: '#201515' }}>{displayName}</h1>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: '#d1fae5', color: '#065f46' }}>
@@ -150,7 +156,12 @@ export function ChannelConnectPage({ channel, displayName, icon, description, bo
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <span className="text-3xl">{icon}</span>
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+          style={{ backgroundColor: iconColor ? `${iconColor}18` : '#f3f4f6' }}
+        >
+          {icon}
+        </div>
         <div>
           <h1 className="text-xl font-semibold" style={{ color: '#201515' }}>{displayName}</h1>
           <p className="text-sm mt-0.5" style={{ color: '#888' }}>{description}</p>
@@ -158,15 +169,21 @@ export function ChannelConnectPage({ channel, displayName, icon, description, bo
       </div>
 
       {/* Bot link */}
-      <a
-        href={botLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        style={{ backgroundColor: '#201515' }}
-      >
-        {botLinkLabel} ↗
-      </a>
+      {botLink ? (
+        <a
+          href={botLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: '#201515' }}
+        >
+          {botLinkLabel} ↗
+        </a>
+      ) : (
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: '#fff7ed', border: '1.5px solid #FFBF6E', color: '#92400e' }}>
+          {displayName} bot not configured. Set <code className="font-mono text-xs">NEXT_PUBLIC_{channel.toUpperCase()}_INSTALL_URL</code> to enable the install link.
+        </div>
+      )}
 
       {/* Steps */}
       <div>

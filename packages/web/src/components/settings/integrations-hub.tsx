@@ -1,6 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  SlackIcon,
+  DiscordIcon,
+  TelegramIcon,
+  WhatsappIcon,
+  MicrosoftIcon,
+  ElectricPlugsIcon,
+} from '@hugeicons/core-free-icons'
+import { BRAND_COLORS } from '@/components/icons/brands'
 
 interface Props {
   connectedChannels: string[]
@@ -10,7 +20,8 @@ const CHANNELS = [
   {
     key: 'mcp',
     label: 'MCP / API',
-    icon: '🔌',
+    icon: ElectricPlugsIcon,
+    iconColor: '#FF4F00',
     description: 'Connect Claude Desktop, Cursor, or any MCP client directly to Foreman.',
     href: '/settings/integrations/mcp',
     available: true,
@@ -18,7 +29,8 @@ const CHANNELS = [
   {
     key: 'telegram',
     label: 'Telegram',
-    icon: '✈️',
+    icon: TelegramIcon,
+    iconColor: BRAND_COLORS.telegram,
     description: 'Chat with Foreman via Telegram DMs or group mentions.',
     href: '/settings/integrations/telegram',
     available: true,
@@ -26,7 +38,8 @@ const CHANNELS = [
   {
     key: 'discord',
     label: 'Discord',
-    icon: '🎮',
+    icon: DiscordIcon,
+    iconColor: BRAND_COLORS.discord,
     description: 'Mention @Foreman in any Discord channel or DM the bot.',
     href: '/settings/integrations/discord',
     available: true,
@@ -34,7 +47,8 @@ const CHANNELS = [
   {
     key: 'slack',
     label: 'Slack',
-    icon: '💬',
+    icon: SlackIcon,
+    iconColor: BRAND_COLORS.slack,
     description: 'Add Foreman to your Slack workspace and trigger actions from any channel.',
     href: '/settings/integrations/slack',
     available: true,
@@ -42,7 +56,8 @@ const CHANNELS = [
   {
     key: 'teams',
     label: 'Microsoft Teams',
-    icon: '🟦',
+    icon: MicrosoftIcon,
+    iconColor: BRAND_COLORS.microsoft,
     description: 'Coming soon.',
     href: '#',
     available: false,
@@ -50,7 +65,8 @@ const CHANNELS = [
   {
     key: 'whatsapp',
     label: 'WhatsApp',
-    icon: '📱',
+    icon: WhatsappIcon,
+    iconColor: BRAND_COLORS.whatsapp,
     description: 'Coming soon.',
     href: '#',
     available: false,
@@ -81,7 +97,17 @@ export function IntegrationsHub({ connectedChannels }: Props) {
               }}
             >
               <div className="flex items-center gap-4">
-                <span className="text-2xl">{ch.icon}</span>
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${ch.iconColor}18` }}
+                >
+                  <HugeiconsIcon
+                    icon={ch.icon as any}
+                    color={ch.iconColor}
+                    size={22}
+                    strokeWidth={1.75}
+                  />
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold" style={{ color: '#201515' }}>

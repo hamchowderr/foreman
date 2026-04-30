@@ -13,6 +13,7 @@ import apiKeys from "./api-keys";
 import channelLinks from "./channel-links";
 import { handleTelegramWebhook } from "../telegram/webhook";
 import { handleSlackWebhook } from "../slack/webhook";
+import { handleSlackOAuth } from "../slack/oauth";
 import { handleDiscordWebhook } from "../discord/webhook";
 
 /**
@@ -46,6 +47,7 @@ app.route("/api-keys", apiKeys);
 app.route("/channel-links", channelLinks);
 app.post("/telegram/webhook", handleTelegramWebhook);
 app.post("/slack/webhook", handleSlackWebhook);
+app.get("/slack/oauth", handleSlackOAuth);
 app.post("/discord/webhook", handleDiscordWebhook);
 
 export default app;
