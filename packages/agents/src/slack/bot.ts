@@ -3,7 +3,7 @@ import { Chat } from "chat";
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
-import { registerChannelUser } from "../lib/identity";
+import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;
@@ -57,9 +57,34 @@ export async function getSlackBot() {
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
+  // Handle /link <code> command for account linking (DMs only)
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    const linkMatch = message.text.trim().match(/^\/link\s+([A-Z0-9]{8})$/i);
+    if (linkMatch) {
+      const result = await redeemChannelLinkCode(
+        linkMatch[1],
+        "slack",
+        message.author.userId,
+        message.author.fullName,
+      );
+      if (result.ok) {
+        await thread.post("Your Slack account is now linked to Foreman. You can close the settings page.");
+      } else if (result.error === "expired") {
+        await thread.post("That code has expired. Generate a new one from your Foreman settings.");
+      } else if (result.error === "already_used") {
+        await thread.post("That code has already been used. Generate a new one if needed.");
+      } else {
+        await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+      }
+      return;
+    }
+  });
+
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
+    if (message.text.trim().startsWith("/link")) return;
     try {
       console.log("[slack] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});

@@ -148,6 +148,71 @@ export async function registerChannelUser(
   return userId;
 }
 
+// ─── Channel Link Code Redemption ───
+
+export interface RedeemResult {
+  ok: boolean;
+  error?: "not_found" | "expired" | "already_used";
+}
+
+/**
+ * Redeem a linking code from a channel bot.
+ * Associates the channel_user_id with the web user who generated the code.
+ */
+export async function redeemChannelLinkCode(
+  code: string,
+  channel: string,
+  channelUserId: string,
+  displayName?: string,
+): Promise<RedeemResult> {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+
+  const { data } = await supabase
+    .from("channel_link_code")
+    .select("id, user_id, channel, expires_at, used_at")
+    .eq("code", code.toUpperCase())
+    .limit(1)
+    .single();
+
+  if (!data) return { ok: false, error: "not_found" };
+  if (data.used_at) return { ok: false, error: "already_used" };
+  if (data.expires_at < now) return { ok: false, error: "expired" };
+
+  // Mark code as used
+  await supabase
+    .from("channel_link_code")
+    .update({ used_at: now })
+    .eq("id", data.id);
+
+  // Upsert channel_identity: link this channel account to the web user
+  const { data: existing } = await supabase
+    .from("channel_identity")
+    .select("id, user_id")
+    .eq("channel", channel)
+    .eq("channel_user_id", channelUserId)
+    .limit(1)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from("channel_identity")
+      .update({ user_id: data.user_id, display_name: displayName ?? null })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("channel_identity").insert({
+      id: randomUUID(),
+      user_id: data.user_id,
+      channel,
+      channel_user_id: channelUserId,
+      display_name: displayName ?? null,
+      created_at: now,
+    });
+  }
+
+  return { ok: true };
+}
+
 // ─── Unified Resolution ───
 
 export interface ResolvedIdentity {
