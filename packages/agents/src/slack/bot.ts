@@ -62,7 +62,7 @@ export async function getSlackBot() {
   // Handle /link <code> command for account linking (DMs only)
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
-    const linkMatch = message.text.trim().match(/^\/link\s+([A-Z0-9]{8})$/i);
+    const linkMatch = message.text.trim().match(/^\/?link\s+([A-Z0-9]{8})$/i);
     if (linkMatch) {
       const result = await redeemChannelLinkCode(
         linkMatch[1],
@@ -86,7 +86,7 @@ export async function getSlackBot() {
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
-    if (message.text.trim().startsWith("/link")) return;
+    if (/^\/?link\s+[A-Z0-9]{8}$/i.test(message.text.trim())) return;
     try {
       console.log("[slack] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
@@ -145,12 +145,12 @@ export async function getSlackBot() {
 
   _bot = bot;
 
-  // Rehydrate persisted installations from Supabase (fire-and-forget)
-  rehydrateInstallations(slack).catch((err) =>
-    console.error("[slack] DB rehydration failed:", err)
-  );
-
   return bot;
+}
+
+export async function rehydrateSlackInstallations() {
+  if (!_slackAdapter) return;
+  await rehydrateInstallations(_slackAdapter);
 }
 
 async function rehydrateInstallations(

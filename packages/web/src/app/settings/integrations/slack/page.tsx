@@ -21,10 +21,11 @@ export default function SlackPage() {
       description="Bring Foreman into your Slack workspace. Mention @Foreman in any channel or message the bot directly to trigger actions."
       botLink={SLACK_INSTALL}
       botLinkLabel="Add to Slack"
+      linkCommand="link"
       steps={[
         'Click "Add to Slack" and authorize Foreman for your workspace.',
         'Click "Generate Link Code" below, then click "Copy command".',
-        'Open a DM with Foreman in Slack and paste the command.',
+        'Open a DM with the Foreman bot in Slack and paste the command (no slash needed).',
         'This page will confirm once your account is linked.',
       ]}
     />

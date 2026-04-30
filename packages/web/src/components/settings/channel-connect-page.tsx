@@ -13,6 +13,7 @@ interface Props {
   botLink: string | null
   botLinkLabel: string
   steps: string[]
+  linkCommand?: string
 }
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
@@ -50,7 +51,9 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   )
 }
 
-export function ChannelConnectPage({ channel, displayName, icon, iconColor, description, botLink, botLinkLabel, steps }: Props) {
+export function ChannelConnectPage({ channel, displayName, icon, iconColor, description, botLink, botLinkLabel, steps, linkCommand = '/link' }: Props) {
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const botConnected = searchParams?.get('connected') === '1'
   const [linked, setLinked] = useState(false)
   const [code, setCode] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<number | null>(null)
@@ -186,6 +189,13 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
         </div>
       </div>
 
+      {/* Bot connected banner */}
+      {botConnected && (
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: '#d1fae5', border: '1.5px solid #6ee7b7', color: '#065f46' }}>
+          ✓ {displayName} bot connected to your workspace. Now complete step 2 below to link your personal account.
+        </div>
+      )}
+
       {/* Bot link */}
       {botLink ? (
         <a
@@ -240,7 +250,7 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
               <span className="font-mono text-3xl font-bold tracking-widest" style={{ color: '#201515' }}>
                 {code}
               </span>
-              <CopyButton text={`/link ${code}`} label="Copy command" />
+              <CopyButton text={`${linkCommand} ${code}`} label="Copy command" />
             </div>
             <p className="text-xs" style={{ color: '#888' }}>
               Copy the command above, then open the Foreman bot in {displayName} and paste it.
