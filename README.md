@@ -192,7 +192,7 @@ Mastra does not provide a `toUIMessageStreamResponse` method. Foreman implements
 
 | Channel             | Adapter                  | How It Works                                         |
 | ------------------- | ------------------------ | ---------------------------------------------------- |
-| **Web**             | Next.js frontend         | Clerk sessions, custom SSE streaming                 |
+| **Web**             | Next.js frontend         | Supabase sessions, custom SSE streaming              |
 | **Slack**           | `@chat-adapter/slack`    | Webhook on `:4112/slack/webhook`                     |
 | **Telegram**        | `@chat-adapter/telegram` | Webhook or polling mode                              |
 | **Discord**         | `@chat-adapter/discord`  | Gateway WebSocket + Interactions endpoint            |
@@ -207,25 +207,24 @@ Mastra does not provide a `toUIMessageStreamResponse` method. Foreman implements
 
 ### Authentication
 
-Foreman uses [Supabase Auth](https://supabase.com/docs/guides/auth) for user authentication.
+Foreman uses [Supabase Auth](https://supabase.com/docs/guides/auth) for all authentication — both the web frontend and the agent server.
 
-| Auth Method                                                 | Use Case                                                             |
-| ----------------------------------------------------------- | -------------------------------------------------------------------- |
-| Clerk (`@clerk/nextjs`)                                     | Web frontend sign-in/sign-up (Phase 2 migration to Supabase pending) |
-| Supabase JWT (`supabase.auth.getUser(token)`)               | Agent server validates session tokens                                |
-| API key (`x-api-key` header, `fmn_` prefix, SHA-256 hashed) | MCP, A2A, programmatic access                                        |
-| Channel identity                                            | Auto-registered per platform (Slack, Discord, Telegram, etc.)        |
+| Auth Method                                                 | Use Case                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------- |
+| Supabase Auth (`@supabase/ssr`)                             | Web frontend sign-in/sign-up (email, magic link, OAuth)       |
+| Supabase JWT (`supabase.auth.getUser(token)`)               | Agent server validates session tokens on every request        |
+| API key (`x-api-key` header, `fmn_` prefix, SHA-256 hashed) | MCP, A2A, programmatic access                                 |
+| Channel identity                                            | Auto-registered per platform (Slack, Discord, Telegram, etc.) |
 
 Users from chat channels get auto-created Foreman accounts. Multiple channel identities can be linked to a single user.
 
-### Organizations (Multi-Tenant)
+### Workspaces (Multi-Tenant)
 
-Foreman supports [Clerk Organizations](https://clerk.com/docs/organizations/overview) for multi-tenant workspaces:
+Foreman supports multi-tenant workspaces for team deployments:
 
-- `orgId` is included in the JWT and used to scope data access
-- Zapier connections and conversations are scoped per organization
-- The web UI includes an `OrganizationSwitcher` for switching between orgs
-- Shared Zapier connections are available to all members within an org
+- Workspace membership, roles, and permissions are managed via the `workspaces` and `workspace_members` tables
+- Zapier connections and conversations can be scoped per workspace
+- Workspace admins can configure guardrail defaults for all members
 
 ### Capabilities
 
@@ -259,15 +258,14 @@ Foreman can extract repeatable action sequences from conversations and save them
 
 API: `GET /workflows`, `GET /workflows/:id`, `POST /workflows/:id/run` (SSE stream), `GET /workflows/:id/runs`
 
-### Voice I/O
+### Voice Input
 
-Foreman supports voice input and output, controllable per-user via the `voice` capability flag.
+Foreman supports voice input (speech-to-text) via the `voice` capability flag.
 
 - **Speech-to-Text**: OpenAI Whisper via `@mastra/voice-openai`
-- **Text-to-Speech**: ElevenLabs (`@mastra/voice-elevenlabs`, primary) with OpenAI TTS fallback
-- **Web UI**: Mic button next to chat input, speaker icon on agent messages
+- **Web UI**: Mic button next to chat input — records audio, sends to `/api/voice/transcribe`, inserts transcript into the message field
 
-API: `POST /api/voice/transcribe` (multipart audio upload), `POST /api/voice/synthesize` (text → audio response)
+API: `POST /api/voice/transcribe` (multipart audio upload → transcript string)
 
 ### Guardrails
 
@@ -377,14 +375,18 @@ FOREMAN_MODE=dev                        # "dev", "production", or "self_hosted"
 ZAPIER_CLIENT_ID=...                    # From: npx zapier-sdk create-client-credentials "name"
 ZAPIER_CLIENT_SECRET=...
 
+# Web URL (used for OAuth redirect URIs)
+WEB_URL=http://localhost:3000           # production: https://your-domain.com
+
 # Channels (add only what you need)
 TELEGRAM_BOT_TOKEN=...
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_SIGNING_SECRET=...
+SLACK_CLIENT_ID=...                     # For web OAuth connect flow
+SLACK_CLIENT_SECRET=...                 # For web OAuth connect flow
 DISCORD_BOT_TOKEN=...
 DISCORD_PUBLIC_KEY=...
 DISCORD_APPLICATION_ID=...
-CRON_SECRET=...                         # Required for Discord Gateway
 GOOGLE_CHAT_CREDENTIALS=...             # Service account JSON (single line)
 GITHUB_TOKEN=...
 GITHUB_WEBHOOK_SECRET=...
@@ -392,17 +394,23 @@ LINEAR_API_KEY=lin_api_...
 LINEAR_WEBHOOK_SECRET=lin_wh_...
 LINEAR_BOT_USERNAME=...
 
-# Voice (optional — falls back to OpenAI TTS if ElevenLabs not set)
-ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=...                 # Defaults to "Rachel"
+# Voice STT (optional — uses OpenAI Whisper, billed to OPENAI_API_KEY)
+# No extra vars needed — STT uses the existing OPENAI_API_KEY above
 ```
 
 **`packages/web/.env.local`:**
 
 ```bash
 NEXT_PUBLIC_AGENT_SERVER_URL=http://localhost:4111
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
+
+# Auth (Supabase — same project as agents)
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421       # local; production: https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_... # from: npx supabase start
+
+# Channels (used by web connect UI)
+NEXT_PUBLIC_SLACK_CLIENT_ID=...
+NEXT_PUBLIC_DISCORD_APPLICATION_ID=...
+NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=...
 ```
 
 ### 3. Start local Supabase & run database migrations
@@ -451,29 +459,40 @@ cd packages/agents && npm run dev:mock
 
 ### Slack
 
+**Bot credentials** (for receiving messages):
+
 1. Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps)
-2. Enable **Event Subscriptions** with URL: `https://<your-domain>/slack/webhook`
-3. Subscribe to: `app_mention`, `message.im`
-4. Add OAuth scopes: `chat:write`, `users:read`, `app_mentions:read`
-5. Install to workspace and copy Bot Token + Signing Secret
-6. Set `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` in `.env.local`
+2. Under **OAuth & Permissions**, add Bot Token Scopes: `chat:write`, `users:read`, `app_mentions:read`, `im:history`, `im:read`, `im:write`
+3. Enable **Event Subscriptions** → Request URL: `https://<your-domain>/slack/webhook`
+4. Subscribe to bot events: `app_mention`, `message.im`
+5. Install to workspace → copy **Bot User OAuth Token** and **Signing Secret**
+6. Set in `agents/.env.local`: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`
+
+**OAuth app credentials** (for web "Connect Slack" flow):
+
+7. Under **OAuth & Permissions**, add a Redirect URL: `https://<your-domain>/settings/channels/slack/callback`
+8. Copy **Client ID** and **Client Secret** from Basic Information
+9. Set in `agents/.env.local`: `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`
+10. Set in `web/.env.local`: `NEXT_PUBLIC_SLACK_CLIENT_ID` (same value as `SLACK_CLIENT_ID`)
 
 ### Telegram
 
-1. Create a bot via [@BotFather](https://t.me/BotFather)
-2. Copy the bot token
-3. Set `TELEGRAM_BOT_TOKEN` in `.env.local`
-4. **Webhook mode:** Set webhook URL via Telegram API to `https://<your-domain>/telegram/webhook`
-5. **Polling mode:** `cd packages/agents && npx tsx src/telegram/start-polling.ts`
+1. Create a bot via [@BotFather](https://t.me/BotFather) → `/newbot`
+2. Copy the bot token and note the bot's **username** (e.g. `foremanHQbot`)
+3. Set in `agents/.env.local`: `TELEGRAM_BOT_TOKEN`
+4. Set in `web/.env.local`: `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the `@username` without the `@`)
+5. **Webhook mode:** Set webhook URL to `https://<your-domain>/telegram/webhook`
+6. **Polling mode:** `cd packages/agents && npx tsx src/telegram/start-polling.ts`
 
 ### Discord
 
 1. Create an app at [discord.com/developers](https://discord.com/developers/applications)
-2. Create a Bot, copy token
-3. Enable **Privileged Gateway Intents**: Message Content Intent
+2. Under **Bot**, copy the token; enable **Privileged Gateway Intents → Message Content Intent**
+3. Under **General Information**, copy **Application ID** and **Public Key**
 4. Set **Interactions Endpoint URL** to `https://<your-domain>/discord/webhook`
 5. Invite bot to server: `https://discord.com/api/oauth2/authorize?client_id=<APP_ID>&permissions=2048&scope=bot`
-6. Set `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID`, `CRON_SECRET`
+6. Set in `agents/.env.local`: `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID`
+7. Set in `web/.env.local`: `NEXT_PUBLIC_DISCORD_APPLICATION_ID` (same value as `DISCORD_APPLICATION_ID`)
 
 Discord uses a Gateway WebSocket connection for receiving messages. The webhook server automatically starts the Gateway listener on boot when `DISCORD_BOT_TOKEN` is set.
 
@@ -590,21 +609,23 @@ Local development uses the [Supabase CLI](https://supabase.com/docs/guides/cli) 
 
 ### Tables
 
-| Table              | Purpose                                                          |
-| ------------------ | ---------------------------------------------------------------- |
-| `user`             | User accounts                                                    |
-| `zapier_identity`  | Per-user Zapier OAuth tokens (encrypted)                         |
-| `conversation`     | Chat conversations (links to `mastraThreadId` for memory)        |
-| `action_proposal`  | Pending/approved/declined action proposals                       |
-| `action_run`       | Executed action results                                          |
-| `workflow`         | Saved workflows (from conversation patterns)                     |
-| `workflow_step`    | Steps within workflows                                           |
-| `workflow_run`     | Workflow execution history                                       |
-| `connection_alias` | User-defined friendly names for Zapier connections               |
-| `capability_flag`  | Per-user feature flags                                           |
-| `channel_identity` | Maps channel users (Slack ID, Discord ID, etc.) to Foreman users |
-| `app_catalog`      | Cached Zapier app metadata with embeddings for semantic search   |
-| `api_key`          | API keys for MCP/A2A access (`fmn_` prefixed, SHA-256 hashed)    |
+| Table                | Purpose                                                          |
+| -------------------- | ---------------------------------------------------------------- |
+| `user`               | User accounts                                                    |
+| `zapier_identity`    | Per-user Zapier OAuth tokens (encrypted)                         |
+| `conversation`       | Chat conversations (links to `mastraThreadId` for memory)        |
+| `action_proposal`    | Pending/approved/declined action proposals                       |
+| `action_run`         | Executed action results                                          |
+| `workflow`           | Saved workflows (from conversation patterns)                     |
+| `workflow_step`      | Steps within workflows                                           |
+| `workflow_run`       | Workflow execution history                                       |
+| `connection_alias`   | User-defined friendly names for Zapier connections               |
+| `capability_flag`    | Per-user feature flags                                           |
+| `channel_identity`   | Maps channel users (Slack ID, Discord ID, etc.) to Foreman users |
+| `channel_link_code`  | Short-lived codes for linking chat channels to a Foreman account |
+| `slack_installation` | Per-workspace Slack bot tokens (persisted across restarts)       |
+| `app_catalog`        | Cached Zapier app metadata with embeddings for semantic search   |
+| `api_key`            | API keys for MCP/A2A access (`fmn_` prefixed, SHA-256 hashed)    |
 
 ### Schema Changes
 
@@ -631,7 +652,7 @@ npx supabase db push
 
 | Component      | Target                   | Why                                                                             |
 | -------------- | ------------------------ | ------------------------------------------------------------------------------- |
-| Web frontend   | **Vercel**               | Standard Next.js deployment, Clerk auth, static + dynamic pages                 |
+| Web frontend   | **Vercel**               | Standard Next.js deployment, Supabase auth, static + dynamic pages              |
 | Agent server   | **VPS (Coolify)**        | Streaming conversations need long-running connections                           |
 | Agent server   | **Vercel** (alternative) | Viable with hosted Postgres (Supabase/Neon). Build with `npm run build:vercel`. |
 | Webhook server | **VPS (Coolify)**        | Discord Gateway WebSocket + channel webhooks need persistent processes          |
@@ -661,7 +682,7 @@ npx vercel --prod      # Deploy to production
 npx vercel env ls      # List env vars
 ```
 
-Required env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_AGENT_SERVER_URL`
+Required env vars (set via `vercel env add` or dashboard): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_AGENT_SERVER_URL`, `NEXT_PUBLIC_SLACK_CLIENT_ID`, `NEXT_PUBLIC_DISCORD_APPLICATION_ID`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`
 
 ## Security
 
@@ -793,10 +814,10 @@ ngrok http 4112
 | Zapier integration | `@zapier/zapier-sdk` (direct import, 34 auto-generated tools)                                                                                              |
 | LLM                | Claude (Anthropic) via Mastra                                                                                                                              |
 | Embeddings         | OpenAI (`text-embedding-3-small`)                                                                                                                          |
-| Voice TTS          | [ElevenLabs](https://elevenlabs.io) (`@mastra/voice-elevenlabs`) + OpenAI TTS (`@mastra/voice-openai`) fallback                                            |
+| Voice STT          | OpenAI Whisper via `@mastra/voice-openai`                                                                                                                  |
 | Database           | Postgres + [pgvector](https://github.com/pgvector/pgvector) (local via [Supabase CLI](https://supabase.com/docs/guides/cli); hosted via Supabase/Neon/RDS) |
 | DB client          | [supabase-js](https://supabase.com/docs/reference/javascript) (app tables) + `@mastra/pg` (`PostgresStore`, `PgVector` for Mastra internals)               |
-| Auth               | [Supabase Auth](https://supabase.com/docs/guides/auth) (agent server) + [Clerk](https://clerk.com) `@clerk/nextjs` (web frontend — migration pending)      |
+| Auth               | [Supabase Auth](https://supabase.com/docs/guides/auth) + `@supabase/ssr` (web frontend and agent server)                                                   |
 | Frontend           | [Next.js](https://nextjs.org) 16, React 19, Tailwind 4                                                                                                     |
 | Markdown rendering | [Streamdown](https://github.com/nichochar/streamdown) (code, math, mermaid plugins)                                                                        |
 | API layer          | [Hono](https://hono.dev) (via Mastra server)                                                                                                               |
