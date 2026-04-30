@@ -22,9 +22,9 @@ export default function DiscordPage() {
       botLinkLabel="Add Foreman to your server"
       steps={[
         'Click "Add Foreman to your server" and authorize the bot.',
-        'Open a DM with Foreman in Discord.',
-        'Click "Generate Link Code" below and copy the 8-character code.',
-        'Send /link YOURCODE in the DM. This page will confirm once linked.',
+        'Click "Generate Link Code" below, then click "Copy command".',
+        'Open a DM with Foreman in Discord and paste the command.',
+        'This page will confirm once your account is linked.',
       ]}
     />
   )

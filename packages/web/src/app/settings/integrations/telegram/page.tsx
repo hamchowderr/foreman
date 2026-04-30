@@ -16,9 +16,8 @@ export default function TelegramPage() {
       botLink={BOT_USERNAME ? `https://t.me/${BOT_USERNAME}` : null}
       botLinkLabel={`Open @${BOT_USERNAME ?? 'ForemanBot'}`}
       steps={[
-        `Click "Open @${BOT_USERNAME ?? 'ForemanBot'}" to start a DM with the bot in Telegram.`,
-        'Click "Generate Link Code" below and copy the 8-character code.',
-        'Send the command /link YOURCODE to the bot in Telegram.',
+        'Click "Generate Link Code" below, then click "Copy command".',
+        `Open @${BOT_USERNAME ?? 'ForemanBot'} in Telegram and paste the command.`,
         'This page will confirm once your account is linked.',
       ]}
     />

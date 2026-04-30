@@ -23,9 +23,9 @@ export default function SlackPage() {
       botLinkLabel="Add to Slack"
       steps={[
         'Click "Add to Slack" and authorize Foreman for your workspace.',
-        'Open a DM with Foreman in Slack.',
-        'Click "Generate Link Code" below and copy the 8-character code.',
-        'Send /link YOURCODE in the DM. This page will confirm once linked.',
+        'Click "Generate Link Code" below, then click "Copy command".',
+        'Open a DM with Foreman in Slack and paste the command.',
+        'This page will confirm once your account is linked.',
       ]}
     />
   )

@@ -9,9 +9,9 @@
     "build:vercel": "DEPLOY_TARGET=vercel mastra build",
     "build:cloudflare": "DEPLOY_TARGET=cloudflare mastra build",
     "start": "node --env-file=.env.local .mastra/output/index.mjs 2>&1 | tee server.log",
-    "start:webhooks": "npx tsx src/webhook-server.ts",
+    "start:webhooks": "npx tsx --env-file=.env.local src/webhook-server.ts",
     "dev:mock": "npx @copilotkit/aimock --config aimock.json --port 4010",
-    "dev:telegram": "npx tsx src/telegram/start-polling.ts",
+    "dev:telegram": "npx tsx --env-file=.env.local src/telegram/start-polling.ts",
     "test": "vitest run --exclude tests/sdk/** --exclude tests/live/**",
     "test:live": "vitest run --config vitest.live.config.ts",
     "test:sdk": "vitest run --config vitest.sdk.config.ts",
@@ -19,9 +19,9 @@
     "test:sdk:write": "vitest run --config vitest.sdk.config.ts -t 'SDK Write'",
     "logs": "node scripts/show-logs.mjs",
     "logs:watch": "node scripts/show-logs.mjs watch",
-    "catalog:seed": "npx tsx scripts/seed-catalog.ts",
-    "catalog:seed:quick": "npx tsx scripts/seed-catalog.ts --apps-only",
-    "catalog:embed": "npx tsx scripts/seed-catalog.ts --embed-only"
+    "catalog:seed": "npx tsx --env-file=.env.local scripts/seed-catalog.ts",
+    "catalog:seed:quick": "npx tsx --env-file=.env.local scripts/seed-catalog.ts --apps-only",
+    "catalog:embed": "npx tsx --env-file=.env.local scripts/seed-catalog.ts --embed-only"
   },
   "dependencies": {
     "@chat-adapter/discord": "^4.26.0",

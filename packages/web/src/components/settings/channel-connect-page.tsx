@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/client'
 
@@ -30,6 +30,24 @@ function formatSecondsLeft(ms: number) {
   const m = Math.floor(s / 60)
   const sec = s % 60
   return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [text])
+  return (
+    <button
+      onClick={copy}
+      className="text-xs px-2 py-1 rounded transition-colors"
+      style={{ backgroundColor: '#FFF3E6', color: copied ? '#065f46' : '#FF4F00' }}
+    >
+      {copied ? 'Copied!' : label}
+    </button>
+  )
 }
 
 export function ChannelConnectPage({ channel, displayName, icon, iconColor, description, botLink, botLinkLabel, steps }: Props) {
@@ -218,20 +236,14 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
           </button>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="font-mono text-3xl font-bold tracking-widest" style={{ color: '#201515' }}>
                 {code}
               </span>
-              <button
-                onClick={() => navigator.clipboard.writeText(`/link ${code}`)}
-                className="text-xs px-2 py-1 rounded"
-                style={{ backgroundColor: '#FFF3E6', color: '#FF4F00' }}
-              >
-                Copy command
-              </button>
+              <CopyButton text={`/link ${code}`} label="Copy command" />
             </div>
             <p className="text-xs" style={{ color: '#888' }}>
-              Send <code className="font-mono px-1 rounded" style={{ backgroundColor: '#f3f4f6' }}>/link {code}</code> to the Foreman bot in {displayName}.
+              Copy the command above, then open the Foreman bot in {displayName} and paste it.
               {' '}Expires in <span style={{ color: msLeft < 60000 ? '#dc2626' : '#201515' }}>{formatSecondsLeft(msLeft)}</span>.
             </p>
             {checking && <p className="text-xs" style={{ color: '#aaa' }}>Waiting for confirmation…</p>}

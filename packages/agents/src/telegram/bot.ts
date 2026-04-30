@@ -71,7 +71,7 @@ export async function getTelegramBot() {
         message.author.fullName,
       );
       if (result.ok) {
-        await thread.post("Your Telegram account is now linked to Foreman. You can close the settings page.");
+        await thread.post("Your Telegram account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.");
       } else if (result.error === "expired") {
         await thread.post("That code has expired. Generate a new one from your Foreman settings.");
       } else if (result.error === "already_used") {
@@ -143,7 +143,7 @@ export function getTelegramAdapter() {
  * and starts long-polling when no webhook URL is configured.
  */
 export async function startTelegramPolling() {
-  const bot = getTelegramBot();
+  const bot = await getTelegramBot();
   await bot.initialize();
   const adapter = getTelegramAdapter();
   console.log(`Telegram bot started in ${adapter.runtimeMode} mode`);
