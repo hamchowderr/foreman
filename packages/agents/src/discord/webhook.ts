@@ -7,6 +7,6 @@ import { getDiscordBot } from "./bot";
  * verifies the public key and dispatches to registered handlers.
  */
 export async function handleDiscordWebhook(c: Context): Promise<Response> {
-  const bot = getDiscordBot();
+  const bot = await getDiscordBot();
   return bot.webhooks.discord(c.req.raw);
 }

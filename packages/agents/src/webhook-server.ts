@@ -1,5 +1,5 @@
 import http from "node:http";
-import { getSlackBot, rehydrateSlackInstallations } from "./slack/bot";
+import { getSlackBot } from "./slack/bot";
 import { getTelegramBot } from "./telegram/bot";
 import { getTeamsBot } from "./teams/bot";
 import { getGoogleChatBot } from "./gchat/bot";
@@ -233,18 +233,11 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, () => {
   console.log(`Webhook server running on port ${port}`);
 
-  // Initialize Slack bot — initialize Chat instance first, then load saved tokens from DB
-  if (process.env.SLACK_BOT_TOKEN || process.env.SLACK_SIGNING_SECRET) {
-    (async () => {
-      try {
-        const bot = await getSlackBot();
-        await bot.initialize();
-        await rehydrateSlackInstallations();
-        console.log("[slack] Bot initialized and installations loaded");
-      } catch (err) {
-        console.error("[slack] Bot initialization failed:", err);
-      }
-    })();
+  // Initialize Slack bot — getSlackBot() handles init + rehydration internally
+  if (process.env.SLACK_SIGNING_SECRET) {
+    getSlackBot()
+      .then(() => console.log("[slack] Bot ready"))
+      .catch((err: unknown) => console.error("[slack] Bot initialization failed:", err));
   }
 
   // Initialize Discord bot — start Gateway WebSocket for receiving messages

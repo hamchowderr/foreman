@@ -81,20 +81,25 @@ export async function getDiscordBot() {
     if (!message.text) return;
     const linkMatch = message.text.trim().match(/^\/link\s+([A-Z0-9]{8})$/i);
     if (linkMatch) {
-      const result = await redeemChannelLinkCode(
-        linkMatch[1],
-        "discord",
-        message.author.userId,
-        message.author.fullName,
-      );
-      if (result.ok) {
-        await thread.post("Your Discord account is now linked to Foreman. You can close the settings page.");
-      } else if (result.error === "expired") {
-        await thread.post("That code has expired. Generate a new one from your Foreman settings.");
-      } else if (result.error === "already_used") {
-        await thread.post("That code has already been used. Generate a new one if needed.");
-      } else {
-        await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+      try {
+        const result = await redeemChannelLinkCode(
+          linkMatch[1],
+          "discord",
+          message.author.userId,
+          message.author.fullName,
+        );
+        if (result.ok) {
+          await thread.post("Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.");
+        } else if (result.error === "expired") {
+          await thread.post("That code has expired. Generate a new one from your Foreman settings.");
+        } else if (result.error === "already_used") {
+          await thread.post("That code has already been used. Generate a new one if needed.");
+        } else {
+          await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+        }
+      } catch (err) {
+        console.error("[discord] /link handler error:", err);
+        await thread.post("Something went wrong while linking your account. Please try again.").catch(() => {});
       }
       return;
     }

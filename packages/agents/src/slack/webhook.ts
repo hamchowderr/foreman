@@ -7,6 +7,25 @@ import { getSlackBot } from "./bot";
  * url_verification challenges and signature verification internally.
  */
 export async function handleSlackWebhook(c: Context): Promise<Response> {
-  const bot = getSlackBot();
-  return bot.webhooks.slack(c.req.raw);
+  // Buffer the body before Hono's stream gets consumed
+  const body = await c.req.arrayBuffer();
+
+  // Handle URL verification immediately — don't wait for bot initialization
+  // (Slack has a 3-second timeout; bot init includes DB queries)
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(body));
+    if (payload.type === 'url_verification') {
+      return new Response(JSON.stringify({ challenge: payload.challenge }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } catch {}
+
+  const bot = await getSlackBot();
+  const request = new Request(c.req.url, {
+    method: c.req.method,
+    headers: c.req.raw.headers,
+    body,
+  });
+  return bot.webhooks.slack(request);
 }

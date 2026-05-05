@@ -20,7 +20,8 @@
     "dev:mock": "node tests/start-mock-dev.js",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "postinstall": "patch-package"
   },
   "overrides": {
     "esbuild": ">=0.25.0"
@@ -41,6 +42,7 @@
     "autoprefixer": "^10.5.0",
     "drizzle-kit": "^0.31.10",
     "jsdom": "^29.0.2",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.10",
     "supertest": "^7.2.2",
     "tailwindcss": "^4",

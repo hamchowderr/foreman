@@ -9,7 +9,7 @@ const storedAgents = new Hono<AppEnv>();
 
 storedAgents.use("/*", authMiddleware);
 
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4-6";
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4.6";
 const MAX_NAME_LEN = 120;
 const MAX_DESC_LEN = 2000;
 const MAX_INSTRUCTIONS_LEN = 50_000;

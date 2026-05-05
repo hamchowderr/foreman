@@ -10,13 +10,19 @@ import { decryptToken } from "../lib/crypto";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;
 let _slackAdapter: ReturnType<typeof createSlackAdapter> | undefined;
+let _initPromise: Promise<Chat<{ slack: ReturnType<typeof createSlackAdapter> }>> | undefined;
 
 /**
- * Create and configure the Slack bot backed by the Foreman Mastra agent.
- * Uses Chat SDK with the Slack adapter. The bot is a singleton — safe to
- * call multiple times.
+ * Create, initialize, and rehydrate the Slack bot singleton.
+ * Safe to call concurrently — initialization only runs once.
  */
-export async function getSlackBot() {
+export function getSlackBot() {
+  if (_initPromise) return _initPromise;
+  _initPromise = _createAndInitBot();
+  return _initPromise;
+}
+
+async function _createAndInitBot() {
   if (_bot) return _bot;
 
   const slack = createSlackAdapter();
@@ -62,7 +68,7 @@ export async function getSlackBot() {
   // Handle /link <code> command for account linking (DMs only)
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
-    const linkMatch = message.text.trim().match(/^\/?link\s+([A-Z0-9]{8})$/i);
+    const linkMatch = message.text.trim().match(/^\/?\s*link\s+([A-Z0-9]{8})$/i);
     if (linkMatch) {
       const result = await redeemChannelLinkCode(
         linkMatch[1],
@@ -86,7 +92,7 @@ export async function getSlackBot() {
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
-    if (/^\/?link\s+[A-Z0-9]{8}$/i.test(message.text.trim())) return;
+    if (/^\/?\s*link\s+[A-Z0-9]{8}$/i.test(message.text.trim())) return;
     try {
       console.log("[slack] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
@@ -145,12 +151,14 @@ export async function getSlackBot() {
 
   _bot = bot;
 
+  await bot.initialize();
+  await rehydrateInstallations(slack);
+
   return bot;
 }
 
 export async function rehydrateSlackInstallations() {
-  if (!_slackAdapter) return;
-  await rehydrateInstallations(_slackAdapter);
+  await getSlackBot(); // ensures init + rehydration have run
 }
 
 async function rehydrateInstallations(
@@ -178,7 +186,7 @@ async function rehydrateInstallations(
 /**
  * Return the underlying Slack adapter instance.
  */
-export function getSlackAdapter() {
-  if (!_slackAdapter) getSlackBot();
+export async function getSlackAdapter() {
+  await getSlackBot();
   return _slackAdapter!;
 }
