@@ -1,6 +1,7 @@
 {
   "title": "Integrations",
   "pages": [
+    "settings-hub",
     "mcp-cloud",
     "a2a-cloud"
   ]
