@@ -28,7 +28,8 @@ bridges the two.
   <Step>
     ### Request arrives
 
-    `POST /api/conversations/:id/messages` with a user message.
+    `POST /conversations/:id/messages` with a user message. (Mastra reserves
+    the `/api/*` prefix; Foreman's custom routes are bare.)
   </Step>
   <Step>
     ### Call `agent.stream`
@@ -78,7 +79,7 @@ When an `requireApproval` tool is invoked:
 1. Mastra pauses the stream
 2. Emits a `proposal-created` event with the full draft
 3. Client renders the approval card
-4. User clicks Approve/Decline → `POST /api/proposals/:id/approve`
+4. User clicks Approve/Decline → `POST /proposals/:id/approve`
 5. Route resumes the stream — tool executes, result comes back as
    `action-executed`
 

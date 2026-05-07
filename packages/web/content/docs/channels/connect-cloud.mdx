@@ -20,46 +20,64 @@ start in Slack, follow up from Telegram, approve from your phone.
 
 ## Install a channel
 
-The flow is the same for every channel. Pick the one you want and follow
-these three steps.
+Channels are managed from one place: **Settings → Integrations** in the
+web UI. Each tile shows whether you're connected and walks you through
+the install. There are two flows depending on the channel.
+
+### Slack — OAuth install
+
+Slack uses a standard "Add to Slack" OAuth flow.
 
 <Steps>
   <Step>
-    ### Visit the installer URL
+    ### Open Settings → Integrations → Slack
 
-    Open the installer for the channel you want to add:
-
-    | Channel | Installer URL |
-    | --- | --- |
-    | Slack | [foreman.otakusolutions.io/install/slack](https://foreman.otakusolutions.io/install/slack) |
-    | Discord | [foreman.otakusolutions.io/install/discord](https://foreman.otakusolutions.io/install/discord) |
-    | Telegram | [foreman.otakusolutions.io/install/telegram](https://foreman.otakusolutions.io/install/telegram) |
-    | Google Chat | [foreman.otakusolutions.io/install/google-chat](https://foreman.otakusolutions.io/install/google-chat) |
-    | GitHub | [foreman.otakusolutions.io/install/github](https://foreman.otakusolutions.io/install/github) |
-    | Linear | [foreman.otakusolutions.io/install/linear](https://foreman.otakusolutions.io/install/linear) |
-
-    You'll be bounced to the channel's own OAuth screen (Slack, Discord,
-    etc.) to authorize the Foreman app.
+    Click **Add to Slack**. You'll be bounced to Slack's OAuth screen.
   </Step>
 
   <Step>
     ### Grant the requested scopes
 
-    Review what Foreman is asking for, then click **Allow** / **Authorize**.
-
-    <Callout>
-      We only ask for what's needed to send and receive messages and to
-      respond to mentions. The exact scopes for each channel are listed on
-      that channel's dedicated docs page (linked below).
-    </Callout>
+    Review what Foreman is asking for (`chat:write`, `app_mentions:read`,
+    `im:history`, `im:read`, `users:read`), then click **Allow**. Slack
+    returns you to Foreman and the workspace is linked.
   </Step>
 
   <Step>
     ### Say hello
 
-    Send your first message to the bot — DM, `@mention`, or `/foreman`
-    depending on the channel. Foreman links that channel identity to your
-    Foreman user automatically. No extra configuration, no tokens to paste.
+    DM the Foreman bot or `@mention` it in any channel.
+  </Step>
+</Steps>
+
+### Discord, Telegram, and the rest — short-code linking
+
+Channels that don't have a per-user OAuth flow use an 8-character
+linking code instead. The code expires after 15 minutes.
+
+<Steps>
+  <Step>
+    ### Open Settings → Integrations
+
+    Pick your channel (Discord, Telegram, Teams, Google Chat, WhatsApp,
+    GitHub, Linear, iMessage). Foreman generates an 8-character link
+    code and shows it on screen.
+  </Step>
+
+  <Step>
+    ### Send the code to the Foreman bot
+
+    On the channel side, find the Foreman bot (e.g.
+    [@foreman_bot](https://t.me/foreman_bot) on Telegram) and send the
+    code as a message. The bot ties that channel identity to your
+    Foreman user.
+  </Step>
+
+  <Step>
+    ### Say hello
+
+    Send any message — Foreman remembers what you've already done in
+    other channels and picks up where you left off.
   </Step>
 </Steps>
 
@@ -100,14 +118,17 @@ See [Channels](/docs/channels) for more on the shared-memory model.
 ## Troubleshooting
 
 <Accordions>
-  <Accordion title="Didn't get redirected back after OAuth">
-    Check your browser's popup blocker for the install page tab and allow pop-ups from `foreman.otakusolutions.io`.
+  <Accordion title="Didn't get redirected back after Slack OAuth">
+    Check your browser's popup blocker and allow pop-ups from `foreman.otakusolutions.io`.
+  </Accordion>
+  <Accordion title="Link code expired before I could use it">
+    Codes are good for 15 minutes. Open Settings → Integrations again and generate a fresh one.
   </Accordion>
   <Accordion title="Bot doesn't respond in a channel">
     Most chat apps require explicitly inviting the bot to a channel. Re-invite it, or test by DMing the bot first.
   </Accordion>
   <Accordion title="No approval prompt appears">
-    The per-channel install page lists exact scopes and features. Confirm the scopes were granted; re-install if Slack/Discord workspace admins stripped scopes.
+    Confirm the requested scopes were granted; re-install from Settings → Integrations if your workspace admin stripped any.
   </Accordion>
 </Accordions>
 

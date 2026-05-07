@@ -3,46 +3,39 @@ title: Voice I/O
 description: Talk to Foreman and have it talk back.
 ---
 
-Foreman supports voice input and voice output through its chat channels.
-Hit the mic icon, speak your request; hit the speaker icon on any reply
-to hear it back.
+Foreman supports voice input across its chat channels and the web UI. Hit
+the mic icon and speak your request — your audio is transcribed and sent
+as a normal text message.
 
 ## Providers
 
-| Direction | Primary | Fallback |
+| Direction | Web UI | Channels (Telegram, etc.) |
 | --- | --- | --- |
-| **Speech → text** | OpenAI Whisper | — |
-| **Text → speech** | ElevenLabs | OpenAI TTS |
+| **Speech → text** | Web Speech API (browser, no server call) | OpenAI Whisper |
 
-If `ELEVENLABS_API_KEY` isn't set, Foreman quietly falls back to OpenAI
-TTS.
+The web mic button uses the browser's built-in Web Speech API
+(`packages/web/src/components/chat/multimodal/mic-button.tsx`) — no audio
+ever leaves the device. Channel adapters that ship audio (e.g. Telegram
+voice notes) upload it to the agent server, which calls Whisper.
 
-## Endpoints
+## Endpoint
 
-- `POST /api/voice/transcribe` — multipart audio upload, returns text
-- `POST /api/voice/synthesize` — `{ text }`, returns audio
+- `POST /voice/transcribe` — multipart audio upload, returns transcribed
+  text. Hard-capped at 25MB (Whisper's limit).
 
 <Callout>
-  Both endpoints obey the user's `voice` capability flag. If the user (or
-  their org admin) has disabled voice, both return 403.
+  This endpoint obeys the user's `voice` capability flag. If voice is
+  disabled, it returns 403.
 </Callout>
-
-## Voice in redactions
-
-Voice output flows through the same PII redactor as text. So if the agent
-would have said *"I'll email tyler@acme.com"*, the synthesized audio says
-*"I'll email [EMAIL]"*. Nothing sensitive comes out of the speaker.
 
 ## Configuration
 
 | Env var | Default | Description |
 | --- | --- | --- |
-| `ELEVENLABS_API_KEY` | — | Primary TTS provider. |
-| `ELEVENLABS_VOICE_ID` | `Rachel` | Which voice to use. |
-| `OPENAI_API_KEY` | — | Whisper STT + fallback TTS. |
+| `OPENAI_API_KEY` | — | Whisper STT for channel-uploaded audio. |
 
 ## Self-host
 
-Voice works identically on self-host. You need both keys in your `.env`
-and nothing else. Whisper and ElevenLabs are both HTTP APIs, so no extra
-infrastructure.
+Voice works identically on self-host. The browser mic button needs no
+configuration — it runs entirely client-side. Channel-side transcription
+just needs `OPENAI_API_KEY` for Whisper.

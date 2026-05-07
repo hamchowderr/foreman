@@ -34,10 +34,10 @@ The split is deliberate.
 - **No vendor lock** — swap the frontend for your own, use MCP from
   Claude Code, use A2A from another Mastra agent, or just curl it. All
   valid.
-- **Flexible hosting** — agent server goes on a VPS (Mastra needs a
-  persistent process for the MCP stdio transport). Frontend can live on
-  Vercel, Cloudflare, your laptop, or the same box. The interface
-  between them is just HTTP + SSE.
+- **Flexible hosting** — agent server runs anywhere a Node process runs
+  (VPS, Vercel, Fly, your laptop). Frontend can live on Vercel,
+  Cloudflare, or the same box. The interface between them is just HTTP
+  + SSE.
 - **Mastra is simple** — the agent file is under 200 lines of TypeScript.
   Advanced users can fork, drop in their own models, tools, or processors,
   and ship the same public API surface without touching anything else.
@@ -96,14 +96,15 @@ Three custom tools (always loaded):
 
 <Files>
   <Folder name="packages/agents/src/mastra/tools/">
-    <File name="connect_zapier.ts" />
-    <File name="search_history.ts" />
-    <File name="fork_conversation.ts" />
+    <File name="connect-zapier.ts" />
+    <File name="search-history.ts" />
+    <File name="fork-conversation.ts" />
   </Folder>
 </Files>
 
-Plus 33 MCP tools from the Zapier SDK, behind `search_tools`. See
-[Zapier SDK](/docs/architecture/zapier-sdk).
+Plus the full Zapier SDK tool registry (auto-generated in
+`lib/zapier-sdk-tools.ts`), surfaced to the agent behind `search_tools`.
+See [Zapier SDK](/docs/architecture/zapier-sdk).
 
 ## Where requests come in
 

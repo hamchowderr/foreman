@@ -20,31 +20,55 @@ leaves your box.
   before creating any vector columns.
 </Callout>
 
-## One-command start
+## Quickstart
 
 <Steps>
   <Step>
-    ### Pull and run
+    ### Clone and install
 
     ```bash
-    docker run -p 3000:3000 --env-file .env foreman/foreman:latest
+    git clone https://github.com/hamchowderr/foreman.git
+    cd foreman
+    npm install
+    ```
+  </Step>
+
+  <Step>
+    ### Boot a local Supabase
+
+    Foreman uses Postgres + pgvector and Supabase Auth. The Supabase CLI
+    boots both in a single Docker stack on shifted ports (so it doesn't
+    collide with anything else you're running).
+
+    ```bash
+    npx supabase start
     ```
 
-    Open `http://localhost:3000` and you're in.
+    This applies every migration in `supabase/migrations/` automatically.
+    Postgres listens on `127.0.0.1:54422`, Studio on `127.0.0.1:54423`.
   </Step>
 
   <Step>
     ### Set environment variables
 
-    Create a `.env` file:
+    Create `packages/agents/.env.local`:
 
     ```bash
+    DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres
+    ENCRYPTION_KEY=<64-char hex>
     ANTHROPIC_API_KEY=sk-ant-...
     OPENAI_API_KEY=sk-...
-    DATABASE_URL=postgres://user:pass@host:5432/foreman
-    ENCRYPTION_KEY=<64-char hex>
-    CLERK_SECRET_KEY=sk_...
-    CLERK_PUBLISHABLE_KEY=pk_...
+    SUPABASE_URL=http://127.0.0.1:54421
+    SUPABASE_SERVICE_ROLE_KEY=<from `npx supabase status`>
+    FOREMAN_MODE=self_hosted
+    ```
+
+    And `packages/web/.env.local`:
+
+    ```bash
+    NEXT_PUBLIC_AGENT_SERVER_URL=http://localhost:4111
+    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<from `npx supabase status`>
     ```
 
     Generate the encryption key:
@@ -55,10 +79,18 @@ leaves your box.
   </Step>
 
   <Step>
-    ### Connect Zapier
+    ### Run
 
-    Sign in via Clerk and click **Connect Zapier** in the web UI. Same flow
-    as the cloud version.
+    ```bash
+    # Agents server (build first — `mastra dev` is unstable on Windows)
+    cd packages/agents && npm run build && npm run start
+
+    # In another terminal: the web frontend
+    cd packages/web && npm run dev
+    ```
+
+    Open `http://localhost:3000`, sign up with Supabase, and click
+    **Connect Zapier**. Same flow as the cloud version.
   </Step>
 </Steps>
 
@@ -79,22 +111,30 @@ Required environment variables for the agents service (`packages/agents/.env.loc
       required: true,
     },
     ANTHROPIC_API_KEY: {
-      description: "Anthropic API key. Used for all agent reasoning (read by the Anthropic SDK).",
+      description: "Anthropic API key. Used for all agent reasoning (read by the Anthropic SDK at first call). Foreman won't refuse to boot without it, but every agent request will fail.",
       type: "string",
-      required: true,
     },
     OPENAI_API_KEY: {
-      description: "OpenAI API key. Used for embeddings in the action-history RAG index.",
+      description: "OpenAI API key. Used for embeddings in the action-history RAG index and for Whisper voice transcription.",
+      type: "string",
+    },
+    SUPABASE_URL: {
+      description: "Supabase project URL. Used by the agent server to verify Supabase JWTs and read user data.",
       type: "string",
       required: true,
     },
-    CLERK_SECRET_KEY: {
-      description: "Clerk backend key used to verify JWTs on the agent server.",
+    SUPABASE_SERVICE_ROLE_KEY: {
+      description: "Supabase service-role key. Used server-side only — never expose to the browser.",
       type: "string",
       required: true,
     },
-    CLERK_PUBLISHABLE_KEY: {
-      description: "Clerk publishable key used by the web frontend.",
+    NEXT_PUBLIC_SUPABASE_URL: {
+      description: "Supabase project URL exposed to the web frontend.",
+      type: "string",
+      required: true,
+    },
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: {
+      description: "Supabase publishable (anon) key used by the web frontend SDK.",
       type: "string",
       required: true,
     },
@@ -132,31 +172,25 @@ Channel tokens (Telegram, Slack, Discord, Teams, Google Chat, WhatsApp, GitHub, 
 
 ## Running on a VPS
 
-Any $5/month Docker-capable VPS works. Behind HTTPS (Caddy, Traefik, or a
-cloud load balancer):
+The agents service ships with `Dockerfile.agents` for container deploys
+(Coolify, Fly, plain `docker run`). The web frontend deploys to Vercel,
+Cloudflare, or anywhere Next.js runs. Both services need their own
+environment variables — see above.
 
-<Tabs items={["Caddyfile", "docker-compose.yaml"]}>
-  <Tab value="Caddyfile">
-    ```
-    foreman.yourdomain.com {
-      reverse_proxy foreman:3000
-    }
-    ```
-  </Tab>
-  <Tab value="docker-compose.yaml">
-    ```yaml
-    services:
-      foreman:
-        image: foreman/foreman:latest
-        restart: unless-stopped
-        env_file: .env
-        volumes:
-          - ./data:/app/data
-        ports:
-          - "3000:3000"
-    ```
-  </Tab>
-</Tabs>
+A typical VPS layout:
+
+- Postgres (Supabase, Neon, or self-hosted with the `vector` extension)
+- Agents container exposing port `4111` behind a reverse proxy
+- Web frontend on Vercel or the same VPS, pointing
+  `NEXT_PUBLIC_AGENT_SERVER_URL` at the agents host
+
+Behind HTTPS with Caddy:
+
+```
+foreman.yourdomain.com {
+  reverse_proxy agents-host:4111
+}
+```
 
 ## What's different vs cloud
 
@@ -169,7 +203,7 @@ cloud load balancer):
 | **Upgrades** | Automatic | `docker pull && docker restart` |
 | **Backups** | Managed | Your own Postgres instance (`pg_dump`, provider snapshots) |
 | **Telemetry** | Opt-in | None |
-| **Auth** | Clerk (managed) | Clerk (free tier) |
+| **Auth** | Supabase (managed) | Supabase (self-hosted or free tier) |
 | **Zapier** | Your personal account | Your personal account |
 
 ## Next
