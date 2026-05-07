@@ -143,10 +143,9 @@ npx supabase start                         # Supabase (Postgres :54422, Studio :
 npx supabase stop                          # Shut it down
 
 # Dev servers
-cd packages/agents && npm run build && npm run start   # Windows-only workaround for mastra dev IPC hang. Linux/Mac: npm run dev.
-cd packages/agents && npm run start        # Then start agents (:4111)
-cd packages/web && npm run dev             # Next.js (:3000)
-cd packages/agents && npm run start:webhooks  # Channel webhooks (:4112)
+cd packages/agents && npm run build && npm run start   # Agents (:4111). Windows workaround for mastra dev IPC hang — Linux/Mac use `npm run dev`.
+cd packages/web && npm run dev                          # Next.js (:3000)
+cd packages/agents && npm run start:webhooks            # Channel webhooks (:4112)
 
 # Build
 cd packages/agents && npm run build        # mastra build → .mastra/output/
