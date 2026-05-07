@@ -117,21 +117,6 @@ First-time setup requires a running local Supabase instance before `npm run dev`
 npx supabase start                         # Boots local Postgres/pgvector on :54422; applies supabase/migrations/*.sql automatically
 ```
 
-## Docs hygiene (`packages/web/content/docs/`)
-
-This file (`CLAUDE.md`) describes how **HamCh's Windows machine** runs Foreman. The MDX files under `packages/web/content/docs/` describe how **anyone in the world** runs Foreman. They are not the same thing.
-
-**Never bleed private dev quirks into public docs.** Specifically:
-
-- `mastra dev` hangs on Windows → `npm run build && npm run start` is a _local workaround_. Public docs say `npm run dev` (the standard Mastra command). Same for any "broken on Windows" / "use this on my machine" note.
-- Windows path syntax, Git Bash gotchas, `obsidian` CLI escaping, Hostinger VPS UUIDs, `C:\Users\HamCh\...` paths — all stay out of public docs.
-- Internal-only branch names, PR numbers, beads issue IDs, vault references — all stay out.
-- VPS hostnames, Coolify UUIDs, deployment tokens — all stay out.
-
-When updating docs, ask: _would a stranger cloning the repo on Linux understand this?_ If the answer is "no, this only matters on HamCh's Windows box", it belongs in this file (or a comment in code), **never** in `content/docs/`.
-
-When adding workarounds for the local environment to this file, write them as workarounds, not as documentation — make it obvious they don't generalize.
-
 ## ngrok (optional — only for channel webhooks)
 
 ngrok is only needed if you're testing **incoming channel webhooks** (Slack, Discord, Telegram, Linear) that require a public URL. The Zapier OAuth callback uses `ZAPIER_REDIRECT_URI=http://localhost:4111/zapier/callback` (set in `.env.local`) — no ngrok required.
@@ -147,10 +132,8 @@ Then update `packages/agents/.env.local` → `AGENT_SERVER_URL=https://<new-url>
 Restart the agents server so it picks up the new URL:
 
 ```bash
-cd packages/agents && npm run start        # see Windows note below
+cd packages/agents && npm run build && npm run start   # Windows: mastra dev hangs (IPC). Linux/Mac: npm run dev. Local quirk only — do not put in public docs.
 ```
-
-> **Windows-only workaround:** `mastra dev` hangs on this machine due to an IPC pipe issue. Locally we always use `npm run build && npm run start`. **Do NOT propagate this into public docs** — see "Docs hygiene" above. On Linux/Mac, `npm run dev` works fine.
 
 ## Dev Commands
 
@@ -160,7 +143,7 @@ npx supabase start                         # Supabase (Postgres :54422, Studio :
 npx supabase stop                          # Shut it down
 
 # Dev servers
-cd packages/agents && npm run build        # Build first (Windows-only workaround for mastra dev IPC hang — see Docs hygiene)
+cd packages/agents && npm run build && npm run start   # Windows-only workaround for mastra dev IPC hang. Linux/Mac: npm run dev.
 cd packages/agents && npm run start        # Then start agents (:4111)
 cd packages/web && npm run dev             # Next.js (:3000)
 cd packages/agents && npm run start:webhooks  # Channel webhooks (:4112)
