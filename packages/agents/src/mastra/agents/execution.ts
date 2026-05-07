@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { AGENT_MODELS, modelSettingsFor, onFinishCostLogger, systemPromptFor, toolsWithCacheControl } from "../../lib/providers";
-import { generateZapierTools } from "../../lib/zapier-sdk-tools";
+import { getDefaultZapierTools } from "../../lib/zapier-sdk-tools";
 
 const EXECUTION_PROMPT = `You are the Execution Agent, responsible for running Zapier actions on behalf of users. You handle action execution, raw API calls, and Zapier account connections.
 
@@ -16,7 +16,7 @@ let _executionTools: Record<string, any> | undefined;
 
 export function createExecutionAgent() {
   if (!_executionTools) {
-    const allTools = generateZapierTools();
+    const allTools = getDefaultZapierTools();
     const executionToolNames = [
       "run-action",
       "fetch",

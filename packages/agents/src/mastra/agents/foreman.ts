@@ -16,7 +16,7 @@ import { OpenAIVoice } from "@mastra/voice-openai";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { generateZapierTools } from "../../lib/zapier-sdk-tools";
+import { getDefaultZapierTools } from "../../lib/zapier-sdk-tools";
 import {
   MODELS,
   AGENT_MODELS,
@@ -27,14 +27,6 @@ import {
 } from "../../lib/providers";
 
 export { buildSystemPrompt, type PromptContext };
-
-// Shared SDK tools — generated once at startup, reused across agent calls.
-// No child process, no MCP transport — direct library import.
-let _sdkTools: Record<string, any> | undefined;
-function getZapierTools() {
-  if (!_sdkTools) _sdkTools = generateZapierTools();
-  return _sdkTools;
-}
 
 export function createForemanAgent(databaseUrl: string) {
   const workspacePath = "./data/workspace";
@@ -58,10 +50,9 @@ export function createForemanAgent(databaseUrl: string) {
     },
   });
 
-  // Generate all 34 Zapier tools directly from SDK registry.
-  // No MCP, no child process — pure library import.
+  // Shared default tool set — generated once per process, reused across agents.
   // toModelOutput and requireApproval are baked into each tool.
-  const sdkTools = getZapierTools();
+  const sdkTools = getDefaultZapierTools();
 
   // Core tools the agent needs for every action — always loaded, no search required.
   // This avoids wasting steps on search_tools + load_tool for common operations.

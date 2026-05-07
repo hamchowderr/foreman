@@ -130,6 +130,10 @@ function resolveCredentials(
 /**
  * Generate all Zapier SDK tools as Mastra createTool() instances.
  *
+ * Use this when you need per-user credentials or connections. If you don't —
+ * (i.e. dev CLI login or env-var-only creds) — prefer `getDefaultZapierTools()`,
+ * which memoizes the result so three agents don't each re-init the SDK.
+ *
  * @param credentials - Optional per-user token (from PKCE web OAuth). If omitted,
  *   dev mode uses CLI login; production uses ZAPIER_CLIENT_ID/SECRET env vars.
  * @param connections - Optional pre-seeded connection alias map.
@@ -269,6 +273,16 @@ export function generateUserZapierTools(
   connections?: Record<string, { connectionId: number }>
 ) {
   return generateZapierTools(credentials, connections);
+}
+
+/**
+ * Memoized default tool set — uses CLI login (dev) or env-var creds (production).
+ * Build once, share across every agent that doesn't need per-user credentials.
+ */
+let _defaultTools: ReturnType<typeof generateZapierTools> | undefined;
+export function getDefaultZapierTools() {
+  if (!_defaultTools) _defaultTools = generateZapierTools();
+  return _defaultTools;
 }
 
 /**
