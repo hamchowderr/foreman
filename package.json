@@ -15,7 +15,6 @@
     "supabase:stop": "npx supabase stop",
     "supabase:status": "npx supabase status",
     "test": "vitest run",
-    "test:api": "vitest run --config vitest.api.config.ts",
     "test:e2e": "npx playwright test",
     "dev:mock": "node tests/start-mock-dev.js",
     "lint": "biome check .",
