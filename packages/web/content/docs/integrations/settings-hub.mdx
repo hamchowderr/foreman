@@ -1,0 +1,148 @@
+---
+title: Settings → Integrations
+description: The web UI for managing channels, MCP clients, and API keys.
+---
+
+This page is a tour of the **Settings → Integrations** surface in the
+Foreman web app. It's where you connect channels (Slack, Discord,
+Telegram), generate API keys, and wire MCP clients up to your Foreman
+instance.
+
+## The hub
+
+Open the web UI and click **Settings → Integrations**. You'll see a tile
+for each available integration. A green **Connected** badge appears next
+to anything you've already linked, and the action button changes from
+**Connect** to **Manage**.
+
+| Tile | Status today | Flow |
+| --- | --- | --- |
+| **MCP / API** | Available | API key creation + client config snippets |
+| **Telegram** | Available | Bot DM + 8-char link code |
+| **Discord** | Available | Server invite → bot DM + 8-char link code |
+| **Slack** | Available | OAuth install → bot DM + 8-char link code |
+| **Microsoft Teams** | In the pipeline | Bot adapter exists, hub install flow not yet wired |
+| **WhatsApp** | In the pipeline | Same — adapter present, install flow pending |
+
+Self-hosters also have working adapters for Google Chat, GitHub, Linear,
+and iMessage; the hub UI just doesn't list them yet. They're reachable
+once you set the matching env vars and route the channel webhook.
+
+## Channel install flow
+
+There are two flows depending on the channel.
+
+### Slack — OAuth install
+
+Slack uses a per-workspace OAuth handshake. The flow is:
+
+1. **Add to Slack** — sends you to Slack's OAuth screen with the requested
+   scopes (`chat:write`, `app_mentions:read`, `im:history`, `im:read`,
+   `users:read`).
+2. Slack redirects back to `/slack/oauth` on the agent server, which
+   exchanges the code, stores the bot token (encrypted), and bounces you
+   back to the Foreman page.
+3. Generate an 8-character **Link Code** on the Foreman page.
+4. DM the Foreman bot in Slack and paste the code (no slash command —
+   the bot accepts the bare code).
+5. The page polls every 4 seconds and confirms once the link is recorded.
+
+### Discord, Telegram, and friends — short-code linking
+
+Channels without a per-user OAuth flow use the link-code flow only:
+
+1. Open the bot (e.g. **Add Foreman to your server** for Discord, **Open
+   @ForemanBot** for Telegram).
+2. Generate an 8-character **Link Code**.
+3. Click **Copy command** and paste it into a DM with the bot — the
+   button copies the channel-appropriate command (`/link CODE` for most,
+   `link CODE` for Slack).
+4. Page polls and confirms.
+
+## The link code itself
+
+- **8 characters** drawn from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no
+  ambiguous `I`, `O`, `0`, `1`).
+- **15-minute TTL.** Generate a fresh one if it expires before you paste.
+- **One per user per channel** — generating a new code invalidates the
+  old one for the same channel.
+- The code is stored hashed in the `channel_link_code` table; the bot
+  consumes it once on paste, then writes the linked identity to
+  `channel_identity` and removes the code.
+
+## MCP / API keys
+
+The **MCP / API** tile opens `/settings/integrations/mcp`, which is also
+where you manage all programmatic access keys. This single page covers:
+
+### Your MCP server URL
+
+A copy-able URL that points to `<agent-server>/mcp`. Drop this into any
+MCP-compatible client.
+
+### API key management
+
+- **Create** — give a key a human name (e.g. *"Claude Desktop"*),
+  Foreman returns the actual key (`fmn_…`) in a one-time reveal banner.
+  **Copy it before you navigate away — it is never shown again.**
+- **List** — every key you've created, with creation date and
+  last-used timestamp.
+- **Revoke** — single click; the key stops working immediately.
+
+Keys are SHA-256 hashed at rest. The `last_used_at` field is updated on
+each successful authenticated request, so you can tell which keys are
+actually in use before revoking.
+
+### Pre-built config snippets
+
+Two ready-to-paste JSON blocks for the most common MCP clients:
+
+- **Claude Desktop** — drops into
+  `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac)
+  or `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+- **Cursor / Windsurf** — drops into `.cursor/mcp.json` or
+  `.windsurfrules`.
+
+When you create a key, the config snippets auto-fill with the actual
+key value while it's revealed. After you navigate away, the snippets
+revert to showing `<your-api-key>` so you don't accidentally screenshot
+a real key.
+
+## Self-host: making the install buttons work
+
+The "install bot" buttons on each channel tile open links built from
+public env vars in the web frontend. Set these in `packages/web/.env.local`
+(no values needed for cloud — the cloud install URLs are managed):
+
+| Channel | Env var | What it does |
+| --- | --- | --- |
+| Telegram | `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Builds the `https://t.me/<username>` open-bot link |
+| Discord | `NEXT_PUBLIC_DISCORD_APPLICATION_ID` | Builds the OAuth invite URL with the `bot` scope |
+| Discord (override) | `NEXT_PUBLIC_DISCORD_BOT_INVITE` | Use a fully-formed invite URL instead of the auto-built one |
+| Slack | `NEXT_PUBLIC_SLACK_CLIENT_ID` | Required to build the OAuth install URL — paired with `NEXT_PUBLIC_AGENT_SERVER_URL` for the redirect |
+| Slack (override) | `NEXT_PUBLIC_SLACK_INSTALL_URL` | Use a hand-built install URL instead |
+
+If a public env var isn't set, the bot button shows a yellow notice with
+the name of the missing var. Generating link codes still works — only
+the convenience link to open the bot is gone.
+
+## Backend, briefly
+
+- `POST /channel-links` — auth'd; body `{ channel: "telegram" }`;
+  returns `{ code, expires_at }`.
+- `GET /channel-links/identities` — auth'd; returns the user's connected
+  channels. Used by the hub for the **Connected** badges and by each
+  per-channel page's poll loop.
+- `DELETE /channel-links/identities/:id` — auth'd; unlinks a channel
+  identity. Wired up in the API but not yet exposed in the hub UI.
+
+All three live in `packages/agents/src/routes/channel-links.ts`.
+
+## Related
+
+<Cards>
+  <Card title="Channels overview" href="/docs/channels" description="Pick a channel — each page covers the provider-side setup." />
+  <Card title="Connect channels (cloud)" href="/docs/channels/connect-cloud" description="High-level walkthrough for Foreman Cloud users." />
+  <Card title="MCP (cloud)" href="/docs/integrations/mcp-cloud" description="What MCP is and what an MCP client can do with Foreman." />
+  <Card title="Webhook server (self-host)" href="/docs/self-hosted/webhook-server" description="The :4112 process that receives the inbound channel traffic." />
+</Cards>
