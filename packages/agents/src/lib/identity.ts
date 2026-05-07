@@ -1,48 +1,28 @@
-import { eq, and } from "drizzle-orm";
-import { getDb, schema } from "./db";
-import { timingSafeEqual, createHash, randomUUID } from "node:crypto";
+import { getSupabase } from "./db";
+import { createHash, randomUUID } from "node:crypto";
 
-/**
- * Channel-agnostic user resolution.
- * Resolves a Foreman userId from any channel:
- * 1. BetterAuth session token (web)
- * 2. API key (MCP/A2A)
- * 3. Channel identity (Telegram, Slack, Discord)
- */
+// ─── Supabase JWT Resolution ───
 
-// ─── Clerk JWT Resolution ───
-
-export interface ClerkJwtResult {
+export interface SupabaseJwtResult {
   userId: string;
   orgId?: string;
 }
 
 /**
- * Verify a Clerk JWT and extract the user ID (sub claim) and org ID (org_id claim).
- * In dev, we decode without full verification for simplicity.
- * In production, use Clerk's JWKS endpoint for proper verification.
- * Clerk includes org_id in the JWT when the user has an active org selected.
+ * Validate a Supabase JWT via the admin client and extract user ID + org.
+ * Uses the service_role client which verifies the JWT server-side.
  */
-export async function resolveFromClerkJwt(
+export async function resolveFromSupabaseJwt(
   token: string
-): Promise<ClerkJwtResult | null> {
+): Promise<SupabaseJwtResult | null> {
   try {
-    // Decode JWT payload (base64url)
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(
-      Buffer.from(parts[1], "base64url").toString("utf-8")
-    );
-
-    // Check expiration
-    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
-
-    const userId = payload.sub;
-    if (!userId) return null;
+    const supabase = getSupabase();
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
 
     return {
-      userId,
-      orgId: payload.org_id ?? undefined,
+      userId: user.id,
+      orgId: user.user_metadata?.org_id ?? undefined,
     };
   } catch {
     return null;
@@ -51,30 +31,19 @@ export async function resolveFromClerkJwt(
 
 // ─── User Auto-Creation ───
 
-async function ensureUserExists(clerkUserId: string): Promise<void> {
-  const db = getDb();
-  const rows = await db
-    .select({ id: schema.user.id })
-    .from(schema.user)
-    .where(eq(schema.user.id, clerkUserId))
-    .limit(1);
-
-  if (rows.length > 0) return;
-
-  // Create user row for Clerk user
-  const now = new Date();
-  try {
-    await db.insert(schema.user).values({
-      id: clerkUserId,
-      name: clerkUserId,
-      email: `${clerkUserId}@clerk.local`,
+export async function ensureUserExists(userId: string): Promise<void> {
+  const supabase = getSupabase();
+  await supabase.from("user").upsert(
+    {
+      id: userId,
+      name: userId,
+      email: `${userId}@supabase.local`,
       emailVerified: false,
-      createdAt: now,
-      updatedAt: now,
-    });
-  } catch {
-    // Race condition — another request may have created it
-  }
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    { onConflict: "id", ignoreDuplicates: true }
+  );
 }
 
 // ─── API Key Resolution ───
@@ -83,28 +52,27 @@ function hashApiKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }
 
-export async function resolveFromApiKey(
-  key: string
-): Promise<string | null> {
-  const db = getDb();
+export async function resolveFromApiKey(key: string): Promise<string | null> {
+  const supabase = getSupabase();
   const keyHash = hashApiKey(key);
 
-  const rows = await db
-    .select()
-    .from(schema.apiKey)
-    .where(eq(schema.apiKey.keyHash, keyHash))
-    .limit(1);
+  const { data } = await supabase
+    .from("api_key")
+    .select("id, user_id")
+    .eq("key_hash", keyHash)
+    .limit(1)
+    .single();
 
-  const apiKeyRow = rows[0];
-  if (!apiKeyRow) return null;
+  if (!data) return null;
 
   // Update last used timestamp (fire and forget)
-  db.update(schema.apiKey)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(schema.apiKey.id, apiKeyRow.id))
+  supabase
+    .from("api_key")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", data.id)
     .then(() => {});
 
-  return apiKeyRow.userId;
+  return data.user_id;
 }
 
 export async function createApiKey(
@@ -112,21 +80,21 @@ export async function createApiKey(
   name: string,
   scopes: string[] = ["read", "write", "execute"]
 ): Promise<{ id: string; key: string }> {
-  const db = getDb();
+  const supabase = getSupabase();
   const id = randomUUID();
   const key = `fmn_${randomUUID().replace(/-/g, "")}`;
   const keyHash = hashApiKey(key);
 
-  await db.insert(schema.apiKey).values({
+  await supabase.from("api_key").insert({
     id,
-    userId,
-    keyHash,
+    user_id: userId,
+    key_hash: keyHash,
     name,
     scopes: JSON.stringify(scopes),
-    createdAt: new Date(),
+    created_at: new Date().toISOString(),
   });
 
-  return { id, key }; // key is only returned once — not stored in plaintext
+  return { id, key };
 }
 
 // ─── Channel Identity Resolution ───
@@ -135,19 +103,16 @@ export async function resolveFromChannel(
   channel: string,
   channelUserId: string
 ): Promise<string | null> {
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(schema.channelIdentity)
-    .where(
-      and(
-        eq(schema.channelIdentity.channel, channel as typeof schema.channelIdentity.channel.enumValues[number]),
-        eq(schema.channelIdentity.channelUserId, channelUserId)
-      )
-    )
-    .limit(1);
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("channel_identity")
+    .select("user_id")
+    .eq("channel", channel)
+    .eq("channel_user_id", channelUserId)
+    .limit(1)
+    .single();
 
-  return rows[0]?.userId ?? null;
+  return data?.user_id ?? null;
 }
 
 export async function registerChannelUser(
@@ -155,17 +120,14 @@ export async function registerChannelUser(
   channelUserId: string,
   displayName?: string
 ): Promise<string> {
-  const db = getDb();
-
-  // Check if already linked
   const existing = await resolveFromChannel(channel, channelUserId);
   if (existing) return existing;
 
-  // Create a new Foreman user
+  const supabase = getSupabase();
   const userId = randomUUID();
-  const now = new Date();
+  const now = new Date().toISOString();
 
-  await db.insert(schema.user).values({
+  await supabase.from("user").insert({
     id: userId,
     name: displayName || `${channel}-${channelUserId}`,
     email: `${channel}-${channelUserId}@foreman.local`,
@@ -174,17 +136,81 @@ export async function registerChannelUser(
     updatedAt: now,
   });
 
-  // Link channel identity
-  await db.insert(schema.channelIdentity).values({
+  await supabase.from("channel_identity").insert({
     id: randomUUID(),
-    userId,
-    channel: channel as typeof schema.channelIdentity.channel.enumValues[number],
-    channelUserId,
-    displayName,
-    createdAt: now,
+    user_id: userId,
+    channel,
+    channel_user_id: channelUserId,
+    display_name: displayName ?? null,
+    created_at: now,
   });
 
   return userId;
+}
+
+// ─── Channel Link Code Redemption ───
+
+export interface RedeemResult {
+  ok: boolean;
+  error?: "not_found" | "expired" | "already_used";
+}
+
+/**
+ * Redeem a linking code from a channel bot.
+ * Associates the channel_user_id with the web user who generated the code.
+ */
+export async function redeemChannelLinkCode(
+  code: string,
+  channel: string,
+  channelUserId: string,
+  displayName?: string,
+): Promise<RedeemResult> {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+
+  const { data } = await supabase
+    .from("channel_link_code")
+    .select("id, user_id, channel, expires_at, used_at")
+    .eq("code", code.toUpperCase())
+    .limit(1)
+    .single();
+
+  if (!data) return { ok: false, error: "not_found" };
+  if (data.used_at) return { ok: false, error: "already_used" };
+  if (data.expires_at < now) return { ok: false, error: "expired" };
+
+  // Mark code as used
+  await supabase
+    .from("channel_link_code")
+    .update({ used_at: now })
+    .eq("id", data.id);
+
+  // Upsert channel_identity: link this channel account to the web user
+  const { data: existing } = await supabase
+    .from("channel_identity")
+    .select("id, user_id")
+    .eq("channel", channel)
+    .eq("channel_user_id", channelUserId)
+    .limit(1)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from("channel_identity")
+      .update({ user_id: data.user_id, display_name: displayName ?? null })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("channel_identity").insert({
+      id: randomUUID(),
+      user_id: data.user_id,
+      channel,
+      channel_user_id: channelUserId,
+      display_name: displayName ?? null,
+      created_at: now,
+    });
+  }
+
+  return { ok: true };
 }
 
 // ─── Unified Resolution ───
@@ -196,21 +222,19 @@ export interface ResolvedIdentity {
 }
 
 /**
- * Resolve user identity from request headers/context.
- * Tries in order: Bearer token → API key → returns null.
- * Channel-specific resolution (Telegram) is handled separately in the bot.
+ * Resolve user identity from request headers.
+ * Tries: Bearer token (Supabase JWT) → X-API-Key → null.
  */
 export async function resolveFromRequest(
   request: Request
 ): Promise<ResolvedIdentity | null> {
   const authHeader = request.headers.get("authorization");
 
-  // 1. Bearer token (Clerk JWT)
+  // 1. Bearer token (Supabase JWT)
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
-    const result = await resolveFromClerkJwt(token);
+    const result = await resolveFromSupabaseJwt(token);
     if (result) {
-      // Ensure user row exists (Clerk users may not have a row yet)
       await ensureUserExists(result.userId);
       return { userId: result.userId, orgId: result.orgId, channel: "web" };
     }

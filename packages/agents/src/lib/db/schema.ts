@@ -1,184 +1,154 @@
-import {
-  pgTable,
-  text,
-  integer,
-  boolean,
-  timestamp,
-  primaryKey,
-} from "drizzle-orm/pg-core";
+// Plain TypeScript interfaces for our Supabase tables.
+// Column names are snake_case to match the database.
 
-// ─── User table (Clerk-managed, auto-created on first auth) ───
+export interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  email_verified: boolean;
+  image: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("emailVerified").notNull(),
-  image: text("image"),
-  createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull(),
-  updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface ZapierIdentityRow {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  access_token: string;
+  refresh_token: string;
+  expires_at: string | null;
+  scopes: string; // JSON stringified array
+  created_at: string;
+  updated_at: string;
+}
 
-// ─── Zapier Identity ───
+export interface ConversationRow {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  mastra_thread_id: string | null;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-export const zapierIdentity = pgTable("zapier_identity", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .unique()
-    .references(() => user.id),
-  orgId: text("org_id"),
-  accessToken: text("access_token").notNull(),
-  refreshToken: text("refresh_token").notNull(),
-  expiresAt: timestamp("expires_at", { mode: "date", withTimezone: true }),
-  scopes: text("scopes").notNull(), // JSON stringified array
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface ActionProposalRow {
+  id: string;
+  conversation_id: string;
+  mastra_run_id: string | null;
+  app_key: string;
+  action_type: "search" | "read" | "write";
+  action_key: string;
+  human_label: string;
+  inputs: string; // JSON
+  input_schema: string; // JSON
+  connection_id: string | null;
+  status: "pending" | "approved" | "declined" | "executed" | "failed";
+  created_at: string;
+  updated_at: string;
+}
 
-// ─── Conversation (links to Mastra Memory thread) ───
+export interface ActionRunRow {
+  id: string;
+  proposal_id: string;
+  result: string; // JSON
+  error: string | null; // JSON
+  executed_at: string;
+}
 
-export const conversation = pgTable("conversation", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  orgId: text("org_id"),
-  mastraThreadId: text("mastra_thread_id"),
-  title: text("title"),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface WorkflowRow {
+  id: string;
+  user_id: string;
+  name: string;
+  source_conversation_id: string | null;
+  parameters: string; // JSON
+  is_template: boolean;
+  cloned_from: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-// ─── Action Proposals & Runs ───
+export interface WorkflowStepRow {
+  id: string;
+  workflow_id: string;
+  order: number;
+  proposal_template: string; // JSON
+}
 
-export const actionProposal = pgTable("action_proposal", {
-  id: text("id").primaryKey(),
-  conversationId: text("conversation_id")
-    .notNull()
-    .references(() => conversation.id),
-  mastraRunId: text("mastra_run_id"),
-  appKey: text("app_key").notNull(),
-  actionType: text("action_type", {
-    enum: ["search", "read", "write"],
-  }).notNull(),
-  actionKey: text("action_key").notNull(),
-  humanLabel: text("human_label").notNull(),
-  inputs: text("inputs").notNull(), // JSON
-  inputSchema: text("input_schema").notNull(), // JSON
-  connectionId: text("connection_id"),
-  status: text("status", {
-    enum: ["pending", "approved", "declined", "executed", "failed"],
-  }).notNull(),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface WorkflowRunRow {
+  id: string;
+  workflow_id: string;
+  inputs: string; // JSON
+  status: "pending" | "running" | "success" | "failed" | "declined";
+  created_at: string;
+  completed_at: string | null;
+}
 
-export const actionRun = pgTable("action_run", {
-  id: text("id").primaryKey(),
-  proposalId: text("proposal_id")
-    .notNull()
-    .references(() => actionProposal.id),
-  result: text("result").notNull(), // JSON
-  error: text("error"), // JSON, nullable
-  executedAt: timestamp("executed_at", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface ConnectionAliasRow {
+  user_id: string;
+  alias: string;
+  app_key: string;
+  connection_id: number;
+  created_at: string;
+}
 
-// ─── Workflows ───
+export interface CapabilityFlagRow {
+  user_id: string;
+  capability: string;
+  enabled: boolean;
+}
 
-export const workflow = pgTable("workflow", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  name: text("name").notNull(),
-  sourceConversationId: text("source_conversation_id").references(
-    () => conversation.id
-  ),
-  parameters: text("parameters").notNull(), // JSON
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface ChannelIdentityRow {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  channel: "web" | "telegram" | "slack" | "discord" | "mcp" | "a2a" | "teams" | "gchat" | "whatsapp" | "github" | "linear" | "imessage";
+  channel_user_id: string;
+  display_name: string | null;
+  created_at: string;
+}
 
-export const workflowStep = pgTable("workflow_step", {
-  id: text("id").primaryKey(),
-  workflowId: text("workflow_id")
-    .notNull()
-    .references(() => workflow.id),
-  order: integer("order").notNull(),
-  proposalTemplate: text("proposal_template").notNull(), // JSON
-});
+export interface AppCatalogRow {
+  app_key: string;
+  slug: string;
+  title: string;
+  categories: string; // JSON array
+  auth_type: string | null;
+  action_count: number | null;
+  embedding_text: string | null;
+  synced_at: string;
+}
 
-export const workflowRun = pgTable("workflow_run", {
-  id: text("id").primaryKey(),
-  workflowId: text("workflow_id")
-    .notNull()
-    .references(() => workflow.id),
-  inputs: text("inputs").notNull(), // JSON
-  status: text("status", {
-    enum: ["pending", "running", "success", "failed", "declined"],
-  }).notNull(),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-  completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
-});
+export interface StoredAgentRow {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  name: string;
+  description: string | null;
+  current_version_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-// ─── Capability Flags ───
+export interface StoredAgentVersionRow {
+  id: string;
+  agent_id: string;
+  version: number;
+  instructions: string;
+  tools: string; // JSON array
+  model: string;
+  notes: string | null;
+  published_at: string | null;
+  created_at: string;
+}
 
-export const capabilityFlag = pgTable(
-  "capability_flag",
-  {
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id),
-    capability: text("capability").notNull(),
-    enabled: boolean("enabled").notNull().default(false),
-  },
-  (table) => [primaryKey({ columns: [table.userId, table.capability] })]
-);
-
-// ─── Channel Identity (multi-channel user linking) ───
-
-export const channelIdentity = pgTable(
-  "channel_identity",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id),
-    orgId: text("org_id"),
-    channel: text("channel", {
-      enum: ["web", "telegram", "slack", "discord", "mcp", "a2a", "teams", "gchat", "whatsapp", "github", "linear", "imessage"],
-    }).notNull(),
-    channelUserId: text("channel_user_id").notNull(),
-    displayName: text("display_name"),
-    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-  },
-  () => []
-);
-
-// ─── App Catalog (embedded for semantic search) ───
-
-export const appCatalog = pgTable("app_catalog", {
-  appKey: text("app_key").primaryKey(),
-  slug: text("slug").notNull(),
-  title: text("title").notNull(),
-  categories: text("categories").notNull(), // JSON array: [{ id, name, slug }]
-  authType: text("auth_type"),
-  actionCount: integer("action_count"),
-  embeddingText: text("embedding_text"), // pre-built text for vector embedding
-  syncedAt: timestamp("synced_at", { mode: "date", withTimezone: true }).notNull(),
-});
-
-// ─── API Keys (MCP/A2A access) ───
-
-export const apiKey = pgTable("api_key", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  keyHash: text("key_hash").notNull().unique(),
-  name: text("name").notNull(),
-  scopes: text("scopes").notNull(), // JSON array: ["read", "write", "execute"]
-  lastUsedAt: timestamp("last_used_at", { mode: "date", withTimezone: true }),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
-});
+export interface ApiKeyRow {
+  id: string;
+  user_id: string;
+  key_hash: string;
+  name: string;
+  scopes: string; // JSON array
+  last_used_at: string | null;
+  created_at: string;
+}

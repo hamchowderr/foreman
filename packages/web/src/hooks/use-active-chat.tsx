@@ -2,7 +2,8 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
-import { useAuth } from "@clerk/nextjs";
+import { useCallback } from "react";
+import { createClient } from "@/lib/client";
 import { DefaultChatTransport } from "ai";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { useDataStream } from "@/components/chat/data-stream-provider";
@@ -62,8 +64,17 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
-  const { getToken, userId } = useAuth();
   const { log } = useDevConsole();
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user.id ?? null);
+    });
+  }, []);
+  const getToken = useCallback(async () => {
+    const { data: { session } } = await createClient().auth.getSession();
+    return session?.access_token ?? null;
+  }, []);
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
   const userIdRef = useRef(userId);
@@ -248,6 +259,36 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const urlPushedRef = useRef(false);
+  const wrappedSendMessage = useCallback<typeof sendMessage>(
+    (...args) => {
+      if (isNewChat && !urlPushedRef.current) {
+        urlPushedRef.current = true;
+        window.history.pushState(
+          {},
+          "",
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+        );
+        // Persist the conversation so it appears in history and survives refresh
+        getTokenRef.current().then((token) => {
+          fetch(
+            `${process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111"}/conversations`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({ id: chatId }),
+            }
+          ).catch(() => {});
+        });
+      }
+      return sendMessage(...args);
+    },
+    [isNewChat, chatId, sendMessage]
+  );
+
   const loadedChatIds = useRef(new Set<string>());
 
   if (isNewChat && !loadedChatIds.current.has(newChatIdRef.current)) {
@@ -268,6 +309,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
       prevChatIdRef.current = chatId;
+      urlPushedRef.current = false;
       if (isNewChat) {
         setMessages([]);
       }
@@ -350,7 +392,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       chatId,
       messages,
       setMessages,
-      sendMessage,
+      sendMessage: wrappedSendMessage,
       status,
       stop,
       regenerate,
@@ -370,7 +412,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       chatId,
       messages,
       setMessages,
-      sendMessage,
+      wrappedSendMessage,
       status,
       stop,
       regenerate,

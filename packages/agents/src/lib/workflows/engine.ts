@@ -1,7 +1,6 @@
-import { getDb, schema } from "@/lib/db";
+import { getSupabase } from "@/lib/db";
 import { runAction } from "@/lib/zapier/execution";
 import { substituteParams, validateParams } from "./params";
-import { eq, asc } from "drizzle-orm";
 
 export interface WorkflowEvent {
   type: "status" | "step" | "complete" | "error" | "param_request";
@@ -25,23 +24,23 @@ export async function* executeWorkflow(
   inputs: Record<string, string>,
   orgId?: string
 ): AsyncGenerator<WorkflowEvent> {
-  const db = getDb();
+  const supabase = getSupabase();
 
   // Load steps ordered
-  const steps = await db
-    .select()
-    .from(schema.workflowStep)
-    .where(eq(schema.workflowStep.workflowId, workflowId))
-    .orderBy(asc(schema.workflowStep.order));
+  const { data: steps } = await supabase
+    .from("workflow_step")
+    .select("*")
+    .eq("workflow_id", workflowId)
+    .order("order", { ascending: true });
 
-  if (steps.length === 0) {
+  if (!steps || steps.length === 0) {
     yield { type: "error", message: "Workflow has no steps" };
     return;
   }
 
   // Check all parameters are satisfied across all steps
   for (const step of steps) {
-    const template = JSON.parse(step.proposalTemplate) as Record<string, unknown>;
+    const template = JSON.parse(step.proposal_template) as Record<string, unknown>;
     const inputsTemplate = (template.inputs ?? {}) as Record<string, unknown>;
     const { valid, missing } = validateParams(inputsTemplate, inputs);
     if (!valid) {
@@ -52,21 +51,21 @@ export async function* executeWorkflow(
 
   // Create run record
   const runId = crypto.randomUUID();
-  const now = new Date();
+  const now = new Date().toISOString();
 
-  await db.insert(schema.workflowRun).values({
+  await supabase.from("workflow_run").insert({
     id: runId,
-    workflowId,
+    workflow_id: workflowId,
     inputs: JSON.stringify(inputs),
     status: "running",
-    createdAt: now,
+    created_at: now,
   });
 
   yield { type: "status", runId, status: "running" };
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
-    const template = JSON.parse(step.proposalTemplate) as Record<string, unknown>;
+    const template = JSON.parse(step.proposal_template) as Record<string, unknown>;
     const label = (template.humanLabel as string) ?? `Step ${i + 1}`;
 
     yield {
@@ -79,7 +78,6 @@ export async function* executeWorkflow(
     };
 
     try {
-      // Substitute params into the action inputs
       const rawInputs = (template.inputs ?? {}) as Record<string, unknown>;
       const resolved = substituteParams(rawInputs, inputs);
 
@@ -114,11 +112,10 @@ export async function* executeWorkflow(
         error: errorMsg,
       };
 
-      // Mark run as failed
-      await db
-        .update(schema.workflowRun)
-        .set({ status: "failed", completedAt: new Date() })
-        .where(eq(schema.workflowRun.id, runId));
+      await supabase
+        .from("workflow_run")
+        .update({ status: "failed", completed_at: new Date().toISOString() })
+        .eq("id", runId);
 
       yield { type: "error", runId, message: errorMsg };
       return;
@@ -126,10 +123,10 @@ export async function* executeWorkflow(
   }
 
   // All steps succeeded
-  await db
-    .update(schema.workflowRun)
-    .set({ status: "success", completedAt: new Date() })
-    .where(eq(schema.workflowRun.id, runId));
+  await supabase
+    .from("workflow_run")
+    .update({ status: "success", completed_at: new Date().toISOString() })
+    .eq("id", runId);
 
   yield { type: "complete", runId, status: "success" };
 }

@@ -1,8 +1,10 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createDiscordAdapter } from "@chat-adapter/discord";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
-import { registerChannelUser } from "../lib/identity";
+import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
+import { requestUserContext } from "../lib/request-user-context";
 
 let _bot: Chat<{ discord: ReturnType<typeof createDiscordAdapter> }> | undefined;
 let _discordAdapter: ReturnType<typeof createDiscordAdapter> | undefined;
@@ -46,8 +48,8 @@ export async function getDiscordBot() {
     // is available when they message from Discord, because resource is the same userId.
     let postedStepTexts: string[] = [];
 
-    const result = await agent.generate(text, {
-      maxSteps: 10,
+    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
+      stopWhen: stepCountIs(10),
       savePerStep: true,
       memory: {
         thread: `discord-${threadId}`,
@@ -63,7 +65,7 @@ export async function getDiscordBot() {
           // Don't let posting errors crash the agent
         }
       },
-    });
+    }));
 
     // result.text contains ALL step texts concatenated.
     // Strip out anything we already posted to avoid duplicates.
@@ -74,9 +76,39 @@ export async function getDiscordBot() {
     return finalText || (postedStepTexts.length > 0 ? null : "Something went wrong — I couldn't generate a response.");
   }
 
+  // Handle /link <code> command for account linking (DMs only)
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    const linkMatch = message.text.trim().match(/^\/link\s+([A-Z0-9]{8})$/i);
+    if (linkMatch) {
+      try {
+        const result = await redeemChannelLinkCode(
+          linkMatch[1],
+          "discord",
+          message.author.userId,
+          message.author.fullName,
+        );
+        if (result.ok) {
+          await thread.post("Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.");
+        } else if (result.error === "expired") {
+          await thread.post("That code has expired. Generate a new one from your Foreman settings.");
+        } else if (result.error === "already_used") {
+          await thread.post("That code has already been used. Generate a new one if needed.");
+        } else {
+          await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+        }
+      } catch (err) {
+        console.error("[discord] /link handler error:", err);
+        await thread.post("Something went wrong while linking your account. Please try again.").catch(() => {});
+      }
+      return;
+    }
+  });
+
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
+    if (message.text.trim().startsWith("/link")) return;
     await thread.startTyping().catch(() => {});
     const reply = await generateStreamedReply(
       thread,

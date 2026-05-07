@@ -1,18 +1,28 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
-import { registerChannelUser } from "../lib/identity";
+import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
+import { requestUserContext } from "../lib/request-user-context";
+import { getSupabase } from "../lib/db";
+import { decryptToken } from "../lib/crypto";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;
 let _slackAdapter: ReturnType<typeof createSlackAdapter> | undefined;
+let _initPromise: Promise<Chat<{ slack: ReturnType<typeof createSlackAdapter> }>> | undefined;
 
 /**
- * Create and configure the Slack bot backed by the Foreman Mastra agent.
- * Uses Chat SDK with the Slack adapter. The bot is a singleton — safe to
- * call multiple times.
+ * Create, initialize, and rehydrate the Slack bot singleton.
+ * Safe to call concurrently — initialization only runs once.
  */
-export async function getSlackBot() {
+export function getSlackBot() {
+  if (_initPromise) return _initPromise;
+  _initPromise = _createAndInitBot();
+  return _initPromise;
+}
+
+async function _createAndInitBot() {
   if (_bot) return _bot;
 
   const slack = createSlackAdapter();
@@ -44,20 +54,45 @@ export async function getSlackBot() {
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Discord
     // is available when they message from Slack, because resource is the same userId.
-    const result = await agent.generate(text, {
-      maxSteps: 5,
+    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
+      stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `slack-${threadId}`,
         resource: userId,
       },
-    });
+    }));
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
+
+  // Handle /link <code> command for account linking (DMs only)
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    const linkMatch = message.text.trim().match(/^\/?\s*link\s+([A-Z0-9]{8})$/i);
+    if (linkMatch) {
+      const result = await redeemChannelLinkCode(
+        linkMatch[1],
+        "slack",
+        message.author.userId,
+        message.author.fullName,
+      );
+      if (result.ok) {
+        await thread.post("Your Slack account is now linked to Foreman. You can close the settings page.");
+      } else if (result.error === "expired") {
+        await thread.post("That code has expired. Generate a new one from your Foreman settings.");
+      } else if (result.error === "already_used") {
+        await thread.post("That code has already been used. Generate a new one if needed.");
+      } else {
+        await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+      }
+      return;
+    }
+  });
 
   // Handle DMs
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
+    if (/^\/?\s*link\s+[A-Z0-9]{8}$/i.test(message.text.trim())) return;
     try {
       console.log("[slack] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
@@ -115,13 +150,43 @@ export async function getSlackBot() {
   });
 
   _bot = bot;
+
+  await bot.initialize();
+  await rehydrateInstallations(slack);
+
   return bot;
+}
+
+export async function rehydrateSlackInstallations() {
+  await getSlackBot(); // ensures init + rehydration have run
+}
+
+async function rehydrateInstallations(
+  adapter: ReturnType<typeof createSlackAdapter>
+): Promise<void> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("slack_installation")
+    .select("team_id, team_name, bot_token, bot_user_id");
+  if (error || !data?.length) return;
+  for (const row of data) {
+    try {
+      await adapter.setInstallation(row.team_id, {
+        botToken: decryptToken(row.bot_token),
+        botUserId: row.bot_user_id ?? undefined,
+        teamName: row.team_name ?? undefined,
+      });
+    } catch (err) {
+      console.error("[slack] Failed to rehydrate team", row.team_id, err);
+    }
+  }
+  console.log(`[slack] Rehydrated ${data.length} installation(s) from DB`);
 }
 
 /**
  * Return the underlying Slack adapter instance.
  */
-export function getSlackAdapter() {
-  if (!_slackAdapter) getSlackBot();
+export async function getSlackAdapter() {
+  await getSlackBot();
   return _slackAdapter!;
 }

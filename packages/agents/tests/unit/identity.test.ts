@@ -1,130 +1,98 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the DB module
-vi.mock("@/lib/db", () => {
-  const mockLimit = vi.fn().mockResolvedValue([]);
-  const mockSet = vi.fn().mockReturnThis();
-  const mockUpdateWhere = vi.fn().mockReturnValue({ then: vi.fn((cb: any) => cb()) });
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: mockLimit,
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockResolvedValue(undefined),
-    update: vi.fn().mockReturnValue({ set: mockSet }),
-    set: mockSet,
-  };
-  // Make update().set().where() work
-  mockSet.mockReturnValue({ where: mockUpdateWhere });
+// ─── Supabase mock ───
 
-  return {
-    getDb: () => chain,
-    schema: {
-      apiKey: {
-        keyHash: "keyHash",
-        id: "id",
-        userId: "userId",
-        lastUsedAt: "lastUsedAt",
-      },
-      channelIdentity: {
-        channel: "channel",
-        channelUserId: "channelUserId",
-        userId: "userId",
-      },
-      user: {},
-    },
-    __mocks: { mockLimit },
-  };
-});
+let nextQueryResult: any = { data: null, error: null };
 
-/** Helper to create a JWT with a given payload. */
-function makeJwt(
-  payload: Record<string, unknown>,
-  header = { alg: "RS256", typ: "JWT" }
-): string {
-  const enc = (obj: Record<string, unknown>) =>
-    Buffer.from(JSON.stringify(obj)).toString("base64url");
-  return `${enc(header)}.${enc(payload)}.fake-signature`;
+function createChain() {
+  const builder: any = {};
+  const chainMethods = ["select", "eq", "neq", "limit", "order", "insert", "update", "upsert", "delete"];
+  for (const method of chainMethods) {
+    builder[method] = vi.fn().mockReturnValue(builder);
+  }
+  builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextQueryResult));
+  builder.maybeSingle = vi.fn().mockImplementation(() => Promise.resolve(nextQueryResult));
+  builder.then = (resolve: any) => resolve(nextQueryResult);
+  return builder;
 }
+
+const mockAuth = {
+  getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+};
+
+const mockSupabase = {
+  from: vi.fn(() => createChain()),
+  auth: mockAuth,
+};
+
+vi.mock("@/lib/db", () => ({
+  getSupabase: () => mockSupabase,
+  __mocks: { mockAuth, mockSupabase, setNextResult: (r: any) => { nextQueryResult = r; } },
+}));
 
 describe("identity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    nextQueryResult = { data: null, error: null };
   });
 
-  describe("resolveFromClerkJwt", () => {
-    it("extracts userId from valid JWT", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const token = makeJwt({
-        sub: "user_abc123",
-        exp: Math.floor(Date.now() / 1000) + 3600,
+  describe("resolveFromSupabaseJwt", () => {
+    it("extracts userId from valid Supabase token", async () => {
+      mockAuth.getUser.mockResolvedValueOnce({
+        data: { user: { id: "user_abc123", user_metadata: {} } },
+        error: null,
       });
-      const result = await resolveFromClerkJwt(token);
+      const { resolveFromSupabaseJwt } = await import("@/lib/identity");
+      const result = await resolveFromSupabaseJwt("valid-token");
       expect(result).not.toBeNull();
       expect(result!.userId).toBe("user_abc123");
     });
 
-    it("extracts orgId when present", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const token = makeJwt({
-        sub: "user_abc123",
-        org_id: "org_xyz789",
-        exp: Math.floor(Date.now() / 1000) + 3600,
+    it("extracts orgId when present in user_metadata", async () => {
+      mockAuth.getUser.mockResolvedValueOnce({
+        data: { user: { id: "user_abc123", user_metadata: { org_id: "org_xyz789" } } },
+        error: null,
       });
-      const result = await resolveFromClerkJwt(token);
+      const { resolveFromSupabaseJwt } = await import("@/lib/identity");
+      const result = await resolveFromSupabaseJwt("valid-token");
       expect(result).not.toBeNull();
       expect(result!.orgId).toBe("org_xyz789");
     });
 
     it("returns result without orgId when org_id not present", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const token = makeJwt({
-        sub: "user_abc123",
-        exp: Math.floor(Date.now() / 1000) + 3600,
+      mockAuth.getUser.mockResolvedValueOnce({
+        data: { user: { id: "user_abc123", user_metadata: {} } },
+        error: null,
       });
-      const result = await resolveFromClerkJwt(token);
+      const { resolveFromSupabaseJwt } = await import("@/lib/identity");
+      const result = await resolveFromSupabaseJwt("valid-token");
       expect(result).not.toBeNull();
       expect(result!.orgId).toBeUndefined();
     });
 
-    it("returns null for expired JWT", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const token = makeJwt({
-        sub: "user_abc123",
-        exp: Math.floor(Date.now() / 1000) - 3600, // expired 1 hour ago
+    it("returns null when auth returns error", async () => {
+      mockAuth.getUser.mockResolvedValueOnce({
+        data: { user: null },
+        error: { message: "Invalid JWT" },
       });
-      const result = await resolveFromClerkJwt(token);
+      const { resolveFromSupabaseJwt } = await import("@/lib/identity");
+      const result = await resolveFromSupabaseJwt("bad-token");
       expect(result).toBeNull();
     });
 
-    it("returns null for malformed token (not 3 parts)", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const result = await resolveFromClerkJwt("not-a-jwt");
-      expect(result).toBeNull();
-    });
-
-    it("returns null for JWT with invalid base64 payload", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const result = await resolveFromClerkJwt("header.!!!invalid!!!.sig");
-      expect(result).toBeNull();
-    });
-
-    it("returns null for JWT without sub claim", async () => {
-      const { resolveFromClerkJwt } = await import("@/lib/identity");
-      const token = makeJwt({
-        exp: Math.floor(Date.now() / 1000) + 3600,
+    it("returns null when auth returns no user", async () => {
+      mockAuth.getUser.mockResolvedValueOnce({
+        data: { user: null },
+        error: null,
       });
-      const result = await resolveFromClerkJwt(token);
+      const { resolveFromSupabaseJwt } = await import("@/lib/identity");
+      const result = await resolveFromSupabaseJwt("token-no-user");
       expect(result).toBeNull();
     });
   });
 
-  describe("hashApiKey", () => {
+  describe("hashApiKey (indirect via resolveFromApiKey)", () => {
     it("produces consistent SHA-256 hash", async () => {
-      // hashApiKey is not exported, but we can test it indirectly via createApiKey
-      // or we can import it as a module internal. Since it's not exported, test via
-      // resolveFromApiKey by checking the DB is queried with a deterministic hash.
       const { createHash } = await import("node:crypto");
       const key = "fmn_testapikey12345";
       const hash1 = createHash("sha256").update(key).digest("hex");
@@ -136,11 +104,7 @@ describe("identity", () => {
 
   describe("resolveFromApiKey", () => {
     it("returns userId when API key matches", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([
-        { id: "key-1", userId: "user-from-api-key", keyHash: "abc" },
-      ]);
+      nextQueryResult = { data: { id: "key-1", user_id: "user-from-api-key" }, error: null };
 
       const { resolveFromApiKey } = await import("@/lib/identity");
       const result = await resolveFromApiKey("fmn_somekey");
@@ -148,9 +112,7 @@ describe("identity", () => {
     });
 
     it("returns null when API key not found", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([]);
+      nextQueryResult = { data: null, error: { code: "PGRST116" } };
 
       const { resolveFromApiKey } = await import("@/lib/identity");
       const result = await resolveFromApiKey("fmn_nonexistent");
@@ -160,11 +122,10 @@ describe("identity", () => {
 
   describe("resolveFromChannel", () => {
     it("returns userId when channel identity exists", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([
-        { userId: "user-from-telegram", channel: "telegram", channelUserId: "tg-123" },
-      ]);
+      nextQueryResult = {
+        data: { user_id: "user-from-telegram", channel: "telegram", channel_user_id: "tg-123" },
+        error: null,
+      };
 
       const { resolveFromChannel } = await import("@/lib/identity");
       const result = await resolveFromChannel("telegram", "tg-123");
@@ -172,9 +133,7 @@ describe("identity", () => {
     });
 
     it("returns null when channel identity not found", async () => {
-      const dbModule = await import("@/lib/db");
-      const db = (dbModule as any).getDb();
-      db.limit.mockResolvedValueOnce([]);
+      nextQueryResult = { data: null, error: null };
 
       const { resolveFromChannel } = await import("@/lib/identity");
       const result = await resolveFromChannel("discord", "unknown-user");

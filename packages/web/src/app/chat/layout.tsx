@@ -1,4 +1,3 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
@@ -11,6 +10,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { DevConsoleProvider } from "@/hooks/use-dev-console";
+import { createClient } from "@/lib/server";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -34,14 +34,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 
 async function SidebarShell({ children }: { children: React.ReactNode }) {
-  const [user, cookieStore] = await Promise.all([currentUser(), cookies()]);
+  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
 
   const sidebarUser = user
     ? {
         id: user.id,
-        email: user.emailAddresses[0]?.emailAddress ?? "",
-        image: user.imageUrl,
+        email: user.email ?? "",
+        image: user.user_metadata?.avatar_url ?? null,
       }
     : undefined;
 

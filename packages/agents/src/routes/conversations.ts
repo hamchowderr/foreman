@@ -1,8 +1,7 @@
 import { Hono } from "hono";
-import { getDb, schema } from "@/lib/db";
+import { getSupabase } from "@/lib/db";
 import { getMastra } from "@/mastra";
 import { toAISdkV5Messages } from "@mastra/ai-sdk/ui";
-import { desc, eq, and } from "drizzle-orm";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
@@ -15,54 +14,60 @@ conversations.use("/*", authMiddleware);
 // POST / — create conversation
 conversations.post("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
-  const db = getDb();
-  const mastra = getMastra();
-
-  const memory = await mastra.getAgent("foreman").getMemory();
-  const thread = await memory!.createThread({ resourceId: userId });
+  const supabase = getSupabase();
 
   let body: any = {};
   try { body = await c.req.json(); } catch {}
   const id = body.id || crypto.randomUUID();
-  const now = new Date();
+  const now = new Date().toISOString();
 
-  await db.insert(schema.conversation).values({
+  // Check if conversation already exists (idempotent — frontend may retry)
+  const { data: existing } = await supabase
+    .from("conversation")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  if (existing) return c.json({ id, mastra_thread_id: id, title: null, created_at: now }, 200);
+
+  // Use chatId as the Mastra threadId so the frontend's threadId matches
+  const mastra = getMastra();
+  const memory = await mastra.getAgent("foreman").getMemory();
+  if (memory) {
+    try {
+      await memory.createThread({ threadId: id, resourceId: userId });
+    } catch {}
+  }
+
+  await supabase.from("conversation").insert({
     id,
-    userId,
-    orgId: orgId ?? null,
-    mastraThreadId: thread.id,
+    user_id: userId,
+    mastra_thread_id: id,
     title: null,
-    createdAt: now,
-    updatedAt: now,
+    created_at: now,
+    updated_at: now,
   });
 
-  return c.json({ id, mastra_thread_id: thread.id, title: null, created_at: now.toISOString() }, 201);
+  return c.json({ id, mastra_thread_id: id, title: null, created_at: now }, 201);
 });
 
 // GET / — list conversations
 conversations.get("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const whereClause = orgId
-    ? and(eq(schema.conversation.userId, userId), eq(schema.conversation.orgId, orgId))
-    : eq(schema.conversation.userId, userId);
-
-  const rows = await db
-    .select()
-    .from(schema.conversation)
-    .where(whereClause)
-    .orderBy(desc(schema.conversation.updatedAt));
+  const { data: rows } = await supabase
+    .from("conversation")
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
 
   return c.json(
-    rows.map((conv) => ({
+    (rows ?? []).map((conv: any) => ({
       id: conv.id,
-      mastra_thread_id: conv.mastraThreadId,
+      mastra_thread_id: conv.mastra_thread_id,
       title: conv.title,
-      created_at: conv.createdAt.toISOString(),
-      updated_at: conv.updatedAt.toISOString(),
+      created_at: conv.created_at,
+      updated_at: conv.updated_at,
     }))
   );
 });
@@ -72,15 +77,16 @@ conversations.get("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid conversation id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const rows = await db
-    .select()
-    .from(schema.conversation)
-    .where(and(eq(schema.conversation.id, id), eq(schema.conversation.userId, userId)))
-    .limit(1);
+  const { data: conv } = await supabase
+    .from("conversation")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
 
-  const conv = rows[0];
   if (!conv) return c.json({ error: "Not found" }, 404);
 
   // Load messages from Mastra Memory (single source of truth)
@@ -88,9 +94,9 @@ conversations.get("/:id", async (c) => {
   const memory = await mastra.getAgent("foreman").getMemory();
   let messages: unknown[] = [];
 
-  if (conv.mastraThreadId && memory) {
+  if (conv.mastra_thread_id && memory) {
     const recalled = await memory.recall({
-      threadId: conv.mastraThreadId,
+      threadId: conv.mastra_thread_id,
       perPage: false,
     });
     messages = toAISdkV5Messages(recalled.messages);
@@ -98,15 +104,21 @@ conversations.get("/:id", async (c) => {
 
   // Sync title from Memory thread
   let title = conv.title;
-  if (conv.mastraThreadId && memory) {
+  if (conv.mastra_thread_id && memory) {
     try {
-      const thread = await memory.getThreadById({ threadId: conv.mastraThreadId });
+      const thread = await memory.getThreadById({ threadId: conv.mastra_thread_id });
       if (thread?.title) title = thread.title;
     } catch {}
   }
 
   return c.json({
-    conversation: { id: conv.id, mastra_thread_id: conv.mastraThreadId, title, created_at: conv.createdAt.toISOString(), updated_at: conv.updatedAt.toISOString() },
+    conversation: {
+      id: conv.id,
+      mastra_thread_id: conv.mastra_thread_id,
+      title,
+      created_at: conv.created_at,
+      updated_at: conv.updated_at,
+    },
     messages,
   });
 });
@@ -116,14 +128,16 @@ conversations.patch("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid conversation id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const rows = await db
-    .select()
-    .from(schema.conversation)
-    .where(and(eq(schema.conversation.id, id), eq(schema.conversation.userId, userId)))
-    .limit(1);
-  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  const { data: existing } = await supabase
+    .from("conversation")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (!existing) return c.json({ error: "Not found" }, 404);
 
   let body: any;
   try { body = await c.req.json(); } catch { return c.json({ error: "Invalid JSON" }, 400); }
@@ -131,7 +145,11 @@ conversations.patch("/:id", async (c) => {
   const title = typeof body.title === "string" ? body.title.trim().slice(0, 80) : undefined;
   if (!title) return c.json({ error: "title is required" }, 400);
 
-  await db.update(schema.conversation).set({ title, updatedAt: new Date() }).where(eq(schema.conversation.id, id));
+  await supabase
+    .from("conversation")
+    .update({ title, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
   return c.json({ id, title });
 });
 
@@ -140,21 +158,19 @@ conversations.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid conversation id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const rows = await db
-    .select()
-    .from(schema.conversation)
-    .where(and(eq(schema.conversation.id, id), eq(schema.conversation.userId, userId)))
-    .limit(1);
-  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  const { data: existing } = await supabase
+    .from("conversation")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (!existing) return c.json({ error: "Not found" }, 404);
 
-  await db.delete(schema.conversation).where(eq(schema.conversation.id, id));
+  await supabase.from("conversation").delete().eq("id", id);
   return c.json({ success: true });
 });
-
-// Chat streaming is handled by Mastra's built-in chatRoute at /chat/:agentId
-// (registered in mastra/index.ts). It handles streaming, tool approval/resume,
-// memory persistence, and title generation natively.
 
 export default conversations;

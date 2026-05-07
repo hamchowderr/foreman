@@ -31,7 +31,7 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (path === "/slack/webhook" && req.method === "POST") {
-      const bot = getSlackBot();
+      const bot = await getSlackBot();
       // Build a fresh Web API Request with the exact raw body bytes
       const request = new Request(url, {
         method: "POST",
@@ -158,7 +158,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/discord/webhook" && req.method === "POST") {
-      const bot = getDiscordBot();
+      const bot = await getDiscordBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -233,11 +233,18 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, () => {
   console.log(`Webhook server running on port ${port}`);
 
+  // Initialize Slack bot — getSlackBot() handles init + rehydration internally
+  if (process.env.SLACK_SIGNING_SECRET) {
+    getSlackBot()
+      .then(() => console.log("[slack] Bot ready"))
+      .catch((err: unknown) => console.error("[slack] Bot initialization failed:", err));
+  }
+
   // Initialize Discord bot — start Gateway WebSocket for receiving messages
   if (process.env.DISCORD_BOT_TOKEN) {
     (async () => {
     try {
-      const bot = getDiscordBot();
+      const bot = await getDiscordBot();
       const adapter = getDiscordAdapter();
       // Must initialize Chat instance before starting Gateway
       await bot.initialize();

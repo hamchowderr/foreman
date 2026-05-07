@@ -1,4 +1,5 @@
 import { checkCapability } from "./capabilities";
+import { getSupabase } from "./db";
 
 // ─── Rate Limiter (in-memory, sliding window) ───
 
@@ -216,26 +217,18 @@ async function checkSensitiveAppCapability(
   userId: string,
   capability: string
 ): Promise<boolean> {
-  // We use the same DB table but interpret "no row" as disabled
-  const { eq, and } = await import("drizzle-orm");
-  const { getDb, schema } = await import("./db");
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("capability_flag")
+    .select("enabled")
+    .eq("user_id", userId)
+    .eq("capability", capability)
+    .limit(1)
+    .single();
 
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(schema.capabilityFlag)
-    .where(
-      and(
-        eq(schema.capabilityFlag.userId, userId),
-        eq(schema.capabilityFlag.capability, capability)
-      )
-    )
-    .limit(1);
-
-  const flag = rows[0];
   // No row = disabled (opt-in for sensitive apps)
-  if (!flag) return false;
-  return flag.enabled;
+  if (!data) return false;
+  return data.enabled;
 }
 
 // ─── Bulk Confirmation ───

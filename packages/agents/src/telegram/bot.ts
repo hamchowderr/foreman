@@ -1,8 +1,10 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createTelegramAdapter } from "@chat-adapter/telegram";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
-import { registerChannelUser } from "../lib/identity";
+import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
+import { requestUserContext } from "../lib/request-user-context";
 
 let _bot: Chat<{ telegram: ReturnType<typeof createTelegramAdapter> }> | undefined;
 let _telegramAdapter: ReturnType<typeof createTelegramAdapter> | undefined;
@@ -46,20 +48,45 @@ export async function getTelegramBot() {
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Discord
     // is available when they message from Telegram, because resource is the same userId.
-    const result = await agent.generate(text, {
-      maxSteps: 5,
+    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
+      stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `telegram-${threadId}`,
         resource: userId,
       },
-    });
+    }));
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
+
+  // Handle /link <code> command for account linking
+  bot.onDirectMessage(async (thread, message) => {
+    if (!message.text) return;
+    const linkMatch = message.text.trim().match(/^\/link\s+([A-Z0-9]{8})$/i);
+    if (linkMatch) {
+      const result = await redeemChannelLinkCode(
+        linkMatch[1],
+        "telegram",
+        message.author.userId,
+        message.author.fullName,
+      );
+      if (result.ok) {
+        await thread.post("Your Telegram account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.");
+      } else if (result.error === "expired") {
+        await thread.post("That code has expired. Generate a new one from your Foreman settings.");
+      } else if (result.error === "already_used") {
+        await thread.post("That code has already been used. Generate a new one if needed.");
+      } else {
+        await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+      }
+      return;
+    }
+  });
 
   // Handle DMs — Telegram bots receive DMs as the primary interaction mode.
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
+    if (message.text.trim().startsWith("/link")) return;
     await thread.startTyping().catch(() => {});
     const reply = await generateReply(
       thread.channelId,
@@ -116,7 +143,7 @@ export function getTelegramAdapter() {
  * and starts long-polling when no webhook URL is configured.
  */
 export async function startTelegramPolling() {
-  const bot = getTelegramBot();
+  const bot = await getTelegramBot();
   await bot.initialize();
   const adapter = getTelegramAdapter();
   console.log(`Telegram bot started in ${adapter.runtimeMode} mode`);

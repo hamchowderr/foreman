@@ -1,6 +1,5 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { generateConnectUrl } from "@/lib/zapier/connect";
 import { createZapierSdk } from "@zapier/zapier-sdk";
 
 export const connectZapierTool = createTool({
@@ -50,11 +49,11 @@ export const connectZapierTool = createTool({
           };
         }
       } catch {
-        // Fall through to generic URL
+        // Fall through to Foreman OAuth flow
       }
     }
 
-    // Generic connections page
+    // Generic: Zapier connections page where users can add new app connections
     return {
       connectUrl: "https://zapier.com/app/assets/connections",
       message:

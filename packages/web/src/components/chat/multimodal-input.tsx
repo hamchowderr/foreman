@@ -31,6 +31,7 @@ import { AttachmentsPreview } from "./multimodal/attachments-preview";
 import { useFileUpload } from "./multimodal/file-upload";
 import { ModelSelectorCompact } from "./multimodal/model-selector-compact";
 import { createSlashHandler } from "./multimodal/slash-handler";
+import { MicButton } from "./multimodal/mic-button";
 import { StopButton } from "./multimodal/stop-button";
 import {
   type SlashCommand,
@@ -320,6 +321,12 @@ function PureMultimodalInput({
               fileInputRef={fileInputRef}
               selectedModelId={selectedModelId}
               status={status}
+            />
+            <MicButton
+              disabled={status === "submitted"}
+              onTranscript={(text) =>
+                setInput((prev) => (prev ? `${prev} ${text}` : text))
+              }
             />
             <ModelSelectorCompact
               onModelChange={onModelChange}

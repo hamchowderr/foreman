@@ -1,22 +1,25 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../db";
+import { getSupabase } from "../db";
 import { decryptToken, encryptToken } from "../crypto";
 import { getEnv } from "../env";
 import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
+import { loadUserConnectionsMap } from "./aliases";
+
+// Must match the client ID used during the PKCE OAuth flow in connect.ts.
+// Tokens issued to a PKCE public client can only be refreshed with the same client_id and no secret.
+const ZAPIER_PKCE_CLIENT_ID = "grwWZD5hUWGvb4V8ODBuOtXer3h0DBEZ2HR8aay6";
 
 type ZapierSdk = ReturnType<typeof createZapierSdk>;
 
 const sdkCache = new Map<string, { sdk: ZapierSdk; expiresAt: number }>();
 const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
 
-// Self-hosted mode: single shared SDK instance for all users
-let sharedSdkCache: { sdk: ZapierSdk; expiresAt: number } | undefined;
+// Self-hosted mode: single shared SDK instance for all users.
+// The SDK handles token exchange + refresh internally via client_credentials.
+let sharedSdk: ZapierSdk | undefined;
 
-async function getSharedSdk(): Promise<ZapierSdk> {
-  if (sharedSdkCache && sharedSdkCache.expiresAt > Date.now()) {
-    return sharedSdkCache.sdk;
-  }
+function getSharedSdk(): ZapierSdk {
+  if (sharedSdk) return sharedSdk;
 
   const env = getEnv();
   if (!env.ZAPIER_CLIENT_ID || !env.ZAPIER_CLIENT_SECRET) {
@@ -25,51 +28,27 @@ async function getSharedSdk(): Promise<ZapierSdk> {
     );
   }
 
-  const res = await fetch(ZAPIER_TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: env.ZAPIER_CLIENT_ID,
-      client_secret: env.ZAPIER_CLIENT_SECRET,
-    }),
+  sharedSdk = createZapierSdk({
+    credentials: {
+      clientId: env.ZAPIER_CLIENT_ID,
+      clientSecret: env.ZAPIER_CLIENT_SECRET,
+    },
   });
 
-  if (!res.ok) {
-    throw new Error(
-      `Failed to obtain shared Zapier token: ${res.status} ${res.statusText}`
-    );
-  }
-
-  const data = (await res.json()) as {
-    access_token: string;
-    expires_in?: number;
-  };
-
-  const expiresIn = data.expires_in || 3600;
-  const sdk = createZapierSdk({ credentials: data.access_token });
-
-  sharedSdkCache = {
-    sdk,
-    expiresAt: Date.now() + Math.min(expiresIn * 1000, 5 * 60 * 1000),
-  };
-
-  return sdk;
+  return sharedSdk;
 }
 
 async function refreshAccessToken(
   userId: string,
   refreshToken: string
 ): Promise<{ accessToken: string; refreshToken: string; expiresAt: Date }> {
-  const env = getEnv();
   const res = await fetch(ZAPIER_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: refreshToken,
-      client_id: env.ZAPIER_CLIENT_ID || "",
-      client_secret: env.ZAPIER_CLIENT_SECRET || "",
+      client_id: ZAPIER_PKCE_CLIENT_ID,
     }),
   });
 
@@ -116,27 +95,28 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   }
 
   // Load from database — when orgId is set, try shared org connection first
-  type IdentityRow = typeof schema.zapierIdentity.$inferSelect;
-  const db = getDb();
-  let identity: IdentityRow | undefined;
+  const supabase = getSupabase();
+  let identity: Record<string, any> | null = null;
 
   if (orgId) {
-    const orgRows = await db
-      .select()
-      .from(schema.zapierIdentity)
-      .where(eq(schema.zapierIdentity.orgId, orgId))
-      .limit(1);
-    identity = orgRows[0];
+    const { data } = await supabase
+      .from("zapier_identity")
+      .select("*")
+      .eq("org_id", orgId)
+      .limit(1)
+      .maybeSingle();
+    identity = data;
   }
 
   // Fall back to user's personal connection
   if (!identity) {
-    const userRows = await db
-      .select()
-      .from(schema.zapierIdentity)
-      .where(eq(schema.zapierIdentity.userId, userId))
-      .limit(1);
-    identity = userRows[0];
+    const { data } = await supabase
+      .from("zapier_identity")
+      .select("*")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    identity = data;
   }
 
   if (!identity) {
@@ -151,38 +131,40 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   let tokenExpiry: number;
 
   // Refresh if expired
-  if (identity.expiresAt && identity.expiresAt.getTime() < Date.now()) {
+  const expiresAtMs = identity.expires_at ? new Date(identity.expires_at).getTime() : null;
+  if (expiresAtMs && expiresAtMs < Date.now()) {
     try {
-      const storedRefresh = decryptToken(identity.refreshToken);
+      const storedRefresh = decryptToken(identity.refresh_token);
       const refreshed = await refreshAccessToken(userId, storedRefresh);
 
       // Update DB with new tokens
-      await db
-        .update(schema.zapierIdentity)
-        .set({
-          accessToken: encryptToken(refreshed.accessToken),
-          refreshToken: encryptToken(refreshed.refreshToken),
-          expiresAt: refreshed.expiresAt,
-          updatedAt: new Date(),
+      await supabase
+        .from("zapier_identity")
+        .update({
+          access_token: encryptToken(refreshed.accessToken),
+          refresh_token: encryptToken(refreshed.refreshToken),
+          expires_at: refreshed.expiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        .where(eq(schema.zapierIdentity.userId, userId));
+        .eq("user_id", userId);
 
       accessToken = refreshed.accessToken;
       tokenExpiry = refreshed.expiresAt.getTime();
     } catch {
-      // Clear cache on refresh failure
       sdkCache.delete(userId);
       throw new ZapierReauthRequired(userId, "token refresh failed");
     }
   } else {
-    accessToken = decryptToken(identity.accessToken);
-    tokenExpiry = identity.expiresAt
-      ? identity.expiresAt.getTime()
-      : Date.now() + 5 * 60 * 1000;
+    accessToken = decryptToken(identity.access_token);
+    tokenExpiry = expiresAtMs ?? Date.now() + 5 * 60 * 1000;
   }
+
+  const connectionsMap = await loadUserConnectionsMap(userId);
+  const hasConnections = Object.keys(connectionsMap).length > 0;
 
   const sdk = createZapierSdk({
     credentials: accessToken,
+    ...(hasConnections ? { manifest: { connections: connectionsMap } } : {}),
   });
 
   // Cache for 5 minutes or until token expires, whichever is sooner

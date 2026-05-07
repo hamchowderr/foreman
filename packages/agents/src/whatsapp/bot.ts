@@ -1,8 +1,10 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
 import { registerChannelUser } from "../lib/identity";
+import { requestUserContext } from "../lib/request-user-context";
 
 let _bot: Chat<{ whatsapp: ReturnType<typeof createWhatsAppAdapter> }> | undefined;
 let _whatsappAdapter: ReturnType<typeof createWhatsAppAdapter> | undefined;
@@ -43,14 +45,14 @@ export async function getWhatsAppBot() {
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from WhatsApp, because resource is the same userId.
-    const result = await agent.generate(text, {
-      maxSteps: 5,
+    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
+      stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `whatsapp-${threadId}`,
         resource: userId,
       },
-    });
+    }));
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 

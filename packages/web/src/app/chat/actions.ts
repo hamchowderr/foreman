@@ -2,8 +2,8 @@
 
 import type { UIMessage } from "ai";
 import { cookies } from "next/headers";
-import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { auth } from "@/lib/auth";
+import { createClient } from "@/lib/server";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { getTextFromMessage } from "@/lib/utils";
 
@@ -26,14 +26,9 @@ export async function generateTitleFromUserMessage({
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+  if (!session?.user?.id) throw new Error("Unauthorized");
 
-  // Not supported by agent server yet - no-op
-  console.warn("deleteTrailingMessages not yet supported by agent server", {
-    id,
-  });
+  console.warn("deleteTrailingMessages not yet supported by agent server", { id });
 }
 
 export async function updateChatVisibility({
@@ -44,24 +39,20 @@ export async function updateChatVisibility({
   visibility: VisibilityType;
 }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+  if (!session?.user?.id) throw new Error("Unauthorized");
 
-  const { getToken } = await clerkAuth();
-  const token = await getToken();
-  if (!token) throw new Error("Unauthorized");
+  const supabase = await createClient();
+  const { data: { session: supaSession } } = await supabase.auth.getSession();
+  if (!supaSession) throw new Error("Unauthorized");
 
   const res = await fetch(`${AGENT_SERVER_URL}/conversations/${chatId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${supaSession.access_token}`,
     },
     body: JSON.stringify({ visibility }),
   });
 
-  if (!res.ok) {
-    throw new Error(`Failed to update visibility: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Failed to update visibility: ${res.status}`);
 }

@@ -5,6 +5,8 @@ import {
 } from "./errors";
 import { checkCapability } from "../capabilities";
 import { runGuardrails } from "../guardrails";
+import { resolveConnection } from "./aliases";
+import { normalizeAppKey } from "./normalize";
 
 type ActionType =
   | "search"
@@ -46,6 +48,7 @@ export async function runAction(
   inputs: Record<string, unknown>,
   connection?: string
 ) {
+  app = normalizeAppKey(app);
   const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
   await requireCapability(userId, capability);
 
@@ -67,8 +70,10 @@ export async function runAction(
 
   const sdk = await getSdkForUser(userId);
 
+  // Resolve alias → numeric ID (passes through if already numeric)
+  let resolvedConnection = await resolveConnection(userId, connection);
+
   // Auto-discover connection if not provided
-  let resolvedConnection = connection;
   if (!resolvedConnection) {
     try {
       const { data: conn } = await sdk.findFirstConnection({
@@ -114,13 +119,14 @@ export async function rawFetch(
   await requireCapability(userId, "raw_api");
 
   const sdk = await getSdkForUser(userId);
+  const resolvedConnection = await resolveConnection(userId, options.connection);
 
   try {
     const result = await sdk.fetch(url, {
       method: (options.method ?? "GET") as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
       headers: options.headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
-      connection: options.connection,
+      connection: resolvedConnection,
     });
     return result;
   } catch (err) {

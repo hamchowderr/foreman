@@ -1,11 +1,10 @@
 import { Hono } from "hono";
-import { getDb, schema } from "@/lib/db";
+import { getSupabase } from "@/lib/db";
 import { getMastra } from "@/mastra";
 import { loadOwnedProposal } from "@/lib/proposals";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
 import { getInputFieldChoices, ZapierReauthRequired } from "@/lib/zapier";
-import { eq } from "drizzle-orm";
 import { indexActionRun } from "@/lib/rag";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
@@ -44,20 +43,16 @@ proposals.patch("/:id", async (c) => {
     return c.json({ error: "inputs object is required" }, 400);
   }
 
-  // Guard against excessively large input payloads
   const inputsStr = JSON.stringify(body.inputs);
   if (inputsStr.length > 50000) {
     return c.json({ error: "inputs payload too large (max 50KB)" }, 400);
   }
 
-  const db = getDb();
-  await db
-    .update(schema.actionProposal)
-    .set({
-      inputs: JSON.stringify(body.inputs),
-      updatedAt: new Date(),
-    })
-    .where(eq(schema.actionProposal.id, id));
+  const supabase = getSupabase();
+  await supabase
+    .from("action_proposal")
+    .update({ inputs: JSON.stringify(body.inputs), updated_at: new Date().toISOString() })
+    .eq("id", id);
 
   return c.json({ id, inputs: body.inputs, status: "pending" });
 });
@@ -79,16 +74,14 @@ proposals.post("/:id/approve", async (c) => {
     return c.json({ error: "Proposal is not pending" }, 409);
   }
 
-  const db = getDb();
+  const supabase = getSupabase();
 
-  // Update status to approved
-  await db
-    .update(schema.actionProposal)
-    .set({ status: "approved", updatedAt: new Date() })
-    .where(eq(schema.actionProposal.id, id));
+  await supabase
+    .from("action_proposal")
+    .update({ status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", id);
 
-  // Parse the mastraRunId which is stored as "runId:toolCallId"
-  const [runId, toolCallId] = proposal.mastraRunId!.split(":");
+  const [runId, toolCallId] = proposal.mastra_run_id!.split(":");
 
   const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
@@ -96,12 +89,7 @@ proposals.post("/:id/approve", async (c) => {
   const sseStream = new ReadableStream({
     async start(controller) {
       try {
-        const inputs = JSON.parse(proposal.inputs);
-        const result = await agent.approveToolCall({
-          runId,
-          toolCallId,
-        });
-
+        const result = await agent.approveToolCall({ runId, toolCallId });
         const reader = result.fullStream.getReader();
 
         while (true) {
@@ -110,30 +98,24 @@ proposals.post("/:id/approve", async (c) => {
 
           const chunk = value as any;
 
-          if (
-            chunk.type === "tool-result" &&
-            chunk.payload?.toolName === "execute_action"
-          ) {
+          if (chunk.type === "tool-result" && chunk.payload?.toolName === "execute_action") {
             const toolResult = chunk.payload.result;
-            const summary = `Executed ${proposal.appKey} ${proposal.actionKey}`;
+            const summary = `Executed ${proposal.app_key} ${proposal.action_key}`;
 
-            // Create action_run row
             const runRowId = crypto.randomUUID();
-            await db.insert(schema.actionRun).values({
+            await supabase.from("action_run").insert({
               id: runRowId,
-              proposalId: id,
+              proposal_id: id,
               result: JSON.stringify(toolResult),
               error: null,
-              executedAt: new Date(),
+              executed_at: new Date().toISOString(),
             });
 
-            // Update proposal status
-            await db
-              .update(schema.actionProposal)
-              .set({ status: "executed", updatedAt: new Date() })
-              .where(eq(schema.actionProposal.id, id));
+            await supabase
+              .from("action_proposal")
+              .update({ status: "executed", updated_at: new Date().toISOString() })
+              .eq("id", id);
 
-            // Index the completed action for RAG (fire-and-forget)
             indexActionRun(
               {
                 id: runRowId,
@@ -143,9 +125,7 @@ proposals.post("/:id/approve", async (c) => {
               },
               proposal,
               userId
-            ).catch((err) =>
-              console.error("[RAG] Failed to index action run:", err)
-            );
+            ).catch((err) => console.error("[RAG] Failed to index action run:", err));
 
             const appChunk: AppChunk = {
               type: "action-executed",
@@ -157,21 +137,13 @@ proposals.post("/:id/approve", async (c) => {
           } else if (chunk.type === "tool-error") {
             const error = chunk.payload?.error;
             const errorMsg =
-              error instanceof Error
-                ? error.message
-                : String(error ?? "Unknown error");
+              error instanceof Error ? error.message : String(error ?? "Unknown error");
 
-            if (
-              errorMsg.includes("ZAPIER_REAUTH_REQUIRED") ||
-              error instanceof ZapierReauthRequired
-            ) {
-              await db
-                .update(schema.actionProposal)
-                .set({
-                  status: "failed",
-                  updatedAt: new Date(),
-                })
-                .where(eq(schema.actionProposal.id, id));
+            if (errorMsg.includes("ZAPIER_REAUTH_REQUIRED") || error instanceof ZapierReauthRequired) {
+              await supabase
+                .from("action_proposal")
+                .update({ status: "failed", updated_at: new Date().toISOString() })
+                .eq("id", id);
 
               controller.enqueue(
                 encodeSSE({
@@ -182,10 +154,10 @@ proposals.post("/:id/approve", async (c) => {
                 })
               );
             } else {
-              await db
-                .update(schema.actionProposal)
-                .set({ status: "failed", updatedAt: new Date() })
-                .where(eq(schema.actionProposal.id, id));
+              await supabase
+                .from("action_proposal")
+                .update({ status: "failed", updated_at: new Date().toISOString() })
+                .eq("id", id);
 
               controller.enqueue(
                 encodeSSE({
@@ -197,12 +169,7 @@ proposals.post("/:id/approve", async (c) => {
               );
             }
           } else if (chunk.type === "text-delta") {
-            controller.enqueue(
-              encodeSSE({
-                type: "text-delta",
-                text: chunk.payload?.text ?? "",
-              })
-            );
+            controller.enqueue(encodeSSE({ type: "text-delta", text: chunk.payload?.text ?? "" }));
           } else if (chunk.type === "finish") {
             controller.enqueue(encodeSSE({ type: "done", runId }));
           }
@@ -211,10 +178,10 @@ proposals.post("/:id/approve", async (c) => {
         const errorMsg = err instanceof Error ? err.message : String(err);
 
         if (errorMsg.includes("ZAPIER_REAUTH_REQUIRED")) {
-          await db
-            .update(schema.actionProposal)
-            .set({ status: "failed", updatedAt: new Date() })
-            .where(eq(schema.actionProposal.id, id));
+          await supabase
+            .from("action_proposal")
+            .update({ status: "failed", updated_at: new Date().toISOString() })
+            .eq("id", id);
 
           controller.enqueue(
             encodeSSE({
@@ -261,16 +228,14 @@ proposals.post("/:id/decline", async (c) => {
     return c.json({ error: "Proposal is not pending" }, 409);
   }
 
-  const db = getDb();
+  const supabase = getSupabase();
 
-  // Update status to declined
-  await db
-    .update(schema.actionProposal)
-    .set({ status: "declined", updatedAt: new Date() })
-    .where(eq(schema.actionProposal.id, id));
+  await supabase
+    .from("action_proposal")
+    .update({ status: "declined", updated_at: new Date().toISOString() })
+    .eq("id", id);
 
-  // Parse the mastraRunId
-  const [runId, toolCallId] = proposal.mastraRunId!.split(":");
+  const [runId, toolCallId] = proposal.mastra_run_id!.split(":");
 
   const mastra = getMastra();
   const agent = mastra.getAgent("foreman");
@@ -278,11 +243,7 @@ proposals.post("/:id/decline", async (c) => {
   const sseStream = new ReadableStream({
     async start(controller) {
       try {
-        const result = await agent.declineToolCall({
-          runId,
-          toolCallId,
-        });
-
+        const result = await agent.declineToolCall({ runId, toolCallId });
         const reader = result.fullStream.getReader();
 
         while (true) {
@@ -292,12 +253,7 @@ proposals.post("/:id/decline", async (c) => {
           const chunk = value as any;
 
           if (chunk.type === "text-delta") {
-            controller.enqueue(
-              encodeSSE({
-                type: "text-delta",
-                text: chunk.payload?.text ?? "",
-              })
-            );
+            controller.enqueue(encodeSSE({ type: "text-delta", text: chunk.payload?.text ?? "" }));
           } else if (chunk.type === "finish") {
             controller.enqueue(encodeSSE({ type: "done", runId }));
           }
@@ -339,11 +295,11 @@ proposals.get("/:id/field-choices/:fieldKey", async (c) => {
 
   const choices = await getInputFieldChoices(
     userId,
-    proposal.appKey,
-    proposal.actionType,
-    proposal.actionKey,
+    proposal.app_key,
+    proposal.action_type,
+    proposal.action_key,
     fieldKey,
-    proposal.connectionId ?? undefined
+    proposal.connection_id ?? undefined
   );
 
   return c.json({ choices });
