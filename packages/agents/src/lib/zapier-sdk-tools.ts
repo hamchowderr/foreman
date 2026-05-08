@@ -111,12 +111,20 @@ const DEFAULT_MAX_ITEMS = 100;
  *
  * @param credentials - Optional credentials for the SDK. If not provided,
  *   the SDK reads from ZAPIER_CREDENTIALS env var or CLI login.
+ * @param connections - Optional pre-seeded connection alias map. The SDK resolves
+ *   string aliases (e.g. "sheets") to numeric connection IDs at call time, saving
+ *   a find-unique-connection round-trip per action.
  * @returns Record of tool-name → Tool instances
  */
-export function generateZapierTools(credentials?: string | (() => Promise<string>)) {
+export function generateZapierTools(
+  credentials?: string | (() => Promise<string>),
+  connections?: Record<string, { connectionId: number }>
+) {
   const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
+  const hasConnections = connections && Object.keys(connections).length > 0;
   const sdk = createZapierSdk({
     ...(credentials ? { credentials } : {}),
+    ...(hasConnections ? { manifest: { connections } } : {}),
     debug: isDebug,
     maxNetworkRetries: 3,
     maxNetworkRetryDelayMs: 30000,
@@ -151,10 +159,19 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
     if (fn.inputSchema) {
       const sdkFn = (sdk as any)[fn.name] as (args: any) => Promise<any>;
 
+      // Some SDK schemas (e.g. getProfile) come pre-wrapped in z.optional().
+      // Unwrap before handing to Mastra — otherwise Mastra wraps again and
+      // zod v4's toJSONSchema rejects optional-of-optional as non-representable.
+      const raw = fn.inputSchema as unknown as z.ZodTypeAny;
+      const unwrapped =
+        (raw as any)?._zod?.def?.type === "optional"
+          ? (raw as any)._zod.def.innerType
+          : raw;
+
       tools[toolName] = createTool({
         id: toolName,
         description,
-        inputSchema: fn.inputSchema as unknown as z.ZodObject<any>,
+        inputSchema: unwrapped as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
         toModelOutput: createSummarizer(fn.name),
@@ -214,11 +231,17 @@ export function generateZapierTools(credentials?: string | (() => Promise<string
 }
 
 /**
- * Create a per-user SDK tool set with dynamic credentials.
- * Used for multi-tenant scenarios.
+ * Create a per-user SDK tool set with dynamic credentials and pre-seeded
+ * connection aliases. Used for multi-tenant scenarios.
+ *
+ * @param credentials - User's Zapier access token
+ * @param connections - Optional alias map from connection_alias table
  */
-export function generateUserZapierTools(credentials: string) {
-  return generateZapierTools(credentials);
+export function generateUserZapierTools(
+  credentials: string,
+  connections?: Record<string, { connectionId: number }>
+) {
+  return generateZapierTools(credentials, connections);
 }
 
 /**

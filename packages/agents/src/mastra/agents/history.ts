@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { searchHistoryTool } from "../tools/search-history";
-import { MODELS } from "./foreman";
+import { AGENT_MODELS, modelSettingsFor, onFinishCostLogger, systemPromptFor, toolsWithCacheControl } from "../../lib/providers";
 
 const HISTORY_PROMPT = `You are the History Agent, a specialist in searching and analyzing a user's past action history. You help users recall previous actions, find patterns in their usage, and recommend actions based on what they have done before.
 
@@ -17,10 +17,14 @@ export function createHistoryAgent() {
     name: "History Agent",
     description:
       "Searches and analyzes the user's past Zapier action history. Use this agent to recall previous actions, find usage patterns, or get recommendations based on history.",
-    instructions: HISTORY_PROMPT,
-    model: MODELS.fast,
-    tools: {
-      search_history: searchHistoryTool,
+    instructions: systemPromptFor("history", HISTORY_PROMPT),
+    model: AGENT_MODELS.history,
+    defaultOptions: {
+      modelSettings: modelSettingsFor("history"),
+      onFinish: onFinishCostLogger("history"),
     },
+    tools: toolsWithCacheControl("history", {
+      search_history: searchHistoryTool,
+    }),
   });
 }

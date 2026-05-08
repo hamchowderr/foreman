@@ -11,11 +11,6 @@ vi.mock("@/mastra", () => ({
   })),
 }));
 
-vi.mock("@/mastra/agents/foreman", () => ({
-  MODELS: { default: "test-model" },
-  buildSystemPrompt: vi.fn().mockReturnValue("test prompt"),
-}));
-
 // Mock channel webhook handlers
 vi.mock("@/telegram/webhook", () => ({
   handleTelegramWebhook: vi.fn((c: any) => c.json({ ok: true })),
@@ -189,10 +184,6 @@ vi.mock("@/lib/guardrails-config", () => ({
 
 vi.mock("@/lib/voice", () => ({
   speechToText: vi.fn().mockResolvedValue("transcribed text"),
-  textToSpeech: vi.fn().mockResolvedValue({
-    audio: Buffer.from("fake-audio"),
-    mimeType: "audio/mpeg",
-  }),
 }));
 
 // ─── Import routes after mocks are set up ───
@@ -407,17 +398,6 @@ describe("API route integration tests", () => {
     it("returns 401 without auth", async () => {
       const res = await app.request("/voice/transcribe", {
         method: "POST",
-      });
-      expect(res.status).toBe(401);
-    });
-  });
-
-  describe("POST /voice/synthesize", () => {
-    it("returns 401 without auth", async () => {
-      const res = await app.request("/voice/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: "hello" }),
       });
       expect(res.status).toBe(401);
     });

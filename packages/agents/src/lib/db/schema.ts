@@ -96,6 +96,8 @@ export const workflow = pgTable("workflow", {
     () => conversation.id
   ),
   parameters: text("parameters").notNull(), // JSON
+  isTemplate: boolean("is_template").notNull().default(false),
+  clonedFrom: text("cloned_from"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
 });
@@ -121,6 +123,22 @@ export const workflowRun = pgTable("workflow_run", {
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
   completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
 });
+
+// ─── Connection Aliases (portable workflow references) ───
+
+export const connectionAlias = pgTable(
+  "connection_alias",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    alias: text("alias").notNull(),
+    appKey: text("app_key").notNull(),
+    connectionId: integer("connection_id").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.alias] })]
+);
 
 // ─── Capability Flags ───
 
@@ -167,6 +185,40 @@ export const appCatalog = pgTable("app_catalog", {
   actionCount: integer("action_count"),
   embeddingText: text("embedding_text"), // pre-built text for vector embedding
   syncedAt: timestamp("synced_at", { mode: "date", withTimezone: true }).notNull(),
+});
+
+// ─── Stored Agents (user-authored agent definitions) ───
+
+export const storedAgent = pgTable("stored_agent", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id),
+  orgId: text("org_id"),
+  name: text("name").notNull(),
+  description: text("description"),
+  // Points to the currently-published version (null until first publish)
+  currentVersionId: text("current_version_id"),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+});
+
+export const storedAgentVersion = pgTable("stored_agent_version", {
+  id: text("id").primaryKey(),
+  agentId: text("agent_id")
+    .notNull()
+    .references(() => storedAgent.id, { onDelete: "cascade" }),
+  // 1-indexed version number, unique per agentId (enforced in app code)
+  version: integer("version").notNull(),
+  instructions: text("instructions").notNull(),
+  // JSON array of tool IDs: ["list-actions", "run-action", ...]
+  tools: text("tools").notNull(),
+  model: text("model").notNull(),
+  // Version notes / changelog for this revision
+  notes: text("notes"),
+  // null = draft, non-null = published timestamp
+  publishedAt: timestamp("published_at", { mode: "date", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
 });
 
 // ─── API Keys (MCP/A2A access) ───

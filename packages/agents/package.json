@@ -36,13 +36,12 @@
     "@mastra/ai-sdk": "^1.4.0",
     "@mastra/auth-clerk": "^1.0.2",
     "@mastra/core": "^1.25.0",
+    "@mastra/editor": "^0.7.16",
     "@mastra/evals": "^1.2.1",
-    "@mastra/mcp": "^1.5.0",
     "@mastra/memory": "^1.15.1",
     "@mastra/observability": "^1.9.1",
     "@mastra/pg": "^1.9.1",
     "@mastra/rag": "^2.2.0",
-    "@mastra/voice-elevenlabs": "^0.12.0",
     "@mastra/voice-openai": "^0.12.1",
     "@zapier/zapier-sdk": "^0.41.0",
     "ai": "^6.0.168",
@@ -63,6 +62,7 @@
     "@types/node": "^20",
     "@zapier/zapier-sdk-cli": "^0.39.9",
     "drizzle-kit": "^0.31.10",
+    "mastra": "1.6.0",
     "typescript": "^5",
     "vitest": "^4.1.4"
   }

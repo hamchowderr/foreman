@@ -3,6 +3,7 @@ import type {
   InputProcessor,
 } from "@mastra/core/processors";
 import { listUserConnections } from "../zapier";
+import { loadUserConnectionsMap } from "../zapier/aliases";
 import { searchAppCatalog } from "../catalog";
 
 /**
@@ -22,23 +23,40 @@ export const contextInjector: InputProcessor = {
     }
 
     try {
-      const connections = await listUserConnections(userId);
+      const [connections, aliasMap] = await Promise.all([
+        listUserConnections(userId).catch(() => []),
+        loadUserConnectionsMap(userId).catch(() => ({})),
+      ]);
 
-      if (!connections || connections.length === 0) {
-        return { messages, systemMessages };
+      const extraMessages: Array<{ role: "system"; content: string }> = [];
+
+      if (connections && connections.length > 0) {
+        const appSummary = connections
+          .map((c: { app_name?: string; app_key?: string }) => c.app_name ?? c.app_key)
+          .filter(Boolean)
+          .join(", ");
+        extraMessages.push({
+          role: "system" as const,
+          content: `[User Context] The user has ${connections.length} connected app(s): ${appSummary}. Use this to proactively suggest relevant actions without requiring a discovery tool call first.`,
+        });
       }
 
-      const appSummary = connections
-        .map((c: { app_name?: string; app_key?: string }) => c.app_name ?? c.app_key)
-        .filter(Boolean)
-        .join(", ");
+      // Inject connection aliases so the agent can use numeric IDs directly
+      // without spending a tool call on find-unique-connection each turn.
+      const aliasEntries = Object.entries(aliasMap);
+      if (aliasEntries.length > 0) {
+        const aliasList = aliasEntries
+          .map(([alias, { connectionId }]) => `"${alias}" → ${connectionId}`)
+          .join(", ");
+        extraMessages.push({
+          role: "system" as const,
+          content: `[Connection Aliases] Use these numeric connection IDs directly — no need to call find-unique-connection first: ${aliasList}`,
+        });
+      }
 
-      const contextMessage = {
-        role: "system" as const,
-        content: `[User Context] The user has ${connections.length} connected app(s): ${appSummary}. Use this to proactively suggest relevant actions without requiring a discovery tool call first.`,
-      };
-
-      const extraMessages: Array<{ role: "system"; content: string }> = [contextMessage];
+      if (extraMessages.length === 0) {
+        return { messages, systemMessages };
+      }
 
       // Semantic app catalog search — suggest relevant apps based on user's message
       const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");

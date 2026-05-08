@@ -14,8 +14,8 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:4111";
 
 async function serverIsReachable(): Promise<boolean> {
   try {
-    const res = await fetch(`${AGENT_URL}/`, { signal: AbortSignal.timeout(2000) });
-    return res.ok || res.status < 500;
+    const res = await fetch(`${AGENT_URL}/api/agents`, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
   } catch {
     return false;
   }

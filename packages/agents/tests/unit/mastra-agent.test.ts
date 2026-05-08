@@ -31,10 +31,10 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("connect_zapier");
   }, 30000);
 
-  it("MODELS constants are correct", async () => {
-    const { MODELS } = await import("@/mastra/agents/foreman");
-    expect(MODELS.default).toBe("anthropic/claude-sonnet-4-6");
-    expect(MODELS.fast).toBe("anthropic/claude-haiku-4-5-20251001");
-    expect(MODELS.heavy).toBe("anthropic/claude-opus-4-6");
+  it("foreman agent uses AGENT_MODELS.foreman as its model", async () => {
+    const { createForemanAgent } = await import("@/mastra/agents/foreman");
+    const { AGENT_MODELS } = await import("@/lib/providers");
+    const agent = await createForemanAgent("file:./test-agent.db");
+    expect(agent.model).toEqual(AGENT_MODELS.foreman);
   }, 30000);
 });

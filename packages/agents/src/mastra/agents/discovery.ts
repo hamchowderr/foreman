@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { MODELS } from "./foreman";
+import { AGENT_MODELS, modelSettingsFor, onFinishCostLogger, systemPromptFor, toolsWithCacheControl } from "../../lib/providers";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 
 const DISCOVERY_PROMPT = `You are the Discovery Agent, a specialist in exploring Zapier integrations. Your job is to help users discover what apps they have connected, what actions are available, and what inputs those actions require.
@@ -40,8 +40,12 @@ export function createDiscoveryAgent() {
     name: "Discovery Agent",
     description:
       "Explores Zapier integrations — discovers connected apps, lists available actions, retrieves action schemas and field choices. Use this agent for any question about what apps or actions are available.",
-    instructions: DISCOVERY_PROMPT,
-    model: MODELS.fast,
-    tools: _discoveryTools,
+    instructions: systemPromptFor("discovery", DISCOVERY_PROMPT),
+    model: AGENT_MODELS.discovery,
+    defaultOptions: {
+      modelSettings: modelSettingsFor("discovery"),
+      onFinish: onFinishCostLogger("discovery"),
+    },
+    tools: toolsWithCacheControl("discovery", _discoveryTools),
   });
 }

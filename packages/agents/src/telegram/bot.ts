@@ -1,3 +1,4 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createTelegramAdapter } from "@chat-adapter/telegram";
 import { createMemoryState } from "@chat-adapter/state-memory";
@@ -47,7 +48,7 @@ export async function getTelegramBot() {
     // Semantic recall works across channels — what user said on Discord
     // is available when they message from Telegram, because resource is the same userId.
     const result = await agent.generate(text, {
-      maxSteps: 5,
+      stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `telegram-${threadId}`,

@@ -60,7 +60,29 @@
       "Bash(awk ' /^\\\\[storage\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } /^\\\\[auth\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } /^\\\\[realtime\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } /^\\\\[inbucket\\\\]$/ { print; getline; print; sub\\(/enabled = true/, \"enabled = false\"\\); next } { print } ' supabase/config.toml)",
       "Bash(tee /tmp/test-output.txt)",
       "Bash(tee /c/Users/HamCh/AppData/Local/Temp/mastra-dev.log)",
-      "Bash(tee /tmp/test-output2.txt)"
+      "Bash(tee /tmp/test-output2.txt)",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54422 -U postgres -d postgres -c \"\\\\dt connection_alias\")",
+      "Bash(\"/c/Program Files/Docker/Docker/Docker Desktop.exe\")",
+      "Bash(awk '{print $2}')",
+      "Bash(tee /tmp/agents-start.log)",
+      "Bash(DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres ENCRYPTION_KEY=test node --unhandled-rejections=strict .mastra/output/index.mjs)",
+      "Bash(DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres ENCRYPTION_KEY=test-key-32-characters-minimum-16 node --unhandled-rejections=strict --trace-uncaught .mastra/output/index.mjs)",
+      "Bash(kill 34370)",
+      "Read(//tmp/**)",
+      "Bash(/c/Users/HamCh/code/foreman/node_modules/.bin/mastra dev *)",
+      "Bash(./node_modules/.bin/mastra dev *)",
+      "Bash(kill %1)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d.get\\('dependencies',{}\\).items\\(\\) if 'mastra' in k.lower\\(\\)]\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('peerDependencies',{}\\), indent=2\\)\\)\")",
+      "Bash(kill 399334)",
+      "Bash(node_modules/.bin/mastra --version)",
+      "Bash(DEBUG=\"*\" timeout 50 npx mastra dev)",
+      "Bash(pkill -f \"until curl\")",
+      "Bash(pkill -f \"mastra/output\")",
+      "Bash(kill 441951)",
+      "Skill(update-config)",
+      "Bash(bash -c 'bd doctor --fix 2>/dev/null; bd hooks install --force 2>/dev/null; exit 0')",
+      "Bash(python3 -c \"import json,sys; issues=json.load\\(sys.stdin\\); [print\\(f'{i[\\\\\"id\\\\\"]} [{i[\\\\\"priority\\\\\"]}] {i[\\\\\"title\\\\\"]}'\\) for i in issues]\")"
     ]
   }
 }

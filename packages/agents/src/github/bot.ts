@@ -1,3 +1,4 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createGitHubAdapter } from "@chat-adapter/github";
 import { createMemoryState } from "@chat-adapter/state-memory";
@@ -46,7 +47,7 @@ export async function getGitHubBot() {
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from GitHub, because resource is the same userId.
     const result = await agent.generate(text, {
-      maxSteps: 5,
+      stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `github-${threadId}`,

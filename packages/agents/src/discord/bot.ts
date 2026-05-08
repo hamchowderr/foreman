@@ -1,3 +1,4 @@
+import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { createDiscordAdapter } from "@chat-adapter/discord";
 import { createMemoryState } from "@chat-adapter/state-memory";
@@ -47,7 +48,7 @@ export async function getDiscordBot() {
     let postedStepTexts: string[] = [];
 
     const result = await agent.generate(text, {
-      maxSteps: 10,
+      stopWhen: stepCountIs(10),
       savePerStep: true,
       memory: {
         thread: `discord-${threadId}`,

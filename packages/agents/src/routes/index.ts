@@ -8,6 +8,7 @@ import webhooks from "./webhooks";
 import capabilities from "./capabilities";
 import guardrails from "./guardrails";
 import voice from "./voice";
+import storedAgents from "./stored-agents";
 import { handleTelegramWebhook } from "../telegram/webhook";
 import { handleSlackWebhook } from "../slack/webhook";
 import { handleDiscordWebhook } from "../discord/webhook";
@@ -32,6 +33,7 @@ app.use("/*", cors({
 app.route("/conversations", conversations);
 app.route("/proposals", proposals);
 app.route("/workflows", workflows);
+app.route("/stored/agents", storedAgents);
 app.route("/zapier", zapierConnect);
 app.route("/webhooks", webhooks);
 app.route("/capabilities", capabilities);
