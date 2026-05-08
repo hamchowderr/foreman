@@ -13,28 +13,34 @@ When asked about available integrations:
 
 Return structured, concise results. Do not execute actions — only discover and describe them.`;
 
-let _discoveryTools: Record<string, any> | undefined;
+const DISCOVERY_TOOL_NAMES = [
+  "list-connections",
+  "find-first-connection",
+  "list-actions",
+  "get-action",
+  "get-input-fields-schema",
+  "list-input-fields",
+  "list-input-field-choices",
+  "list-apps",
+  "get-app",
+];
+
+// Resolved lazily via DynamicArgument so createZapierSdk() runs after new Mastra().
+// See zapier-sdk-tools.ts for why module-load SDK init breaks Mastra Studio.
+let _discoveryToolsCache: Record<string, any> | undefined;
+
+function buildDiscoveryTools() {
+  if (_discoveryToolsCache) return _discoveryToolsCache;
+  const allTools = generateZapierTools();
+  const filtered: Record<string, any> = {};
+  for (const name of DISCOVERY_TOOL_NAMES) {
+    if (allTools[name]) filtered[name] = allTools[name];
+  }
+  _discoveryToolsCache = toolsWithCacheControl("discovery", filtered);
+  return _discoveryToolsCache;
+}
 
 export function createDiscoveryAgent() {
-  if (!_discoveryTools) {
-    const allTools = generateZapierTools();
-    const discoveryToolNames = [
-      "list-connections",
-      "find-first-connection",
-      "list-actions",
-      "get-action",
-      "get-input-fields-schema",
-      "list-input-fields",
-      "list-input-field-choices",
-      "list-apps",
-      "get-app",
-    ];
-    _discoveryTools = {};
-    for (const name of discoveryToolNames) {
-      if (allTools[name]) _discoveryTools[name] = allTools[name];
-    }
-  }
-
   return new Agent({
     id: "discovery",
     name: "Discovery Agent",
@@ -46,6 +52,6 @@ export function createDiscoveryAgent() {
       modelSettings: modelSettingsFor("discovery"),
       onFinish: onFinishCostLogger("discovery"),
     },
-    tools: toolsWithCacheControl("discovery", _discoveryTools),
+    tools: () => buildDiscoveryTools(),
   });
 }

@@ -28,12 +28,61 @@ import {
 
 export { buildSystemPrompt, type PromptContext };
 
-// Shared SDK tools — generated once at startup, reused across agent calls.
-// No child process, no MCP transport — direct library import.
-let _sdkTools: Record<string, any> | undefined;
-function getZapierTools() {
-  if (!_sdkTools) _sdkTools = generateZapierTools();
-  return _sdkTools;
+// Core tools the agent needs for every action — always loaded, no search required.
+// This avoids wasting steps on search_tools + load_tool for common operations.
+const CORE_TOOL_NAMES = [
+  "list-connections",
+  "find-first-connection",
+  "list-actions",
+  "get-action",
+  "get-input-fields-schema",
+  "list-input-field-choices",
+  "run-action",
+];
+
+/**
+ * Lazy resolution of Zapier-derived configuration.
+ *
+ * `createZapierSdk()` mutates global zod state and must run AFTER
+ * `new Mastra(...)` has constructed — otherwise Mastra Studio's
+ * `toJSONSchema` introspection hangs instead of throwing. By keeping these
+ * caches behind functions invoked from the agent's `tools` / `inputProcessors`
+ * `DynamicArgument` callbacks, the SDK call is deferred to the first request,
+ * which always lands after Mastra finishes wiring up.
+ */
+let _foremanToolsCache: Record<string, any> | undefined;
+let _foremanProcessorsCache: any[] | undefined;
+
+function buildForemanTools() {
+  if (_foremanToolsCache) return _foremanToolsCache;
+  const sdkTools = generateZapierTools();
+  const coreTools: Record<string, any> = {};
+  for (const name of CORE_TOOL_NAMES) {
+    if (sdkTools[name]) coreTools[name] = sdkTools[name];
+  }
+  _foremanToolsCache = toolsWithCacheControl("foreman", {
+    search_history: searchHistoryTool,
+    fork_conversation: forkConversationTool,
+    connect_zapier: connectZapierTool,
+    ...coreTools,
+  });
+  return _foremanToolsCache;
+}
+
+function buildForemanInputProcessors() {
+  if (_foremanProcessorsCache) return _foremanProcessorsCache;
+  const sdkTools = generateZapierTools();
+  const searchableTools: Record<string, any> = {};
+  for (const [name, tool] of Object.entries(sdkTools)) {
+    if (!CORE_TOOL_NAMES.includes(name)) searchableTools[name] = tool;
+  }
+  // Only put non-core tools behind search (tables, fetch, app listing, etc.)
+  const zapierToolSearch = new ToolSearchProcessor({
+    tools: searchableTools,
+    search: { topK: 8, minScore: 0.1 },
+  });
+  _foremanProcessorsCache = [contextInjector, zapierToolSearch];
+  return _foremanProcessorsCache;
 }
 
 export function createForemanAgent(databaseUrl: string) {
@@ -58,38 +107,6 @@ export function createForemanAgent(databaseUrl: string) {
     },
   });
 
-  // Generate all 34 Zapier tools directly from SDK registry.
-  // No MCP, no child process — pure library import.
-  // toModelOutput and requireApproval are baked into each tool.
-  const sdkTools = getZapierTools();
-
-  // Core tools the agent needs for every action — always loaded, no search required.
-  // This avoids wasting steps on search_tools + load_tool for common operations.
-  const coreToolNames = [
-    "list-connections",
-    "find-first-connection",
-    "list-actions",
-    "get-action",
-    "get-input-fields-schema",
-    "list-input-field-choices",
-    "run-action",
-  ];
-  const coreTools: Record<string, any> = {};
-  const searchableTools: Record<string, any> = {};
-  for (const [name, tool] of Object.entries(sdkTools)) {
-    if (coreToolNames.includes(name)) {
-      coreTools[name] = tool;
-    } else {
-      searchableTools[name] = tool;
-    }
-  }
-
-  // Only put non-core tools behind search (tables, fetch, app listing, etc.)
-  const zapierToolSearch = new ToolSearchProcessor({
-    tools: searchableTools,
-    search: { topK: 8, minScore: 0.1 },
-  });
-
   return new Agent({
     id: "foreman",
     name: "Foreman",
@@ -101,12 +118,7 @@ export function createForemanAgent(databaseUrl: string) {
       modelSettings: modelSettingsFor("foreman"),
       onFinish: onFinishCostLogger("foreman"),
     },
-    tools: toolsWithCacheControl("foreman", {
-      search_history: searchHistoryTool,
-      fork_conversation: forkConversationTool,
-      connect_zapier: connectZapierTool,
-      ...coreTools,
-    }),
+    tools: () => buildForemanTools(),
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {
@@ -118,7 +130,7 @@ export function createForemanAgent(databaseUrl: string) {
         sampling: { type: "ratio", rate: 0.2 },
       },
     },
-    inputProcessors: [contextInjector, zapierToolSearch],
+    inputProcessors: () => buildForemanInputProcessors(),
     outputProcessors: [piiRedactor],
     workspace,
     memory: new Memory({

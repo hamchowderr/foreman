@@ -128,10 +128,31 @@ function resolveCredentials(
 }
 
 /**
+ * Module-level cache for the default tool set.
+ *
+ * `createZapierSdk()` mutates global state (the zod `_zod` symbol registry —
+ * multiple zod copies share state via this symbol). When that mutation happens
+ * BEFORE `new Mastra({...})` has constructed, Mastra Studio's internal
+ * `toJSONSchema` introspection enters an infinite loop instead of throwing.
+ * Result: `mastra dev` hangs at `[file-logger] Logging to server.log`.
+ *
+ * Callers should resolve tools lazily — i.e., from a Mastra `DynamicArgument`
+ * function (`tools: () => ...`) which only fires at request time, after
+ * `new Mastra(...)` has finished constructing. This cache makes that pattern
+ * cheap: the first request pays the SDK-init cost; subsequent requests reuse
+ * the same tool instances.
+ *
+ * Per-user tool sets (with explicit credentials/connections) are NOT cached —
+ * they're always rebuilt for the requesting user.
+ */
+let _defaultToolsCache: Record<string, ReturnType<typeof createTool>> | undefined;
+
+/**
  * Generate all Zapier SDK tools as Mastra createTool() instances.
  *
  * @param credentials - Optional per-user token (from PKCE web OAuth). If omitted,
  *   dev mode uses CLI login; production uses ZAPIER_CLIENT_ID/SECRET env vars.
+ *   When omitted (the agent-default path), the result is memoized.
  * @param connections - Optional pre-seeded connection alias map.
  * @returns Record of tool-name → Tool instances
  */
@@ -139,6 +160,9 @@ export function generateZapierTools(
   credentials?: string | (() => Promise<string>),
   connections?: Record<string, { connectionId: number }>
 ) {
+  if (!credentials && !connections && _defaultToolsCache) {
+    return _defaultToolsCache;
+  }
   const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
   const hasConnections = connections && Object.keys(connections).length > 0;
   const resolvedCredentials = resolveCredentials(credentials);
@@ -254,6 +278,9 @@ export function generateZapierTools(
     }
   }
 
+  if (!credentials && !connections) {
+    _defaultToolsCache = tools;
+  }
   return tools;
 }
 
