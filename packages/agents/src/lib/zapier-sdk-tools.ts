@@ -14,6 +14,8 @@ import {
   ZapierConfigurationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
+import { requestUserContext } from "./request-user-context";
+import { getSdkForUser } from "./zapier/sdk";
 
 /**
  * Auto-generate Mastra tools from the Zapier SDK's internal registry.
@@ -107,13 +109,30 @@ const PAGINATED_METHODS = new Set([
 const DEFAULT_MAX_ITEMS = 100;
 
 /**
+ * Resolve SDK credentials based on environment.
+ * - Explicit credentials passed in: use as-is (per-user token from PKCE flow).
+ * - Dev mode + no credentials: SDK auto-uses CLI login (~/.zapier-sdk/config.json).
+ * - Production + no credentials: Client Credentials from ZAPIER_CLIENT_ID/SECRET.
+ */
+function resolveCredentials(
+  explicit?: string | (() => Promise<string>)
+): Parameters<typeof createZapierSdk>[0]["credentials"] {
+  if (explicit) return explicit;
+  const isDev = process.env.FOREMAN_MODE === "dev";
+  if (!isDev) {
+    const clientId = process.env.ZAPIER_CLIENT_ID;
+    const clientSecret = process.env.ZAPIER_CLIENT_SECRET;
+    if (clientId && clientSecret) return { clientId, clientSecret };
+  }
+  return undefined; // dev: SDK uses CLI login
+}
+
+/**
  * Generate all Zapier SDK tools as Mastra createTool() instances.
  *
- * @param credentials - Optional credentials for the SDK. If not provided,
- *   the SDK reads from ZAPIER_CREDENTIALS env var or CLI login.
- * @param connections - Optional pre-seeded connection alias map. The SDK resolves
- *   string aliases (e.g. "sheets") to numeric connection IDs at call time, saving
- *   a find-unique-connection round-trip per action.
+ * @param credentials - Optional per-user token (from PKCE web OAuth). If omitted,
+ *   dev mode uses CLI login; production uses ZAPIER_CLIENT_ID/SECRET env vars.
+ * @param connections - Optional pre-seeded connection alias map.
  * @returns Record of tool-name → Tool instances
  */
 export function generateZapierTools(
@@ -122,13 +141,14 @@ export function generateZapierTools(
 ) {
   const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
   const hasConnections = connections && Object.keys(connections).length > 0;
+  const resolvedCredentials = resolveCredentials(credentials);
   const sdk = createZapierSdk({
-    ...(credentials ? { credentials } : {}),
+    ...(resolvedCredentials ? { credentials: resolvedCredentials } : {}),
     ...(hasConnections ? { manifest: { connections } } : {}),
     debug: isDebug,
     maxNetworkRetries: 3,
     maxNetworkRetryDelayMs: 30000,
-    canDeleteTables: true, // Gated by requireApproval on the tool
+    canDeleteTables: true,
   });
 
   const registry = sdk.getRegistry({ package: "mcp" });
@@ -168,24 +188,28 @@ export function generateZapierTools(
           ? (raw as any)._zod.def.innerType
           : raw;
 
+      const summarize = createSummarizer(fn.name);
       tools[toolName] = createTool({
         id: toolName,
         description,
         inputSchema: unwrapped as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
-        toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
           try {
+            // Resolve per-user SDK if a user context is active (set by request handler).
+            // Falls back to the global SDK (CLI login / client credentials) when no
+            // user context is available — e.g., during channel webhook processing.
+            const userCtx = requestUserContext.getStore();
+            const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
+            const activeMethod = (activeSdk as any)[fn.name] as (args: any) => Promise<any>;
+
             if (PAGINATED_METHODS.has(fn.name)) {
               const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
-              const result = await sdkFn.call(sdk, { ...input, maxItems });
-              if (result?.data && Array.isArray(result.data)) {
-                return { data: result.data, count: result.data.length, nextCursor: result.nextCursor };
-              }
-              return result;
+              const result = await activeMethod.call(activeSdk, { ...input, maxItems });
+              return summarize(result);
             }
-            return await sdkFn.call(sdk, input);
+            return summarize(await activeMethod.call(activeSdk, input));
           } catch (err) {
             return handleSdkError(err, fn.name);
           }
@@ -208,17 +232,20 @@ export function generateZapierTools(
         }
       }
 
+      const summarizeFetch = createSummarizer(fn.name);
       tools[toolName] = createTool({
         id: toolName,
         description,
         inputSchema: z.object(shape).describe(description),
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
-        toModelOutput: createSummarizer(fn.name),
         execute: async (input) => {
           try {
+            const userCtx = requestUserContext.getStore();
+            const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
+            const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
             const args = fn.inputParameters!.map((p: any) => input[p.name]);
-            return await sdkFn.call(sdk, ...args);
+            return summarizeFetch(await activeMethod.call(activeSdk, ...args));
           } catch (err) {
             return handleSdkError(err, fn.name);
           }
@@ -254,7 +281,7 @@ function handleSdkError(err: unknown, methodName: string): { error: string; code
     const ae = err as any;
     const appKey = ae.appKey ?? ae.app ?? null;
     return {
-      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`is-expired: true\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
+      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`isExpired: true\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
       code: "AUTH_FAILED",
       retryable: false,
       suggestedRecovery: {
@@ -372,7 +399,8 @@ function createSummarizer(fnName: string) {
       const summarized = items.map((item: any) => {
         if (typeof item !== "object" || !item) return item;
         const {
-          id, name, title, key, app, appKey, slug, status, type, actionType,
+          id, name, title, key, app, appKey, app_name, app_key, account_type,
+          slug, status, type, actionType,
           ...rest
         } = item;
         const summary: Record<string, unknown> = {};
@@ -382,6 +410,9 @@ function createSummarizer(fnName: string) {
         if (key) summary.key = key;
         if (app) summary.app = app;
         if (appKey) summary.appKey = appKey;
+        if (app_name) summary.app_name = app_name;
+        if (app_key) summary.app_key = app_key;
+        if (account_type) summary.account_type = account_type;
         if (slug) summary.slug = slug;
         if (status) summary.status = status;
         if (type) summary.type = type;

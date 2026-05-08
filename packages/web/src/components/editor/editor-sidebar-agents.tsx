@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
-import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@/lib/client";
 import { cn } from "@/lib/utils";
 import { storedAgentsApi, type StoredAgent } from "@/lib/stored-agents-client";
 
@@ -12,15 +12,14 @@ import { storedAgentsApi, type StoredAgent } from "@/lib/stored-agents-client";
  * from the full list on /editor so the two views can update independently.
  */
 export function EditorSidebarAgents() {
-  const { getToken } = useAuth();
   const params = useParams<{ id?: string }>();
   const activeId = params?.id;
 
   const { data, isLoading, error } = useSWR<StoredAgent[]>(
     ["stored-agents-sidebar"],
     async () => {
-      const token = await getToken();
-      return storedAgentsApi.list(token ?? "");
+      const { data: { session } } = await createClient().auth.getSession();
+      return storedAgentsApi.list(session?.access_token ?? "");
     },
     { revalidateOnFocus: false }
   );

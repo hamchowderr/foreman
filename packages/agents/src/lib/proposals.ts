@@ -1,30 +1,20 @@
-import { getDb, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { getSupabase } from "@/lib/db";
 
-/**
- * Load a proposal and verify the requesting user owns it
- * (via conversation.user_id).
- */
 export async function loadOwnedProposal(proposalId: string, userId: string) {
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const rows = await db
-    .select({
-      proposal: schema.actionProposal,
-      conversationUserId: schema.conversation.userId,
-    })
-    .from(schema.actionProposal)
-    .innerJoin(
-      schema.conversation,
-      eq(schema.actionProposal.conversationId, schema.conversation.id)
-    )
-    .where(eq(schema.actionProposal.id, proposalId))
-    .limit(1);
+  const { data } = await supabase
+    .from("action_proposal")
+    .select("*, conversation!inner(user_id)")
+    .eq("id", proposalId)
+    .limit(1)
+    .single();
 
-  const row = rows[0];
-  if (!row || row.conversationUserId !== userId) {
+  if (!data || (data.conversation as any).user_id !== userId) {
     return null;
   }
 
-  return row.proposal;
+  // Return proposal fields without the joined conversation
+  const { conversation: _conv, ...proposal } = data as any;
+  return proposal;
 }

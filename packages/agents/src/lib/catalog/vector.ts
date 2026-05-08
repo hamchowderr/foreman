@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { embedMany } from "ai";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
 import { PgVector } from "@mastra/pg";
@@ -70,20 +71,24 @@ export async function indexAppCatalog(
       values: batch,
     });
 
+    const batchMetadata = batchApps.map((a) => {
+      const cats = safeJsonParse(a.categories);
+      const categoryNames = Array.isArray(cats)
+        ? cats.map((c: any) => c.name ?? c.slug).join(", ")
+        : "";
+      return {
+        appKey: a.appKey,
+        title: a.title,
+        categories: categoryNames,
+      };
+    });
+
     await vector.upsert({
       indexName: INDEX_NAME,
       vectors: embeddings,
-      metadata: batchApps.map((a) => {
-        const cats = safeJsonParse(a.categories);
-        const categoryNames = Array.isArray(cats)
-          ? cats.map((c: any) => c.name ?? c.slug).join(", ")
-          : "";
-        return {
-          appKey: a.appKey,
-          title: a.title,
-          categories: categoryNames,
-        };
-      }),
+      metadata: batchMetadata,
+      // Stable IDs derived from appKey so re-runs update rather than append
+      ids: batchApps.map((a) => appKeyToVectorId(a.appKey)),
     });
 
     if (i + BATCH_SIZE < texts.length) {
@@ -135,4 +140,14 @@ function safeJsonParse(value: string): unknown {
   } catch {
     return value;
   }
+}
+
+/**
+ * Derive a stable UUID-shaped vector ID from an app key so upserts are
+ * idempotent — re-running the embed phase updates rows, not appends new ones.
+ * Uses SHA-256 to avoid prefix collisions (e.g. FacebookConversions* keys).
+ */
+function appKeyToVectorId(appKey: string): string {
+  const hash = createHash("sha256").update(appKey.toLowerCase()).digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
 }

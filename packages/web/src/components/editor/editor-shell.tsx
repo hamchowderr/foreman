@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
-import { BotIcon, PlusIcon } from "lucide-react";
+import { BotIcon, LogOut, PlusIcon } from "lucide-react";
+import { createClient } from "@/lib/client";
 import { EditorSidebarAgents } from "./editor-sidebar-agents";
 
 export function EditorShell({
@@ -14,6 +14,11 @@ export function EditorShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+
+  const handleSignOut = async () => {
+    await createClient().auth.signOut();
+    router.push("/");
+  };
 
   return (
     <div className="flex h-dvh w-full bg-background text-foreground">
@@ -42,7 +47,14 @@ export function EditorShell({
             <div className="min-w-0 flex-1">
               <div className="truncate text-xs text-muted">{user.email}</div>
             </div>
-            <UserButton />
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-background hover:text-foreground"
+              title="Sign out"
+            >
+              <LogOut className="size-3.5" />
+            </button>
           </div>
         </div>
       </aside>
@@ -56,7 +68,14 @@ export function EditorShell({
             <BotIcon className="size-4 text-accent" />
             Agent Editor
           </Link>
-          <UserButton />
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded-md p-1 text-muted transition-colors hover:bg-muted hover:text-foreground"
+            title="Sign out"
+          >
+            <LogOut className="size-4" />
+          </button>
         </div>
         {children}
       </main>

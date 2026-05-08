@@ -4,6 +4,7 @@ import { createiMessageAdapter } from "chat-adapter-imessage";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { getMastra } from "../mastra";
 import { registerChannelUser } from "../lib/identity";
+import { requestUserContext } from "../lib/request-user-context";
 
 let _bot: Chat | undefined;
 let _imessageAdapter: ReturnType<typeof createiMessageAdapter> | undefined;
@@ -45,14 +46,14 @@ export async function getiMessageBot() {
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from iMessage, because resource is the same userId.
-    const result = await agent.generate(text, {
+    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
       stopWhen: stepCountIs(5),
       savePerStep: true,
       memory: {
         thread: `imessage-${threadId}`,
         resource: userId,
       },
-    });
+    }));
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 

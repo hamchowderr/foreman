@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@/lib/client";
 import { toast } from "sonner";
 import {
   ChevronLeftIcon,
@@ -53,8 +53,12 @@ const AUTOSAVE_DEBOUNCE_MS = 800;
 
 type SaveState = "clean" | "dirty" | "saving" | "error";
 
+async function getToken() {
+  const { data: { session } } = await createClient().auth.getSession();
+  return session?.access_token ?? null;
+}
+
 export function AgentEditor({ agentId }: { agentId: string }) {
-  const { getToken } = useAuth();
   const router = useRouter();
   const { mutate: globalMutate } = useSWRConfig();
 

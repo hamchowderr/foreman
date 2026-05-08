@@ -1,14 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { Show, SignInButton } from "@clerk/nextjs";
 import { Menu, X } from "@/components/icons/hi";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/client";
 
 export function SiteNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      setIsSignedIn(!!session);
+    });
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
@@ -46,16 +53,15 @@ export function SiteNav() {
           </a>
           <div className="w-px h-5 bg-border mx-1" />
           <ThemeToggle />
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <Button size="sm" className="ml-1">Sign in</Button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
+          {isSignedIn ? (
             <Button size="sm" asChild className="ml-1">
               <Link href="/chat">Open chat</Link>
             </Button>
-          </Show>
+          ) : (
+            <Button size="sm" asChild className="ml-1">
+              <Link href="/auth/login">Sign in</Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile */}
@@ -79,16 +85,15 @@ export function SiteNav() {
             <GitHubIcon /> GitHub
           </a>
           <div className="pt-2">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <Button className="w-full">Sign in</Button>
-              </SignInButton>
-            </Show>
-            <Show when="signed-in">
+            {isSignedIn ? (
               <Button asChild className="w-full">
                 <Link href="/chat">Open chat</Link>
               </Button>
-            </Show>
+            ) : (
+              <Button asChild className="w-full">
+                <Link href="/auth/login">Sign in</Link>
+              </Button>
+            )}
           </div>
         </div>
       )}

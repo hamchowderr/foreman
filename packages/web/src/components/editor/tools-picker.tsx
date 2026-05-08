@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@/lib/client";
 import { SearchIcon, ShieldCheckIcon, ShieldAlertIcon, WrenchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +16,11 @@ interface ToolsPickerProps {
 }
 
 export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) {
-  const { getToken } = useAuth();
   const { data, isLoading, error } = useSWR(
     ["stored-agents-tools"],
     async () => {
-      const token = await getToken();
-      const res = await storedAgentsApi.listTools(token ?? "");
+      const { data: { session } } = await createClient().auth.getSession();
+      const res = await storedAgentsApi.listTools(session?.access_token ?? "");
       return res.tools;
     },
     { revalidateOnFocus: false }

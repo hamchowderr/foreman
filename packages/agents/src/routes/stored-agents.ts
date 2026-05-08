@@ -1,6 +1,5 @@
 import { Hono } from "hono";
-import { getDb, schema } from "@/lib/db";
-import { desc, eq, and } from "drizzle-orm";
+import { getSupabase } from "@/lib/db";
 import { authMiddleware } from "./middleware";
 import { validateParam } from "@/lib/validation";
 import type { AppEnv } from "./types";
@@ -10,77 +9,69 @@ const storedAgents = new Hono<AppEnv>();
 
 storedAgents.use("/*", authMiddleware);
 
-// Default model when the user doesn't specify one.
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4-6";
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4.6";
 const MAX_NAME_LEN = 120;
 const MAX_DESC_LEN = 2000;
 const MAX_INSTRUCTIONS_LEN = 50_000;
 const MAX_TOOLS = 200;
 const MAX_NOTES_LEN = 1000;
 
-type AgentRow = typeof schema.storedAgent.$inferSelect;
-type VersionRow = typeof schema.storedAgentVersion.$inferSelect;
-
-function serializeAgent(a: AgentRow, latest?: VersionRow | null) {
+function serializeAgent(a: any, latest?: any | null) {
   return {
     id: a.id,
     name: a.name,
     description: a.description,
-    current_version_id: a.currentVersionId,
+    current_version_id: a.current_version_id,
     latest_version: latest ? serializeVersion(latest) : null,
-    created_at: a.createdAt.toISOString(),
-    updated_at: a.updatedAt.toISOString(),
+    created_at: a.created_at,
+    updated_at: a.updated_at,
   };
 }
 
-function serializeVersion(v: VersionRow) {
+function serializeVersion(v: any) {
   let tools: string[];
   try {
     const parsed = JSON.parse(v.tools);
-    tools = Array.isArray(parsed) ? parsed.filter((t) => typeof t === "string") : [];
+    tools = Array.isArray(parsed) ? parsed.filter((t: any) => typeof t === "string") : [];
   } catch {
     tools = [];
   }
   return {
     id: v.id,
-    agent_id: v.agentId,
+    agent_id: v.agent_id,
     version: v.version,
     instructions: v.instructions,
     tools,
     model: v.model,
     notes: v.notes,
-    published_at: v.publishedAt?.toISOString() ?? null,
-    created_at: v.createdAt.toISOString(),
-    is_draft: v.publishedAt === null,
+    published_at: v.published_at ?? null,
+    created_at: v.created_at,
+    is_draft: v.published_at === null,
   };
 }
 
-async function loadAgent(
-  db: ReturnType<typeof getDb>,
-  id: string,
-  userId: string
-): Promise<AgentRow | null> {
-  const rows = await db
-    .select()
-    .from(schema.storedAgent)
-    .where(
-      and(eq(schema.storedAgent.id, id), eq(schema.storedAgent.userId, userId))
-    )
-    .limit(1);
-  return rows[0] ?? null;
+async function loadAgent(id: string, userId: string): Promise<any | null> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("stored_agent")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
 }
 
-async function getLatestVersion(
-  db: ReturnType<typeof getDb>,
-  agentId: string
-): Promise<VersionRow | null> {
-  const rows = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(eq(schema.storedAgentVersion.agentId, agentId))
-    .orderBy(desc(schema.storedAgentVersion.version))
-    .limit(1);
-  return rows[0] ?? null;
+async function getLatestVersion(agentId: string): Promise<any | null> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("agent_id", agentId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
 }
 
 function sanitizeTools(input: unknown): string[] | null {
@@ -100,8 +91,6 @@ function sanitizeTools(input: unknown): string[] | null {
 }
 
 // ─── Tools catalog ───
-// GET /tools — list available tool IDs with metadata. Placed before /:id so it
-// doesn't collide with the ID route.
 storedAgents.get("/tools", async (c) => {
   const catalog = await getToolCatalog();
   return c.json({ tools: catalog });
@@ -112,8 +101,7 @@ storedAgents.get("/tools", async (c) => {
 // POST / — create agent and its initial v1 draft
 storedAgents.post("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
-  const db = getDb();
+  const supabase = getSupabase();
 
   let body: any;
   try {
@@ -144,58 +132,51 @@ storedAgents.post("/", async (c) => {
   const initialModel =
     typeof model === "string" && model.trim() ? model.trim() : DEFAULT_MODEL;
 
-  const now = new Date();
+  const now = new Date().toISOString();
   const agentId = crypto.randomUUID();
   const versionId = crypto.randomUUID();
 
-  await db.insert(schema.storedAgent).values({
+  await supabase.from("stored_agent").insert({
     id: agentId,
-    userId,
-    orgId: orgId ?? null,
+    user_id: userId,
     name: name.trim(),
     description: description ?? null,
-    currentVersionId: null,
-    createdAt: now,
-    updatedAt: now,
+    current_version_id: null,
+    created_at: now,
+    updated_at: now,
   });
 
-  await db.insert(schema.storedAgentVersion).values({
+  await supabase.from("stored_agent_version").insert({
     id: versionId,
-    agentId,
+    agent_id: agentId,
     version: 1,
     instructions: initialInstructions,
     tools: JSON.stringify(initialTools),
     model: initialModel,
     notes: null,
-    publishedAt: null,
-    createdAt: now,
+    published_at: null,
+    created_at: now,
   });
 
-  const agent = await loadAgent(db, agentId, userId);
-  const latest = await getLatestVersion(db, agentId);
+  const agent = await loadAgent(agentId, userId);
+  const latest = await getLatestVersion(agentId);
   return c.json(serializeAgent(agent!, latest), 201);
 });
 
-// GET / — list agents for current user/org
+// GET / — list agents for current user
 storedAgents.get("/", async (c) => {
   const userId = c.get("userId");
-  const orgId = c.get("orgId");
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const whereClause = orgId
-    ? and(eq(schema.storedAgent.userId, userId), eq(schema.storedAgent.orgId, orgId))
-    : eq(schema.storedAgent.userId, userId);
+  const { data: agents } = await supabase
+    .from("stored_agent")
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
 
-  const agents = await db
-    .select()
-    .from(schema.storedAgent)
-    .where(whereClause)
-    .orderBy(desc(schema.storedAgent.updatedAt));
-
-  // Batch-load the latest version for each agent.
   const results = await Promise.all(
-    agents.map(async (a) => {
-      const latest = await getLatestVersion(db, a.id);
+    (agents ?? []).map(async (a: any) => {
+      const latest = await getLatestVersion(a.id);
       return serializeAgent(a, latest);
     })
   );
@@ -208,11 +189,10 @@ storedAgents.get("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
-  const db = getDb();
 
-  const agent = await loadAgent(db, id, userId);
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
-  const latest = await getLatestVersion(db, id);
+  const latest = await getLatestVersion(id);
   return c.json(serializeAgent(agent, latest));
 });
 
@@ -229,11 +209,11 @@ storedAgents.patch("/:id", async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  const db = getDb();
-  const agent = await loadAgent(db, id, userId);
+  const supabase = getSupabase();
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  const patch: { name?: string; description?: string | null } = {};
+  const patch: Record<string, any> = {};
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim() || body.name.length > MAX_NAME_LEN) {
       return c.json({ error: "name must be 1-120 chars" }, 400);
@@ -248,16 +228,16 @@ storedAgents.patch("/:id", async (c) => {
   }
 
   if (Object.keys(patch).length === 0) {
-    return c.json(serializeAgent(agent, await getLatestVersion(db, id)));
+    return c.json(serializeAgent(agent, await getLatestVersion(id)));
   }
 
-  await db
-    .update(schema.storedAgent)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(eq(schema.storedAgent.id, id));
+  await supabase
+    .from("stored_agent")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", id);
 
-  const updated = await loadAgent(db, id, userId);
-  const latest = await getLatestVersion(db, id);
+  const updated = await loadAgent(id, userId);
+  const latest = await getLatestVersion(id);
   return c.json(serializeAgent(updated!, latest));
 });
 
@@ -266,20 +246,18 @@ storedAgents.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const agent = await loadAgent(db, id, userId);
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  // Null out current_version_id first so the FK-less self-reference isn't dangling.
-  await db
-    .update(schema.storedAgent)
-    .set({ currentVersionId: null })
-    .where(eq(schema.storedAgent.id, id));
-  await db
-    .delete(schema.storedAgentVersion)
-    .where(eq(schema.storedAgentVersion.agentId, id));
-  await db.delete(schema.storedAgent).where(eq(schema.storedAgent.id, id));
+  // Null out current_version_id first to avoid FK conflicts
+  await supabase
+    .from("stored_agent")
+    .update({ current_version_id: null })
+    .eq("id", id);
+  await supabase.from("stored_agent_version").delete().eq("agent_id", id);
+  await supabase.from("stored_agent").delete().eq("id", id);
   return c.json({ ok: true });
 });
 
@@ -290,18 +268,18 @@ storedAgents.get("/:id/versions", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const agent = await loadAgent(db, id, userId);
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  const versions = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(eq(schema.storedAgentVersion.agentId, id))
-    .orderBy(desc(schema.storedAgentVersion.version));
+  const { data: versions } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("agent_id", id)
+    .order("version", { ascending: false });
 
-  return c.json(versions.map(serializeVersion));
+  return c.json((versions ?? []).map(serializeVersion));
 });
 
 // GET /:id/versions/:versionId
@@ -310,99 +288,85 @@ storedAgents.get("/:id/versions/:versionId", async (c) => {
   const id = validateParam(c.req.param("id"), "id");
   const versionId = validateParam(c.req.param("versionId"), "versionId");
   if (!id || !versionId) return c.json({ error: "Invalid id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const agent = await loadAgent(db, id, userId);
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  const rows = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(
-      and(
-        eq(schema.storedAgentVersion.id, versionId),
-        eq(schema.storedAgentVersion.agentId, id)
-      )
-    )
-    .limit(1);
-  const v = rows[0];
+  const { data: v } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("id", versionId)
+    .eq("agent_id", id)
+    .limit(1)
+    .maybeSingle();
   if (!v) return c.json({ error: "Not found" }, 404);
   return c.json(serializeVersion(v));
 });
 
-// POST /:id/versions — create a new draft by forking from a source version
-// (or the latest if no sourceVersionId provided).
+// POST /:id/versions — create a new draft
 storedAgents.post("/:id/versions", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
 
   let body: any = {};
-  try {
-    body = await c.req.json();
-  } catch {}
+  try { body = await c.req.json(); } catch {}
 
-  const db = getDb();
-  const agent = await loadAgent(db, id, userId);
+  const supabase = getSupabase();
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  // If a draft already exists for this agent, return it — we never keep
-  // more than one trailing draft.
-  const latest = await getLatestVersion(db, id);
-  if (latest && latest.publishedAt === null) {
+  const latest = await getLatestVersion(id);
+  if (latest && latest.published_at === null) {
     return c.json(serializeVersion(latest), 200);
   }
 
-  // Pick the source to copy from: explicit sourceVersionId, else latest
-  // (which is guaranteed published at this point since no draft exists).
-  let source: VersionRow | null = latest;
+  let source: any = latest;
   if (body.sourceVersionId && typeof body.sourceVersionId === "string") {
-    const sourceRows = await db
-      .select()
-      .from(schema.storedAgentVersion)
-      .where(
-        and(
-          eq(schema.storedAgentVersion.id, body.sourceVersionId),
-          eq(schema.storedAgentVersion.agentId, id)
-        )
-      )
-      .limit(1);
-    if (!sourceRows[0]) {
+    const { data: sourceV } = await supabase
+      .from("stored_agent_version")
+      .select("*")
+      .eq("id", body.sourceVersionId)
+      .eq("agent_id", id)
+      .limit(1)
+      .maybeSingle();
+    if (!sourceV) {
       return c.json({ error: "sourceVersionId not found" }, 400);
     }
-    source = sourceRows[0];
+    source = sourceV;
   }
 
   const nextVersion = (latest?.version ?? 0) + 1;
-  const now = new Date();
+  const now = new Date().toISOString();
   const versionId = crypto.randomUUID();
 
-  await db.insert(schema.storedAgentVersion).values({
+  await supabase.from("stored_agent_version").insert({
     id: versionId,
-    agentId: id,
+    agent_id: id,
     version: nextVersion,
     instructions: source?.instructions ?? "",
     tools: source?.tools ?? "[]",
     model: source?.model ?? DEFAULT_MODEL,
     notes: null,
-    publishedAt: null,
-    createdAt: now,
+    published_at: null,
+    created_at: now,
   });
-  await db
-    .update(schema.storedAgent)
-    .set({ updatedAt: now })
-    .where(eq(schema.storedAgent.id, id));
+  await supabase
+    .from("stored_agent")
+    .update({ updated_at: now })
+    .eq("id", id);
 
-  const created = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(eq(schema.storedAgentVersion.id, versionId))
-    .limit(1);
-  return c.json(serializeVersion(created[0]), 201);
+  const { data: created } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("id", versionId)
+    .limit(1)
+    .single();
+  return c.json(serializeVersion(created), 201);
 });
 
-// PATCH /:id/versions/:versionId — edit draft content. Published versions are
-// immutable; attempts to edit return 409.
+// PATCH /:id/versions/:versionId — edit draft content
 storedAgents.patch("/:id/versions/:versionId", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
@@ -416,30 +380,26 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  const db = getDb();
-  const agent = await loadAgent(db, id, userId);
+  const supabase = getSupabase();
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  const rows = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(
-      and(
-        eq(schema.storedAgentVersion.id, versionId),
-        eq(schema.storedAgentVersion.agentId, id)
-      )
-    )
-    .limit(1);
-  const v = rows[0];
+  const { data: v } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("id", versionId)
+    .eq("agent_id", id)
+    .limit(1)
+    .maybeSingle();
   if (!v) return c.json({ error: "Not found" }, 404);
-  if (v.publishedAt !== null) {
+  if (v.published_at !== null) {
     return c.json(
       { error: "Cannot edit a published version. Create a new draft instead." },
       409
     );
   }
 
-  const patch: Partial<typeof v> = {};
+  const patch: Record<string, any> = {};
   if (body.instructions !== undefined) {
     if (typeof body.instructions !== "string" || body.instructions.length > MAX_INSTRUCTIONS_LEN) {
       return c.json({ error: "instructions must be a string (max 50KB)" }, 400);
@@ -470,69 +430,63 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
     return c.json(serializeVersion(v));
   }
 
-  await db
-    .update(schema.storedAgentVersion)
-    .set(patch)
-    .where(eq(schema.storedAgentVersion.id, versionId));
-  await db
-    .update(schema.storedAgent)
-    .set({ updatedAt: new Date() })
-    .where(eq(schema.storedAgent.id, id));
+  await supabase.from("stored_agent_version").update(patch).eq("id", versionId);
+  await supabase
+    .from("stored_agent")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", id);
 
-  const updated = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(eq(schema.storedAgentVersion.id, versionId))
-    .limit(1);
-  return c.json(serializeVersion(updated[0]));
+  const { data: updated } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("id", versionId)
+    .limit(1)
+    .single();
+  return c.json(serializeVersion(updated));
 });
 
-// POST /:id/versions/:versionId/publish — mark the version as published and
-// bump the agent's current_version_id pointer.
+// POST /:id/versions/:versionId/publish
 storedAgents.post("/:id/versions/:versionId/publish", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
   const versionId = validateParam(c.req.param("versionId"), "versionId");
   if (!id || !versionId) return c.json({ error: "Invalid id" }, 400);
-  const db = getDb();
+  const supabase = getSupabase();
 
-  const agent = await loadAgent(db, id, userId);
+  const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  const rows = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(
-      and(
-        eq(schema.storedAgentVersion.id, versionId),
-        eq(schema.storedAgentVersion.agentId, id)
-      )
-    )
-    .limit(1);
-  const v = rows[0];
+  const { data: v } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("id", versionId)
+    .eq("agent_id", id)
+    .limit(1)
+    .maybeSingle();
   if (!v) return c.json({ error: "Not found" }, 404);
 
-  const now = new Date();
-  if (v.publishedAt === null) {
-    await db
-      .update(schema.storedAgentVersion)
-      .set({ publishedAt: now })
-      .where(eq(schema.storedAgentVersion.id, versionId));
+  const now = new Date().toISOString();
+  if (v.published_at === null) {
+    await supabase
+      .from("stored_agent_version")
+      .update({ published_at: now })
+      .eq("id", versionId);
   }
-  await db
-    .update(schema.storedAgent)
-    .set({ currentVersionId: versionId, updatedAt: now })
-    .where(eq(schema.storedAgent.id, id));
+  await supabase
+    .from("stored_agent")
+    .update({ current_version_id: versionId, updated_at: now })
+    .eq("id", id);
 
-  const updatedVersion = await db
-    .select()
-    .from(schema.storedAgentVersion)
-    .where(eq(schema.storedAgentVersion.id, versionId))
-    .limit(1);
-  const updatedAgent = await loadAgent(db, id, userId);
+  const { data: updatedVersion } = await supabase
+    .from("stored_agent_version")
+    .select("*")
+    .eq("id", versionId)
+    .limit(1)
+    .single();
+  const updatedAgent = await loadAgent(id, userId);
   return c.json({
-    agent: serializeAgent(updatedAgent!, updatedVersion[0]),
-    version: serializeVersion(updatedVersion[0]),
+    agent: serializeAgent(updatedAgent!, updatedVersion),
+    version: serializeVersion(updatedVersion),
   });
 });
 

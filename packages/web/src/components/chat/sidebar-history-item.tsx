@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { memo, useRef, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@/lib/client";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
@@ -49,7 +49,6 @@ const PureChatItem = ({
   const [isRenaming, setIsRenaming] = useState(false);
   const [title, setTitle] = useState(chat.title);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { getToken } = useAuth();
   const { mutate } = useSWRConfig();
 
   const handleRename = async () => {
@@ -61,7 +60,8 @@ const PureChatItem = ({
     }
 
     try {
-      const token = await getToken();
+      const { data: { session } } = await createClient().auth.getSession();
+      const token = session?.access_token ?? null;
       const agentUrl = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
       await fetch(`${agentUrl}/conversations/${chat.id}`, {
         method: "PATCH",

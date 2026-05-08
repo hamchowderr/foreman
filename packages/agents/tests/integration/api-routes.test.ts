@@ -80,65 +80,54 @@ function createExpiredJwt(userId: string): string {
 
 const AUTH_HEADER = `Bearer ${createMockJwt("test-user-1", "test-org-1")}`;
 
-// ─── DB mock ───
-
-const mockDbRows: Record<string, any[]> = {};
-
-function setMockRows(table: string, rows: any[]) {
-  mockDbRows[table] = rows;
-}
-
-function clearMockRows() {
-  for (const key of Object.keys(mockDbRows)) {
-    delete mockDbRows[key];
-  }
-}
+// ─── Supabase mock ───
 
 /**
- * Build a chainable query builder mock.
- * Every method returns `this` except terminal methods which return data.
+ * Build a chainable supabase-js query builder mock.
+ * Resolves to { data, error } to match the supabase-js API.
  */
-function createQueryBuilder(rows: any[] = []) {
+function createQueryBuilder(data: any = null) {
   const builder: any = {};
   const chainMethods = [
-    "select",
-    "from",
-    "where",
-    "limit",
-    "orderBy",
-    "insert",
-    "values",
-    "update",
-    "set",
-    "delete",
-    "onConflictDoUpdate",
+    "select", "eq", "neq", "gt", "lt", "gte", "lte",
+    "in", "is", "not", "or", "and",
+    "limit", "order", "offset",
+    "insert", "update", "upsert", "delete",
+    "single", "maybeSingle",
   ];
   for (const method of chainMethods) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
-  // Terminal: await the builder to get rows
-  builder.then = (resolve: any) => resolve(rows);
+  // Terminal: await to get { data, error }
+  const result = { data, error: null };
+  builder.then = (resolve: any) => resolve(result);
   return builder;
 }
 
-const mockDb = {
-  select: vi.fn(() => createQueryBuilder([])),
-  insert: vi.fn(() => createQueryBuilder()),
-  update: vi.fn(() => createQueryBuilder()),
-  delete: vi.fn(() => createQueryBuilder()),
+const mockSupabase = {
+  from: vi.fn(() => createQueryBuilder()),
+  auth: {
+    getUser: vi.fn().mockImplementation((token: string) => {
+      try {
+        const parts = token.split(".");
+        if (parts.length !== 3) throw new Error("Invalid JWT structure");
+        const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+        if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+          return Promise.resolve({ data: { user: null }, error: { message: "JWT expired" } });
+        }
+        return Promise.resolve({
+          data: { user: { id: "test-user-1", user_metadata: { org_id: "test-org-1" } } },
+          error: null,
+        });
+      } catch {
+        return Promise.resolve({ data: { user: null }, error: { message: "Invalid JWT" } });
+      }
+    }),
+  },
 };
 
 vi.mock("@/lib/db", () => ({
-  getDb: () => mockDb,
-  schema: {
-    workflow: { userId: "userId", updatedAt: "updatedAt" },
-    workflowStep: { workflowId: "workflowId", order: "order" },
-    workflowRun: { workflowId: "workflowId", id: "id", createdAt: "createdAt" },
-    capabilityFlag: { userId: "userId", capability: "capability" },
-    apiKey: { keyHash: "keyHash", id: "id" },
-    channelIdentity: { channel: "channel", channelUserId: "channelUserId" },
-    user: {},
-  },
+  getSupabase: () => mockSupabase,
 }));
 
 // Mock capabilities (returns defaults: all enabled)
@@ -199,7 +188,6 @@ app.route("/", routesApp);
 describe("API route integration tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    clearMockRows();
   });
 
   // ── Capabilities ──────────────────────────────────────────────────────

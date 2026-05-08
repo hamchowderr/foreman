@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@/lib/client";
 import { BotIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +20,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { storedAgentsApi, type StoredAgent } from "@/lib/stored-agents-client";
 
+async function getToken() {
+  const { data: { session } } = await createClient().auth.getSession();
+  return session?.access_token ?? null;
+}
+
 export function AgentListView() {
-  const { getToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mutate } = useSWRConfig();

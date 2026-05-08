@@ -1,4 +1,4 @@
-import { currentUser } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/server";
 
 export type UserType = "guest" | "regular";
 
@@ -13,23 +13,19 @@ export type Session = {
   user: SessionUser;
 };
 
-/**
- * Server-side auth helper that wraps Clerk's currentUser().
- * Returns a session object compatible with the old next-auth shape,
- * or null if not authenticated.
- */
 export async function auth(): Promise<Session | null> {
-  const user = await currentUser();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return {
     user: {
       id: user.id,
-      email: user.emailAddresses[0]?.emailAddress ?? "",
-      image: user.imageUrl,
+      email: user.email ?? "",
+      image: user.user_metadata?.avatar_url ?? null,
       type: "regular" as UserType,
     },
   };
