@@ -29,7 +29,8 @@
     "datasets:fix-input": "npx tsx --env-file=.env.local scripts/datasets-fix-input.ts",
     "datasets:set-context": "npx tsx --env-file=.env.local scripts/datasets-set-context.ts",
     "datasets:mini-experiment": "npx tsx --env-file=.env.local scripts/datasets-mini-experiment.ts",
-    "datasets:experiment": "npx tsx --env-file=.env.local scripts/datasets-experiment.ts"
+    "datasets:experiment": "npx tsx --env-file=.env.local scripts/datasets-experiment.ts",
+    "datasets:analyze": "npx tsx --env-file=.env.local scripts/datasets-analyze.ts"
   },
   "dependencies": {
     "@chat-adapter/discord": "^4.28.1",

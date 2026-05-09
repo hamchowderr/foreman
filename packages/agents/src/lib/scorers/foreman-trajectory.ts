@@ -29,24 +29,34 @@ interface ExpectedTrajectory {
   blacklistedTools?: string[];
 }
 
+// Modern Mastra agent output is MastraDBMessage[] where each message has
+// `content.parts: MastraMessagePart[]`. Tool invocations are nested in
+// content.parts[].type === "tool-invocation" with toolInvocation.toolName.
+// (Legacy bare `message.parts` and `output.toolCalls` shapes also handled
+// for resilience.)
 function extractActualToolNames(output: unknown): string[] {
   const names: string[] = [];
 
-  // Try the MastraDBMessage[] shape first (parts-based)
   if (Array.isArray(output)) {
     for (const message of output as Array<{
+      content?: { parts?: unknown[]; toolInvocations?: Array<{ toolName?: string }> };
       parts?: unknown[];
-      content?: { toolInvocations?: Array<{ toolName?: string }> };
     }>) {
-      if (Array.isArray(message?.parts)) {
-        for (const part of message.parts as Array<Record<string, unknown>>) {
+      // Modern shape: content.parts[]
+      const partsList = Array.isArray(message?.content?.parts)
+        ? message.content.parts
+        : Array.isArray(message?.parts)
+          ? message.parts
+          : null;
+      if (partsList) {
+        for (const part of partsList as Array<Record<string, unknown>>) {
           if (part?.type === "tool-invocation") {
             const inv = part.toolInvocation as { toolName?: string } | undefined;
             if (inv?.toolName) names.push(inv.toolName);
           }
         }
       }
-      // Fallback to legacy content.toolInvocations shape
+      // Legacy fallback: content.toolInvocations
       const ti = message?.content?.toolInvocations;
       if (Array.isArray(ti)) {
         for (const inv of ti) {

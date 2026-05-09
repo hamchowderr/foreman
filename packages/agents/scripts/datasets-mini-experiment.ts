@@ -14,6 +14,9 @@ const { mastra } = await import("../src/mastra");
 const { foremanTrajectoryScorer } = await import(
   "../src/lib/scorers/foreman-trajectory"
 );
+const { foremanLLMJudgeScorer } = await import(
+  "../src/lib/scorers/foreman-llm-judge"
+);
 
 const TEST_CASES = [
   {
@@ -91,7 +94,7 @@ async function main() {
     name: `mini-validate-${Date.now()}`,
     targetType: "agent" as const,
     targetId: "foreman",
-    scorers: { agent: [foremanTrajectoryScorer] } as any,
+    scorers: { agent: [foremanTrajectoryScorer, foremanLLMJudgeScorer] } as any,
     maxConcurrency: 1,
     itemTimeout: 180_000,
     maxRetries: 0,

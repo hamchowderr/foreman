@@ -27,6 +27,9 @@ const { mastra } = await import("../src/mastra");
 const { foremanTrajectoryScorer } = await import(
   "../src/lib/scorers/foreman-trajectory"
 );
+const { foremanLLMJudgeScorer } = await import(
+  "../src/lib/scorers/foreman-llm-judge"
+);
 
 const DATASET_NAME = "foreman-baseline-v1";
 
@@ -58,7 +61,7 @@ async function main() {
   console.log(`Experiment name: ${expName}`);
   console.log(`Dataset:         ${dataset.id}`);
   console.log(`Target:          agent foreman`);
-  console.log(`Scorers:         [foreman-trajectory-accuracy]`);
+  console.log(`Scorers:         [foreman-trajectory-accuracy, foreman-llm-judge]`);
   console.log();
 
   const startOpts = {
@@ -66,7 +69,7 @@ async function main() {
     description: `Baseline trajectory eval against the v1 prompt rewrite. ${Number.isFinite(limit) ? `Limited to ${limit} items.` : "All items."}`,
     targetType: "agent" as const,
     targetId: "foreman",
-    scorers: { agent: [foremanTrajectoryScorer] } as any,
+    scorers: { agent: [foremanTrajectoryScorer, foremanLLMJudgeScorer] } as any,
     maxConcurrency: 3,
     itemTimeout: 120_000,
     maxRetries: 1,
