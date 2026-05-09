@@ -2,8 +2,10 @@ import { enableFileLogging } from "../lib/file-logger";
 enableFileLogging();
 
 import { Mastra } from "@mastra/core";
+import { MastraCompositeStore } from "@mastra/core/storage";
 import { MastraEditor } from "@mastra/editor";
 import { PostgresStore } from "@mastra/pg";
+import { DuckDBStore } from "@mastra/duckdb";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
 import { toAISdkStream } from "@mastra/ai-sdk";
 import { registerApiRoute } from "@mastra/core/server";
@@ -29,9 +31,24 @@ export function getMastra(): Mastra {
 
   const databaseUrl = process.env.DATABASE_URL!;
 
-  const storage = new PostgresStore({
+  // Postgres handles every storage domain except observability — Mastra's
+  // observability domain (traces, metrics, logs, scores, feedback) needs an
+  // OLAP-capable backend. Per Mastra docs, Postgres/LibSQL are NOT supported
+  // for observability; DuckDB is the recommended local-dev backend (ClickHouse
+  // for production). Composite store routes the observability domain to
+  // DuckDB while leaving the rest on Postgres.
+  // Docs: https://mastra.ai/docs/observability/metrics/overview
+  const storage = new MastraCompositeStore({
     id: "foreman-storage",
-    connectionString: databaseUrl,
+    default: new PostgresStore({
+      id: "foreman-storage-pg",
+      connectionString: databaseUrl,
+    }),
+    domains: {
+      observability: new DuckDBStore({
+        path: process.env.DUCKDB_PATH ?? "mastra.duckdb",
+      }).observability,
+    },
   });
 
   const foremanAgent = createForemanAgent(databaseUrl);
@@ -54,18 +71,22 @@ export function getMastra(): Mastra {
     await next();
   };
 
-  const otelEnabled = process.env.OTEL_ENABLED === "true";
+  // Observability is always on so the Mastra Studio Observability tab works.
+  // OTEL_ENABLED=true additionally enables the OTEL Console exporter for local
+  // span dumping; production typically only wants the DefaultExporter.
+  const observability = new Observability({
+    configs: {
+      default: {
+        serviceName: "foreman-agents",
+        exporters:
+          process.env.OTEL_ENABLED === "true"
+            ? [new DefaultExporter(), new ConsoleExporter()]
+            : [new DefaultExporter()],
+      },
+    },
+  });
 
-  const observability = otelEnabled
-    ? new Observability({
-        configs: {
-          default: {
-            serviceName: "foreman-agents",
-            exporters: [new DefaultExporter(), new ConsoleExporter()],
-          },
-        },
-      })
-    : undefined;
+  const editor = new MastraEditor();
 
   /**
    * Fix the stream format mismatch between @mastra/ai-sdk and the AI SDK v6 protocol.
@@ -101,6 +122,7 @@ export function getMastra(): Mastra {
     },
     storage,
     observability,
+    editor,
     server: {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
