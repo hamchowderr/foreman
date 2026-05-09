@@ -87,8 +87,9 @@ Foreman runs in one of three modes:
     `npx zapier-sdk create-client-credentials`).
   </Tab>
   <Tab value="self_hosted">
-    Single shared Zapier account for everyone in your install. Easiest
-    for personal use.
+    Same per-user OAuth model as `production`, just running on your own
+    infrastructure (VPS, Coolify, Docker host). Each user has their own
+    Zapier connection — nothing is shared between users.
   </Tab>
 </Tabs>
 

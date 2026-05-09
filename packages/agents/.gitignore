@@ -3,5 +3,10 @@ node_modules/
 *.db
 *.db-shm
 *.db-wal
+*.duckdb
+*.duckdb.wal
 data/
+datasets/
 .env.local
+mastra-dev.log
+server.log

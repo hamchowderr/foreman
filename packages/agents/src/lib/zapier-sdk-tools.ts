@@ -60,27 +60,37 @@ const READ_ONLY = new Set([
   "findUniqueConnection",
   "getConnection",
   "getInputFieldsSchema",
-  "listInputFields",
   "listInputFieldChoices",
   "listTables",
   "getTable",
   "listTableFields",
   "listTableRecords",
   "getTableRecord",
-  "listClientCredentials",
   "getProfile",
 ]);
 
 /**
- * Deprecated SDK methods that are thin wrappers around other methods.
- * Excluded to avoid duplicate tools confusing the agent.
+ * SDK methods excluded from tool generation.
+ *
+ * Two reasons to exclude:
+ * 1. Deprecated wrappers — duplicates of other SDK methods that would confuse
+ *    the agent if both were exposed.
+ * 2. Unused for Foreman — features Foreman doesn't surface to users (e.g.,
+ *    Connect Builder OAuth client-credential management).
  */
-const DEPRECATED_METHODS = new Set([
+const EXCLUDED_METHODS = new Set([
+  // Deprecated — duplicates of `connection`-prefixed methods
   "listAuthentications",
   "findFirstAuthentication",
   "findUniqueAuthentication",
   "getAuthentication",
   "request",
+  // Legacy duplicate of getInputFieldsSchema
+  "listInputFields",
+  // Connect Builder OAuth client credentials — Foreman doesn't expose this
+  "createClientCredentials",
+  "deleteClientCredentials",
+  "listClientCredentials",
 ]);
 
 /** Convert camelCase to kebab-case (matching MCP server convention). */
@@ -96,11 +106,9 @@ const PAGINATED_METHODS = new Set([
   "listActions",
   "listApps",
   "listConnections",
-  "listClientCredentials",
   "listTables",
   "listTableRecords",
   "listTableFields",
-  "listInputFields",
   "listInputFieldChoices",
   "runAction", // search/read actions return paginated results
 ]);
@@ -128,6 +136,26 @@ function resolveCredentials(
 }
 
 /**
+ * Module-level cache for the default tool set.
+ *
+ * `createZapierSdk()` mutates global state (the zod `_zod` symbol registry —
+ * multiple zod copies share state via this symbol). When that mutation happens
+ * BEFORE `new Mastra({...})` has constructed, Mastra Studio's internal
+ * `toJSONSchema` introspection enters an infinite loop instead of throwing.
+ * Result: `mastra dev` hangs at `[file-logger] Logging to server.log`.
+ *
+ * Callers should resolve tools lazily — i.e., from a Mastra `DynamicArgument`
+ * function (`tools: () => ...`) which only fires at request time, after
+ * `new Mastra(...)` has finished constructing. This cache makes that pattern
+ * cheap: the first request pays the SDK-init cost; subsequent requests reuse
+ * the same tool instances.
+ *
+ * Per-user tool sets (with explicit credentials/connections) are NOT cached —
+ * they're always rebuilt for the requesting user.
+ */
+let _defaultToolsCache: Record<string, ReturnType<typeof createTool>> | undefined;
+
+/**
  * Generate all Zapier SDK tools as Mastra createTool() instances.
  *
  * Use this when you need per-user credentials or connections. If you don't —
@@ -136,6 +164,7 @@ function resolveCredentials(
  *
  * @param credentials - Optional per-user token (from PKCE web OAuth). If omitted,
  *   dev mode uses CLI login; production uses ZAPIER_CLIENT_ID/SECRET env vars.
+ *   When omitted (the agent-default path), the result is memoized.
  * @param connections - Optional pre-seeded connection alias map.
  * @returns Record of tool-name → Tool instances
  */
@@ -143,6 +172,9 @@ export function generateZapierTools(
   credentials?: string | (() => Promise<string>),
   connections?: Record<string, { connectionId: number }>
 ) {
+  if (!credentials && !connections && _defaultToolsCache) {
+    return _defaultToolsCache;
+  }
   const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
   const hasConnections = connections && Object.keys(connections).length > 0;
   const resolvedCredentials = resolveCredentials(credentials);
@@ -159,7 +191,7 @@ export function generateZapierTools(
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
   for (const fn of registry.functions) {
-    if (DEPRECATED_METHODS.has(fn.name)) continue;
+    if (EXCLUDED_METHODS.has(fn.name)) continue;
 
     const toolName = toKebab(fn.name);
     const description =
@@ -258,6 +290,9 @@ export function generateZapierTools(
     }
   }
 
+  if (!credentials && !connections) {
+    _defaultToolsCache = tools;
+  }
   return tools;
 }
 

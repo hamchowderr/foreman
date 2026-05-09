@@ -22,14 +22,12 @@ const READ_ONLY_IDS = new Set([
   "find-unique-connection",
   "get-connection",
   "get-input-fields-schema",
-  "list-input-fields",
   "list-input-field-choices",
   "list-tables",
   "get-table",
   "list-table-fields",
   "list-table-records",
   "get-table-record",
-  "list-client-credentials",
   "get-profile",
 ]);
 

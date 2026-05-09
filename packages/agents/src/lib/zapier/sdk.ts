@@ -14,30 +14,6 @@ type ZapierSdk = ReturnType<typeof createZapierSdk>;
 const sdkCache = new Map<string, { sdk: ZapierSdk; expiresAt: number }>();
 const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
 
-// Self-hosted mode: single shared SDK instance for all users.
-// The SDK handles token exchange + refresh internally via client_credentials.
-let sharedSdk: ZapierSdk | undefined;
-
-function getSharedSdk(): ZapierSdk {
-  if (sharedSdk) return sharedSdk;
-
-  const env = getEnv();
-  if (!env.ZAPIER_CLIENT_ID || !env.ZAPIER_CLIENT_SECRET) {
-    throw new Error(
-      "self_hosted mode requires ZAPIER_CLIENT_ID and ZAPIER_CLIENT_SECRET env vars"
-    );
-  }
-
-  sharedSdk = createZapierSdk({
-    credentials: {
-      clientId: env.ZAPIER_CLIENT_ID,
-      clientSecret: env.ZAPIER_CLIENT_SECRET,
-    },
-  });
-
-  return sharedSdk;
-}
-
 async function refreshAccessToken(
   userId: string,
   refreshToken: string
@@ -80,11 +56,6 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     });
   }
 
-  // Self-hosted mode: single shared Zapier account for all users
-  if (env.FOREMAN_MODE === "self_hosted") {
-    return getSharedSdk();
-  }
-
   // Cache key includes orgId so org and personal connections are cached separately
   const cacheKey = orgId ? `${userId}:org:${orgId}` : userId;
 
@@ -120,8 +91,9 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   }
 
   if (!identity) {
-    // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json)
-    if (env.FOREMAN_MODE !== "production") {
+    // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json).
+    // production and self_hosted both require a real per-user OAuth connection.
+    if (env.FOREMAN_MODE === "dev") {
       return createZapierSdk();
     }
     throw new ZapierNotConnected(userId);

@@ -26,13 +26,28 @@ const validatePayload = createStep({
     timestamp: z.string(),
     source: z.string(),
   }),
-  execute: async ({ inputData }) => {
-    return {
+  execute: async ({ inputData, writer }) => {
+    await writer?.write({
+      type: "webhook-validation-start",
+      event: inputData.event,
+      source: inputData.source ?? "zapier",
+    });
+
+    const result = {
       event: inputData.event,
       data: inputData.data,
       timestamp: inputData.timestamp ?? new Date().toISOString(),
       source: inputData.source ?? "zapier",
     };
+
+    await writer?.write({
+      type: "webhook-validated",
+      event: result.event,
+      source: result.source,
+      timestamp: result.timestamp,
+    });
+
+    return result;
   },
 });
 
@@ -50,8 +65,16 @@ const processEvent = createStep({
     event: z.string(),
     message: z.string(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData, writer }) => {
     const { event, data, source } = inputData;
+
+    await writer?.write({
+      type: "webhook-routing",
+      event,
+      source,
+    });
+
+    let result: { status: "processed" | "skipped"; event: string; message: string };
 
     switch (event) {
       case "new_record":
@@ -59,41 +82,52 @@ const processEvent = createStep({
           `[Webhook] New record from ${source}:`,
           JSON.stringify(data),
         );
-        return {
-          status: "processed" as const,
+        result = {
+          status: "processed",
           event,
           message: `New record received from ${source}`,
         };
+        break;
 
       case "updated_record":
         console.log(
           `[Webhook] Updated record from ${source}:`,
           JSON.stringify(data),
         );
-        return {
-          status: "processed" as const,
+        result = {
+          status: "processed",
           event,
           message: `Record update received from ${source}`,
         };
+        break;
 
       case "trigger_fired":
         console.log(
           `[Webhook] Trigger fired from ${source}:`,
           JSON.stringify(data),
         );
-        return {
-          status: "processed" as const,
+        result = {
+          status: "processed",
           event,
           message: `Trigger event received from ${source}`,
         };
+        break;
 
       default:
-        return {
-          status: "skipped" as const,
+        result = {
+          status: "skipped",
           event,
           message: `Unknown event type: ${event}`,
         };
     }
+
+    await writer?.write({
+      type: "webhook-processed",
+      event: result.event,
+      status: result.status,
+    });
+
+    return result;
   },
 });
 

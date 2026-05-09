@@ -12,21 +12,32 @@ Guidelines:
 - If the user is not connected to Zapier, use connect_zapier to generate a connection URL.
 - You will receive pre-resolved action schemas and inputs from the supervisor. Do not re-discover — just execute.`;
 
-let _executionTools: Record<string, any> | undefined;
+const EXECUTION_TOOL_NAMES = ["run-action", "fetch"];
+
+// Resolved lazily via DynamicArgument so createZapierSdk() runs after new Mastra().
+// See zapier-sdk-tools.ts for why module-load SDK init breaks Mastra Studio.
+let _executionToolsCache: Record<string, any> | undefined;
+
+function buildExecutionTools() {
+  if (_executionToolsCache) return _executionToolsCache;
+  let allTools: Record<string, any> = {};
+  try {
+    allTools = generateZapierTools();
+  } catch (err) {
+    console.error("[execution] generateZapierTools failed; serving connect_zapier only:", err);
+  }
+  const filtered: Record<string, any> = {};
+  for (const name of EXECUTION_TOOL_NAMES) {
+    if (allTools[name]) filtered[name] = allTools[name];
+  }
+  _executionToolsCache = toolsWithCacheControl("execution", {
+    ...filtered,
+    connect_zapier: connectZapierTool,
+  });
+  return _executionToolsCache;
+}
 
 export function createExecutionAgent() {
-  if (!_executionTools) {
-    const allTools = getDefaultZapierTools();
-    const executionToolNames = [
-      "run-action",
-      "fetch",
-    ];
-    _executionTools = {};
-    for (const name of executionToolNames) {
-      if (allTools[name]) _executionTools[name] = allTools[name];
-    }
-  }
-
   return new Agent({
     id: "execution",
     name: "Execution Agent",
@@ -38,9 +49,6 @@ export function createExecutionAgent() {
       modelSettings: modelSettingsFor("execution"),
       onFinish: onFinishCostLogger("execution"),
     },
-    tools: toolsWithCacheControl("execution", {
-      ...(_executionTools ?? {}),
-      connect_zapier: connectZapierTool,
-    }),
+    tools: () => buildExecutionTools(),
   });
 }
