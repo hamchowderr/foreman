@@ -1,0 +1,153 @@
+---
+title: Agent editor
+description: Manage agent instructions, tools, and versions from the web UI.
+---
+
+The editor is the web surface for managing agent definitions outside of
+code. You can write the system instructions, pick which tools an agent
+can use, save drafts, and publish versions — all without touching the
+codebase or restarting the server.
+
+It lives at **`/editor`** in the web app.
+
+## Mental model
+
+| Concept | What it is |
+| --- | --- |
+| **Agent** | A persisted definition: name, description, and a list of versions. |
+| **Version** | A specific snapshot of instructions + tool set. Either a *draft* (mutable) or *published* (immutable). |
+| **Current version** | The version that runs when the agent is invoked. Set by publishing. |
+| **Draft** | An in-progress version. At most one unpublished draft per agent at a time. |
+
+Every agent starts with a v1 draft on creation. You edit the draft,
+publish it (which freezes its content and updates the agent's *current
+version*), then start v2 as a new draft when you want to change something.
+
+## The agent list — `/editor`
+
+Shows every stored agent you own.
+
+- **New agent** opens a dialog asking for a name and an optional
+  description. On submit, Foreman creates the agent + a v1 draft and
+  routes you to the agent editor.
+- Each card in the list shows the agent's name, description, and the
+  status of its latest version (*Draft* or *Published*).
+
+## The agent editor — `/editor/:id`
+
+Three columns:
+
+1. **Sidebar** — agent list (jump between agents) plus a *New agent*
+   button.
+2. **Main editor** — the version you're currently editing. Three tabs:
+   - **Instructions** — the system prompt. A textarea, no formatting.
+   - **Tools** — pick which tools this agent can call (see below).
+   - **Settings** — name and description (apply to the agent, not the
+     version).
+3. **Right panel** — version history. Click a version to inspect or
+   restore.
+
+Above all three: the **agent header** with the name, the current version
+badge, and the actions: **Publish**, **History**, **Delete**.
+
+## Editing instructions
+
+The Instructions tab is a plain textarea bound to the active draft.
+Edits autosave to the draft via `PATCH /stored/agents/:id/versions/:versionId`.
+A small "Saved" indicator confirms the write.
+
+A few constraints worth knowing:
+
+- You can only edit a **draft**. Published versions are read-only — if
+  you open one, the editor surfaces a *Read-only* banner and the inputs
+  disable. To make changes, click **New draft** in the version panel.
+- You cannot edit one agent's instructions to be empty — the API rejects
+  empty drafts on save.
+
+## Picking tools
+
+The **Tools** tab opens a picker that lists every tool registered on
+the agent server — the custom tools (`search_history`,
+`fork_conversation`, `connect_zapier`) plus the auto-generated Zapier
+SDK tools (`run-action`, `list-actions`, etc.).
+
+| Action | Result |
+| --- | --- |
+| Click a tool | Toggles its inclusion in the current draft. |
+| Search box | Filters by tool name or description. |
+| Tool detail row | Shows description + whether it's read-only or write-gated. |
+
+The list of available tools comes from `GET /stored/agents/tools`. If
+you're self-hosting and add a custom tool, restart the agent server and
+it appears here.
+
+## Versions
+
+The right panel shows every version, newest first, with publish
+timestamps and a small badge for *Draft* or *Published*.
+
+### Creating a new draft
+
+After publishing v1, the **New draft** button creates v2 (initialized
+from the current published content) so you can iterate without breaking
+the live agent. The API rejects creating a new draft if there's already
+an unpublished one — finish or discard the current draft first.
+
+### Publishing
+
+The **Publish** button promotes the current draft to *Published*. After
+publish:
+
+- `published_at` is set, the version becomes immutable.
+- The agent's `current_version_id` updates to point at this version.
+- The next call to `agent.stream()` uses the new content.
+
+### Comparing or restoring
+
+Click any prior version in the history panel to view its content
+read-only. From there you can:
+
+- **Restore** — copies that version's content into a new draft. The
+  original published version is left untouched.
+
+### Deleting an agent
+
+The **Delete** button at the agent level removes the agent and all of
+its versions. There's a confirmation dialog and the operation is hard —
+no soft-delete. Don't delete an agent that's currently referenced by a
+deployed feature.
+
+## Programmatic access
+
+Everything the UI does is exposed over the agent server's REST API.
+Pages and dialogs in the editor are just thin clients over these
+endpoints, all under `/stored/agents` (auth required):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/stored/agents` | List my agents |
+| POST | `/stored/agents` | Create agent + initial v1 draft |
+| GET | `/stored/agents/:id` | Read one agent |
+| PATCH | `/stored/agents/:id` | Update name/description |
+| DELETE | `/stored/agents/:id` | Delete agent + all versions |
+| GET | `/stored/agents/:id/versions` | List versions, newest first |
+| GET | `/stored/agents/:id/versions/:vId` | Read one version |
+| POST | `/stored/agents/:id/versions` | Create a new draft |
+| PATCH | `/stored/agents/:id/versions/:vId` | Edit draft content (rejected on published) |
+| POST | `/stored/agents/:id/versions/:vId/publish` | Promote a draft to published |
+| GET | `/stored/agents/tools` | List tools available to assign |
+
+`packages/web/src/lib/stored-agents-client.ts` is the typed wrapper the
+UI uses; reuse it from CLI scripts or other tools if you want to
+automate edits.
+
+## Edge cases & gotchas
+
+- **Two browser tabs open on the same agent.** Both write to the same
+  draft. Last write wins (no conflict detection). Don't do this.
+- **Switching agents while saving.** The `Saved` indicator tracks the
+  active agent; switching mid-save can briefly show the wrong state.
+  Wait for the indicator to settle before moving on.
+- **Tools list out of sync.** If you add a tool to the codebase and
+  the picker doesn't show it, restart the agent server — the registry
+  is built once at boot.
