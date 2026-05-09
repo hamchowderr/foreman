@@ -286,7 +286,7 @@ Foreman supports three operating modes, set via `FOREMAN_MODE` in `.env.local`:
 | --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Dev**         | `dev` (default) | Uses your personal Zapier CLI login. No client credentials needed. Best for local development.                                                         |
 | **Production**  | `production`    | Multi-tenant: each user connects their own Zapier account via OAuth. Requires `ZAPIER_CLIENT_ID` and `ZAPIER_CLIENT_SECRET`.                           |
-| **Self-Hosted** | `self_hosted`   | Uses shared Zapier client credentials for all users (single account). Ideal for personal/team deployments where everyone shares one Zapier connection. |
+| **Self-Hosted** | `self_hosted`   | Same per-user Zapier OAuth flow as production, just running on your own infrastructure (e.g. Hostinger VPS, Coolify, your own Docker). Each user has their own Zapier connection — nothing is shared between users. |
 
 ## Zapier Configuration
 
@@ -328,7 +328,7 @@ Users connect their Zapier accounts via the web UI or by using the `connect_zapi
 
 ### Self-Hosted Mode
 
-For single-account deployments where all users share one Zapier connection.
+Same model as production — each user connects their own Zapier account via OAuth — but running on your own infrastructure (Hostinger VPS, Coolify, your own Docker host) instead of cloud.
 
 ```bash
 FOREMAN_MODE=self_hosted
@@ -336,7 +336,7 @@ ZAPIER_CLIENT_ID=<client_id>
 ZAPIER_CLIENT_SECRET=<client_secret>
 ```
 
-All users share the same Zapier credentials. No per-user OAuth flow is needed.
+Per-user OAuth, encrypted token storage, and all other behavior is identical to production. The mode flag exists so deployments can branch on environment for things like log verbosity or telemetry destinations — not for connection ownership.
 
 ## Prerequisites
 
