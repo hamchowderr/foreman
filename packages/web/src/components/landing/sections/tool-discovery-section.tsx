@@ -1,5 +1,6 @@
 import { Reveal } from "@/components/landing/reveal";
 import { ToolDiscovery } from "@/components/landing/demos/tool-discovery";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "@/components/icons/hi";
 
@@ -16,14 +17,12 @@ export function ToolDiscoverySection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <div className="grid md:grid-cols-[1fr_1.3fr] gap-10 md:gap-12 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">Picks the right tool for the job</Badge>
+            <Badge variant="accent" className="mb-4">Drives your whole Zapier account</Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-              Smart enough to know what to use.
+              Every action. Every table. Every message.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              33 tools from the Zapier SDK — actions, connections, tables, HTTP,
-              and more. Instead of loading them all every time, Foreman searches
-              for what it needs and loads only that. Faster responses, less noise.
+              Actions, Zapier Tables, authenticated HTTP, connection discovery — 33 SDK tools in all. Foreman searches and loads only what a request needs, so it stays fast across 9,000+ apps.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {BULLETS.map((line) => (
@@ -37,7 +36,9 @@ export function ToolDiscoverySection() {
             </ul>
           </Reveal>
           <Reveal delay={0.1} direction="right">
-            <ToolDiscovery />
+            <TiltedSpotlight>
+              <ToolDiscovery />
+            </TiltedSpotlight>
           </Reveal>
         </div>
       </div>

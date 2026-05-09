@@ -18,18 +18,34 @@ type Token = {
   sensitive?: "email" | "phone" | "ssn" | "key" | "card";
 };
 
-const SCRIPT: Token[] = [
-  { text: "Forwarded the invoice to " },
-  { text: "jamie@acme.com", sensitive: "email" },
-  { text: ". Their AmEx on file is " },
-  { text: "3782 822463 10005", sensitive: "card" },
-  { text: ", and the API token " },
-  { text: "sk_live_51HxK2fL", sensitive: "key" },
-  { text: " unlocks the export. SSN for W-9 is " },
-  { text: "123-45-6789", sensitive: "ssn" },
-  { text: ". Call them at " },
-  { text: "(415) 555-0199", sensitive: "phone" },
-  { text: " if anything." },
+const SCRIPTS: Token[][] = [
+  [
+    { text: "Forwarded the invoice to " },
+    { text: "jamie@acme.com", sensitive: "email" },
+    { text: ". Their AmEx on file is " },
+    { text: "3782 822463 10005", sensitive: "card" },
+    { text: ", and the API token " },
+    { text: "sk_live_51HxK", sensitive: "key" },
+    { text: " unlocks the export." },
+  ],
+  [
+    { text: "Added Priya Shah to the CRM — mobile " },
+    { text: "(415) 555-0199", sensitive: "phone" },
+    { text: ", SSN on file " },
+    { text: "123-45-6789", sensitive: "ssn" },
+    { text: ". Confirmation sent to " },
+    { text: "priya.shah@acme.com", sensitive: "email" },
+    { text: "." },
+  ],
+  [
+    { text: "Noah's Stripe card " },
+    { text: "4242 4242 4242 4242", sensitive: "card" },
+    { text: " was declined. Slack DM at " },
+    { text: "noah@acme.com", sensitive: "email" },
+    { text: " with webhook key " },
+    { text: "whsec_3Q9x7mL", sensitive: "key" },
+    { text: " for reprocessing." },
+  ],
 ];
 
 const REDACTED_LABELS: Record<NonNullable<Token["sensitive"]>, string> = {
@@ -40,56 +56,44 @@ const REDACTED_LABELS: Record<NonNullable<Token["sensitive"]>, string> = {
   card: "[CARD]",
 };
 
-const CHAR_DELAY = 18;
+const TOKEN_DELAY = 260;
+const REDACT_AFTER = 700;
+const RESTART_AFTER = 5500;
 
 export function PiiTypewriter() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: false, amount: 0.4 });
-  const [typedChars, setTypedChars] = useState(0);
+  const [scriptIdx, setScriptIdx] = useState(0);
+  const [tokensShown, setTokensShown] = useState(0);
   const [redacted, setRedacted] = useState(false);
 
-  const fullText = SCRIPT.map((t) => t.text).join("");
-  const totalChars = fullText.length;
+  const script = SCRIPTS[scriptIdx];
 
   useEffect(() => {
     if (!inView) return;
 
-    setTypedChars(0);
+    setTokensShown(0);
     setRedacted(false);
 
-    let charTimer: ReturnType<typeof setInterval> | null = null;
-    let redactTimer: ReturnType<typeof setTimeout> | null = null;
-    let restartTimer: ReturnType<typeof setTimeout> | null = null;
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    charTimer = setInterval(() => {
-      setTypedChars((prev) => {
-        const next = prev + 1;
-        if (next >= totalChars) {
-          if (charTimer) clearInterval(charTimer);
-          redactTimer = setTimeout(() => setRedacted(true), 700);
-          restartTimer = setTimeout(() => {
-            setTypedChars(0);
-            setRedacted(false);
-          }, 5500);
-        }
-        return next;
-      });
-    }, CHAR_DELAY);
+    for (let i = 1; i <= script.length; i++) {
+      timers.push(setTimeout(() => setTokensShown(i), i * TOKEN_DELAY));
+    }
 
-    return () => {
-      if (charTimer) clearInterval(charTimer);
-      if (redactTimer) clearTimeout(redactTimer);
-      if (restartTimer) clearTimeout(restartTimer);
-    };
-  }, [inView, totalChars]);
+    const doneAt = script.length * TOKEN_DELAY;
+    timers.push(setTimeout(() => setRedacted(true), doneAt + REDACT_AFTER));
+    timers.push(
+      setTimeout(() => {
+        setScriptIdx((i) => (i + 1) % SCRIPTS.length);
+      }, doneAt + RESTART_AFTER),
+    );
 
-  // Build visible tokens up to typedChars
-  let remaining = typedChars;
-  const visible = SCRIPT.map((token) => {
-    const take = Math.min(remaining, token.text.length);
-    remaining -= take;
-    return { ...token, visibleText: token.text.slice(0, take), complete: take === token.text.length };
-  });
+    return () => timers.forEach(clearTimeout);
+  }, [inView, scriptIdx, script.length]);
+
+  const typing = tokensShown < script.length;
+  const visible = script.slice(0, tokensShown);
 
   return (
     <div ref={ref} className="relative">
@@ -102,53 +106,29 @@ export function PiiTypewriter() {
             </span>
           </div>
           <motion.span
-            animate={{
-              color: redacted ? "var(--accent)" : "var(--muted)",
-            }}
+            animate={{ color: redacted ? "var(--accent)" : "var(--muted)" }}
             className="text-[10px] uppercase tracking-widest font-medium flex items-center gap-1"
           >
             <Lock className="h-3 w-3" />
             {redacted ? "redacted" : "scanning"}
           </motion.span>
         </div>
-        <div className="p-5 sm:p-6 min-h-[180px] text-sm sm:text-base leading-relaxed font-mono">
+        <div className="p-5 sm:p-6 min-h-[200px] text-sm sm:text-base leading-relaxed font-mono">
           <p className="break-words">
             {visible.map((token, i) => {
               if (!token.sensitive) {
-                return <span key={i}>{token.visibleText}</span>;
+                return <span key={i}>{token.text}</span>;
               }
-              const showRedacted = redacted && token.complete;
               return (
-                <span key={i} className="relative inline-block align-baseline">
-                  <AnimatePresence mode="wait" initial={false}>
-                    {showRedacted ? (
-                      <motion.span
-                        key="red"
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="inline-block rounded bg-accent/15 text-accent px-1.5 py-0.5 font-semibold text-xs sm:text-sm align-middle"
-                      >
-                        {REDACTED_LABELS[token.sensitive]}
-                      </motion.span>
-                    ) : (
-                      <motion.span
-                        key="raw"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0, y: 4, filter: "blur(3px)" }}
-                        transition={{ duration: 0.25 }}
-                        className="inline-block rounded bg-red-500/10 text-red-600 dark:text-red-400 px-1 py-0.5 border border-red-500/20"
-                      >
-                        {token.visibleText}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </span>
+                <SensitiveToken
+                  key={i}
+                  raw={token.text}
+                  label={REDACTED_LABELS[token.sensitive]}
+                  redacted={redacted}
+                />
               );
             })}
-            {typedChars < totalChars && (
+            {typing && (
               <span className="inline-block w-[2px] h-[1em] bg-accent align-text-bottom ml-0.5 animate-pulse" />
             )}
           </p>
@@ -162,6 +142,44 @@ export function PiiTypewriter() {
         </div>
       </div>
     </div>
+  );
+}
+
+function SensitiveToken({
+  raw,
+  label,
+  redacted,
+}: {
+  raw: string;
+  label: string;
+  redacted: boolean;
+}) {
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {redacted ? (
+        <motion.span
+          key="red"
+          initial={{ opacity: 0, y: -3 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="rounded bg-accent/15 text-accent px-1.5 py-0.5 font-semibold text-xs sm:text-sm whitespace-nowrap"
+        >
+          {label}
+        </motion.span>
+      ) : (
+        <motion.span
+          key="raw"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, filter: "blur(3px)" }}
+          transition={{ duration: 0.25 }}
+          className="rounded bg-red-500/10 text-red-600 dark:text-red-400 px-1 py-0.5 border border-red-500/20 whitespace-nowrap"
+        >
+          {raw}
+        </motion.span>
+      )}
+    </AnimatePresence>
   );
 }
 

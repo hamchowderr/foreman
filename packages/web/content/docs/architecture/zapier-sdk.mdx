@@ -1,40 +1,43 @@
 ---
-title: Zapier SDK via MCP
+title: Zapier SDK
 description: How Foreman actually talks to Zapier.
 ---
 
-Foreman's 9,000+-app coverage is the Zapier SDK's MCP server. Mastra's
-`MCPClient` speaks to it over stdio transport.
+Foreman's 9,000+-app coverage is the Zapier SDK, used directly. We import
+`@zapier/zapier-sdk` and auto-generate Mastra tools from its internal
+registry — no MCP transport, no child process, no stdio.
 
 ## The wire
 
 <Files>
   <Folder name="process" defaultOpen>
     <Folder name="foreman (Next.js + Mastra)">
-      <File name="MCPClient" />
+      <File name="zapier-sdk-tools.ts (direct import)" />
     </Folder>
-    <Folder name="npx zapier-sdk mcp (child process)">
-      <File name="33 MCP tools, stdio" />
+    <Folder name="@zapier/zapier-sdk">
+      <File name="getRegistry() → Mastra tools" />
     </Folder>
   </Folder>
 </Files>
 
-On boot, Foreman spawns `npx @zapier/zapier-sdk mcp` as a child process
-and pipes JSON-RPC requests/responses over stdin/stdout. Tools surface to
-the agent as `run-action`, `search-actions`, etc.
+`packages/agents/src/lib/zapier-sdk-tools.ts` reads the SDK's
+`getRegistry()` (the same function list the upstream MCP server uses
+internally) and wraps each method with `createTool()`. Method names
+convert from `camelCase` to `kebab-case` for tool IDs (`runAction` →
+`run-action`).
 
-<Callout type="warn">
-  Stdio transport is why Foreman's agent server **can't run on Vercel**.
-  Serverless functions can't keep a persistent child process. That's why
-  the agent server lives on a VPS (Coolify/Docker) and only the web
-  frontend lives on Vercel.
+<Callout>
+  This replaced an earlier MCP stdio approach. Cutting out the child
+  process means the agent server is deployable to Vercel as well as the
+  VPS — there's no persistent stdio pipe to keep open.
 </Callout>
 
 ## requireApproval
 
-10 of the 33 MCP tools are write/delete operations. Mastra's MCPClient
-takes a `requireApproval` option that intercepts those calls and surfaces
-an **action proposal** instead of running them.
+Nine SDK methods write or delete real data. They're listed in the
+`APPROVAL_REQUIRED` set in `zapier-sdk-tools.ts`. Each generated tool
+checks the set at execution time and surfaces an **action proposal**
+instead of running.
 
 The approval-gated tools:
 
@@ -42,7 +45,6 @@ The approval-gated tools:
 | --- | --- |
 | `run-action` | write |
 | `fetch` | write |
-| `request` | write |
 | `create-table` | write |
 | `delete-table` | write |
 | `create-table-records` | write |
@@ -51,9 +53,12 @@ The approval-gated tools:
 | `create-table-fields` | write |
 | `delete-table-fields` | write |
 
-## toModelOutput
+A separate `READ_ONLY` set marks 17 discovery tools (list/get/find) so
+they can be exposed to MCP clients with the right annotations.
 
-Every MCP tool response passes through a summarizer before reaching the
+## Output summarisation
+
+Every tool response passes through a summarizer before reaching the
 agent. This compresses verbose API responses:
 
 - Lists cap at 20 items
@@ -62,6 +67,10 @@ agent. This compresses verbose API responses:
 
 Saves hundreds of tokens per tool call, and makes the agent's context
 window go a lot further.
+
+Five thin-wrapper SDK methods (`request`, `listAuthentications`, etc.)
+sit in a `DEPRECATED_METHODS` set and are excluded from generation
+entirely — the agent only sees the canonical equivalents.
 
 ## Modes
 

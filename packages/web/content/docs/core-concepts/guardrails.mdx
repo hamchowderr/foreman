@@ -53,8 +53,7 @@ Settings → Sensitive apps → [Category] → Opt in
 
 ## Org admin override
 
-Under a Clerk Organization, admins set guardrail defaults for every
-member:
+Workspace admins set guardrail defaults for every member:
 
 - Allow sensitive apps (on/off)
 - Require approval for deletes (on/off)
@@ -64,10 +63,9 @@ Members can't override admin-locked settings.
 
 ## Token encryption
 
-Zapier OAuth tokens are stored encrypted at rest with **AES-256-GCM**. API
-keys for programmatic access (MCP, A2A) are **SHA-256 hashed** — never
-stored in plaintext. The encryption key comes from the `ENCRYPTION_KEY`
-env var on self-host, or is managed automatically on cloud.
+Zapier OAuth tokens are stored encrypted at rest; we only ever see a
+revocable access token, never your password. API keys for programmatic
+access (MCP, A2A) are hashed — never stored in plaintext.
 
 ## Next
 

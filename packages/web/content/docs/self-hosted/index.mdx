@@ -1,0 +1,215 @@
+---
+title: Self-hosting
+description: Run Foreman on your laptop or your own VPS.
+---
+
+Foreman is MIT-licensed. Run it locally or on any VPS — your data never
+leaves your box.
+
+<Callout type="info">
+  You'll still need your own Zapier account and API keys from Anthropic and
+  OpenAI. Foreman never ships with credentials baked in.
+</Callout>
+
+<Callout>
+  Foreman requires a Postgres instance with the
+  [`vector`](https://github.com/pgvector/pgvector) extension enabled —
+  [Supabase](https://supabase.com), [Neon](https://neon.tech), or a
+  self-hosted `postgres` + `pgvector` both work. Point `DATABASE_URL` at
+  it; the initial migration runs `CREATE EXTENSION IF NOT EXISTS vector`
+  before creating any vector columns.
+</Callout>
+
+## Quickstart
+
+<Steps>
+  <Step>
+    ### Clone and install
+
+    ```bash
+    git clone https://github.com/hamchowderr/foreman.git
+    cd foreman
+    npm install
+    ```
+  </Step>
+
+  <Step>
+    ### Boot a local Supabase
+
+    Foreman uses Postgres + pgvector and Supabase Auth. The Supabase CLI
+    boots both in a single Docker stack on shifted ports (so it doesn't
+    collide with anything else you're running).
+
+    ```bash
+    npx supabase start
+    ```
+
+    This applies every migration in `supabase/migrations/` automatically.
+    Postgres listens on `127.0.0.1:54422`, Studio on `127.0.0.1:54423`.
+  </Step>
+
+  <Step>
+    ### Set environment variables
+
+    Create `packages/agents/.env.local`:
+
+    ```bash
+    DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres
+    ENCRYPTION_KEY=<64-char hex>
+    ANTHROPIC_API_KEY=sk-ant-...
+    OPENAI_API_KEY=sk-...
+    SUPABASE_URL=http://127.0.0.1:54421
+    SUPABASE_SERVICE_ROLE_KEY=<from `npx supabase status`>
+    FOREMAN_MODE=self_hosted
+    ```
+
+    And `packages/web/.env.local`:
+
+    ```bash
+    NEXT_PUBLIC_AGENT_SERVER_URL=http://localhost:4111
+    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<from `npx supabase status`>
+    ```
+
+    Generate the encryption key:
+
+    ```bash
+    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+    ```
+  </Step>
+
+  <Step>
+    ### Run
+
+    ```bash
+    # Agents server on :4111
+    cd packages/agents && npm run dev
+
+    # In another terminal, the web frontend on :3000
+    cd packages/web && npm run dev
+    ```
+
+    Open `http://localhost:3000`, sign up with Supabase, and click
+    **Connect Zapier**. Same flow as the cloud version.
+  </Step>
+</Steps>
+
+## Configuration
+
+Required environment variables for the agents service (`packages/agents/.env.local`):
+
+<TypeTable
+  type={{
+    DATABASE_URL: {
+      description: "Postgres connection URL (Supabase, Neon, or self-hosted Postgres + pgvector). Validated at boot.",
+      type: "string",
+      required: true,
+    },
+    ENCRYPTION_KEY: {
+      description: "64-char hex (32-byte) key for AES-256-GCM encryption of stored Zapier OAuth tokens. Validated at boot.",
+      type: "string",
+      required: true,
+    },
+    ANTHROPIC_API_KEY: {
+      description: "Anthropic API key. Used for all agent reasoning (read by the Anthropic SDK at first call). Foreman won't refuse to boot without it, but every agent request will fail.",
+      type: "string",
+    },
+    OPENAI_API_KEY: {
+      description: "OpenAI API key. Used for embeddings in the action-history RAG index and for Whisper voice transcription.",
+      type: "string",
+    },
+    SUPABASE_URL: {
+      description: "Supabase project URL. Used by the agent server to verify Supabase JWTs and read user data.",
+      type: "string",
+      required: true,
+    },
+    SUPABASE_SERVICE_ROLE_KEY: {
+      description: "Supabase service-role key. Used server-side only — never expose to the browser.",
+      type: "string",
+      required: true,
+    },
+    NEXT_PUBLIC_SUPABASE_URL: {
+      description: "Supabase project URL exposed to the web frontend.",
+      type: "string",
+      required: true,
+    },
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: {
+      description: "Supabase publishable (anon) key used by the web frontend SDK.",
+      type: "string",
+      required: true,
+    },
+    FOREMAN_MODE: {
+      description: "Deployment mode. Controls tenant and OAuth behavior.",
+      type: '"dev" | "production" | "self_hosted"',
+      default: '"dev"',
+    },
+    DEPLOY_TARGET: {
+      description: "Deployment target. Affects storage and build defaults.",
+      type: '"vps" | "vercel" | "cloudflare"',
+      default: '"vps"',
+    },
+    ZAPIER_CLIENT_ID: {
+      description: "Zapier OAuth app client ID. Needed when hosting Foreman for multiple users.",
+      type: "string",
+    },
+    ZAPIER_CLIENT_SECRET: {
+      description: "Zapier OAuth app client secret. Paired with ZAPIER_CLIENT_ID.",
+      type: "string",
+    },
+    ZAPIER_REDIRECT_URI: {
+      description: "Override for the Zapier OAuth redirect URI. Defaults are derived from the deployment.",
+      type: "string",
+    },
+    PORT: {
+      description: "Port for the agent server to listen on.",
+      type: "string",
+      default: '"4111"',
+    },
+  }}
+/>
+
+Channel tokens (Telegram, Slack, Discord, Teams, Google Chat, WhatsApp, GitHub, Linear) and voice keys (ElevenLabs) are all optional — set only the ones you want to enable. See `packages/agents/src/lib/env.ts` for the full authoritative list.
+
+## Running on a VPS
+
+The agents service ships with `Dockerfile.agents` for container deploys
+(Coolify, Fly, plain `docker run`). The web frontend deploys to Vercel,
+Cloudflare, or anywhere Next.js runs. Both services need their own
+environment variables — see above.
+
+A typical VPS layout:
+
+- Postgres (Supabase, Neon, or self-hosted with the `vector` extension)
+- Agents container exposing port `4111` behind a reverse proxy
+- Web frontend on Vercel or the same VPS, pointing
+  `NEXT_PUBLIC_AGENT_SERVER_URL` at the agents host
+
+Behind HTTPS with Caddy:
+
+```
+foreman.yourdomain.com {
+  reverse_proxy agents-host:4111
+}
+```
+
+## What's different vs cloud
+
+<Callout>
+  Feature parity is the goal. These differences are mostly about ops.
+</Callout>
+
+| | Cloud | Self-host |
+| --- | --- | --- |
+| **Upgrades** | Automatic | `docker pull && docker restart` |
+| **Backups** | Managed | Your own Postgres instance (`pg_dump`, provider snapshots) |
+| **Telemetry** | Opt-in | None |
+| **Auth** | Supabase (managed) | Supabase (self-hosted or free tier) |
+| **Zapier** | Your personal account | Your personal account |
+
+## Next
+
+<Cards>
+  <Card title="MCP (self-hosted)" href="/docs/self-hosted/mcp" description="Point Claude Code at your local Foreman." />
+  <Card title="A2A (self-hosted)" href="/docs/self-hosted/a2a" description="Let other agents call your Foreman." />
+  <Card title="Architecture" href="/docs/architecture/mastra" description="What's running inside the container." />
+</Cards>

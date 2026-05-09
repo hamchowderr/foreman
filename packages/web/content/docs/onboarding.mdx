@@ -1,0 +1,137 @@
+---
+title: Onboarding flow
+description: The first-run experience that takes a new user from sign-up to running their first action.
+---
+
+When someone signs up for Foreman, they land on `/onboarding` — a
+four-step flow that gets them from "I just made an account" to "I just
+ran an automation" in about a minute. This page documents each step,
+the routing rules between them, and how the flow handles the round-trip
+through Zapier's OAuth screen.
+
+<Callout>
+  Source lives in `packages/web/src/app/onboarding/page.tsx` and the four
+  step components in `packages/web/src/components/onboarding/`.
+</Callout>
+
+## Entry rules
+
+The onboarding page enforces three things on load:
+
+1. **Must be signed in.** Unauthenticated visitors are redirected to
+   `/auth/login`. Supabase session is read with the SSR helper.
+2. **Skip if already onboarded.** If the user already has a connected
+   Zapier identity (checked via `GET /zapier/status`), they're redirected
+   to `/chat`. This means visiting `/onboarding` after the fact is
+   harmless — you just bounce to chat.
+3. **One exception:** if the URL has `?zapier_connected=true`, we don't
+   skip — that's the user mid-OAuth-redirect coming back from Zapier.
+
+## Step 1 — Welcome / use cases
+
+Picks one or more use cases from a 3×3 grid:
+
+| ID | Label |
+| --- | --- |
+| `sales` | Sales tracking |
+| `email` | Email digests |
+| `crm` | CRM updates |
+| `slack` | Slack alerts |
+| `data` | Data entry |
+| `reports` | Weekly reports |
+| `invoices` | Invoice processing |
+| `leads` | Lead management |
+| `calendar` | Calendar sync |
+
+The CTA is disabled until at least one tile is selected. The
+selection is currently a UI hint only — it doesn't persist server-side
+yet, but it does drive Step 3's pre-filled prompt. Selections are
+preserved across the Zapier OAuth round-trip via URL params so they
+survive a navigation away and back.
+
+## Step 2 — Connect Zapier
+
+A single big **Connect Zapier** button. Click it and:
+
+1. The browser calls `GET /zapier/web-connect` (auth'd, returns the OAuth
+   authorize URL).
+2. We redirect to that URL — Zapier shows their consent screen.
+3. Zapier redirects back to `/zapier/oauth` on the agent server.
+4. The agent server exchanges the code, encrypts the access + refresh
+   tokens, writes them to `zapier_identity`, and bounces back to
+   `/onboarding?step=1&zapier_connected=true&uses=<csv>`.
+5. The page shows a green "Connected" state and the CTA advances to
+   Step 3.
+
+<Callout type="info">
+  The `uses=` query param round-trips the user's Step 1 selections so
+  they're not lost during the redirect chain. Don't strip it — Step 3
+  reads it.
+</Callout>
+
+If the OAuth call fails (network, scope denial, etc.), the page surfaces
+the error inline with a retry button and stays on Step 2.
+
+## Step 3 — Try it
+
+A live chat panel pre-filled with a prompt tailored to the user's
+selected use cases:
+
+| Selected use case | Prompt sent |
+| --- | --- |
+| `sales`, `data` | "What Zapier tables do I have set up?" / "What Zapier tables are available for data entry?" |
+| `email` | "What Zapier workflows do I have for email?" |
+| `crm` | "What CRM-related Zapier connections do I have?" |
+| `slack`, `invoices`, `leads`, `calendar` | "What apps am I connected to in Zapier?" |
+| `reports` | "What automation workflows do I have in Zapier?" |
+
+If the user picked nothing matching, the fallback is "What apps am I
+connected to in Zapier?".
+
+The chat surface is the real production agent — same SSE stream, same
+tools, same `updateWorkingMemory` / `recall` integration. Two memory
+tools (`updateWorkingMemory`, `recall`) are visually hidden in the
+onboarding view to avoid distracting the first-time user, but they
+still run.
+
+## Step 4 — Done
+
+Feature highlights and a primary CTA into `/chat`:
+
+- *9,000+ apps at your fingertips* — Foreman reads and writes across
+  everything in your Zapier account.
+- *Just talk to it* — describe what you need; no flow-building.
+- *You approve every action* — nothing runs without explicit approval.
+
+## Step navigation
+
+- Progress is one-way: `goNext()` only. There's no Back button — by
+  design, since each step's state lives downstream of the previous one
+  (Step 3's prompt depends on Step 1's selections; Step 2's connection
+  is required for Step 3).
+- The top bar shows four step dots. The current step is wider and
+  filled; completed steps are muted but filled; future steps are empty.
+- A `step={n}` URL param lets the OAuth callback re-enter at Step 2 (the
+  only legitimate use). Don't deep-link users into a later step
+  arbitrarily — Step 3's chat assumes a working Zapier connection.
+
+## Edge cases
+
+- **User abandons mid-flow.** They land back on `/onboarding` next visit;
+  if Zapier never got connected, they pick up where they left off
+  conceptually (state isn't persisted, but the entry rule re-evaluates —
+  unconnected users always start at Step 1).
+- **User completes Step 2 then closes the browser.** Next visit, the
+  entry rule sees a connected Zapier and bounces to `/chat` — they
+  effectively skip Steps 3 and 4. Chat works fine without them.
+- **OAuth scope denial.** Step 2 surfaces the error and offers retry.
+  Tokens are only written on a successful exchange, so a partial state
+  isn't possible.
+
+## Related
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="The user-facing version of this flow." />
+  <Card title="Settings → Integrations" href="/docs/integrations/settings-hub" description="Where users go to add channels after onboarding." />
+  <Card title="Self-hosting" href="/docs/self-hosted" description="The OAuth callback URL and Zapier client config for your own deploy." />
+</Cards>

@@ -45,10 +45,10 @@ This is not a toggle — it's baked into how the agent runs.
 
 ## How it's enforced
 
-10 Zapier MCP tools are marked `requireApproval`. When the agent invokes
-one, Mastra pauses the stream and surfaces an **action proposal** event.
-The frontend renders it as an approval card. Only when you `POST
-/api/proposals/:id/approve` does the tool actually run.
+Nine Zapier SDK tools are marked `requireApproval`. When the agent
+invokes one, Mastra pauses the stream and surfaces an **action proposal**
+event. The frontend renders it as an approval card. Only when you `POST
+/proposals/:id/approve` does the tool actually run.
 
 <Callout type="info">
   See [Toolbox search](/docs/core-concepts/tool-discovery) for the full

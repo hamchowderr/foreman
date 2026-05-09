@@ -10,6 +10,7 @@ history travel with you.
 ## Install guides
 
 <Cards>
+  <Card title="Connect channels (cloud)" href="/docs/channels/connect-cloud" description="5-minute install walkthrough for Foreman Cloud users." />
   <Card title="Slack" href="/docs/channels/slack" description="DM the bot or @mention in a channel." />
   <Card title="Discord" href="/docs/channels/discord" description="Gateway + slash commands in any server." />
   <Card title="Telegram" href="/docs/channels/telegram" description="DM @foreman_bot or add to a group." />
@@ -32,9 +33,13 @@ history travel with you.
 | **MCP** | Point Claude Code, ChatGPT, or another MCP client at the Foreman endpoint |
 | **A2A** | Call the Foreman A2A endpoint from another agent |
 
-## Coming soon
+## In the pipeline
 
-Microsoft Teams, WhatsApp, and iMessage are in the pipeline.
+Microsoft Teams, WhatsApp, and iMessage have working bot adapters in the
+codebase but aren't part of the cloud install flow yet. If you self-host,
+set the corresponding env vars (`TEAMS_*`, `WHATSAPP_*`, `IMESSAGE_*` —
+see `packages/agents/src/lib/env.ts`) and they'll route through the same
+agent.
 
 <Callout>
   Every channel shares the same memory. If Slack is where you already

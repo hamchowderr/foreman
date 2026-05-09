@@ -1,10 +1,8 @@
 {
   "title": "Integrations",
   "pages": [
-    "index",
+    "settings-hub",
     "mcp-cloud",
-    "mcp-self-hosted",
-    "a2a-cloud",
-    "a2a-self-hosted"
+    "a2a-cloud"
   ]
 }

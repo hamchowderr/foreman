@@ -17,7 +17,7 @@ import { OpenAIVoice } from "@mastra/voice-openai";
 import { searchHistoryTool } from "../tools/search-history";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { generateZapierTools } from "../../lib/zapier-sdk-tools";
+import { getDefaultZapierTools } from "../../lib/zapier-sdk-tools";
 import {
   MODELS,
   AGENT_MODELS,

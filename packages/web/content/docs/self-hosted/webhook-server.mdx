@@ -1,0 +1,125 @@
+---
+title: Webhook server · self-hosted
+description: Receive incoming messages from Slack, Discord, Telegram, and other channels.
+---
+
+If you only use the web UI, you can skip this page entirely. The webhook
+server is for **inbound channel traffic** — when Slack, Discord, Telegram,
+Teams, Google Chat, WhatsApp, GitHub, or Linear push events to your
+Foreman instance, they hit this server.
+
+It's a separate process from the agent server and listens on its own
+port. The split exists for a real reason: signature verification needs
+the raw request body bytes, but Hono (the agent server's HTTP framework)
+consumes the body stream before the Chat SDK can verify it. The webhook
+server uses raw Node HTTP, captures the unmodified body, and hands it to
+the Chat SDK intact.
+
+## Boot
+
+```bash
+cd packages/agents
+npm run start:webhooks
+```
+
+That starts a Node process on `WEBHOOK_PORT` (default `4112`). On boot it:
+
+- Listens on `/health` and the channel webhook routes below.
+- Initializes a Slack bot if `SLACK_SIGNING_SECRET` is set (rehydrates
+  installations from the database so previously-connected workspaces
+  keep working across restarts).
+- Initializes the Discord bot and starts the **Gateway listener** if
+  `DISCORD_BOT_TOKEN` is set. Discord doesn't push DMs over webhooks —
+  it pushes them over a persistent WebSocket. Slash commands still come
+  in via the webhook URL.
+
+<Callout type="info">
+  The agent server (port `4111`) and the webhook server (port `4112`)
+  are two separate processes. Run both. In production they're typically
+  two systemd units, two PM2 entries, or two containers.
+</Callout>
+
+## Routes
+
+Each channel posts to its own path. Configure the URL in the channel
+provider's dashboard.
+
+| Channel | Path | Method |
+| --- | --- | --- |
+| Slack | `/slack/webhook` | POST |
+| Discord (slash commands) | `/discord/webhook` | POST |
+| Telegram | `/telegram/webhook` | POST |
+| Microsoft Teams | `/teams/webhook` | POST |
+| Google Chat | `/gchat/webhook` | POST |
+| WhatsApp | `/whatsapp/webhook` | POST + GET (verify) |
+| GitHub | `/github/webhook` | POST |
+| Linear | `/linear/webhook` | POST |
+| iMessage (relay) | `/imessage/webhook` | POST |
+| Zapier OAuth callback | `/zapier/connect/:token`, `/zapier/callback` | GET |
+| Health check | `/health` | GET |
+
+## Behind a public URL
+
+Channel providers can only reach a public host. Your options:
+
+<Tabs items={["Local + ngrok", "VPS"]}>
+  <Tab value="Local + ngrok">
+    ```bash
+    ngrok http 4112
+    ```
+
+    Use the printed `https://<id>.ngrok-free.app` URL when configuring
+    each channel's webhook URL in its provider dashboard.
+  </Tab>
+  <Tab value="VPS">
+    Run the webhook server alongside the agent server. Reverse-proxy
+    `https://hooks.yourdomain.com → :4112`. Configure each channel
+    against `https://hooks.yourdomain.com/<channel>/webhook`.
+
+    Caddy example:
+
+    ```
+    hooks.yourdomain.com {
+      reverse_proxy localhost:4112
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Required env vars per channel
+
+Set only the ones for the channels you want to enable. Each channel's
+own docs page lists the exact scopes and developer-portal steps.
+
+| Channel | Env vars |
+| --- | --- |
+| Slack | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optionally `SLACK_CLIENT_ID`/`SECRET`/`REDIRECT_URI` for the OAuth install flow |
+| Discord | `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID` |
+| Telegram | `TELEGRAM_BOT_TOKEN` |
+| Microsoft Teams | `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD`, `TEAMS_APP_TENANT_ID` |
+| Google Chat | `GOOGLE_CHAT_CREDENTIALS` (JSON) or `GOOGLE_CHAT_USE_ADC=true` |
+| WhatsApp | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` |
+| GitHub | `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID` |
+| Linear | `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, `LINEAR_ACCESS_TOKEN` |
+| iMessage | `IMESSAGE_API_KEY`, `IMESSAGE_SERVER_URL` (when relaying via a Mac) |
+
+`packages/agents/src/lib/env.ts` is the authoritative list.
+
+## Verifying
+
+```bash
+curl http://localhost:4112/health
+# → {"status":"ok"}
+```
+
+If `/health` answers but a specific channel doesn't, check the channel's
+own docs page — almost every issue is either a wrong webhook URL in the
+provider dashboard or a missing env var.
+
+## Related
+
+<Cards>
+  <Card title="Channels overview" href="/docs/channels" description="Pick a channel — each page covers the provider-side setup." />
+  <Card title="MCP (self-hosted)" href="/docs/self-hosted/mcp" description="A different inbound surface for AI clients." />
+  <Card title="A2A (self-hosted)" href="/docs/self-hosted/a2a" description="A different inbound surface for other agents." />
+</Cards>
