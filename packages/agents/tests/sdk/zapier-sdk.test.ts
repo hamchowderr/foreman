@@ -112,7 +112,7 @@ describe("SDK Read Tests", () => {
       const result = await exec("list-connections");
       log("list-connections", result);
       assertNotValidationError(result, "list-connections");
-      const items = result?.data ?? result;
+      const items = result.items;
       expect(Array.isArray(items)).toBe(true);
       console.log(`  Found ${items.length} connected app(s)`);
       if (items.length > 0) {
@@ -131,7 +131,7 @@ describe("SDK Read Tests", () => {
       const result = await exec("list-apps");
       log("list-apps", result);
       assertNotValidationError(result, "list-apps");
-      const items = result?.data ?? result;
+      const items = result.items;
       expect(Array.isArray(items)).toBe(true);
       expect(items.length).toBeGreaterThan(0);
       const hasMore = result?.nextCursor !== undefined && result?.nextCursor !== null;
@@ -145,10 +145,9 @@ describe("SDK Read Tests", () => {
   it(
     "get-profile — returns current user profile",
     async () => {
-      const result = await exec("get-profile");
-      log("get-profile", result);
-      assertNotValidationError(result, "get-profile");
-      const profile = result?.data ?? result;
+      const profile = await exec("get-profile");
+      log("get-profile", profile);
+      assertNotValidationError(profile, "get-profile");
       expect(profile).toBeDefined();
       console.log(
         `  User: ${profile.full_name ?? profile.email ?? "unknown"}`,
@@ -166,7 +165,7 @@ describe("SDK Read Tests", () => {
     "find-first-connection — returns first connected app",
     async () => {
       const connections = await exec("list-connections");
-      const items = connections?.data ?? connections;
+      const items = connections.items;
       if (!Array.isArray(items) || items.length === 0) {
         console.log("  SKIP: no connections found");
         return;
@@ -182,7 +181,7 @@ describe("SDK Read Tests", () => {
       });
       log("find-first-connection", result);
       assertNotValidationError(result, "find-first-connection");
-      expect(result?.data ?? result).toBeDefined();
+      expect(result).toBeDefined();
     },
     TIMEOUT,
   );
@@ -198,7 +197,7 @@ describe("SDK Read Tests", () => {
       const result = await exec("list-actions", { app: firstApp });
       log("list-actions", result);
       assertNotValidationError(result, "list-actions");
-      const items = result?.data ?? result;
+      const items = result.items;
       expect(Array.isArray(items)).toBe(true);
       expect(items.length).toBeGreaterThan(0);
       console.log(
@@ -220,7 +219,7 @@ describe("SDK Read Tests", () => {
       }
       const actions = await exec("list-actions", { app: firstApp });
       assertNotValidationError(actions, "list-actions (for get-action)");
-      const items = actions?.data ?? actions;
+      const items = actions.items;
       if (!Array.isArray(items) || items.length === 0) {
         console.log("  SKIP: no actions found");
         return;
@@ -236,7 +235,7 @@ describe("SDK Read Tests", () => {
       });
       log("get-action", result);
       assertNotValidationError(result, "get-action");
-      expect(result?.data ?? result).toBeDefined();
+      expect(result).toBeDefined();
     },
     TIMEOUT,
   );
@@ -250,7 +249,7 @@ describe("SDK Read Tests", () => {
       }
       const actions = await exec("list-actions", { app: firstApp });
       assertNotValidationError(actions, "list-actions (for schema)");
-      const items = actions?.data ?? actions;
+      const items = actions.items;
       if (!Array.isArray(items) || items.length === 0) {
         console.log("  SKIP: no actions found");
         return;
@@ -276,7 +275,7 @@ describe("SDK Read Tests", () => {
       const result = await exec("list-tables");
       log("list-tables", result);
       assertNotValidationError(result, "list-tables");
-      const items = result?.data ?? result;
+      const items = result.items;
       console.log(
         `  Found ${Array.isArray(items) ? items.length : 0} table(s)`,
       );
@@ -305,10 +304,9 @@ describe("SDK Read Tests", () => {
       const result = await exec("get-app", { app });
       log("get-app", result);
       assertNotValidationError(result, "get-app");
-      const data = result?.data ?? result;
-      expect(data).toBeDefined();
+      expect(result).toBeDefined();
       // Should have app metadata, not an error
-      expect(data.key ?? data.slug ?? data.title).toBeDefined();
+      expect(result.key ?? result.slug ?? result.title).toBeDefined();
     },
     TIMEOUT,
   );
@@ -322,7 +320,7 @@ describe("SDK Read Tests", () => {
       }
       const actions = await exec("list-actions", { app: firstApp });
       assertNotValidationError(actions, "list-actions (for choices)");
-      const items = actions?.data ?? actions;
+      const items = actions.items;
       if (!Array.isArray(items) || items.length === 0) {
         console.log("  SKIP: no actions found");
         return;
@@ -337,14 +335,8 @@ describe("SDK Read Tests", () => {
         action: actionKey,
       });
       assertNotValidationError(schema, "get-input-fields-schema (for choices)");
-      const fields = schema?.data ?? schema?.properties ?? schema;
-      if (!fields || typeof fields !== "object") {
-        console.log("  SKIP: no schema fields returned");
-        return;
-      }
-      const fieldKeys = Array.isArray(fields)
-        ? fields.map((f: any) => f.key ?? f.name).filter(Boolean)
-        : Object.keys(fields);
+      // JSON Schema response: { type: "object", properties: { fieldKey: {...} }, ... }
+      const fieldKeys = Object.keys(schema.properties ?? {});
       if (fieldKeys.length === 0) {
         console.log("  SKIP: no fields in schema");
         return;
@@ -370,7 +362,7 @@ describe("SDK Read Tests", () => {
     async () => {
       const tables = await exec("list-tables");
       assertNotValidationError(tables, "list-tables (for get-table)");
-      const items = tables?.data ?? tables;
+      const items = tables.items;
       if (!Array.isArray(items) || items.length === 0) {
         console.log("  SKIP: no tables found");
         return;
@@ -381,7 +373,7 @@ describe("SDK Read Tests", () => {
       const result = await exec("get-table", { table: tableId });
       log("get-table", result);
       assertNotValidationError(result, "get-table");
-      expect(result?.data ?? result).toBeDefined();
+      expect(result).toBeDefined();
     },
     TIMEOUT,
   );
@@ -429,7 +421,7 @@ describe("SDK Error Handling", () => {
     "returns structured error for invalid action key",
     async () => {
       const connections = await exec("list-connections");
-      const items = connections?.data ?? connections;
+      const items = connections.items;
       if (!Array.isArray(items) || items.length === 0) {
         console.log("  SKIP: no connections");
         return;
