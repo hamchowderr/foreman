@@ -19,7 +19,6 @@ const DISCOVERY_TOOL_NAMES = [
   "list-actions",
   "get-action",
   "get-input-fields-schema",
-  "list-input-fields",
   "list-input-field-choices",
   "list-apps",
   "get-app",

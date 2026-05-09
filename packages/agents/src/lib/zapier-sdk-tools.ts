@@ -60,27 +60,37 @@ const READ_ONLY = new Set([
   "findUniqueConnection",
   "getConnection",
   "getInputFieldsSchema",
-  "listInputFields",
   "listInputFieldChoices",
   "listTables",
   "getTable",
   "listTableFields",
   "listTableRecords",
   "getTableRecord",
-  "listClientCredentials",
   "getProfile",
 ]);
 
 /**
- * Deprecated SDK methods that are thin wrappers around other methods.
- * Excluded to avoid duplicate tools confusing the agent.
+ * SDK methods excluded from tool generation.
+ *
+ * Two reasons to exclude:
+ * 1. Deprecated wrappers — duplicates of other SDK methods that would confuse
+ *    the agent if both were exposed.
+ * 2. Unused for Foreman — features Foreman doesn't surface to users (e.g.,
+ *    Connect Builder OAuth client-credential management).
  */
-const DEPRECATED_METHODS = new Set([
+const EXCLUDED_METHODS = new Set([
+  // Deprecated — duplicates of `connection`-prefixed methods
   "listAuthentications",
   "findFirstAuthentication",
   "findUniqueAuthentication",
   "getAuthentication",
   "request",
+  // Legacy duplicate of getInputFieldsSchema
+  "listInputFields",
+  // Connect Builder OAuth client credentials — Foreman doesn't expose this
+  "createClientCredentials",
+  "deleteClientCredentials",
+  "listClientCredentials",
 ]);
 
 /** Convert camelCase to kebab-case (matching MCP server convention). */
@@ -96,11 +106,9 @@ const PAGINATED_METHODS = new Set([
   "listActions",
   "listApps",
   "listConnections",
-  "listClientCredentials",
   "listTables",
   "listTableRecords",
   "listTableFields",
-  "listInputFields",
   "listInputFieldChoices",
   "runAction", // search/read actions return paginated results
 ]);
@@ -179,7 +187,7 @@ export function generateZapierTools(
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
   for (const fn of registry.functions) {
-    if (DEPRECATED_METHODS.has(fn.name)) continue;
+    if (EXCLUDED_METHODS.has(fn.name)) continue;
 
     const toolName = toKebab(fn.name);
     const description =

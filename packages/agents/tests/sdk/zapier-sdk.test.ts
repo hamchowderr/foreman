@@ -283,16 +283,9 @@ describe("SDK Read Tests", () => {
     TIMEOUT,
   );
 
-  it(
-    "list-client-credentials — lists OAuth credentials",
-    async () => {
-      const result = await exec("list-client-credentials");
-      log("list-client-credentials", result);
-      assertNotValidationError(result, "list-client-credentials");
-      expect(result).toBeDefined();
-    },
-    TIMEOUT,
-  );
+  // (Removed list-client-credentials test — Connect Builder OAuth client
+  // credential management is excluded from tool generation; not exposed to
+  // users in Foreman.)
 
   it(
     "get-app — gets details for a specific app",

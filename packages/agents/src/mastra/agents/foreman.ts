@@ -7,6 +7,7 @@ import {
   createToxicityScorer,
 } from "@mastra/evals/scorers/prebuilt";
 import { ToolSearchProcessor } from "@mastra/core/processors";
+import { stepCountIs } from "ai";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import {
   buildSystemPrompt,
@@ -30,14 +31,37 @@ export { buildSystemPrompt, type PromptContext };
 
 // Core tools the agent needs for every action — always loaded, no search required.
 // This avoids wasting steps on search_tools + load_tool for common operations.
+// Includes Zapier Tables management (these are SDK-level operations, NOT
+// run-action calls — having them direct prevents the agent from hallucinating
+// `run-action` invocations like `create_fields` that don't exist as actions).
 const CORE_TOOL_NAMES = [
+  // App discovery (so the agent doesn't need search_tools to translate
+  // "Notion" → "notion" slug or fetch app metadata)
+  "list-apps",
+  "get-app",
+  // Connection discovery
   "list-connections",
   "find-first-connection",
+  "find-unique-connection",
+  // Action discovery + execution
   "list-actions",
   "get-action",
   "get-input-fields-schema",
   "list-input-field-choices",
   "run-action",
+  // Zapier Tables (SDK-level, not run-action)
+  "list-tables",
+  "get-table",
+  "create-table",
+  "delete-table",
+  "list-table-fields",
+  "create-table-fields",
+  "delete-table-fields",
+  "list-table-records",
+  "get-table-record",
+  "create-table-records",
+  "update-table-records",
+  "delete-table-records",
 ];
 
 /**
@@ -117,6 +141,11 @@ export function createForemanAgent(databaseUrl: string) {
     defaultOptions: {
       modelSettings: modelSettingsFor("foreman"),
       onFinish: onFinishCostLogger("foreman"),
+      // Raise the agent loop ceiling — the previous default (15 steps) caused
+      // multi-tool flows (Tables: search → load → list-actions → get-schema →
+      // run-action → fields setup → records insert) to silently truncate
+      // mid-stream with no closing message to the user.
+      stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,

@@ -19,16 +19,23 @@ describe("Tool generation", () => {
     }
   });
 
-  it("excludes deprecated methods", () => {
-    const deprecated = [
+  it("excludes deprecated and unused methods", () => {
+    const excluded = [
+      // Deprecated wrappers
       "request",
       "list-authentications",
       "find-first-authentication",
       "find-unique-authentication",
       "get-authentication",
+      // Legacy duplicate of get-input-fields-schema
+      "list-input-fields",
+      // Connect Builder OAuth client credentials — not exposed
+      "create-client-credentials",
+      "delete-client-credentials",
+      "list-client-credentials",
     ];
-    for (const name of deprecated) {
-      expect(tools[name]).toBeUndefined();
+    for (const name of excluded) {
+      expect(tools[name], `${name} should be excluded from tool generation`).toBeUndefined();
     }
   });
 
@@ -60,14 +67,12 @@ describe("Tool generation", () => {
       "list-connections",
       "find-first-connection",
       "get-input-fields-schema",
-      "list-input-fields",
       "list-input-field-choices",
       "list-tables",
       "get-table",
       "list-table-fields",
       "list-table-records",
       "get-table-record",
-      "list-client-credentials",
       "get-profile",
     ];
     for (const name of readOnly) {
