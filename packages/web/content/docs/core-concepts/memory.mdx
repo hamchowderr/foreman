@@ -69,15 +69,19 @@ etc. to your Foreman user. So:
 
 <Files>
   <Folder name="packages/agents/src/mastra/" defaultOpen>
-    <File name="agents/foreman.ts" />
-    <Folder name="memory">
-      <File name="config.ts" />
+    <Folder name="agents">
+      <File name="foreman.ts" />
     </Folder>
   </Folder>
   <Folder name="packages/agents/src/lib/">
     <File name="identity.ts" />
   </Folder>
 </Files>
+
+The Mastra `Memory` instance — embedder, working-memory toggle, and
+semantic-recall settings — is configured inline on the Foreman agent in
+`mastra/agents/foreman.ts`. Channel-identity mapping lives in
+`lib/identity.ts` and writes to the `channel_identity` table.
 
 - Messages are stored in **Mastra threads**, not a custom `message` table.
 - Each conversation maps to a `mastraThreadId`.

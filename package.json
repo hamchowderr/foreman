@@ -15,16 +15,19 @@
     "supabase:stop": "npx supabase stop",
     "supabase:status": "npx supabase status",
     "test": "vitest run",
-    "test:api": "vitest run --config vitest.api.config.ts",
     "test:e2e": "npx playwright test",
     "dev:mock": "node tests/start-mock-dev.js",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
-    "postinstall": "patch-package"
+    "check:deps": "node scripts/check-dep-uniqueness.mjs",
+    "audit:ci": "npm audit --audit-level=moderate",
+    "postinstall": "patch-package && node scripts/check-dep-uniqueness.mjs"
   },
   "overrides": {
-    "esbuild": ">=0.25.0"
+    "esbuild": ">=0.25.0",
+    "zod": "^4.3.6",
+    "postcss": "^8.5.10"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",

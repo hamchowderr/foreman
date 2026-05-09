@@ -3,10 +3,10 @@ title: Toolbox search
 description: How Foreman picks the right tools for your request.
 ---
 
-Foreman has a toolbox of 33 MCP tools (plus a few custom ones) — ways to
-talk to Zapier apps, tables, webhooks, connections, auth. Loading every
-tool into every request would waste tokens, slow down replies, and clutter
-the agent's context.
+Foreman has a toolbox of dozens of Zapier SDK tools (plus a few custom
+ones) — ways to talk to Zapier apps, tables, webhooks, connections, auth.
+Loading every tool into every request would waste tokens, slow down
+replies, and clutter the agent's context.
 
 Instead, the toolbox is **searched**, not loaded.
 
@@ -29,9 +29,9 @@ Instead, the toolbox is **searched**, not loaded.
   <Step>
     ### Only matched tools load
 
-    Foreman loads the handful it needs — typically `search-actions`,
-    `get-action-schema`, `find-field-choices`, `run-action`. The other
-    28 stay dormant.
+    Foreman loads the handful it needs — typically `list-actions`,
+    `get-input-fields-schema`, `list-input-field-choices`, `run-action`.
+    The rest stay dormant.
   </Step>
 
   <Step>
@@ -49,24 +49,24 @@ request:
 
 | Tool | What it does |
 | --- | --- |
-| `connect_zapier` | Generate a one-time Zapier connect URL (for non-web channels). |
-| `search_history` | Semantic search across past action results. |
-| `fork_conversation` | Branch a conversation for parallel exploration. |
+| `connect-zapier` | Generate a one-time Zapier connect URL (for non-web channels). |
+| `search-history` | Semantic search across past action results. |
+| `fork-conversation` | Branch a conversation for parallel exploration. |
 
 ## requireApproval
 
-10 of the 33 MCP tools are write/delete operations. They never run without
-your explicit approval — the agent proposes, you approve.
+Nine SDK tools write or delete real data. They never run without your
+explicit approval — the agent proposes, you approve.
 
 <Callout type="warn">
   If you self-host and disable approvals (don't), Foreman will still
   surface what it would run. Blind execution is never the default.
 </Callout>
 
-The 10 approval-gated tools:
+The nine approval-gated tools:
 
 ```ts
-run-action, fetch, request,
+run-action, fetch,
 create-table, delete-table,
 create-table-records, update-table-records, delete-table-records,
 create-table-fields, delete-table-fields

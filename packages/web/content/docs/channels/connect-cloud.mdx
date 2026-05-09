@@ -1,0 +1,142 @@
+---
+title: Connect your channels (cloud)
+description: Wire up Slack, Discord, Telegram and more in about 5 minutes on Foreman Cloud.
+---
+
+Foreman Cloud ships channels as one-click installs. Connect your Zapier
+account once, then pick which chat apps you want to reach Foreman from.
+Every channel shares the same memory and the same Zapier connections —
+start in Slack, follow up from Telegram, approve from your phone.
+
+## Before you start
+
+<Callout>
+  You'll need two things:
+
+  - A signed-in [Foreman Cloud](https://foreman.otakusolutions.io) account.
+  - A connected Zapier account. If you haven't done this yet, walk through
+    [Getting started](/docs/getting-started) first — it takes about a minute.
+</Callout>
+
+## Install a channel
+
+Channels are managed from one place: **Settings → Integrations** in the
+web UI. Each tile shows whether you're connected and walks you through
+the install. There are two flows depending on the channel.
+
+### Slack — OAuth install
+
+Slack uses a standard "Add to Slack" OAuth flow.
+
+<Steps>
+  <Step>
+    ### Open Settings → Integrations → Slack
+
+    Click **Add to Slack**. You'll be bounced to Slack's OAuth screen.
+  </Step>
+
+  <Step>
+    ### Grant the requested scopes
+
+    Review what Foreman is asking for (`chat:write`, `app_mentions:read`,
+    `im:history`, `im:read`, `users:read`), then click **Allow**. Slack
+    returns you to Foreman and the workspace is linked.
+  </Step>
+
+  <Step>
+    ### Say hello
+
+    DM the Foreman bot or `@mention` it in any channel.
+  </Step>
+</Steps>
+
+### Discord, Telegram, and the rest — short-code linking
+
+Channels that don't have a per-user OAuth flow use an 8-character
+linking code instead. The code expires after 15 minutes.
+
+<Steps>
+  <Step>
+    ### Open Settings → Integrations
+
+    Pick your channel (Discord, Telegram, Teams, Google Chat, WhatsApp,
+    GitHub, Linear, iMessage). Foreman generates an 8-character link
+    code and shows it on screen.
+  </Step>
+
+  <Step>
+    ### Send the code to the Foreman bot
+
+    On the channel side, find the Foreman bot (e.g.
+    [@foreman_bot](https://t.me/foreman_bot) on Telegram) and send the
+    code as a message. The bot ties that channel identity to your
+    Foreman user.
+  </Step>
+
+  <Step>
+    ### Say hello
+
+    Send any message — Foreman remembers what you've already done in
+    other channels and picks up where you left off.
+  </Step>
+</Steps>
+
+## Per-channel notes
+
+Each channel has its own quirks — scopes, invite flow, slash commands.
+These pages cover the specifics:
+
+<Cards>
+  <Card title="Slack" href="/docs/channels/slack" description="DM the bot or @mention in a channel." />
+  <Card title="Discord" href="/docs/channels/discord" description="Gateway + slash commands in any server." />
+  <Card title="Telegram" href="/docs/channels/telegram" description="DM @foreman_bot or add to a group." />
+  <Card title="Google Chat" href="/docs/channels/google-chat" description="Workspace-native, service-account auth." />
+  <Card title="GitHub" href="/docs/channels/github" description="Tag @foreman in issues and PRs." />
+  <Card title="Linear" href="/docs/channels/linear" description="Triage, comments, follow-ups." />
+</Cards>
+
+## Test it
+
+Once you're installed, try one of these in your new channel:
+
+- Say `hello` — Foreman should reply in kind.
+- Ask `what apps do I have connected?` — you'll see the Zapier integrations
+  already linked to your account.
+
+<Callout>
+  Writes always trigger an inline approval card. Nothing gets sent,
+  posted, or changed until you click **Approve**.
+</Callout>
+
+## Where memory goes
+
+Every channel you add shares the same conversation history, the same
+Zapier connections, and the same preferences. Add Slack today, add
+Telegram tomorrow, and Foreman will remember what you were working on.
+See [Channels](/docs/channels) for more on the shared-memory model.
+
+## Troubleshooting
+
+<Accordions>
+  <Accordion title="Didn't get redirected back after Slack OAuth">
+    Check your browser's popup blocker and allow pop-ups from `foreman.otakusolutions.io`.
+  </Accordion>
+  <Accordion title="Link code expired before I could use it">
+    Codes are good for 15 minutes. Open Settings → Integrations again and generate a fresh one.
+  </Accordion>
+  <Accordion title="Bot doesn't respond in a channel">
+    Most chat apps require explicitly inviting the bot to a channel. Re-invite it, or test by DMing the bot first.
+  </Accordion>
+  <Accordion title="No approval prompt appears">
+    Confirm the requested scopes were granted; re-install from Settings → Integrations if your workspace admin stripped any.
+  </Accordion>
+</Accordions>
+
+## Next
+
+<Callout>
+  - New here? Finish [Getting started](/docs/getting-started) to connect Zapier.
+  - Want the big picture? Read [Core concepts](/docs/core-concepts).
+  - Running your own copy? Each channel's dedicated doc has a **Self-host**
+    section with the webhook and env-var setup.
+</Callout>

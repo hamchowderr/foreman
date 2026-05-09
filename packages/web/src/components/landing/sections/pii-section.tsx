@@ -1,5 +1,6 @@
 import { Reveal } from "@/components/landing/reveal";
 import { PiiTypewriter } from "@/components/landing/demos/pii-typewriter";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "@/components/icons/hi";
 
@@ -38,7 +39,9 @@ export function PiiSection() {
             </ul>
           </Reveal>
           <Reveal delay={0.1} direction="right">
-            <PiiTypewriter />
+            <TiltedSpotlight>
+              <PiiTypewriter />
+            </TiltedSpotlight>
           </Reveal>
         </div>
       </div>

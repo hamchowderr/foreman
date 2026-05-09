@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Search, History, Mail, Calendar, CreditCard, FileText } from "@/components/icons/hi";
+import { Search, History, Mail, Calendar, CreditCard, FileText, MessageSquare, Check } from "@/components/icons/hi";
 
 type Result = {
   icon: typeof Mail;
@@ -13,13 +13,17 @@ type Result = {
   score: number;
 };
 
-type Query = {
+export type HistoryQuery = {
+  /** Natural-language question shown as the section headline. */
+  headline: string;
+  /** What the user types into the search box. */
   text: string;
   results: Result[];
 };
 
-const QUERIES: Query[] = [
+export const HISTORY_QUERIES: HistoryQuery[] = [
   {
+    headline: "\u201CWhat did I send to Jake last week?\u201D",
     text: "what did I send to Jake last week",
     results: [
       { icon: Mail, app: "Gmail", title: "Q3 deck for Thursday", snippet: "Attaching the Q3 review deck — let me know…", date: "Tue 2:14 PM", score: 0.94 },
@@ -28,6 +32,7 @@ const QUERIES: Query[] = [
     ],
   },
   {
+    headline: "\u201CWhich invoices went out in March?\u201D",
     text: "invoices from March",
     results: [
       { icon: CreditCard, app: "Stripe", title: "Invoice #INV-2091 paid", snippet: "Acme Corp · $12,400.00 · Paid 3/28…", date: "Mar 28", score: 0.96 },
@@ -35,18 +40,50 @@ const QUERIES: Query[] = [
       { icon: CreditCard, app: "Stripe", title: "Invoice #INV-2084 sent", snippet: "Globex Inc · $4,900.00 · Due Mar 31…", date: "Mar 15", score: 0.76 },
     ],
   },
+  {
+    headline: "\u201CWhat did I promise the launch team?\u201D",
+    text: "promises to the launch team",
+    results: [
+      { icon: MessageSquare, app: "Slack", title: "#launch · reply to Priya", snippet: "Will ship the onboarding copy by Friday…", date: "Wed 4:20 PM", score: 0.92 },
+      { icon: Check, app: "Linear", title: "ENG-482 · Ship onboarding flow", snippet: "Assigned to you · due Friday…", date: "Wed 4:22 PM", score: 0.87 },
+      { icon: Mail, app: "Gmail", title: "Launch readiness recap", snippet: "Confirmed Friday deadline for onboarding…", date: "Wed 5:01 PM", score: 0.74 },
+    ],
+  },
+  {
+    headline: "\u201CAny refunds I approved in Q1?\u201D",
+    text: "refunds approved in Q1",
+    results: [
+      { icon: CreditCard, app: "Stripe", title: "Refund · ch_3Nx…KZ", snippet: "$149.00 refunded to Priya Shah…", date: "Feb 14", score: 0.95 },
+      { icon: CreditCard, app: "Stripe", title: "Refund · ch_3Mk…Lq", snippet: "$980.00 refunded to Acme Corp…", date: "Jan 28", score: 0.89 },
+      { icon: Mail, app: "Gmail", title: "Re: billing dispute resolved", snippet: "Confirmed refund issued — closing ticket…", date: "Jan 28", score: 0.77 },
+    ],
+  },
+  {
+    headline: "\u201CMeetings I booked this week?\u201D",
+    text: "meetings booked this week",
+    results: [
+      { icon: Calendar, app: "Google Calendar", title: "Intro · Priya ↔ Noah", snippet: "Thursday 3:00 PM · 30 min · video…", date: "Thu 3:00 PM", score: 0.94 },
+      { icon: Calendar, app: "Google Calendar", title: "Q3 review (Jake, Priya)", snippet: "Thursday 2:00 PM · Conference Room B…", date: "Thu 2:00 PM", score: 0.88 },
+      { icon: Mail, app: "Gmail", title: "Invite · Design sync", snippet: "Sent to design@acme.com · Friday 10 AM…", date: "Fri 10:00 AM", score: 0.72 },
+    ],
+  },
 ];
 
-export function HistorySearch() {
+export function HistorySearch({
+  queryIdx,
+  onQueryAdvance,
+}: {
+  queryIdx: number;
+  onQueryAdvance: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.3, once: false });
-  const [queryIdx, setQueryIdx] = useState(0);
   const [typed, setTyped] = useState("");
   const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     if (!inView) return;
-    const query = QUERIES[queryIdx];
+    const query = HISTORY_QUERIES[queryIdx];
     setTyped("");
     setShowResults(false);
 
@@ -57,14 +94,14 @@ export function HistorySearch() {
       if (idx >= query.text.length) {
         clearInterval(typeInterval);
         setTimeout(() => setShowResults(true), 300);
-        setTimeout(() => setQueryIdx((q) => (q + 1) % QUERIES.length), 5500);
+        setTimeout(() => onQueryAdvance(), 5500);
       }
     }, 40);
 
     return () => clearInterval(typeInterval);
-  }, [queryIdx, inView]);
+  }, [queryIdx, inView, onQueryAdvance]);
 
-  const query = QUERIES[queryIdx];
+  const query = HISTORY_QUERIES[queryIdx];
 
   return (
     <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden">

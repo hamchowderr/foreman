@@ -3,6 +3,7 @@
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { GitBranch, Play, Sparkles, Check, ChevronRight } from "@/components/icons/hi";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 
 type Phase = "chat" | "highlight" | "extracting" | "extracted" | "running" | "done";
 
@@ -143,6 +144,7 @@ export function WorkflowExtraction() {
   return (
     <div ref={ref} className="grid md:grid-cols-2 gap-4">
       {/* Chat column */}
+      <TiltedSpotlight>
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
           <AnimatePresence mode="wait">
@@ -202,8 +204,10 @@ export function WorkflowExtraction() {
           </AnimatePresence>
         </div>
       </div>
+      </TiltedSpotlight>
 
       {/* Workflow column */}
+      <TiltedSpotlight>
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
@@ -344,6 +348,7 @@ export function WorkflowExtraction() {
           </AnimatePresence>
         </div>
       </div>
+      </TiltedSpotlight>
     </div>
   );
 }

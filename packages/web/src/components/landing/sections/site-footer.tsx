@@ -47,7 +47,7 @@ export function SiteFooter() {
               <span className="font-semibold text-foreground">Foreman</span>
             </div>
             <p className="text-xs text-muted mt-3 leading-relaxed max-w-[220px]">
-              Execute actions, manage tables, and query 9,000+ apps through your Zapier account.
+              A chat driver for your Zapier account. Drive 9,000+ app connections you already built.
             </p>
           </div>
 

@@ -1,0 +1,8 @@
+{
+  "title": "Self-hosted",
+  "pages": [
+    "webhook-server",
+    "mcp",
+    "a2a"
+  ]
+}

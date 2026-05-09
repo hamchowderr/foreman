@@ -15,12 +15,12 @@ export function ClosingCta() {
 
             <div className="relative p-8 sm:p-12 md:p-16 text-center">
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-[-0.03em] max-w-2xl mx-auto">
-                Execute actions. Manage tables. Query apps. Just say it.
+                You already built the connections. Start driving them.
               </h2>
               <p className="text-muted mt-4 sm:mt-5 text-base sm:text-lg max-w-xl mx-auto">
-                Connect your Zapier account and start giving Foreman
-                instructions. Actions, tables, connections, search — all
-                through natural language. It's alpha — free while we build.
+                Connect your Zapier account once. Then talk to it from any chat
+                app you already use. Approval-gated, audit-logged, open source.
+                Free while we&apos;re in alpha.
               </p>
               <div className="flex flex-wrap justify-center gap-3 mt-6 sm:mt-8">
                 <MagneticButton strength={0.25}>

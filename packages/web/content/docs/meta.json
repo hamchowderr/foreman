@@ -1,16 +1,18 @@
 {
   "title": "Foreman Docs",
   "pages": [
+    "---Getting started---",
     "index",
     "getting-started",
+    "onboarding",
+    "---Using Foreman---",
     "channels",
-    "self-hosting",
     "editor",
-    "---Core concepts---",
     "core-concepts",
-    "---Integrations---",
+    "---Cloud---",
     "integrations",
-    "---Architecture---",
-    "architecture"
+    "architecture",
+    "---Self-hosted---",
+    "self-hosted"
   ]
 }

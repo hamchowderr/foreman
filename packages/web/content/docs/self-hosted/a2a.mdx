@@ -10,7 +10,7 @@ Same shape as cloud — just point at your own URL.
 <Tabs items={["Local", "VPS"]}>
   <Tab value="Local">
     ```
-    http://localhost:3000/a2a/foreman
+    http://localhost:4111/a2a/foreman
     ```
   </Tab>
   <Tab value="VPS">
@@ -23,7 +23,7 @@ Same shape as cloud — just point at your own URL.
 ## Example: curl
 
 ```bash
-curl -X POST http://localhost:3000/a2a/foreman \
+curl -X POST http://localhost:4111/a2a/foreman \
   -H "content-type: application/json" \
   -H "x-api-key: fmn_your_key_here" \
   -d '{"message": "Send Jake the Q3 deck"}'
@@ -34,7 +34,7 @@ curl -X POST http://localhost:3000/a2a/foreman \
 Identical to cloud — just swap the URL.
 
 ```ts
-const res = await fetch("http://localhost:3000/a2a/foreman", {
+const res = await fetch("http://localhost:4111/a2a/foreman", {
   method: "POST",
   headers: {
     "content-type": "application/json",
@@ -58,5 +58,5 @@ and drop the header.
 
 <Cards>
   <Card title="A2A (cloud)" href="/docs/integrations/a2a-cloud" description="The hosted version." />
-  <Card title="MCP (self-hosted)" href="/docs/integrations/mcp-self-hosted" description="For AI clients instead of agents." />
+  <Card title="MCP (self-hosted)" href="/docs/self-hosted/mcp" description="For AI clients instead of agents." />
 </Cards>

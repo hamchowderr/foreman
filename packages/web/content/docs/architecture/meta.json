@@ -1,7 +1,6 @@
 {
   "title": "Architecture",
   "pages": [
-    "index",
     "mastra",
     "zapier-sdk",
     "streaming"

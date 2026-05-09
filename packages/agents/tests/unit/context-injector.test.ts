@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the zapier module before importing the processor
+// Mock every module the processor reaches into. The barrel re-exports
+// listUserConnections, but loadUserConnectionsMap and searchAppCatalog
+// come from their own modules and need their own mocks — otherwise they
+// hit real Supabase and time the test out at 5s.
 vi.mock("@/lib/zapier", () => ({
   listUserConnections: vi.fn(),
+}));
+vi.mock("@/lib/zapier/aliases", () => ({
+  loadUserConnectionsMap: vi.fn().mockResolvedValue({}),
+}));
+vi.mock("@/lib/catalog", () => ({
+  searchAppCatalog: vi.fn().mockResolvedValue([]),
 }));
 
 import { contextInjector } from "@/lib/processors/input";

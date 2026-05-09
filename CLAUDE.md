@@ -114,8 +114,7 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 First-time setup requires a running local Supabase instance before `npm run dev`:
 
 ```bash
-npx supabase start                         # Boots local Postgres/pgvector on :54422
-# Apply schema via Supabase Studio (:54423) or psql using agents/drizzle/*.sql
+npx supabase start                         # Boots local Postgres/pgvector on :54422; applies supabase/migrations/*.sql automatically
 ```
 
 ## ngrok (optional — only for channel webhooks)
@@ -133,10 +132,8 @@ Then update `packages/agents/.env.local` → `AGENT_SERVER_URL=https://<new-url>
 Restart the agents server so it picks up the new URL:
 
 ```bash
-cd packages/agents && npm run start        # NOT mastra dev — use npm run start on Windows
+cd packages/agents && npm run build && npm run start   # Windows: mastra dev hangs (IPC). Linux/Mac: npm run dev. Local quirk only — do not put in public docs.
 ```
-
-> **Note:** `mastra dev` hangs on Windows due to an IPC pipe issue. Always use `npm run build && npm run start` instead.
 
 ## Dev Commands
 
@@ -146,10 +143,9 @@ npx supabase start                         # Supabase (Postgres :54422, Studio :
 npx supabase stop                          # Shut it down
 
 # Dev servers
-cd packages/agents && npm run build        # Build first (mastra dev broken on Windows)
-cd packages/agents && npm run start        # Then start agents (:4111)
-cd packages/web && npm run dev             # Next.js (:3000)
-cd packages/agents && npm run start:webhooks  # Channel webhooks (:4112)
+cd packages/agents && npm run build && npm run start   # Agents (:4111). Windows workaround for mastra dev IPC hang — Linux/Mac use `npm run dev`.
+cd packages/web && npm run dev                          # Next.js (:3000)
+cd packages/agents && npm run start:webhooks            # Channel webhooks (:4112)
 
 # Build
 cd packages/agents && npm run build        # mastra build → .mastra/output/

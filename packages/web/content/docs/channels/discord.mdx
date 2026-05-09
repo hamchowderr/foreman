@@ -84,11 +84,11 @@ description: Gateway + slash commands, in any server.
     DISCORD_BOT_TOKEN=...
     DISCORD_PUBLIC_KEY=...
     DISCORD_APPLICATION_ID=...
-    CRON_SECRET=...  # required for Gateway WebSocket
     ```
 
-    Restart Foreman. The webhook server auto-starts the Discord Gateway
-    listener on boot when `DISCORD_BOT_TOKEN` is set.
+    Restart the webhook server (`npm run start:webhooks`, port `4112`).
+    The Discord Gateway listener auto-starts on boot when
+    `DISCORD_BOT_TOKEN` is set.
   </Step>
 </Steps>
 
