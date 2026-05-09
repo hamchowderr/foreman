@@ -20,7 +20,12 @@ let _executionToolsCache: Record<string, any> | undefined;
 
 function buildExecutionTools() {
   if (_executionToolsCache) return _executionToolsCache;
-  const allTools = generateZapierTools();
+  let allTools: Record<string, any> = {};
+  try {
+    allTools = generateZapierTools();
+  } catch (err) {
+    console.error("[execution] generateZapierTools failed; serving connect_zapier only:", err);
+  }
   const filtered: Record<string, any> = {};
   for (const name of EXECUTION_TOOL_NAMES) {
     if (allTools[name]) filtered[name] = allTools[name];

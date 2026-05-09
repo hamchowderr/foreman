@@ -30,7 +30,12 @@ let _discoveryToolsCache: Record<string, any> | undefined;
 
 function buildDiscoveryTools() {
   if (_discoveryToolsCache) return _discoveryToolsCache;
-  const allTools = generateZapierTools();
+  let allTools: Record<string, any> = {};
+  try {
+    allTools = generateZapierTools();
+  } catch (err) {
+    console.error("[discovery] generateZapierTools failed; agent will have no tools:", err);
+  }
   const filtered: Record<string, any> = {};
   for (const name of DISCOVERY_TOOL_NAMES) {
     if (allTools[name]) filtered[name] = allTools[name];

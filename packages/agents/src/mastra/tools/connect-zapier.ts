@@ -54,6 +54,13 @@ export const connectZapierTool = createTool({
         "If omitted, returns the general Zapier connections page URL.",
       ),
   }),
+  onInputStart: ({ toolCallId }) => {
+    console.log(`[tool:connect_zapier] Input streaming started (callId=${toolCallId.slice(0, 8)})`);
+  },
+  onInputAvailable: ({ input, toolCallId }) => {
+    const slug = (input as any)?.appSlug ?? "(generic)";
+    console.log(`[tool:connect_zapier] Input available: appSlug=${slug} (callId=${toolCallId.slice(0, 8)})`);
+  },
   onOutput: ({ output, toolName }) => {
     console.log(
       `[tool:${toolName}] Generated connect URL for ${(output as any)?.appName ?? "generic"}`,
@@ -68,10 +75,13 @@ export const connectZapierTool = createTool({
       };
     }
 
-    await context?.writer?.write({
-      type: "custom-event",
-      status: "searching",
-      message: `Looking up ${appSlug} on Zapier...`,
+    // Top-level data-* chunk so the UI can render progress as a discrete part.
+    // transient: true keeps "Looking up ..." chatter out of message history —
+    // the final tool result is what gets persisted, not the search progress.
+    await context?.writer?.custom({
+      type: "data-tool-progress",
+      data: { tool: "connect_zapier", status: "searching", appSlug },
+      transient: true,
     });
 
     try {

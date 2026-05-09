@@ -79,7 +79,17 @@ let _foremanProcessorsCache: any[] | undefined;
 
 function buildForemanTools() {
   if (_foremanToolsCache) return _foremanToolsCache;
-  const sdkTools = generateZapierTools();
+  // SDK init can throw (network, credentials, registry build). When it does,
+  // returning the custom-only tool set is honest: the agent keeps the Foreman
+  // tools (connect_zapier etc.) so it can still tell the user what failed
+  // instead of cascading into 8+ "Error calling handler" log entries from
+  // every Studio listTools probe.
+  let sdkTools: Record<string, any> = {};
+  try {
+    sdkTools = generateZapierTools();
+  } catch (err) {
+    console.error("[foreman] generateZapierTools failed; serving custom tools only:", err);
+  }
   const coreTools: Record<string, any> = {};
   for (const name of CORE_TOOL_NAMES) {
     if (sdkTools[name]) coreTools[name] = sdkTools[name];
@@ -95,7 +105,12 @@ function buildForemanTools() {
 
 function buildForemanInputProcessors() {
   if (_foremanProcessorsCache) return _foremanProcessorsCache;
-  const sdkTools = generateZapierTools();
+  let sdkTools: Record<string, any> = {};
+  try {
+    sdkTools = generateZapierTools();
+  } catch (err) {
+    console.error("[foreman] generateZapierTools failed in inputProcessors; ToolSearchProcessor will index nothing:", err);
+  }
   const searchableTools: Record<string, any> = {};
   for (const [name, tool] of Object.entries(sdkTools)) {
     if (!CORE_TOOL_NAMES.includes(name)) searchableTools[name] = tool;
@@ -184,7 +199,11 @@ export function createForemanAgent(databaseUrl: string) {
           messageRange: 1,
           scope: "resource",
         },
-        observationalMemory: true,
+        // observationalMemory removed: its input processor requires a threadId
+        // in RequestContext, which Mastra's experiment runner doesn't inject.
+        // workingMemory + lastMessages + semanticRecall provide sufficient
+        // memory for production conversational use.
+        observationalMemory: false,
       },
     }),
   });

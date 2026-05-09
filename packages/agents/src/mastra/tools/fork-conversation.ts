@@ -29,15 +29,32 @@ export const forkConversationTool = createTool({
     messagesCopied: z.number(),
     sourceThreadId: z.string(),
   }),
+  onInputStart: ({ toolCallId }) => {
+    console.log(`[tool:fork_conversation] Input streaming started (callId=${toolCallId.slice(0, 8)})`);
+  },
+  onInputAvailable: ({ input, toolCallId }) => {
+    const i = input as any;
+    console.log(
+      `[tool:fork_conversation] Input available: thread=${i?.threadId?.slice(0, 8)} limit=${i?.messageLimit ?? "(all)"} (callId=${toolCallId.slice(0, 8)})`,
+    );
+  },
   onOutput: ({ output, toolName }) => {
     const o = output as any;
     console.log(`[tool:${toolName}] Forked ${o?.sourceThreadId} → ${o?.newThreadId} (${o?.messagesCopied} messages)`);
   },
   execute: async ({ threadId, title, messageLimit }, ctx) => {
-    await ctx?.writer?.write({
-      type: "custom-event",
-      status: "forking",
-      message: `Cloning conversation ${threadId.slice(0, 8)}...`,
+    // Top-level data-* chunk so the UI renders forking progress as a discrete
+    // part. transient: true — the in-flight "cloning..." message is chatter,
+    // not data the chat history needs to replay on refresh.
+    await ctx?.writer?.custom({
+      type: "data-tool-progress",
+      data: {
+        tool: "fork_conversation",
+        status: "forking",
+        sourceThreadId: threadId,
+        messageLimit,
+      },
+      transient: true,
     });
 
     const agentId = ctx.agent?.agentId;

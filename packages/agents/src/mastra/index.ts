@@ -1,12 +1,15 @@
 import { enableFileLogging } from "../lib/file-logger";
 enableFileLogging();
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Mastra } from "@mastra/core";
 import { MastraCompositeStore } from "@mastra/core/storage";
 import { MastraEditor } from "@mastra/editor";
 import { PostgresStore } from "@mastra/pg";
 import { DuckDBStore } from "@mastra/duckdb";
 import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
+import { PinoLogger } from "@mastra/loggers";
 import { toAISdkStream } from "@mastra/ai-sdk";
 import { registerApiRoute } from "@mastra/core/server";
 import { RequestContext } from "@mastra/core/request-context";
@@ -26,6 +29,12 @@ validateAgentCapabilities();
 
 let _mastra: Mastra | undefined;
 
+// Lazy resolution of the Mastra instance. NOTE: we tried hoisting `new Mastra({...})`
+// to module level so the deployer's AST analyzer could extract `bundler: { sourcemap: true }`
+// (which currently silently no-ops for indirect/wrapped construction). It worked for
+// `mastra build` but broke `mastra dev`'s named-export resolution for `getMastra` —
+// dev's bundler treats the file as having only the `mastra` const exported. Until
+// upstream sorts that out, keeping construction inside `getMastra()` is the way.
 export function getMastra(): Mastra {
   if (_mastra) return _mastra;
 
@@ -46,7 +55,23 @@ export function getMastra(): Mastra {
     }),
     domains: {
       observability: new DuckDBStore({
-        path: process.env.DUCKDB_PATH ?? "mastra.duckdb",
+        // Resolve relative to THIS file's location, not process.cwd().
+        // `mastra dev` runs the bundled entry from .mastra/output/index.mjs
+        // with cwd set to src/mastra/public/ — using cwd would put the file
+        // there and (a) fail to find its dir on first boot, (b) lock the
+        // bundled-assets dir for the next build. import.meta.url is stable:
+        // - source path `src/mastra/index.ts` → ../../data/mastra.duckdb
+        //   under packages/agents/data/
+        // - bundled path `.mastra/output/index.mjs` → same destination
+        path:
+          process.env.DUCKDB_PATH ??
+          path.resolve(
+            path.dirname(fileURLToPath(import.meta.url)),
+            "..",
+            "..",
+            "data",
+            "mastra.duckdb",
+          ),
       }).observability,
     },
   });
@@ -74,6 +99,10 @@ export function getMastra(): Mastra {
   // Observability is always on so the Mastra Studio Observability tab works.
   // OTEL_ENABLED=true additionally enables the OTEL Console exporter for local
   // span dumping; production typically only wants the DefaultExporter.
+  // The `logging` block forwards PinoLogger calls into the observability log
+  // store (DuckDB) so Studio's Logs tab is populated by application logger
+  // calls, not just Mastra-internal traces.
+  // Docs: https://mastra.ai/docs/observability/logging
   const observability = new Observability({
     configs: {
       default: {
@@ -82,15 +111,25 @@ export function getMastra(): Mastra {
           process.env.OTEL_ENABLED === "true"
             ? [new DefaultExporter(), new ConsoleExporter()]
             : [new DefaultExporter()],
+        logging: {
+          enabled: true,
+          level: (process.env.OBS_LOG_LEVEL as any) ?? "info",
+        },
       },
     },
   });
 
+  // PinoLogger is the canonical Mastra logger. With observability configured
+  // above, Mastra wraps it so every debug/info/warn/error call is forwarded to
+  // both the console AND the observability log store automatically.
+  const logger = new PinoLogger({
+    name: "foreman",
+    level: (process.env.LOG_LEVEL as any) ?? "info",
+  });
+
   const editor = new MastraEditor();
 
-  /**
-   * Fix the stream format mismatch between @mastra/ai-sdk and the AI SDK v6 protocol.
-   */
+  // Fix the stream format mismatch between @mastra/ai-sdk and the AI SDK v6 protocol.
   function fixApprovalStream(stream: ReadableStream): ReadableStream {
     return stream.pipeThrough(
       new TransformStream({
@@ -123,6 +162,16 @@ export function getMastra(): Mastra {
     storage,
     observability,
     editor,
+    logger,
+    // Background tasks must be enabled at the Mastra level for
+    // `mastra.backgroundTaskManager` to be defined. With this on, individual
+    // tools can opt into background execution via their own `background`
+    // config (or per-call via the LLM's `_background` arg), and the
+    // /background-tasks/stream SSE endpoint becomes available for monitoring.
+    // Docs: https://mastra.ai/docs/streaming/background-tasks
+    backgroundTasks: {
+      enabled: true,
+    },
     server: {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
@@ -240,6 +289,63 @@ export function getMastra(): Mastra {
             }
           },
         }),
+        // Stream every background-task lifecycle event as SSE. Filterable via
+        // ?agentId=&runId=&threadId=&resourceId=&taskId= query params. The
+        // stream stays open until the client disconnects (AbortController is
+        // wired to c.req.raw.signal). Emits an initial snapshot of currently
+        // running tasks then forwards live events.
+        registerApiRoute("/background-tasks/stream", {
+          method: "GET",
+          handler: async (c: any) => {
+            const m = c.get("mastra");
+            const bg = m.backgroundTaskManager;
+            if (!bg) {
+              return c.json({ error: "backgroundTasks is not enabled on this Mastra instance" }, 503);
+            }
+
+            const filter: Record<string, string> = {};
+            for (const key of ["agentId", "runId", "threadId", "resourceId", "taskId"] as const) {
+              const v = c.req.query(key);
+              if (typeof v === "string" && v.length > 0) filter[key] = v;
+            }
+
+            const controller = new AbortController();
+            const upstream: Request = c.req.raw;
+            if (upstream.signal) {
+              if (upstream.signal.aborted) controller.abort();
+              else upstream.signal.addEventListener("abort", () => controller.abort());
+            }
+
+            const taskStream = bg.stream({ ...filter, abortSignal: controller.signal });
+            const sse = new ReadableStream({
+              async start(out) {
+                const enc = new TextEncoder();
+                try {
+                  for await (const chunk of taskStream) {
+                    out.enqueue(enc.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                  }
+                } catch (err: any) {
+                  if (err?.name !== "AbortError") {
+                    out.enqueue(enc.encode(`event: error\ndata: ${JSON.stringify({ message: err?.message })}\n\n`));
+                  }
+                } finally {
+                  out.close();
+                }
+              },
+              cancel() {
+                controller.abort();
+              },
+            });
+
+            return new Response(sse, {
+              headers: {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache, no-transform",
+                Connection: "keep-alive",
+              },
+            });
+          },
+        }),
       ],
     },
   });
@@ -247,5 +353,6 @@ export function getMastra(): Mastra {
   return _mastra;
 }
 
-// Default export for mastra build
+// Default export so `mastra build` and friends can pick the instance up via
+// the entry file, while interactive callers continue to call `getMastra()`.
 export const mastra = getMastra();
