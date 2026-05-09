@@ -1,0 +1,64 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR / branch when a new push lands.
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agents:
+    name: agents (vitest + AIMock)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # AIMock is started in-process by packages/agents/tests/aimock-setup.ts
+      # (vitest globalSetup) — no separate action needed. Real Anthropic and
+      # Zapier creds are deliberately absent so any leak into a non-mocked
+      # path fails loudly instead of silently calling production.
+      - run: npm test
+        env:
+          NODE_ENV: test
+          DUCKDB_PATH: ./data/test.duckdb
+
+  web:
+    name: web (next build + lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build web (also type-checks)
+        run: cd packages/web && npm run build
+      - name: Lint (root)
+        run: npm run lint
+
+  deps:
+    name: dep uniqueness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # check-dep-uniqueness.mjs runs as part of postinstall, so npm ci alone
+      # validates that there are no duplicate-resolved versions across the
+      # workspace. A bare `npm ci` failure here is a real signal.
+      - run: npm ci
