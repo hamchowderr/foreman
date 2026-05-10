@@ -16,7 +16,6 @@
 - [Channels](#channels)
 - [Deployment](#deployment)
 - [Testing](#testing)
-- [Development workflow](#development-workflow)
 - [Links](#links)
 
 ## What it is
@@ -169,15 +168,6 @@ Four tiers, plus end-to-end browser tests. Tier 1 is the default loop and runs w
 | E2E (browser) | `cd packages/web && npx playwright test` | Web flows | web + agents servers running |
 
 For deterministic mock-mode dev (no real LLM/voice/MCP/A2A): `cd packages/agents && npm run dev:mock`.
-
-## Development workflow
-
-- **Issue tracker:** [bd (beads)](https://github.com/gastownhall/beads). Use `bd ready` to see unblocked work, `bd show <id>` for context, `bd update <id> --claim` to take it on, `bd close <id> --reason "…"` when done. Every code change should have a claimed bd issue. Do not use markdown TODO lists.
-- **Branch naming:** `feature/`, `fix/`, `chore/` prefixes. Never push to `main` or `master`.
-- **Commits:** create new commits rather than amending. Never skip hooks (`--no-verify`) without an explicit ask.
-- **PRs:** open a PR for every merge to `main`. Wait for `gh pr checks` to pass before merging.
-- **Lint / format:** `npm run lint` (Biome), `npm run lint:fix`, `npm run format`.
-- **Local tunnel:** `ngrok http 4112` for testing channel webhooks against real platforms. Update each platform's webhook URL after restarting ngrok.
 
 Deeper developer docs (file inventory, route table, custom tools, processors, memory config, schema, prompt internals) live in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). The README is for orientation; CLAUDE.md is for working in the code.
 
