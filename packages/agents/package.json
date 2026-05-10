@@ -13,7 +13,7 @@
     "dev:mock": "npx @copilotkit/aimock --config aimock.json --port 4010",
     "dev:telegram": "npx tsx --env-file=.env.local src/telegram/start-polling.ts",
     "test": "vitest run --exclude tests/sdk/** --exclude tests/live/**",
-    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:live": "node --env-file=.env.local ../../node_modules/vitest/vitest.mjs run --config vitest.live.config.ts",
     "test:sdk": "vitest run --config vitest.sdk.config.ts",
     "test:sdk:read": "vitest run --config vitest.sdk.config.ts -t 'SDK Read'",
     "test:sdk:write": "vitest run --config vitest.sdk.config.ts -t 'SDK Write'",
