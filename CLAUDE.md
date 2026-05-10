@@ -161,13 +161,16 @@ npm run lint && npm run format
 ## Testing
 
 ```bash
-# Unit (mocked, fast)
+# Unit + integration (mocked, fast — runs in CI on every PR)
 cd packages/agents && npm test
 
 # SDK integration (real Zapier API — needs `npx @zapier/zapier-sdk-cli login`)
 cd packages/agents && npm run test:sdk          # all
 cd packages/agents && npm run test:sdk:read     # read-only
 cd packages/agents && npm run test:sdk:write    # creates + deletes a real Zapier Table
+
+# Live integration (real local Supabase)
+cd packages/agents && npm run test:live
 
 # Integration (API routes, protocols)
 cd packages/agents && npm test -- tests/integration
@@ -177,9 +180,15 @@ cd packages/web && npx playwright test
 
 # Mock mode (no real LLM/API)
 cd packages/agents && npm run dev:mock
+
+# Devserver-startup hang regression (skipped by default — opt in)
+RUN_DEVSERVER_STARTUP=1 npx vitest run \
+  packages/agents/tests/integration/devserver-startup.test.ts
 ```
 
 SDK tests use `vitest.sdk.config.ts` (no aimock). Unit/integration tests use `vitest.config.ts` (with aimock globalSetup).
+
+The `devserver-startup` test spawns `mastra dev` and polls the API port — it hangs on Windows (documented IPC issue) and currently times out on Linux CI, so it's gated behind `RUN_DEVSERVER_STARTUP=1`. Run locally on-demand when bisecting startup regressions.
 
 ## Deploy
 
