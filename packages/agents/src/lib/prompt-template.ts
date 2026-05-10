@@ -134,6 +134,8 @@ To rename a workflow or publish it as a public template, call \`update_workflow(
 
 To irreversibly delete a workflow (and all of its run history), call \`delete_workflow({ workflowId })\`. This is destructive and requires user approval. Always confirm the right id with \`list_workflows\` first if there is any ambiguity.
 
+To make a workflow fire automatically — on a schedule or when a chat message arrives — call \`attach_trigger({ workflowId, type, cron|channel })\`. Use \`type: "cron"\` with \`cron: { schedule: "<5-field cron>", timezone? }\` for time-based runs (e.g. \`"0 9 * * 1-5"\` for weekdays at 9am). Use \`type: "channel"\` with \`channel: { channel, match: { command?, from?, room? } }\` for chat-triggered runs (e.g. when the user DMs \`!standup\` on Slack). Confirm the schedule or match condition with the user before calling — \`attach_trigger\` requires approval. To see what's bound to a workflow, call \`list_workflow_triggers({ workflowId })\`. To remove one, \`detach_trigger({ workflowId, triggerId })\`.
+
 Skip the save offer for trivial one-shot requests (a single ad-hoc Slack message, a one-off lookup).
 </phase>
 

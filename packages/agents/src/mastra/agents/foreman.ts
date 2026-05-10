@@ -16,10 +16,13 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { attachTriggerTool } from "../tools/attach-trigger";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { deleteWorkflowTool } from "../tools/delete-workflow";
+import { detachTriggerTool } from "../tools/detach-trigger";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { getWorkflowTool } from "../tools/get-workflow";
+import { listWorkflowTriggersTool } from "../tools/list-workflow-triggers";
 import { listWorkflowsTool } from "../tools/list-workflows";
 import { runWorkflowTool } from "../tools/run-workflow";
 import { saveWorkflowTool } from "../tools/save-workflow";
@@ -103,6 +106,9 @@ function buildForemanTools() {
     run_workflow: runWorkflowTool,
     update_workflow: updateWorkflowTool,
     delete_workflow: deleteWorkflowTool,
+    attach_trigger: attachTriggerTool,
+    list_workflow_triggers: listWorkflowTriggersTool,
+    detach_trigger: detachTriggerTool,
     ...coreTools,
   });
   return _foremanToolsCache;
