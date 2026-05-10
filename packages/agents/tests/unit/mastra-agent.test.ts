@@ -18,7 +18,7 @@ describe("Mastra foreman agent", () => {
     expect(agent.id).toBe("foreman");
   }, 30000); // MCP server startup can take time
 
-  it("has the 3 custom tools registered", async () => {
+  it("has the custom tools registered", async () => {
     const { createForemanAgent } = await import("@/mastra/agents/foreman");
     const agent = await createForemanAgent("file:./test-agent.db");
 
@@ -29,6 +29,9 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("search_history");
     expect(toolNames).toContain("fork_conversation");
     expect(toolNames).toContain("connect_zapier");
+    expect(toolNames).toContain("save_workflow");
+    expect(toolNames).toContain("list_workflows");
+    expect(toolNames).toContain("get_workflow");
   }, 30000);
 
   it("foreman agent uses AGENT_MODELS.foreman as its model", async () => {

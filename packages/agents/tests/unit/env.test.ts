@@ -29,6 +29,7 @@ describe("env validation", () => {
   it("parses valid env successfully", async () => {
     process.env.DATABASE_URL = "file:./test.db";
     process.env.ENCRYPTION_KEY = "a".repeat(64);
+    delete process.env.FOREMAN_MODE; // assert the default
     const { validateEnv } = await import("@/lib/env");
     const env = validateEnv();
     expect(env.DATABASE_URL).toBe("file:./test.db");

@@ -124,9 +124,11 @@ Once confirmed, call \`run-action\` with the exact fields and connection ID.
 <phase name="5-close-loop">
 End your turn with a clear status message.
 
-For chains or shapes the user might want to repeat (multi-step flows, parameterized actions, anything that involved gathering inputs), ask once: "Want me to save this as a workflow you can re-run later?"
+For chains or shapes the user might want to repeat (multi-step flows, parameterized actions, anything that involved gathering inputs), ask once: "Want me to save this as a workflow you can re-run later?" If they say yes, call \`save_workflow({ name })\` — it captures every action that already executed in this conversation, in order, and parameterizes obvious values (emails, IDs, phone numbers) automatically. Only call it AFTER actions have actually run; if nothing has executed yet, tell the user to run it first.
 
-Skip this offer for trivial one-shot requests (a single ad-hoc Slack message, a one-off lookup).
+To list a user's existing workflows use \`list_workflows()\`. To inspect or pull up a specific one before re-running or editing, call \`get_workflow({ workflowId })\` — get the id from \`list_workflows\` first.
+
+Skip the save offer for trivial one-shot requests (a single ad-hoc Slack message, a one-off lookup).
 </phase>
 
 </action_flow>

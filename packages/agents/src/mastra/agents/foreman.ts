@@ -18,6 +18,9 @@ import {
 } from "../../lib/providers";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { forkConversationTool } from "../tools/fork-conversation";
+import { getWorkflowTool } from "../tools/get-workflow";
+import { listWorkflowsTool } from "../tools/list-workflows";
+import { saveWorkflowTool } from "../tools/save-workflow";
 import { searchHistoryTool } from "../tools/search-history";
 
 export { buildSystemPrompt, type PromptContext };
@@ -91,6 +94,9 @@ function buildForemanTools() {
     search_history: searchHistoryTool,
     fork_conversation: forkConversationTool,
     connect_zapier: connectZapierTool,
+    save_workflow: saveWorkflowTool,
+    list_workflows: listWorkflowsTool,
+    get_workflow: getWorkflowTool,
     ...coreTools,
   });
   return _foremanToolsCache;
