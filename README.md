@@ -112,15 +112,16 @@ For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel web
 
 ## Modes
 
-`FOREMAN_MODE` in `packages/agents/.env.local` switches Foreman between three operating modes. **All three use the same per-user OAuth model** — every user has their own Zapier connections, none of the modes share credentials between users.
+`FOREMAN_MODE` in `packages/agents/.env.local` decides how Zapier auth resolves. There are really two modes from your perspective: **dev** (you, on your laptop) and **self-hosted** (you, running it for other users).
 
 | Mode | Value | When to use | Auth model |
 |---|---|---|---|
 | **Dev** | `dev` (default) | Local development on a single machine | Single Zapier CLI login (`npx @zapier/zapier-sdk-cli login`). No client credentials needed. |
-| **Production** | `production` | Hosted multi-user deployment | Each user OAuths their own Zapier account through the Foreman UI. Requires `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET`. |
-| **Self-Hosted** | `self_hosted` | Same as Production, but you run the infra | Identical per-user OAuth flow as Production — just deployed on your own VPS / cluster instead of our hosted environment. Requires the same client credentials. |
+| **Self-hosted** | `self_hosted` | Running Foreman for real users on your own infra (VPS, cluster, etc.) | Each user OAuths their own Zapier account through the Foreman UI. Requires `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET`. |
 
-Self-hosted is **not** a single-shared-account mode. It is Production deployed on your own infra. Each user still connects their own Zapier account.
+> The code also accepts `production` as a synonym for `self_hosted` — that's the value we tag our own hosted deploy at https://foreman.otakusolutions.io with. From a code-path standpoint they are identical. As a self-hoster you should use `self_hosted`.
+
+Self-hosted is **not** a single-shared-account mode. Each user still connects their own Zapier account — Foreman just runs on infrastructure you own instead of ours.
 
 ## Channels
 
