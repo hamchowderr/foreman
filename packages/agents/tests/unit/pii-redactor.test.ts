@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { piiRedactor } from "@/lib/processors/output";
 
 describe("PII Redactor", () => {
@@ -23,29 +23,23 @@ describe("PII Redactor", () => {
     });
 
     it("redacts sk-* API keys", async () => {
-      const result = await redactChunk(
-        "Your key is sk-abcdefghijklmnopqrstuvwxyz"
-      );
+      const result = await redactChunk("Your key is sk-abcdefghijklmnopqrstuvwxyz");
       expect(result).toBe("Your key is [API_KEY]");
     });
 
     it("redacts xoxb-* Slack tokens", async () => {
-      const result = await redactChunk(
-        "Token: xoxb-1234567890-abcdefghij"
-      );
+      const result = await redactChunk("Token: xoxb-1234567890-abcdefghij");
       expect(result).toBe("Token: [API_KEY]");
     });
 
     it("redacts sk_live_* Stripe keys", async () => {
-      const result = await redactChunk(
-        "Stripe key: sk_live_abcdefghij1234567890"
-      );
+      const result = await redactChunk("Stripe key: sk_live_abcdefghij1234567890");
       expect(result).toBe("Stripe key: [API_KEY]");
     });
 
     it("redacts Bearer tokens", async () => {
       const result = await redactChunk(
-        "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature"
+        "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature",
       );
       expect(result).toBe("Authorization: Bearer [TOKEN]");
     });
@@ -61,9 +55,7 @@ describe("PII Redactor", () => {
     });
 
     it("redacts credit card numbers", async () => {
-      const result = await redactChunk(
-        "Card: 4111 1111 1111 1111"
-      );
+      const result = await redactChunk("Card: 4111 1111 1111 1111");
       expect(result).toBe("Card: [CARD]");
     });
 
@@ -85,7 +77,7 @@ describe("PII Redactor", () => {
 
     it("redacts mixed content — phones and keys but NOT emails", async () => {
       const result = await redactChunk(
-        "Email admin@test.com, call (555) 123-4567, key sk-abcdefghijklmnopqrstuvwxyz"
+        "Email admin@test.com, call (555) 123-4567, key sk-abcdefghijklmnopqrstuvwxyz",
       );
       expect(result).toContain("admin@test.com"); // emails preserved
       expect(result).toContain("[PHONE]");
@@ -108,9 +100,7 @@ describe("PII Redactor", () => {
         {
           role: "assistant",
           content: {
-            parts: [
-              { type: "text", text: "Your email is user@example.com" },
-            ],
+            parts: [{ type: "text", text: "Your email is user@example.com" }],
           },
         },
       ] as any[];
@@ -119,9 +109,7 @@ describe("PII Redactor", () => {
         messages,
       } as any);
 
-      expect(result[0].content.parts[0].text).toBe(
-        "Your email is user@example.com"
-      );
+      expect(result[0].content.parts[0].text).toBe("Your email is user@example.com");
     });
 
     it("does not modify user messages", async () => {
@@ -129,9 +117,7 @@ describe("PII Redactor", () => {
         {
           role: "user",
           content: {
-            parts: [
-              { type: "text", text: "My email is user@example.com" },
-            ],
+            parts: [{ type: "text", text: "My email is user@example.com" }],
           },
         },
       ] as any[];
@@ -140,15 +126,11 @@ describe("PII Redactor", () => {
         messages,
       } as any);
 
-      expect(result[0].content.parts[0].text).toBe(
-        "My email is user@example.com"
-      );
+      expect(result[0].content.parts[0].text).toBe("My email is user@example.com");
     });
 
     it("handles messages without parts gracefully", async () => {
-      const messages = [
-        { role: "assistant", content: "plain string content" },
-      ] as any[];
+      const messages = [{ role: "assistant", content: "plain string content" }] as any[];
 
       const result = await piiRedactor.processOutputResult!({
         messages,

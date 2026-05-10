@@ -51,8 +51,7 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
       width: 50,
       renderCell: ({ rowIdx }: { rowIdx: number }) => rowIdx + 1,
       cellClass: "border-t border-r dark:bg-neutral-950 dark:text-neutral-50",
-      headerCellClass:
-        "border-t border-r dark:bg-neutral-900 dark:text-neutral-50",
+      headerCellClass: "border-t border-r dark:bg-neutral-900 dark:text-neutral-50",
     };
 
     const dataColumns = Array.from({ length: MIN_COLS }, (_, i) => ({

@@ -1,7 +1,7 @@
-import { randomUUID, randomBytes, createHash } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { getSupabase } from "../db";
 import { encryptToken } from "../crypto";
+import { getSupabase } from "../db";
 import { getEnv } from "../env";
 
 const ZAPIER_AUTHORIZE_URL = "https://zapier.com/oauth/authorize/";
@@ -16,10 +16,7 @@ const LOGIN_PORTS = [49505, 50575, 52804, 55981, 61010, 63851];
 const ZAPIER_SCOPE = "internal credentials offline_access";
 
 // In-memory store for pending connect requests (bot channel flow).
-const pendingConnects = new Map<
-  string,
-  { userId: string; state: string; expiresAt: number }
->();
+const pendingConnects = new Map<string, { userId: string; state: string; expiresAt: number }>();
 
 // In-memory state map for web/agent PKCE flow (shared with route handler).
 export const webConnectStateMap = new Map<
@@ -51,14 +48,15 @@ async function findAvailablePort(): Promise<number> {
   for (const port of LOGIN_PORTS) {
     const available = await new Promise<boolean>((resolve) => {
       const server = createServer();
-      server.listen(port, () => { server.close(); resolve(true); });
+      server.listen(port, () => {
+        server.close();
+        resolve(true);
+      });
       server.on("error", () => resolve(false));
     });
     if (available) return port;
   }
-  throw new Error(
-    `No OAuth callback ports available. Ports tried: ${LOGIN_PORTS.join(", ")}`
-  );
+  throw new Error(`No OAuth callback ports available. Ports tried: ${LOGIN_PORTS.join(", ")}`);
 }
 
 /**
@@ -67,10 +65,7 @@ async function findAvailablePort(): Promise<number> {
  * captures the code and state, relays them to the main server's /oauth handler,
  * then shuts down.
  */
-async function startRelayServer(
-  port: number,
-  mainServerOauthUrl: string
-): Promise<void> {
+async function startRelayServer(port: number, mainServerOauthUrl: string): Promise<void> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const url = new URL(req.url ?? "/", `http://localhost:${port}`);
@@ -118,9 +113,7 @@ export function generateConnectUrl(userId: string): string {
 /**
  * Validate and consume a one-time connect token.
  */
-export function consumeConnectToken(
-  token: string
-): { userId: string; state: string } | null {
+export function consumeConnectToken(token: string): { userId: string; state: string } | null {
   const entry = pendingConnects.get(token);
   if (!entry) return null;
   if (entry.expiresAt < Date.now()) {
@@ -141,7 +134,7 @@ export function consumeConnectToken(
  * For production (ZAPIER_REDIRECT_URI set): uses that URI directly.
  */
 export async function buildAuthorizeUrl(
-  state: string
+  state: string,
 ): Promise<{ authorizeUrl: string; codeVerifier: string; redirectUri: string }> {
   const env = getEnv();
   const codeVerifier = generateCodeVerifier();
@@ -183,7 +176,7 @@ export async function exchangeCodeAndStore(
   code: string,
   userId: string,
   codeVerifier: string,
-  redirectUri: string
+  redirectUri: string,
 ): Promise<void> {
   const res = await fetch(ZAPIER_TOKEN_URL, {
     method: "POST",
@@ -225,7 +218,7 @@ export async function exchangeCodeAndStore(
       created_at: now,
       updated_at: now,
     },
-    { onConflict: "user_id" }
+    { onConflict: "user_id" },
   );
 }
 

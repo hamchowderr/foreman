@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
-  useReducedMotion,
-} from "motion/react";
-import { useRef, type ReactNode, type MouseEvent } from "react";
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
+import { type MouseEvent, type ReactNode, useRef } from "react";
 
 /**
  * Wraps a card with 3D tilt, cursor-following spotlight, and a conic
@@ -101,8 +95,7 @@ export function TiltedSpotlight({
           style={{
             background:
               "conic-gradient(from 0deg, transparent 0deg, rgba(255,74,0,0.55) 90deg, transparent 180deg, rgba(255,74,0,0.3) 270deg, transparent 360deg)",
-            WebkitMask:
-              "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
             WebkitMaskComposite: "xor",
             maskComposite: "exclude",
             padding: "1.5px",

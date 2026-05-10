@@ -1,7 +1,7 @@
-import { MDocument } from "@mastra/rag";
-import { embedMany } from "ai";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
 import { PgVector } from "@mastra/pg";
+import { MDocument } from "@mastra/rag";
+import { embedMany } from "ai";
 import { getEnv } from "@/lib/env";
 
 const INDEX_NAME = "action_history";
@@ -55,7 +55,7 @@ export async function indexActionRun(
     humanLabel: string;
     inputs: string;
   },
-  userId: string
+  userId: string,
 ): Promise<void> {
   await ensureIndex();
 
@@ -109,7 +109,7 @@ export async function indexActionRun(
 export async function indexConversationSummary(
   conversationId: string,
   summary: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   await ensureIndex();
 
@@ -144,7 +144,7 @@ export async function indexConversationSummary(
 export async function searchActionHistory(
   query: string,
   userId: string,
-  topK = 5
+  topK = 5,
 ): Promise<
   Array<{
     score: number;

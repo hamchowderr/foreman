@@ -21,7 +21,7 @@ function PureAttachmentsButton({
   const { data: modelsResponse } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false, dedupingInterval: 3_600_000 }
+    { revalidateOnFocus: false, dedupingInterval: 3_600_000 },
   );
 
   const caps: Record<string, ModelCapabilities> | undefined =
@@ -34,7 +34,7 @@ function PureAttachmentsButton({
         "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
         hasVision
           ? "text-foreground hover:border-border hover:text-foreground"
-          : "text-muted-foreground/30 cursor-not-allowed"
+          : "text-muted-foreground/30 cursor-not-allowed",
       )}
       data-testid="attachments-button"
       disabled={status !== "ready" || !hasVision}

@@ -19,16 +19,6 @@
 
 import { createScorer } from "@mastra/core/evals";
 
-interface ExpectedStep {
-  stepType?: string;
-  name: string;
-}
-
-interface ExpectedTrajectory {
-  steps?: ExpectedStep[];
-  blacklistedTools?: string[];
-}
-
 // Modern Mastra agent output is MastraDBMessage[] where each message has
 // `content.parts: MastraMessagePart[]`. Tool invocations are nested in
 // content.parts[].type === "tool-invocation" with toolInvocation.toolName.
@@ -73,7 +63,9 @@ function extractActualToolNames(output: unknown): string[] {
     typeof output === "object" &&
     "toolCalls" in (output as Record<string, unknown>)
   ) {
-    const toolCalls = (output as { toolCalls?: Array<{ payload?: { toolName?: string }; toolName?: string }> }).toolCalls;
+    const toolCalls = (
+      output as { toolCalls?: Array<{ payload?: { toolName?: string }; toolName?: string }> }
+    ).toolCalls;
     if (Array.isArray(toolCalls)) {
       for (const tc of toolCalls) {
         const name = tc?.payload?.toolName ?? tc?.toolName;
@@ -115,10 +107,7 @@ function isSubsequence(needle: string[], haystack: string[]): boolean {
   return i === needle.length;
 }
 
-function blacklistViolated(
-  actual: string[],
-  blacklist: string[] | undefined,
-): string | null {
+function blacklistViolated(actual: string[], blacklist: string[] | undefined): string | null {
   if (!blacklist?.length) return null;
   for (const item of actual) {
     if (blacklist.includes(item)) return item;

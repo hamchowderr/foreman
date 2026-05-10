@@ -20,7 +20,11 @@ const COLUMNS: Array<{
     links: [
       { label: "Docs", href: "/docs" },
       { label: "GitHub", href: "https://github.com/hamchowderr/foreman", external: true },
-      { label: "Changelog", href: "https://github.com/hamchowderr/foreman/releases", external: true },
+      {
+        label: "Changelog",
+        href: "https://github.com/hamchowderr/foreman/releases",
+        external: true,
+      },
     ],
   },
   {
@@ -59,7 +63,8 @@ export function SiteFooter() {
               </h3>
               <ul className="space-y-2 text-sm">
                 {col.links.map((link) => {
-                  const className = "text-muted hover:text-foreground transition-colors break-words";
+                  const className =
+                    "text-muted hover:text-foreground transition-colors break-words";
                   if (link.external) {
                     return (
                       <li key={link.label}>
@@ -92,7 +97,13 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted">
-          <span>&copy; <Suspense fallback={null}><CurrentYear /></Suspense> Otaku Solutions. MIT-licensed.</span>
+          <span>
+            &copy;{" "}
+            <Suspense fallback={null}>
+              <CurrentYear />
+            </Suspense>{" "}
+            Otaku Solutions. MIT-licensed.
+          </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
               <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />

@@ -1,14 +1,22 @@
+import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
+import { getSupabase } from "@/lib/db";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
-import { getSupabase } from "@/lib/db";
-import { randomUUID } from "node:crypto";
 
 const VALID_CHANNELS = [
-  "telegram", "discord", "slack", "teams", "gchat", "whatsapp", "github", "linear", "imessage",
+  "telegram",
+  "discord",
+  "slack",
+  "teams",
+  "gchat",
+  "whatsapp",
+  "github",
+  "linear",
+  "imessage",
 ] as const;
 
-type Channel = typeof VALID_CHANNELS[number];
+type Channel = (typeof VALID_CHANNELS)[number];
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

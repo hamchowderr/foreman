@@ -1,171 +1,195 @@
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
-import { ArrowRight, Search, Zap, ChevronRight, ChevronDown } from 'lucide-react'
-import { createClient } from '@/lib/client'
-import { MessageResponse } from '@/components/ai-elements/message'
-import { sanitizeText } from '@/lib/utils'
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { ArrowRight, ChevronDown, ChevronRight, Search, Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MessageResponse } from "@/components/ai-elements/message";
+import { createClient } from "@/lib/client";
+import { sanitizeText } from "@/lib/utils";
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
 const USE_MESSAGES: Record<string, string> = {
-  sales: 'What Zapier tables do I have set up?',
-  email: 'What Zapier workflows do I have for email?',
-  crm: 'What CRM-related Zapier connections do I have?',
-  slack: 'What apps am I connected to in Zapier?',
-  data: 'What Zapier tables are available for data entry?',
-  reports: 'What automation workflows do I have in Zapier?',
-  invoices: 'What apps am I connected to in Zapier?',
-  leads: 'What apps am I connected to in Zapier?',
-  calendar: 'What apps am I connected to in Zapier?',
-}
+  sales: "What Zapier tables do I have set up?",
+  email: "What Zapier workflows do I have for email?",
+  crm: "What CRM-related Zapier connections do I have?",
+  slack: "What apps am I connected to in Zapier?",
+  data: "What Zapier tables are available for data entry?",
+  reports: "What automation workflows do I have in Zapier?",
+  invoices: "What apps am I connected to in Zapier?",
+  leads: "What apps am I connected to in Zapier?",
+  calendar: "What apps am I connected to in Zapier?",
+};
 
 function getPrompt(uses: string[]): string {
   for (const u of uses) {
-    if (USE_MESSAGES[u]) return USE_MESSAGES[u]
+    if (USE_MESSAGES[u]) return USE_MESSAGES[u];
   }
-  return 'What apps am I connected to in Zapier?'
+  return "What apps am I connected to in Zapier?";
 }
 
-const HIDDEN_TOOLS = new Set(['updateWorkingMemory', 'recall'])
+const HIDDEN_TOOLS = new Set(["updateWorkingMemory", "recall"]);
 
 function ToolCallBubble({ part }: { part: any }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(false);
   // AI SDK v6: type is "tool-<toolName>", name extracted from type
-  const toolName = part.type?.startsWith('tool-') ? part.type.replace(/^tool-/, '') : (part.toolName || 'tool')
-  const isSearch = toolName.includes('search') || toolName.includes('list')
-  const Icon = isSearch ? Search : Zap
-  const hasOutput = part.state === 'output-available' || part.output != null
+  const toolName = part.type?.startsWith("tool-")
+    ? part.type.replace(/^tool-/, "")
+    : part.toolName || "tool";
+  const isSearch = toolName.includes("search") || toolName.includes("list");
+  const Icon = isSearch ? Search : Zap;
+  const hasOutput = part.state === "output-available" || part.output != null;
 
   return (
     <button
+      type="button"
       onClick={() => setExpanded((e) => !e)}
       className="w-full text-left rounded-lg px-3 py-2 transition-colors text-sm"
       style={{
-        backgroundColor: '#FFF3E6',
-        border: '1px solid #FFBF6E',
+        backgroundColor: "#FFF3E6",
+        border: "1px solid #FFBF6E",
       }}
     >
       <div className="flex items-center gap-2">
-        <Icon className="h-3 w-3 shrink-0" style={{ color: '#FF4F00' }} />
-        <span className="flex-1 font-medium text-xs" style={{ color: '#FF4F00' }}>{toolName}</span>
-        {hasOutput && <span className="text-[10px]" style={{ color: '#4A7C2F' }}>✓</span>}
-        {expanded
-          ? <ChevronDown className="h-3 w-3" style={{ color: '#FFBF6E' }} />
-          : <ChevronRight className="h-3 w-3" style={{ color: '#FFBF6E' }} />
-        }
+        <Icon className="h-3 w-3 shrink-0" style={{ color: "#FF4F00" }} />
+        <span className="flex-1 font-medium text-xs" style={{ color: "#FF4F00" }}>
+          {toolName}
+        </span>
+        {hasOutput && (
+          <span className="text-[10px]" style={{ color: "#4A7C2F" }}>
+            ✓
+          </span>
+        )}
+        {expanded ? (
+          <ChevronDown className="h-3 w-3" style={{ color: "#FFBF6E" }} />
+        ) : (
+          <ChevronRight className="h-3 w-3" style={{ color: "#FFBF6E" }} />
+        )}
       </div>
       {expanded && part.input && (
-        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid #FFBF6E' }}>
+        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid #FFBF6E" }}>
           {Object.entries(part.input as Record<string, unknown>).map(([k, v]) => (
             <div key={k} className="flex gap-2 text-[10px]">
-              <span style={{ color: '#FFBF6E' }}>{k}:</span>
-              <span className="font-medium" style={{ color: '#201515' }}>{String(v)}</span>
+              <span style={{ color: "#FFBF6E" }}>{k}:</span>
+              <span className="font-medium" style={{ color: "#201515" }}>
+                {String(v)}
+              </span>
             </div>
           ))}
           {hasOutput && part.output && (
-            <div className="mt-1.5 pt-1.5 text-[10px]" style={{ borderTop: '1px solid #FFBF6E', color: '#4A7C2F' }}>
-              → {typeof part.output === 'string' ? part.output : JSON.stringify(part.output).slice(0, 120)}
+            <div
+              className="mt-1.5 pt-1.5 text-[10px]"
+              style={{ borderTop: "1px solid #FFBF6E", color: "#4A7C2F" }}
+            >
+              →{" "}
+              {typeof part.output === "string"
+                ? part.output
+                : JSON.stringify(part.output).slice(0, 120)}
             </div>
           )}
         </div>
       )}
     </button>
-  )
+  );
 }
 
 interface Props {
-  uses: string[]
-  onNext: () => void
+  uses: string[];
+  onNext: () => void;
 }
 
 export function StepTry({ uses, onNext }: Props) {
-  const prompt = getPrompt(uses)
-  const [chatId] = useState(() => crypto.randomUUID())
-  const [userId, setUserId] = useState<string>('')
-  const [started, setStarted] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [done, setDone] = useState(false)
+  const prompt = getPrompt(uses);
+  const [chatId] = useState(() => crypto.randomUUID());
+  const [userId, setUserId] = useState<string>("");
+  const [started, setStarted] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    createClient().auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.id) setUserId(session.user.id)
-    })
-  }, [])
+    createClient()
+      .auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user?.id) setUserId(session.user.id);
+      });
+  }, []);
 
-  const userIdRef = useRef(userId)
-  useEffect(() => { userIdRef.current = userId }, [userId])
+  const userIdRef = useRef(userId);
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
   const { messages, sendMessage, status } = useChat({
     id: chatId,
     transport: new DefaultChatTransport({
       api: `${AGENT_URL}/chat/foreman`,
       fetch: async (input, init) => {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         return fetch(input, {
           ...init,
           headers: {
             ...init?.headers,
             ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
           },
-        })
+        });
       },
       prepareSendMessagesRequest(request) {
-        const lastMsg = request.messages.at(-1) as any
+        const lastMsg = request.messages.at(-1) as any;
         // AI SDK may represent content as string or as parts array
         const text: string =
-          (typeof lastMsg?.content === 'string' && lastMsg.content) ||
+          (typeof lastMsg?.content === "string" && lastMsg.content) ||
           lastMsg?.parts
-            ?.filter((p: any) => p.type === 'text')
+            ?.filter((p: any) => p.type === "text")
             .map((p: any) => p.text as string)
-            .join('') ||
-          prompt
+            .join("") ||
+          prompt;
         return {
           body: {
-            messages: [{ role: 'user', content: text }],
+            messages: [{ role: "user", content: text }],
             threadId: request.id,
             resourceId: userIdRef.current,
           },
-        }
+        };
       },
     }),
-  } as any)
+  } as any);
 
   const handleStart = () => {
     if (!started && userId) {
-      setStarted(true)
-      sendMessage({ role: 'user', content: prompt } as any)
+      setStarted(true);
+      sendMessage({ role: "user", content: prompt } as any);
     }
-  }
+  };
 
   // Scroll to bottom on any DOM change (fires during streaming, not just on new messages)
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
+    const el = scrollRef.current;
+    if (!el) return;
     const observer = new MutationObserver(() => {
-      el.scrollTop = el.scrollHeight
-    })
-    observer.observe(el, { childList: true, subtree: true, characterData: true })
-    return () => observer.disconnect()
-  }, [])
+      el.scrollTop = el.scrollHeight;
+    });
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (status === 'ready' && messages.length > 1) setDone(true)
-  }, [status, messages.length])
+    if (status === "ready" && messages.length > 1) setDone(true);
+  }, [status, messages.length]);
 
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#FFBF6E' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#FFBF6E" }}>
           Step 3 of 4
         </p>
-        <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#201515' }}>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#201515" }}>
           Try it out
         </h1>
-        <p className="text-base" style={{ color: '#6B5050' }}>
+        <p className="text-base" style={{ color: "#6B5050" }}>
           Watch Foreman query your Zapier account in real time.
         </p>
       </div>
@@ -173,21 +197,36 @@ export function StepTry({ uses, onNext }: Props) {
       {/* Mini chat */}
       <div
         className="rounded-2xl overflow-hidden"
-        style={{ border: '1px solid #F0E8E0', backgroundColor: '#FFFFFF' }}
+        style={{ border: "1px solid #F0E8E0", backgroundColor: "#FFFFFF" }}
       >
         {/* Chrome bar */}
         <div
           className="flex items-center gap-1.5 px-4 py-2.5"
-          style={{ backgroundColor: '#201515', borderBottom: '1px solid #3A2525' }}
+          style={{ backgroundColor: "#201515", borderBottom: "1px solid #3A2525" }}
         >
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#FF4F00', opacity: 0.6 }} />
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#FFBF6E', opacity: 0.4 }} />
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#CDE4E1', opacity: 0.4 }} />
-          <span className="ml-2 text-[10px] uppercase tracking-widest" style={{ color: '#FFBF6E', opacity: 0.6 }}>
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#FF4F00", opacity: 0.6 }}
+          />
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#FFBF6E", opacity: 0.4 }}
+          />
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#CDE4E1", opacity: 0.4 }}
+          />
+          <span
+            className="ml-2 text-[10px] uppercase tracking-widest"
+            style={{ color: "#FFBF6E", opacity: 0.6 }}
+          >
             Foreman
           </span>
-          {status === 'streaming' && (
-            <span className="ml-auto text-[10px] font-mono animate-pulse" style={{ color: '#FF4F00' }}>
+          {status === "streaming" && (
+            <span
+              className="ml-auto text-[10px] font-mono animate-pulse"
+              style={{ color: "#FF4F00" }}
+            >
               thinking…
             </span>
           )}
@@ -202,100 +241,116 @@ export function StepTry({ uses, onNext }: Props) {
           {/* Pre-start: show prompt as a clickable suggestion */}
           {!started && (
             <div className="flex h-full flex-col items-center justify-center gap-4 py-4">
-              <p className="text-xs text-center" style={{ color: '#FFBF6E' }}>
+              <p className="text-xs text-center" style={{ color: "#FFBF6E" }}>
                 Press the button below to see Foreman in action
               </p>
               <button
+                type="button"
                 onClick={handleStart}
                 disabled={!userId}
                 className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium transition-all"
                 style={{
-                  backgroundColor: '#FFF3E6',
-                  border: '1px solid #FFBF6E',
-                  color: '#201515',
+                  backgroundColor: "#FFF3E6",
+                  border: "1px solid #FFBF6E",
+                  color: "#201515",
                   opacity: userId ? 1 : 0.5,
-                  cursor: userId ? 'pointer' : 'wait',
+                  cursor: userId ? "pointer" : "wait",
                 }}
               >
                 <span>{prompt}</span>
-                <ArrowRight className="h-3 w-3 shrink-0" style={{ color: '#FF4F00' }} />
+                <ArrowRight className="h-3 w-3 shrink-0" style={{ color: "#FF4F00" }} />
               </button>
             </div>
           )}
 
           {messages.map((msg) => {
-            if (msg.role === 'user') {
+            if (msg.role === "user") {
               return (
                 <div key={msg.id} className="flex justify-end">
                   <div
                     className="max-w-[75%] rounded-2xl rounded-br-sm px-3.5 py-2 text-xs leading-relaxed"
-                    style={{ backgroundColor: '#FFF3E6', border: '1px solid #FFBF6E', color: '#201515' }}
+                    style={{
+                      backgroundColor: "#FFF3E6",
+                      border: "1px solid #FFBF6E",
+                      color: "#201515",
+                    }}
                   >
-                    {(msg.parts as any[])?.find((p: any) => p.type === 'text')?.text || prompt}
+                    {(msg.parts as any[])?.find((p: any) => p.type === "text")?.text || prompt}
                   </div>
                 </div>
-              )
+              );
             }
 
             // Assistant message — render parts (AI SDK v6: tool parts are "tool-<toolName>")
-            const parts: any[] = (msg as any).parts || []
+            const parts: any[] = (msg as any).parts || [];
             return (
               <div key={msg.id} className="space-y-2">
                 {parts.map((part: any, i: number) => {
-                  if (part.type?.startsWith('tool-')) {
-                    const tn = part.type.replace(/^tool-/, '')
-                    if (HIDDEN_TOOLS.has(tn)) return null
-                    return <ToolCallBubble key={i} part={part} />
+                  if (part.type?.startsWith("tool-")) {
+                    const tn = part.type.replace(/^tool-/, "");
+                    if (HIDDEN_TOOLS.has(tn)) return null;
+                    // biome-ignore lint/suspicious/noArrayIndexKey: parts array within a single message render — order is stable
+                    return <ToolCallBubble key={i} part={part} />;
                   }
-                  if (part.type === 'text' && part.text) {
+                  if (part.type === "text" && part.text) {
                     return (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: parts array within a single message render — order is stable
                       <div key={i} className="flex items-start gap-2.5">
                         <div
                           className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-px text-[9px] font-bold text-white"
-                          style={{ backgroundColor: '#FF4F00' }}
+                          style={{ backgroundColor: "#FF4F00" }}
                         >
                           F
                         </div>
                         <div
                           className="rounded-2xl rounded-tl-sm px-3.5 py-2 text-xs leading-relaxed max-w-[80%]"
-                          style={{ backgroundColor: '#FFFDF9', border: '1px solid #F0E8E0', color: '#201515' }}
+                          style={{
+                            backgroundColor: "#FFFDF9",
+                            border: "1px solid #F0E8E0",
+                            color: "#201515",
+                          }}
                         >
                           <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
                         </div>
                       </div>
-                    )
+                    );
                   }
-                  return null
+                  return null;
                 })}
                 {/* Fallback: assistant message with no structured parts */}
-                {parts.length === 0 && (() => {
-                  const fallbackText = (msg as any).text || ''
-                  return fallbackText ? (
-                    <div className="flex items-start gap-2.5">
-                      <div
-                        className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-px text-[9px] font-bold text-white"
-                        style={{ backgroundColor: '#FF4F00' }}
-                      >
-                        F
+                {parts.length === 0 &&
+                  (() => {
+                    const fallbackText = (msg as any).text || "";
+                    return fallbackText ? (
+                      <div className="flex items-start gap-2.5">
+                        <div
+                          className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-px text-[9px] font-bold text-white"
+                          style={{ backgroundColor: "#FF4F00" }}
+                        >
+                          F
+                        </div>
+                        <div
+                          className="rounded-2xl rounded-tl-sm px-3.5 py-2 text-xs leading-relaxed max-w-[80%]"
+                          style={{
+                            backgroundColor: "#FFFDF9",
+                            border: "1px solid #F0E8E0",
+                            color: "#201515",
+                          }}
+                        >
+                          <MessageResponse>{sanitizeText(fallbackText)}</MessageResponse>
+                        </div>
                       </div>
-                      <div
-                        className="rounded-2xl rounded-tl-sm px-3.5 py-2 text-xs leading-relaxed max-w-[80%]"
-                        style={{ backgroundColor: '#FFFDF9', border: '1px solid #F0E8E0', color: '#201515' }}
-                      >
-                        <MessageResponse>{sanitizeText(fallbackText)}</MessageResponse>
-                      </div>
-                    </div>
-                  ) : null
-                })()}
+                    ) : null;
+                  })()}
               </div>
-            )
+            );
           })}
 
-          {status === 'streaming' && messages.length <= 1 && (
+          {status === "streaming" && messages.length <= 1 && (
             <div className="flex items-center gap-2">
               <div
                 className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold text-white"
-                style={{ backgroundColor: '#FF4F00' }}
+                style={{ backgroundColor: "#FF4F00" }}
               >
                 F
               </div>
@@ -304,7 +359,7 @@ export function StepTry({ uses, onNext }: Props) {
                   <span
                     key={delay}
                     className="h-1.5 w-1.5 rounded-full animate-bounce"
-                    style={{ backgroundColor: '#FFBF6E', animationDelay: `${delay}ms` }}
+                    style={{ backgroundColor: "#FFBF6E", animationDelay: `${delay}ms` }}
                   />
                 ))}
               </div>
@@ -314,16 +369,24 @@ export function StepTry({ uses, onNext }: Props) {
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <p className="text-sm" style={{ color: done ? '#4A7C2F' : started ? '#FFBF6E' : '#6B5050' }}>
-          {done ? 'Foreman is connected.' : started ? 'Waiting for response…' : 'Click the prompt above to start'}
+        <p
+          className="text-sm"
+          style={{ color: done ? "#4A7C2F" : started ? "#FFBF6E" : "#6B5050" }}
+        >
+          {done
+            ? "Foreman is connected."
+            : started
+              ? "Waiting for response…"
+              : "Click the prompt above to start"}
         </p>
         <button
+          type="button"
           onClick={onNext}
           disabled={!done}
           className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all"
           style={{
-            backgroundColor: done ? '#FF4F00' : '#FFBF6E',
-            cursor: done ? 'pointer' : 'not-allowed',
+            backgroundColor: done ? "#FF4F00" : "#FFBF6E",
+            cursor: done ? "pointer" : "not-allowed",
           }}
         >
           Continue
@@ -331,5 +394,5 @@ export function StepTry({ uses, onNext }: Props) {
         </button>
       </div>
     </div>
-  )
+  );
 }

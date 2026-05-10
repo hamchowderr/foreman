@@ -69,7 +69,7 @@ function PureMessages({
       <div
         className={cn(
           "absolute inset-0 touch-pan-y overflow-y-auto",
-          messages.length > 0 ? "bg-background" : "bg-transparent"
+          messages.length > 0 ? "bg-background" : "bg-transparent",
         )}
         ref={messagesContainerRef}
         style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
@@ -79,34 +79,21 @@ function PureMessages({
             <PreviewMessage
               addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}
-              isLoading={
-                status === "streaming" && messages.length - 1 === index
-              }
+              isLoading={status === "streaming" && messages.length - 1 === index}
               isReadonly={isReadonly}
               key={message.id}
               message={message}
               onEdit={onEditMessage}
               regenerate={regenerate}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
+              requiresScrollPadding={hasSentMessage && index === messages.length - 1}
               setMessages={setMessages}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
+              vote={votes ? votes.find((vote) => vote.messageId === message.id) : undefined}
             />
           ))}
 
-          {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
-            <ThinkingMessage />
-          )}
+          {status === "submitted" && messages.at(-1)?.role !== "assistant" && <ThinkingMessage />}
 
-          <div
-            className="min-h-[24px] min-w-[24px] shrink-0"
-            ref={messagesEndRef}
-          />
+          <div className="min-h-[24px] min-w-[24px] shrink-0" ref={messagesEndRef} />
         </div>
       </div>
 

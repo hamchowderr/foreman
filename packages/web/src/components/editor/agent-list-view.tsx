@@ -1,11 +1,11 @@
 "use client";
 
+import { BotIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { createClient } from "@/lib/client";
-import { BotIcon, PlusIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,11 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { storedAgentsApi, type StoredAgent } from "@/lib/stored-agents-client";
+import { createClient } from "@/lib/client";
+import { type StoredAgent, storedAgentsApi } from "@/lib/stored-agents-client";
 
 async function getToken() {
-  const { data: { session } } = await createClient().auth.getSession();
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
   return session?.access_token ?? null;
 }
 
@@ -30,13 +32,10 @@ export function AgentListView() {
   const searchParams = useSearchParams();
   const { mutate } = useSWRConfig();
 
-  const { data, isLoading, error } = useSWR<StoredAgent[]>(
-    ["stored-agents-list"],
-    async () => {
-      const token = await getToken();
-      return storedAgentsApi.list(token ?? "");
-    }
-  );
+  const { data, isLoading, error } = useSWR<StoredAgent[]>(["stored-agents-list"], async () => {
+    const token = await getToken();
+    return storedAgentsApi.list(token ?? "");
+  });
 
   const [creating, setCreating] = useState(false);
 
@@ -62,28 +61,20 @@ export function AgentListView() {
             Custom agent definitions — instructions, tools, and published versions.
           </p>
         </div>
-        <Button
-          variant="accent"
-          onClick={() => setCreating(true)}
-          className="gap-2"
-        >
+        <Button variant="accent" onClick={() => setCreating(true)} className="gap-2">
           <PlusIcon className="size-4" />
           New agent
         </Button>
       </header>
 
-      {isLoading && (
-        <p className="text-sm text-muted">Loading agents…</p>
-      )}
+      {isLoading && <p className="text-sm text-muted">Loading agents…</p>}
       {error && (
         <p className="text-sm text-destructive">
           Failed to load agents: {(error as Error).message}
         </p>
       )}
 
-      {data && data.length === 0 && !isLoading && (
-        <EmptyState onCreate={() => setCreating(true)} />
-      )}
+      {data && data.length === 0 && !isLoading && <EmptyState onCreate={() => setCreating(true)} />}
 
       {data && data.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,8 +104,8 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <BotIcon className="mx-auto mb-3 size-8 text-muted" />
       <h2 className="text-base font-medium">No agents yet</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-        Create your first agent to define instructions, pick tools, and publish
-        versions you can reference elsewhere.
+        Create your first agent to define instructions, pick tools, and publish versions you can
+        reference elsewhere.
       </p>
       <Button variant="accent" onClick={onCreate} className="mt-4 gap-2">
         <PlusIcon className="size-4" />
@@ -138,9 +129,7 @@ function AgentCard({ agent }: { agent: StoredAgent }) {
       className="card-hover group rounded-xl border border-border bg-card p-5 transition-colors"
     >
       <div className="mb-3 flex items-start justify-between gap-2">
-        <h3 className="truncate text-base font-medium group-hover:text-accent">
-          {agent.name}
-        </h3>
+        <h3 className="truncate text-base font-medium group-hover:text-accent">{agent.name}</h3>
         {latest?.is_draft ? (
           <Badge variant="outline">draft v{latest.version}</Badge>
         ) : publishedVersion ? (
@@ -223,8 +212,11 @@ function NewAgentDialog({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="mb-1 block text-sm font-medium">Name</label>
+              <label htmlFor="new-agent-name" className="mb-1 block text-sm font-medium">
+                Name
+              </label>
               <Input
+                id="new-agent-name"
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -234,11 +226,11 @@ function NewAgentDialog({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">
-                Description{" "}
-                <span className="text-xs font-normal text-muted">(optional)</span>
+              <label htmlFor="new-agent-description" className="mb-1 block text-sm font-medium">
+                Description <span className="text-xs font-normal text-muted">(optional)</span>
               </label>
               <Textarea
+                id="new-agent-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Helps answer support questions and file tickets in Zendesk."
@@ -257,11 +249,7 @@ function NewAgentDialog({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="accent"
-              disabled={!name.trim() || submitting}
-            >
+            <Button type="submit" variant="accent" disabled={!name.trim() || submitting}>
               {submitting ? "Creating…" : "Create agent"}
             </Button>
           </DialogFooter>

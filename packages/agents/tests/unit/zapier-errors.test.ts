@@ -1,11 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  ZapierError,
-  ZapierNotConnected,
-  ZapierReauthRequired,
-  ZapierRateLimited,
   ZapierActionFailed,
   ZapierCapabilityDenied,
+  ZapierError,
+  ZapierNotConnected,
+  ZapierRateLimited,
+  ZapierReauthRequired,
 } from "@/lib/zapier/errors";
 
 describe("Zapier errors", () => {

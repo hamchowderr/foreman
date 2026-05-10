@@ -4,10 +4,7 @@ import { useMemo } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { updateChatVisibility } from "@/app/chat/actions";
-import {
-  type ChatHistory,
-  getChatHistoryPaginationKey,
-} from "@/components/chat/sidebar-history";
+import { type ChatHistory, getChatHistoryPaginationKey } from "@/components/chat/sidebar-history";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 
 export function useChatVisibility({
@@ -19,7 +16,7 @@ export function useChatVisibility({
 }) {
   const { mutate, cache } = useSWRConfig();
   const history: ChatHistory = cache.get(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`
+    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`,
   )?.data;
 
   const { data: localVisibility, mutate: setLocalVisibility } = useSWR(
@@ -27,7 +24,7 @@ export function useChatVisibility({
     null,
     {
       fallbackData: initialVisibilityType,
-    }
+    },
   );
 
   const visibilityType = useMemo(() => {

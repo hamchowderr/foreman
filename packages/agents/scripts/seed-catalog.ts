@@ -8,15 +8,15 @@
  *   npx tsx scripts/seed-catalog.ts --limit 10         # Only process 10 apps (for testing)
  */
 import { config } from "dotenv";
+
 config({ path: ".env.local" });
 config(); // also try .env as fallback
+
 import { seedCatalog } from "../src/lib/catalog/seed";
 
 const args = process.argv.slice(2);
 
-const limit = args.includes("--limit")
-  ? Number(args[args.indexOf("--limit") + 1])
-  : undefined;
+const limit = args.includes("--limit") ? Number(args[args.indexOf("--limit") + 1]) : undefined;
 
 const appsOnly = args.includes("--apps-only");
 const embedOnly = args.includes("--embed-only");

@@ -1,10 +1,10 @@
-import { stepCountIs } from "ai";
-import { Chat } from "chat";
 import { createLinearAdapter } from "@chat-adapter/linear";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { getMastra } from "../mastra";
+import { stepCountIs } from "ai";
+import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { getMastra } from "../mastra";
 
 let _bot: Chat<{ linear: ReturnType<typeof createLinearAdapter> }> | undefined;
 let _linearAdapter: ReturnType<typeof createLinearAdapter> | undefined;
@@ -36,23 +36,21 @@ export async function getLinearBot() {
     text: string,
     displayName?: string,
   ) {
-    const userId = await registerChannelUser(
-      "linear",
-      linearUserId,
-      displayName
-    );
+    const userId = await registerChannelUser("linear", linearUserId, displayName);
 
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Linear, because resource is the same userId.
-    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
-      stopWhen: stepCountIs(5),
-      savePerStep: true,
-      memory: {
-        thread: `linear-${threadId}`,
-        resource: userId,
-      },
-    }));
+    const result = await requestUserContext.run({ userId }, () =>
+      agent.generate(text, {
+        stopWhen: stepCountIs(5),
+        savePerStep: true,
+        memory: {
+          thread: `linear-${threadId}`,
+          resource: userId,
+        },
+      }),
+    );
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
@@ -62,11 +60,11 @@ export async function getLinearBot() {
     try {
       console.log("[linear] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       console.log("[linear] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -82,11 +80,11 @@ export async function getLinearBot() {
       console.log("[linear] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       console.log("[linear] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -100,11 +98,11 @@ export async function getLinearBot() {
     if (!message.text) return;
     try {
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       await thread.post(reply);
     } catch (err) {

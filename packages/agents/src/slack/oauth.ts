@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { getSupabase } from "../lib/db";
 import { encryptToken } from "../lib/crypto";
+import { getSupabase } from "../lib/db";
 
 const WEB_URL = process.env.WEB_URL ?? "http://localhost:3000";
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID!;
@@ -14,7 +14,7 @@ export async function handleSlackOAuth(c: Context): Promise<Response> {
   if (error || !code) {
     return c.redirect(
       `${WEB_URL}/settings/integrations/slack?error=${encodeURIComponent(error ?? "missing_code")}`,
-      302
+      302,
     );
   }
 
@@ -35,7 +35,7 @@ export async function handleSlackOAuth(c: Context): Promise<Response> {
       body: params.toString(),
     });
 
-    const data = await slackRes.json() as {
+    const data = (await slackRes.json()) as {
       ok: boolean;
       error?: string;
       team?: { id: string; name: string };
@@ -47,7 +47,7 @@ export async function handleSlackOAuth(c: Context): Promise<Response> {
       console.error("[slack/oauth] Token exchange failed:", data.error);
       return c.redirect(
         `${WEB_URL}/settings/integrations/slack?error=${encodeURIComponent(data.error ?? "token_exchange_failed")}`,
-        302
+        302,
       );
     }
 
@@ -61,20 +61,14 @@ export async function handleSlackOAuth(c: Context): Promise<Response> {
         bot_user_id: data.bot_user_id ?? null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "team_id" }
+      { onConflict: "team_id" },
     );
 
     console.log("[slack/oauth] Connected team:", data.team.id, data.team.name);
 
-    return c.redirect(
-      `${WEB_URL}/settings/integrations/slack?connected=1`,
-      302
-    );
+    return c.redirect(`${WEB_URL}/settings/integrations/slack?connected=1`, 302);
   } catch (err) {
     console.error("[slack/oauth] Error:", err);
-    return c.redirect(
-      `${WEB_URL}/settings/integrations/slack?error=oauth_failed`,
-      302
-    );
+    return c.redirect(`${WEB_URL}/settings/integrations/slack?error=oauth_failed`, 302);
   }
 }

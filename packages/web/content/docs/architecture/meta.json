@@ -1,8 +1,4 @@
 {
   "title": "Architecture",
-  "pages": [
-    "mastra",
-    "zapier-sdk",
-    "streaming"
-  ]
+  "pages": ["mastra", "zapier-sdk", "streaming"]
 }

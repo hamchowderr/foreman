@@ -1,10 +1,7 @@
-import type {
-  ProcessInputArgs,
-  InputProcessor,
-} from "@mastra/core/processors";
+import type { InputProcessor, ProcessInputArgs } from "@mastra/core/processors";
+import { searchAppCatalog } from "../catalog";
 import { listUserConnections } from "../zapier";
 import { loadUserConnectionsMap } from "../zapier/aliases";
-import { searchAppCatalog } from "../catalog";
 
 /**
  * Input processor that injects user context (connected apps, recent actions)
@@ -13,8 +10,7 @@ import { searchAppCatalog } from "../catalog";
 export const contextInjector: InputProcessor = {
   id: "context-injector",
   name: "Context Injector",
-  description:
-    "Injects user Zapier connection context into system messages before LLM call",
+  description: "Injects user Zapier connection context into system messages before LLM call",
 
   async processInput({ messages, systemMessages, requestContext }: ProcessInputArgs) {
     const userId = requestContext?.get("userId") as string | undefined;
@@ -80,7 +76,9 @@ export const contextInjector: InputProcessor = {
             const relevant = catalogResults.filter((r) => r.score >= 0.4);
             if (relevant.length >= 2) {
               const suggestions = relevant
-                .map((r) => `${r.title} (${r.categories || "uncategorized"}) [${r.score.toFixed(2)}]`)
+                .map(
+                  (r) => `${r.title} (${r.categories || "uncategorized"}) [${r.score.toFixed(2)}]`,
+                )
                 .join(", ");
               extraMessages.push({
                 role: "system" as const,
@@ -103,4 +101,3 @@ export const contextInjector: InputProcessor = {
     }
   },
 };
-

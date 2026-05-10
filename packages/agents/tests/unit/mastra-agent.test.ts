@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import { randomBytes } from "node:crypto";
+import { beforeAll, describe, expect, it } from "vitest";
 
 beforeAll(() => {
   process.env.DATABASE_URL = "file:./test-agent.db";

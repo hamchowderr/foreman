@@ -6,15 +6,18 @@
     "useIgnoreFile": true
   },
   "files": {
-    "experimentalScannerIgnores": [
-      "node_modules",
-      ".next",
-      ".mastra",
-      ".vercel",
-      "dist",
-      "drizzle",
-      ".source",
-      ".beads"
+    "includes": [
+      "**/*.{ts,tsx,js,jsx,mjs,cjs,json}",
+      "!**/.next",
+      "!**/.mastra",
+      "!**/.vercel",
+      "!**/.source",
+      "!**/.beads",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/drizzle",
+      "!**/*.min.js",
+      "!packages/web/components.json"
     ]
   },
   "formatter": {
@@ -75,5 +78,52 @@
         "noImgElement": "warn"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/web/src/components/ui/**",
+        "packages/web/src/components/ai-elements/**"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useButtonType": "off",
+            "useSemanticElements": "off",
+            "noStaticElementInteractions": "off",
+            "useKeyWithClickEvents": "off",
+            "useFocusableInteractive": "off",
+            "noLabelWithoutControl": "off",
+            "noAutofocus": "off",
+            "noRedundantRoles": "off",
+            "useAriaPropsForRole": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noDocumentCookie": "off"
+          },
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          },
+          "performance": {
+            "noImgElement": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/web/src/components/landing/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noCommentText": "off"
+          },
+          "a11y": {
+            "useValidAnchor": "off"
+          }
+        }
+      }
+    }
+  ]
 }

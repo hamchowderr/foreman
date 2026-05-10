@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, AnimatePresence, useInView } from "motion/react";
+import { AnimatePresence, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { Check, RotateCcw, Play } from "@/components/icons/hi";
+import { Check, Play, RotateCcw } from "@/components/icons/hi";
 
 type ZapNode = {
   id: string;
@@ -51,24 +51,116 @@ const SCENES: Scene[] = [
       { app: "slack", color: "#4a154b", letter: "#", label: "slack · send-message" },
     ],
     trace: [
-      { tool: "list-connections", args: '"forms, sheets, mailchimp, gmail, slack"', result: "all 5 connected" },
+      {
+        tool: "list-connections",
+        args: '"forms, sheets, mailchimp, gmail, slack"',
+        result: "all 5 connected",
+      },
       { tool: "search-actions", args: '"add row"', result: "sheets · create-spreadsheet-row" },
       { tool: "list-input-fields", args: "add-subscriber", result: "email · merge_fields · tags" },
       { tool: "search-actions", args: '"draft email"', result: "gmail · create-draft" },
       { tool: "search-history", args: '"#new-signups channel"', result: "slack · #new-signups" },
     ],
     nodes: [
-      { id: "forms",  n: 1,  app: "Google Forms",    action: "New Form Response",     color: "#673ab7", letter: "F", lane: "main" },
-      { id: "sheets", n: 2,  app: "Google Sheets",   action: "Create Spreadsheet Row",color: "#0f9d58", letter: "S", lane: "main" },
-      { id: "draft",  n: 3,  app: "Gmail",           action: "Create Draft",          color: "#ea4335", letter: "M", lane: "main" },
-      { id: "mc",     n: 4,  app: "Mailchimp",       action: "Add/Update Subscriber", color: "#ffe01b", letter: "M", lane: "main" },
-      { id: "paths",  n: 5,  app: "Paths",           action: "Branch",                color: "#0f172a", letter: "⎇", lane: "main" },
-      { id: "rulesA", n: 6,  app: "Path A rules",    action: "Opted in → newsletter", color: "#ea4335", letter: "A", lane: "pathA" },
-      { id: "slackA", n: 7,  app: "Slack",           action: "Send Channel Message",  color: "#4a154b", letter: "S", lane: "pathA" },
-      { id: "tableA", n: 8,  app: "Zapier Tables",   action: "Create Record",         color: "#ff4a00", letter: "Z", lane: "pathA" },
-      { id: "rulesB", n: 9,  app: "Path B rules",    action: "Else",                  color: "#ea4335", letter: "B", lane: "pathB" },
-      { id: "slackB", n: 10, app: "Slack",           action: "Send Channel Message",  color: "#4a154b", letter: "S", lane: "pathB" },
-      { id: "fmt",    n: 11, app: "Formatter",       action: "Text transform",        color: "#ff4a00", letter: "ƒ", lane: "pathB" },
+      {
+        id: "forms",
+        n: 1,
+        app: "Google Forms",
+        action: "New Form Response",
+        color: "#673ab7",
+        letter: "F",
+        lane: "main",
+      },
+      {
+        id: "sheets",
+        n: 2,
+        app: "Google Sheets",
+        action: "Create Spreadsheet Row",
+        color: "#0f9d58",
+        letter: "S",
+        lane: "main",
+      },
+      {
+        id: "draft",
+        n: 3,
+        app: "Gmail",
+        action: "Create Draft",
+        color: "#ea4335",
+        letter: "M",
+        lane: "main",
+      },
+      {
+        id: "mc",
+        n: 4,
+        app: "Mailchimp",
+        action: "Add/Update Subscriber",
+        color: "#ffe01b",
+        letter: "M",
+        lane: "main",
+      },
+      {
+        id: "paths",
+        n: 5,
+        app: "Paths",
+        action: "Branch",
+        color: "#0f172a",
+        letter: "⎇",
+        lane: "main",
+      },
+      {
+        id: "rulesA",
+        n: 6,
+        app: "Path A rules",
+        action: "Opted in → newsletter",
+        color: "#ea4335",
+        letter: "A",
+        lane: "pathA",
+      },
+      {
+        id: "slackA",
+        n: 7,
+        app: "Slack",
+        action: "Send Channel Message",
+        color: "#4a154b",
+        letter: "S",
+        lane: "pathA",
+      },
+      {
+        id: "tableA",
+        n: 8,
+        app: "Zapier Tables",
+        action: "Create Record",
+        color: "#ff4a00",
+        letter: "Z",
+        lane: "pathA",
+      },
+      {
+        id: "rulesB",
+        n: 9,
+        app: "Path B rules",
+        action: "Else",
+        color: "#ea4335",
+        letter: "B",
+        lane: "pathB",
+      },
+      {
+        id: "slackB",
+        n: 10,
+        app: "Slack",
+        action: "Send Channel Message",
+        color: "#4a154b",
+        letter: "S",
+        lane: "pathB",
+      },
+      {
+        id: "fmt",
+        n: 11,
+        app: "Formatter",
+        action: "Text transform",
+        color: "#ff4a00",
+        letter: "ƒ",
+        lane: "pathB",
+      },
     ],
   },
   {
@@ -78,9 +170,9 @@ const SCENES: Scene[] = [
       "New Airtable lead — enrich with Clearbit, ping me in Slack, and route hot ones to Pipedrive, warm ones to a Mailchimp drip.",
     workflowLabel: "workflow · 5 steps",
     steps: [
-      { app: "airtable",  color: "#ffbc00", letter: "A", label: "airtable · find-record" },
-      { app: "clearbit",  color: "#0d79bc", letter: "C", label: "clearbit · enrich-person" },
-      { app: "slack",     color: "#4a154b", letter: "#", label: "slack · send-message" },
+      { app: "airtable", color: "#ffbc00", letter: "A", label: "airtable · find-record" },
+      { app: "clearbit", color: "#0d79bc", letter: "C", label: "clearbit · enrich-person" },
+      { app: "slack", color: "#4a154b", letter: "#", label: "slack · send-message" },
       { app: "pipedrive", color: "#1c2e40", letter: "P", label: "pipedrive · create-deal" },
       { app: "mailchimp", color: "#ffe01b", letter: "M", label: "mailchimp · add-to-campaign" },
     ],
@@ -88,21 +180,113 @@ const SCENES: Scene[] = [
       { tool: "search-actions", args: '"enrich person"', result: "clearbit · enrich-person" },
       { tool: "list-input-fields", args: "enrich-person", result: "email · company · score" },
       { tool: "search-actions", args: '"create deal"', result: "pipedrive · create-deal" },
-      { tool: "list-input-field-choices", args: "pipeline", result: "Inbound · Outbound · Partner" },
+      {
+        tool: "list-input-field-choices",
+        args: "pipeline",
+        result: "Inbound · Outbound · Partner",
+      },
       { tool: "search-actions", args: '"mailchimp drip"', result: "mailchimp · add-to-campaign" },
     ],
     nodes: [
-      { id: "airt",   n: 1,  app: "Airtable",        action: "New Record",            color: "#ffbc00", letter: "A", lane: "main" },
-      { id: "cb",     n: 2,  app: "Clearbit",        action: "Enrich Person",         color: "#0d79bc", letter: "C", lane: "main" },
-      { id: "filt",   n: 3,  app: "Filter",          action: "Only valid emails",     color: "#ff4a00", letter: "ƒ", lane: "main" },
-      { id: "slackL", n: 4,  app: "Slack",           action: "Send Channel Message",  color: "#4a154b", letter: "S", lane: "main" },
-      { id: "paths",  n: 5,  app: "Paths",           action: "Branch",                color: "#0f172a", letter: "⎇", lane: "main" },
-      { id: "rulesA", n: 6,  app: "Path A rules",    action: "Score ≥ 80 (hot)",      color: "#ea4335", letter: "A", lane: "pathA" },
-      { id: "pd",     n: 7,  app: "Pipedrive",       action: "Create Deal",           color: "#1c2e40", letter: "P", lane: "pathA" },
-      { id: "slackA", n: 8,  app: "Slack",           action: "DM account owner",      color: "#4a154b", letter: "S", lane: "pathA" },
-      { id: "rulesB", n: 9,  app: "Path B rules",    action: "Else",                  color: "#ea4335", letter: "B", lane: "pathB" },
-      { id: "mc",     n: 10, app: "Mailchimp",       action: "Add to Warm Drip",      color: "#ffe01b", letter: "M", lane: "pathB" },
-      { id: "notion", n: 11, app: "Notion",          action: "Append to Leads DB",    color: "#0f172a", letter: "N", lane: "pathB" },
+      {
+        id: "airt",
+        n: 1,
+        app: "Airtable",
+        action: "New Record",
+        color: "#ffbc00",
+        letter: "A",
+        lane: "main",
+      },
+      {
+        id: "cb",
+        n: 2,
+        app: "Clearbit",
+        action: "Enrich Person",
+        color: "#0d79bc",
+        letter: "C",
+        lane: "main",
+      },
+      {
+        id: "filt",
+        n: 3,
+        app: "Filter",
+        action: "Only valid emails",
+        color: "#ff4a00",
+        letter: "ƒ",
+        lane: "main",
+      },
+      {
+        id: "slackL",
+        n: 4,
+        app: "Slack",
+        action: "Send Channel Message",
+        color: "#4a154b",
+        letter: "S",
+        lane: "main",
+      },
+      {
+        id: "paths",
+        n: 5,
+        app: "Paths",
+        action: "Branch",
+        color: "#0f172a",
+        letter: "⎇",
+        lane: "main",
+      },
+      {
+        id: "rulesA",
+        n: 6,
+        app: "Path A rules",
+        action: "Score ≥ 80 (hot)",
+        color: "#ea4335",
+        letter: "A",
+        lane: "pathA",
+      },
+      {
+        id: "pd",
+        n: 7,
+        app: "Pipedrive",
+        action: "Create Deal",
+        color: "#1c2e40",
+        letter: "P",
+        lane: "pathA",
+      },
+      {
+        id: "slackA",
+        n: 8,
+        app: "Slack",
+        action: "DM account owner",
+        color: "#4a154b",
+        letter: "S",
+        lane: "pathA",
+      },
+      {
+        id: "rulesB",
+        n: 9,
+        app: "Path B rules",
+        action: "Else",
+        color: "#ea4335",
+        letter: "B",
+        lane: "pathB",
+      },
+      {
+        id: "mc",
+        n: 10,
+        app: "Mailchimp",
+        action: "Add to Warm Drip",
+        color: "#ffe01b",
+        letter: "M",
+        lane: "pathB",
+      },
+      {
+        id: "notion",
+        n: 11,
+        app: "Notion",
+        action: "Append to Leads DB",
+        color: "#0f172a",
+        letter: "N",
+        lane: "pathB",
+      },
     ],
   },
   {
@@ -114,38 +298,130 @@ const SCENES: Scene[] = [
     steps: [
       { app: "github", color: "#1f2328", letter: "G", label: "github · find-issue" },
       { app: "linear", color: "#5e6ad2", letter: "L", label: "linear · create-issue" },
-      { app: "slack",  color: "#4a154b", letter: "#", label: "slack · post-to-#bugs" },
-      { app: "pd",     color: "#06ac38", letter: "P", label: "pagerduty · create-incident" },
+      { app: "slack", color: "#4a154b", letter: "#", label: "slack · post-to-#bugs" },
+      { app: "pd", color: "#06ac38", letter: "P", label: "pagerduty · create-incident" },
     ],
     trace: [
       { tool: "search-actions", args: '"github issue"', result: "github · find-issue" },
       { tool: "search-actions", args: '"linear create"', result: "linear · create-issue" },
       { tool: "list-input-field-choices", args: "linear.team", result: "Eng · Web · Mobile" },
       { tool: "search-history", args: '"#bugs slack channel"', result: "slack · #bugs" },
-      { tool: "list-input-fields", args: "pagerduty.create-incident", result: "service · urgency · title" },
+      {
+        tool: "list-input-fields",
+        args: "pagerduty.create-incident",
+        result: "service · urgency · title",
+      },
     ],
     nodes: [
-      { id: "gh",     n: 1,  app: "GitHub",          action: "New Issue",             color: "#1f2328", letter: "G", lane: "main" },
-      { id: "filtL",  n: 2,  app: "Filter",          action: "Label: bug",            color: "#ff4a00", letter: "ƒ", lane: "main" },
-      { id: "lin",    n: 3,  app: "Linear",          action: "Create Issue",          color: "#5e6ad2", letter: "L", lane: "main" },
-      { id: "slackT", n: 4,  app: "Slack",           action: "Post to #bugs",         color: "#4a154b", letter: "S", lane: "main" },
-      { id: "paths",  n: 5,  app: "Paths",           action: "Branch",                color: "#0f172a", letter: "⎇", lane: "main" },
-      { id: "rulesA", n: 6,  app: "Path A rules",    action: "Priority = P0",         color: "#ea4335", letter: "A", lane: "pathA" },
-      { id: "slackA", n: 7,  app: "Slack",           action: "DM oncall",             color: "#4a154b", letter: "S", lane: "pathA" },
-      { id: "pg",     n: 8,  app: "PagerDuty",       action: "Create Incident",       color: "#06ac38", letter: "P", lane: "pathA" },
-      { id: "rulesB", n: 9,  app: "Path B rules",    action: "Else",                  color: "#ea4335", letter: "B", lane: "pathB" },
-      { id: "jira",   n: 10, app: "Jira",            action: "Add to backlog",        color: "#0052cc", letter: "J", lane: "pathB" },
-      { id: "mail",   n: 11, app: "Gmail",           action: "Notify team lead",      color: "#ea4335", letter: "G", lane: "pathB" },
+      {
+        id: "gh",
+        n: 1,
+        app: "GitHub",
+        action: "New Issue",
+        color: "#1f2328",
+        letter: "G",
+        lane: "main",
+      },
+      {
+        id: "filtL",
+        n: 2,
+        app: "Filter",
+        action: "Label: bug",
+        color: "#ff4a00",
+        letter: "ƒ",
+        lane: "main",
+      },
+      {
+        id: "lin",
+        n: 3,
+        app: "Linear",
+        action: "Create Issue",
+        color: "#5e6ad2",
+        letter: "L",
+        lane: "main",
+      },
+      {
+        id: "slackT",
+        n: 4,
+        app: "Slack",
+        action: "Post to #bugs",
+        color: "#4a154b",
+        letter: "S",
+        lane: "main",
+      },
+      {
+        id: "paths",
+        n: 5,
+        app: "Paths",
+        action: "Branch",
+        color: "#0f172a",
+        letter: "⎇",
+        lane: "main",
+      },
+      {
+        id: "rulesA",
+        n: 6,
+        app: "Path A rules",
+        action: "Priority = P0",
+        color: "#ea4335",
+        letter: "A",
+        lane: "pathA",
+      },
+      {
+        id: "slackA",
+        n: 7,
+        app: "Slack",
+        action: "DM oncall",
+        color: "#4a154b",
+        letter: "S",
+        lane: "pathA",
+      },
+      {
+        id: "pg",
+        n: 8,
+        app: "PagerDuty",
+        action: "Create Incident",
+        color: "#06ac38",
+        letter: "P",
+        lane: "pathA",
+      },
+      {
+        id: "rulesB",
+        n: 9,
+        app: "Path B rules",
+        action: "Else",
+        color: "#ea4335",
+        letter: "B",
+        lane: "pathB",
+      },
+      {
+        id: "jira",
+        n: 10,
+        app: "Jira",
+        action: "Add to backlog",
+        color: "#0052cc",
+        letter: "J",
+        lane: "pathB",
+      },
+      {
+        id: "mail",
+        n: 11,
+        app: "Gmail",
+        action: "Notify team lead",
+        color: "#ea4335",
+        letter: "G",
+        lane: "pathB",
+      },
     ],
   },
 ];
 
 // Timing within a single scene
-const BUILD_STEP_MS = 580;             // per-node build delay
-const BUILD_END_PAUSE_MS = 700;        // pause after build
-const RUN_STEP_MS = 320;               // per-node run tick
-const RUN_END_LINGER_MS = 2000;        // hold complete state before advancing
-const SCENE_GAP_MS = 700;              // gap between scenes
+const BUILD_STEP_MS = 580; // per-node build delay
+const BUILD_END_PAUSE_MS = 700; // pause after build
+const RUN_STEP_MS = 320; // per-node run tick
+const RUN_END_LINGER_MS = 2000; // hold complete state before advancing
+const SCENE_GAP_MS = 700; // gap between scenes
 
 type Phase = "building" | "running" | "complete";
 
@@ -183,21 +459,11 @@ export function ZapVsForemanRace() {
 
     // Run phase: green tick per node
     for (let i = 1; i <= nodeCount; i++) {
-      timers.push(
-        setTimeout(
-          () => setRan(i),
-          BUILD_MS + BUILD_END_PAUSE_MS + i * RUN_STEP_MS,
-        ),
-      );
+      timers.push(setTimeout(() => setRan(i), BUILD_MS + BUILD_END_PAUSE_MS + i * RUN_STEP_MS));
     }
 
     // Transition to complete
-    timers.push(
-      setTimeout(
-        () => setPhase("complete"),
-        BUILD_MS + BUILD_END_PAUSE_MS + RUN_MS,
-      ),
-    );
+    timers.push(setTimeout(() => setPhase("complete"), BUILD_MS + BUILD_END_PAUSE_MS + RUN_MS));
 
     // Advance to next scene
     timers.push(
@@ -220,12 +486,13 @@ export function ZapVsForemanRace() {
   //   2.4s  workflow draft appears
   //   2.7s  awaiting approval banner
   const sceneElapsedMs =
-    phase === "building"
-      ? Math.min(built * BUILD_STEP_MS, BUILD_MS)
-      : BUILD_MS;
+    phase === "building" ? Math.min(built * BUILD_STEP_MS, BUILD_MS) : BUILD_MS;
   const FOREMAN_MS = 3000;
   const promptVisible = sceneElapsedMs >= 100;
-  const traceShown = Math.max(0, Math.min(scene.trace.length, Math.floor((sceneElapsedMs - 400) / 400)));
+  const traceShown = Math.max(
+    0,
+    Math.min(scene.trace.length, Math.floor((sceneElapsedMs - 400) / 400)),
+  );
   const draftVisible = sceneElapsedMs >= 400 + scene.trace.length * 400 + 200;
   const approvalVisible = sceneElapsedMs >= 400 + scene.trace.length * 400 + 600;
 
@@ -246,11 +513,21 @@ export function ZapVsForemanRace() {
         <div className="relative rounded-xl border border-border bg-surface overflow-hidden flex flex-col">
           <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className={`h-2 w-2 rounded-full shrink-0 ${
-                phase === "running" ? "bg-green-500 animate-pulse" : phase === "complete" ? "bg-green-500" : "bg-muted/60"
-              }`} />
+              <div
+                className={`h-2 w-2 rounded-full shrink-0 ${
+                  phase === "running"
+                    ? "bg-green-500 animate-pulse"
+                    : phase === "complete"
+                      ? "bg-green-500"
+                      : "bg-muted/60"
+                }`}
+              />
               <span className="text-xs font-semibold truncate">
-                {phase === "building" ? "Building a Zap" : phase === "running" ? "Test run" : "Complete"}
+                {phase === "building"
+                  ? "Building a Zap"
+                  : phase === "running"
+                    ? "Test run"
+                    : "Complete"}
               </span>
               <AnimatePresence mode="wait">
                 <motion.span
@@ -494,7 +771,9 @@ function ZapCanvas({
       {mainNodes.map((node, i) => (
         <div key={node.id} className="flex flex-col items-center gap-1.5">
           <ZapNodeCard node={node} state={nodeState(node.n)} />
-          {i < mainNodes.length - 1 && <Connector active={nodeState(mainNodes[i + 1].n) !== "empty"} />}
+          {i < mainNodes.length - 1 && (
+            <Connector active={nodeState(mainNodes[i + 1].n) !== "empty"} />
+          )}
         </div>
       ))}
 
@@ -507,7 +786,9 @@ function ZapCanvas({
           {pathANodes.map((node, i) => (
             <div key={node.id} className="flex flex-col items-center gap-1.5">
               <ZapNodeCard node={node} state={nodeState(node.n)} compact />
-              {i < pathANodes.length - 1 && <Connector active={nodeState(pathANodes[i + 1].n) !== "empty"} />}
+              {i < pathANodes.length - 1 && (
+                <Connector active={nodeState(pathANodes[i + 1].n) !== "empty"} />
+              )}
             </div>
           ))}
         </div>
@@ -519,7 +800,9 @@ function ZapCanvas({
           {pathBNodes.map((node, i) => (
             <div key={node.id} className="flex flex-col items-center gap-1.5">
               <ZapNodeCard node={node} state={nodeState(node.n)} compact />
-              {i < pathBNodes.length - 1 && <Connector active={nodeState(pathBNodes[i + 1].n) !== "empty"} />}
+              {i < pathBNodes.length - 1 && (
+                <Connector active={nodeState(pathBNodes[i + 1].n) !== "empty"} />
+              )}
             </div>
           ))}
         </div>
@@ -570,9 +853,7 @@ function ZapNodeCard({
           transition={{ duration: 0.9, repeat: Infinity }}
         />
       )}
-      <span className="text-[9px] font-mono text-muted tabular-nums w-4 shrink-0">
-        {node.n}.
-      </span>
+      <span className="text-[9px] font-mono text-muted tabular-nums w-4 shrink-0">{node.n}.</span>
       <AppDot color={node.color} letter={node.letter} />
       <div className="flex-1 min-w-0 leading-tight">
         <div className={`font-medium truncate ${compact ? "text-[10px]" : "text-[11px]"}`}>

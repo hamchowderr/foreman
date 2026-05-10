@@ -1,13 +1,13 @@
 "use client";
 
+import { SearchIcon, ShieldAlertIcon, ShieldCheckIcon, WrenchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { createClient } from "@/lib/client";
-import { SearchIcon, ShieldCheckIcon, ShieldAlertIcon, WrenchIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/client";
+import { type CatalogTool, storedAgentsApi } from "@/lib/stored-agents-client";
 import { cn } from "@/lib/utils";
-import { storedAgentsApi, type CatalogTool } from "@/lib/stored-agents-client";
 
 interface ToolsPickerProps {
   selected: string[];
@@ -19,11 +19,13 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
   const { data, isLoading, error } = useSWR(
     ["stored-agents-tools"],
     async () => {
-      const { data: { session } } = await createClient().auth.getSession();
+      const {
+        data: { session },
+      } = await createClient().auth.getSession();
       const res = await storedAgentsApi.listTools(session?.access_token ?? "");
       return res.tools;
     },
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false },
   );
 
   const [query, setQuery] = useState("");
@@ -35,9 +37,7 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
     const q = query.trim().toLowerCase();
     const filtered = q
       ? data.filter(
-          (t) =>
-            t.id.toLowerCase().includes(q) ||
-            t.description.toLowerCase().includes(q)
+          (t) => t.id.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
         )
       : data;
 
@@ -81,15 +81,11 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
             className="h-8 pl-8 text-sm"
           />
         </div>
-        <div className="shrink-0 text-xs text-muted">
-          {selected.length} selected
-        </div>
+        <div className="shrink-0 text-xs text-muted">{selected.length} selected</div>
       </div>
 
       <div className="max-h-[420px] overflow-y-auto p-2">
-        {isLoading && (
-          <p className="p-3 text-sm text-muted">Loading tool catalog…</p>
-        )}
+        {isLoading && <p className="p-3 text-sm text-muted">Loading tool catalog…</p>}
         {error && (
           <p className="p-3 text-sm text-destructive">
             Failed to load tools: {(error as Error).message}
@@ -196,7 +192,7 @@ function Group({
                 className={cn(
                   "flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors",
                   checked ? "bg-accent/5" : "hover:bg-surface",
-                  disabled && "cursor-not-allowed opacity-60"
+                  disabled && "cursor-not-allowed opacity-60",
                 )}
               >
                 <input
@@ -215,9 +211,7 @@ function Group({
                       </span>
                     )}
                   </div>
-                  <p className="line-clamp-2 text-xs text-muted">
-                    {t.description}
-                  </p>
+                  <p className="line-clamp-2 text-xs text-muted">{t.description}</p>
                 </div>
               </label>
             </li>

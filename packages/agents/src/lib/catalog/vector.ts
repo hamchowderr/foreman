@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { embedMany } from "ai";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
 import { PgVector } from "@mastra/pg";
+import { embedMany } from "ai";
 import { getEnv } from "../env";
 
 const INDEX_NAME = "catalog_vectors";

@@ -54,7 +54,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
         }
       }
     },
-    [isResizing]
+    [isResizing],
   );
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
       <div
         className={cn(
           "fixed bottom-0 z-40 flex w-full flex-col overflow-x-hidden overflow-y-auto border-t border-border/50 bg-background",
-          { "select-none": isResizing }
+          { "select-none": isResizing },
         )}
         ref={consoleContainerRef}
         style={{ height }}
@@ -133,19 +133,16 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
             >
               <div
                 className={cn("w-10 shrink-0 tabular-nums", {
-                  "text-muted-foreground": [
-                    "in_progress",
-                    "loading_packages",
-                  ].includes(consoleOutput.status),
+                  "text-muted-foreground": ["in_progress", "loading_packages"].includes(
+                    consoleOutput.status,
+                  ),
                   "text-emerald-500": consoleOutput.status === "completed",
                   "text-red-400": consoleOutput.status === "failed",
                 })}
               >
                 [{consoleOutputs.length - index}]
               </div>
-              {["in_progress", "loading_packages"].includes(
-                consoleOutput.status
-              ) ? (
+              {["in_progress", "loading_packages"].includes(consoleOutput.status) ? (
                 <div className="flex items-center gap-2">
                   <Spinner className="size-3.5" />
                   <span className="text-muted-foreground">
@@ -153,7 +150,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                       ? "Initializing..."
                       : consoleOutput.status === "loading_packages"
                         ? consoleOutput.contents.map((content) =>
-                            content.type === "text" ? content.value : null
+                            content.type === "text" ? content.value : null,
                           )
                         : null}
                   </span>
@@ -162,14 +159,8 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                 <div className="no-scrollbar flex w-full min-w-0 flex-col gap-2 overflow-x-auto text-foreground">
                   {consoleOutput.contents.map((content) =>
                     content.type === "image" ? (
-                      <picture
-                        key={`${consoleOutput.id}-img-${content.value.slice(0, 32)}`}
-                      >
-                        <img
-                          alt="output"
-                          className="max-w-full rounded-md"
-                          src={content.value}
-                        />
+                      <picture key={`${consoleOutput.id}-img-${content.value.slice(0, 32)}`}>
+                        <img alt="output" className="max-w-full rounded-md" src={content.value} />
                       </picture>
                     ) : (
                       <div
@@ -178,7 +169,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                       >
                         {content.value}
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               )}

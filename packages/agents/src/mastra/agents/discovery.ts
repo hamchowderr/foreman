@@ -1,6 +1,11 @@
 import { Agent } from "@mastra/core/agent";
-import { AGENT_MODELS, modelSettingsFor, onFinishCostLogger, systemPromptFor, toolsWithCacheControl } from "../../lib/providers";
-import { getDefaultZapierTools } from "../../lib/zapier-sdk-tools";
+import {
+  AGENT_MODELS,
+  modelSettingsFor,
+  onFinishCostLogger,
+  systemPromptFor,
+  toolsWithCacheControl,
+} from "../../lib/providers";
 
 const DISCOVERY_PROMPT = `You are the Discovery Agent, a specialist in exploring Zapier integrations. Your job is to help users discover what apps they have connected, what actions are available, and what inputs those actions require.
 

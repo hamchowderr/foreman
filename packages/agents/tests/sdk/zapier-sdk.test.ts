@@ -33,7 +33,7 @@
  *   NOTE: Field is `app_key` (snake_case), NOT `appKey` (camelCase)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateZapierTools } from "../../src/lib/zapier-sdk-tools";
 
 // Longer timeout — real API calls
@@ -49,7 +49,8 @@ beforeAll(() => {
 
 async function exec(toolName: string, input: Record<string, unknown> = {}) {
   const tool = tools[toolName];
-  if (!tool) throw new Error(`Tool "${toolName}" not found. Available: ${Object.keys(tools).join(", ")}`);
+  if (!tool)
+    throw new Error(`Tool "${toolName}" not found. Available: ${Object.keys(tools).join(", ")}`);
   const fn = tool.execute ?? tool;
   if (typeof fn !== "function") {
     throw new Error(`Tool "${toolName}" has no execute function`);
@@ -78,18 +79,14 @@ function dumpSchema(toolName: string) {
 
 function log(label: string, data: unknown) {
   const preview =
-    typeof data === "string"
-      ? data.slice(0, 200)
-      : JSON.stringify(data, null, 2)?.slice(0, 500);
+    typeof data === "string" ? data.slice(0, 200) : JSON.stringify(data, null, 2)?.slice(0, 500);
   console.log(`  [${label}] ${preview}`);
 }
 
 /** Assert result is not an SDK validation error. */
 function assertNotValidationError(result: any, context: string) {
   if (result?.error === true && result?.validationErrors) {
-    throw new Error(
-      `${context}: SDK validation failed — wrong param names.\n${result.message}`,
-    );
+    throw new Error(`${context}: SDK validation failed — wrong param names.\n${result.message}`);
   }
 }
 
@@ -117,9 +114,7 @@ describe("SDK Read Tests", () => {
       console.log(`  Found ${items.length} connected app(s)`);
       if (items.length > 0) {
         // Connection objects use `app_key` (snake_case)
-        console.log(
-          `  Apps: ${items.map((c: any) => c.app_key ?? c.title).join(", ")}`,
-        );
+        console.log(`  Apps: ${items.map((c: any) => c.app_key ?? c.title).join(", ")}`);
       }
     },
     TIMEOUT,
@@ -149,9 +144,7 @@ describe("SDK Read Tests", () => {
       log("get-profile", profile);
       assertNotValidationError(profile, "get-profile");
       expect(profile).toBeDefined();
-      console.log(
-        `  User: ${profile.full_name ?? profile.email ?? "unknown"}`,
-      );
+      console.log(`  User: ${profile.full_name ?? profile.email ?? "unknown"}`);
     },
     TIMEOUT,
   );
@@ -276,9 +269,7 @@ describe("SDK Read Tests", () => {
       log("list-tables", result);
       assertNotValidationError(result, "list-tables");
       const items = result.items;
-      console.log(
-        `  Found ${Array.isArray(items) ? items.length : 0} table(s)`,
-      );
+      console.log(`  Found ${Array.isArray(items) ? items.length : 0} table(s)`);
     },
     TIMEOUT,
   );
@@ -388,9 +379,7 @@ describe("SDK Error Handling", () => {
       expect(result.error).toBeDefined();
       expect(result.code).toBeDefined();
       expect(typeof result.retryable).toBe("boolean");
-      console.log(
-        `  Error code: ${result.code}, retryable: ${result.retryable}`,
-      );
+      console.log(`  Error code: ${result.code}, retryable: ${result.retryable}`);
     },
     TIMEOUT,
   );
@@ -476,67 +465,63 @@ describe("SDK Write Tests", () => {
     }
   }, TIMEOUT);
 
-  it(
-    "create-table → add-fields → create-records → list-records → delete-table",
-    async () => {
-      // 1. Create table
-      console.log(`  Creating table: ${TEST_TABLE_NAME}`);
-      const createResult = await exec("create-table", { name: TEST_TABLE_NAME });
-      log("create-table", createResult);
-      assertNotValidationError(createResult, "create-table");
+  it("create-table → add-fields → create-records → list-records → delete-table", async () => {
+    // 1. Create table
+    console.log(`  Creating table: ${TEST_TABLE_NAME}`);
+    const createResult = await exec("create-table", { name: TEST_TABLE_NAME });
+    log("create-table", createResult);
+    assertNotValidationError(createResult, "create-table");
 
-      createdTableId = createResult?.data?.id ?? createResult?.id;
-      expect(createdTableId).toBeDefined();
-      console.log(`  Table created: ${createdTableId}`);
+    createdTableId = createResult?.data?.id ?? createResult?.id;
+    expect(createdTableId).toBeDefined();
+    console.log(`  Table created: ${createdTableId}`);
 
-      // 2. Add fields
-      console.log("  Adding fields...");
-      const fieldsResult = await exec("create-table-fields", {
-        table: createdTableId,
-        fields: [
-          { name: "task", type: "text" },
-          { name: "priority", type: "number" },
-        ],
-      });
-      log("create-table-fields", fieldsResult);
-      assertNotValidationError(fieldsResult, "create-table-fields");
+    // 2. Add fields
+    console.log("  Adding fields...");
+    const fieldsResult = await exec("create-table-fields", {
+      table: createdTableId,
+      fields: [
+        { name: "task", type: "text" },
+        { name: "priority", type: "number" },
+      ],
+    });
+    log("create-table-fields", fieldsResult);
+    assertNotValidationError(fieldsResult, "create-table-fields");
 
-      // 3. List fields to verify
-      const listFields = await exec("list-table-fields", { table: createdTableId });
-      assertNotValidationError(listFields, "list-table-fields");
-      const fields = listFields?.data ?? listFields;
-      expect(Array.isArray(fields)).toBe(true);
-      console.log(`  Table has ${fields.length} field(s)`);
+    // 3. List fields to verify
+    const listFields = await exec("list-table-fields", { table: createdTableId });
+    assertNotValidationError(listFields, "list-table-fields");
+    const fields = listFields?.data ?? listFields;
+    expect(Array.isArray(fields)).toBe(true);
+    console.log(`  Table has ${fields.length} field(s)`);
 
-      // 4. Create records
-      console.log("  Creating records...");
-      const recordsResult = await exec("create-table-records", {
-        table: createdTableId,
-        records: [
-          { data: { task: "Test task 1", priority: 1 } },
-          { data: { task: "Test task 2", priority: 2 } },
-          { data: { task: "Test task 3", priority: 3 } },
-        ],
-      });
-      log("create-table-records", recordsResult);
-      assertNotValidationError(recordsResult, "create-table-records");
+    // 4. Create records
+    console.log("  Creating records...");
+    const recordsResult = await exec("create-table-records", {
+      table: createdTableId,
+      records: [
+        { data: { task: "Test task 1", priority: 1 } },
+        { data: { task: "Test task 2", priority: 2 } },
+        { data: { task: "Test task 3", priority: 3 } },
+      ],
+    });
+    log("create-table-records", recordsResult);
+    assertNotValidationError(recordsResult, "create-table-records");
 
-      // 5. List records to verify
-      const listRecords = await exec("list-table-records", { table: createdTableId });
-      assertNotValidationError(listRecords, "list-table-records");
-      const records = listRecords?.data ?? listRecords;
-      expect(Array.isArray(records)).toBe(true);
-      expect(records.length).toBeGreaterThanOrEqual(3);
-      console.log(`  Found ${records.length} record(s)`);
+    // 5. List records to verify
+    const listRecords = await exec("list-table-records", { table: createdTableId });
+    assertNotValidationError(listRecords, "list-table-records");
+    const records = listRecords?.data ?? listRecords;
+    expect(Array.isArray(records)).toBe(true);
+    expect(records.length).toBeGreaterThanOrEqual(3);
+    console.log(`  Found ${records.length} record(s)`);
 
-      // 6. Delete table
-      console.log(`  Deleting table: ${createdTableId}`);
-      const deleteResult = await exec("delete-table", { table: createdTableId });
-      log("delete-table", deleteResult);
-      assertNotValidationError(deleteResult, "delete-table");
-      createdTableId = undefined;
-      console.log("  Full write cycle complete");
-    },
-    60_000,
-  );
+    // 6. Delete table
+    console.log(`  Deleting table: ${createdTableId}`);
+    const deleteResult = await exec("delete-table", { table: createdTableId });
+    log("delete-table", deleteResult);
+    assertNotValidationError(deleteResult, "delete-table");
+    createdTableId = undefined;
+    console.log("  Full write cycle complete");
+  }, 60_000);
 });

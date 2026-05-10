@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Supabase mock ───
 
@@ -10,6 +10,7 @@ function createChain() {
     builder[m] = vi.fn().mockReturnValue(builder);
   }
   builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextResult));
+  // biome-ignore lint/suspicious/noThenProperty: deliberate — mock makes the Supabase query builder thenable so tests can `await builder`
   builder.then = (resolve: any) => resolve(nextResult);
   return builder;
 }

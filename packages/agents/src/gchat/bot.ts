@@ -1,10 +1,10 @@
-import { stepCountIs } from "ai";
-import { Chat } from "chat";
 import { createGoogleChatAdapter } from "@chat-adapter/gchat";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { getMastra } from "../mastra";
+import { stepCountIs } from "ai";
+import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { getMastra } from "../mastra";
 
 let _bot: Chat<{ gchat: ReturnType<typeof createGoogleChatAdapter> }> | undefined;
 let _gchatAdapter: ReturnType<typeof createGoogleChatAdapter> | undefined;
@@ -36,23 +36,21 @@ export async function getGoogleChatBot() {
     text: string,
     displayName?: string,
   ) {
-    const userId = await registerChannelUser(
-      "gchat",
-      gchatUserId,
-      displayName
-    );
+    const userId = await registerChannelUser("gchat", gchatUserId, displayName);
 
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Google Chat, because resource is the same userId.
-    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
-      stopWhen: stepCountIs(5),
-      savePerStep: true,
-      memory: {
-        thread: `gchat-${threadId}`,
-        resource: userId,
-      },
-    }));
+    const result = await requestUserContext.run({ userId }, () =>
+      agent.generate(text, {
+        stopWhen: stepCountIs(5),
+        savePerStep: true,
+        memory: {
+          thread: `gchat-${threadId}`,
+          resource: userId,
+        },
+      }),
+    );
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
@@ -61,11 +59,11 @@ export async function getGoogleChatBot() {
     try {
       console.log("[gchat] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       console.log("[gchat] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -81,11 +79,11 @@ export async function getGoogleChatBot() {
       console.log("[gchat] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       console.log("[gchat] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -99,11 +97,11 @@ export async function getGoogleChatBot() {
     if (!message.text) return;
     try {
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       await thread.post(reply);
     } catch (err) {

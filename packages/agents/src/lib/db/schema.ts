@@ -103,7 +103,19 @@ export interface ChannelIdentityRow {
   id: string;
   user_id: string;
   org_id: string | null;
-  channel: "web" | "telegram" | "slack" | "discord" | "mcp" | "a2a" | "teams" | "gchat" | "whatsapp" | "github" | "linear" | "imessage";
+  channel:
+    | "web"
+    | "telegram"
+    | "slack"
+    | "discord"
+    | "mcp"
+    | "a2a"
+    | "teams"
+    | "gchat"
+    | "whatsapp"
+    | "github"
+    | "linear"
+    | "imessage";
   channel_user_id: string;
   display_name: string | null;
   created_at: string;

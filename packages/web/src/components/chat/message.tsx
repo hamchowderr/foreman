@@ -5,13 +5,7 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "../ai-elements/tool";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
@@ -91,7 +85,7 @@ const GenericToolCard = ({
   toolName: string;
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
 }) => {
-  const { toolCallId, state } = part;
+  const { state } = part;
   const approvalId = (part as { approval?: { id: string } }).approval?.id;
   const isDenied =
     state === "output-denied" ||
@@ -128,9 +122,7 @@ const GenericToolCard = ({
             />
           )}
           {isDenied && (
-            <div className="px-4 py-3 text-sm text-muted-foreground">
-              Action was denied.
-            </div>
+            <div className="px-4 py-3 text-sm text-muted-foreground">Action was denied.</div>
           )}
         </ToolContent>
         {needsApproval && (
@@ -168,9 +160,7 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
 }) => {
-  const attachmentsFromMessage = message.parts.filter(
-    (part) => part.type === "file"
-  );
+  const attachmentsFromMessage = message.parts.filter((part) => part.type === "file");
 
   useDataStream();
 
@@ -180,18 +170,13 @@ const PurePreviewMessage = ({
   const hasAnyContent = message.parts?.some(
     (part) =>
       (part.type === "text" && part.text?.trim().length > 0) ||
-      (part.type === "reasoning" &&
-        "text" in part &&
-        part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-")
+      (part.type === "reasoning" && "text" in part && part.text?.trim().length > 0) ||
+      part.type.startsWith("tool-"),
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
 
   const attachments = attachmentsFromMessage.length > 0 && (
-    <div
-      className="flex flex-row justify-end gap-2"
-      data-testid={"message-attachments"}
-    >
+    <div className="flex flex-row justify-end gap-2" data-testid={"message-attachments"}>
       {attachmentsFromMessage.map((attachment) => (
         <PreviewAttachment
           attachment={{
@@ -216,7 +201,7 @@ const PurePreviewMessage = ({
       }
       return acc;
     },
-    { text: "", isStreaming: false, rendered: false }
+    { text: "", isStreaming: false, rendered: false },
   ) ?? { text: "", isStreaming: false, rendered: false };
 
   const parts = message.parts?.map((part: any, index: number) => {
@@ -245,7 +230,7 @@ const PurePreviewMessage = ({
             "text-[15px] leading-[1.5]",
             isUserMsg
               ? "w-fit max-w-[min(75%,52ch)] overflow-hidden break-words rounded-[18px] rounded-br-[4px] bg-[#007AFF] px-4 py-2.5 text-white dark:bg-[#0A84FF]"
-              : "w-fit max-w-full overflow-hidden break-words rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-2.5 text-[#1C1C1E] dark:bg-[#2C2C2E] dark:text-[#F2F2F7]"
+              : "w-fit max-w-full overflow-hidden break-words rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-2.5 text-[#1C1C1E] dark:bg-[#2C2C2E] dark:text-[#F2F2F7]",
           )}
           data-testid="message-content"
           key={key}
@@ -261,8 +246,7 @@ const PurePreviewMessage = ({
       const isDenied =
         state === "output-denied" ||
         (state === "approval-responded" &&
-          (part as { approval?: { approved?: boolean } }).approval?.approved ===
-            false);
+          (part as { approval?: { approved?: boolean } }).approval?.approved === false);
       const widthClass = "w-[min(100%,450px)]";
 
       if (state === "output-available") {
@@ -306,8 +290,7 @@ const PurePreviewMessage = ({
           <Tool className="w-full" defaultOpen={true}>
             <ToolHeader state={state} type="tool-getWeather" />
             <ToolContent>
-              {(state === "input-available" ||
-                state === "approval-requested") && (
+              {(state === "input-available" || state === "approval-requested") && (
                 <ToolInput input={part.input} />
               )}
             </ToolContent>
@@ -337,13 +320,7 @@ const PurePreviewMessage = ({
         );
       }
 
-      return (
-        <DocumentPreview
-          isReadonly={isReadonly}
-          key={toolCallId}
-          result={part.output}
-        />
-      );
+      return <DocumentPreview isReadonly={isReadonly} key={toolCallId} result={part.output} />;
     }
 
     if (type === "tool-updateDocument") {
@@ -375,11 +352,7 @@ const PurePreviewMessage = ({
       const { toolCallId, state } = part;
 
       return (
-        <Tool
-          className="w-[min(100%,450px)]"
-          defaultOpen={true}
-          key={toolCallId}
-        >
+        <Tool className="w-[min(100%,450px)]" defaultOpen={true} key={toolCallId}>
           <ToolHeader state={state} type="tool-requestSuggestions" />
           <ToolContent>
             {state === "input-available" && <ToolInput input={part.input} />}
@@ -457,14 +430,14 @@ const PurePreviewMessage = ({
     <div
       className={cn(
         "group/message w-full",
-        !isAssistant && "animate-[fade-up_0.25s_cubic-bezier(0.22,1,0.36,1)]"
+        !isAssistant && "animate-[fade-up_0.25s_cubic-bezier(0.22,1,0.36,1)]",
       )}
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
       <div
         className={cn(
-          isUser ? "flex flex-col items-end gap-1.5" : "flex flex-col items-start gap-1.5"
+          isUser ? "flex flex-col items-end gap-1.5" : "flex flex-col items-start gap-1.5",
         )}
       >
         {isAssistant ? (

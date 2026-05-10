@@ -73,7 +73,7 @@ export async function getToolCatalog(): Promise<CatalogTool[]> {
       read_only: false,
       requires_approval: false,
       category: "custom",
-    }
+    },
   );
 
   // Zapier SDK tools. generateZapierTools() reads from the SDK registry and
@@ -95,7 +95,7 @@ export async function getToolCatalog(): Promise<CatalogTool[]> {
     // Fall back to just custom tools so the picker still works.
     console.warn(
       "tool-catalog: Zapier SDK enumeration failed, returning custom tools only",
-      err instanceof Error ? err.message : err
+      err instanceof Error ? err.message : err,
     );
   }
 

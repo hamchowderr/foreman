@@ -1,4 +1,4 @@
-import { describe, it, expectTypeOf } from "vitest";
+import { describe, expectTypeOf, it } from "vitest";
 import type { AppChunk } from "@/lib/stream/types";
 
 describe("AppChunk type", () => {

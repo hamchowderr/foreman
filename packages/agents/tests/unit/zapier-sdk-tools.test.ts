@@ -2,7 +2,7 @@
  * Unit tests for zapier-sdk-tools.ts — tool generation logic.
  * No API calls. Verifies tools are generated with correct metadata.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { generateZapierTools } from "../../src/lib/zapier-sdk-tools";
 
 let tools: Record<string, any>;

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X } from "@/components/icons/hi";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect, useState } from "react";
+import { Menu, X } from "@/components/icons/hi";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/client";
 
 export function SiteNav() {
@@ -12,9 +12,11 @@ export function SiteNav() {
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
-    createClient().auth.getSession().then(({ data: { session } }) => {
-      setIsSignedIn(!!session);
-    });
+    createClient()
+      .auth.getSession()
+      .then(({ data: { session } }) => {
+        setIsSignedIn(!!session);
+      });
   }, []);
 
   return (
@@ -76,12 +78,47 @@ export function SiteNav() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-background px-6 py-4 space-y-3 animate-fade-in">
-          <a href="#features" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Features</a>
-          <a href="#how" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>How it works</a>
-          <a href="#channels" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Channels</a>
-          <a href="#hosting" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Pricing</a>
-          <Link href="/docs" className="block text-sm text-muted hover:text-foreground" onClick={() => setMobileOpen(false)}>Docs</Link>
-          <a href="https://github.com/hamchowderr/foreman" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground">
+          <a
+            href="#features"
+            className="block text-sm text-muted hover:text-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            Features
+          </a>
+          <a
+            href="#how"
+            className="block text-sm text-muted hover:text-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            How it works
+          </a>
+          <a
+            href="#channels"
+            className="block text-sm text-muted hover:text-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            Channels
+          </a>
+          <a
+            href="#hosting"
+            className="block text-sm text-muted hover:text-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            Pricing
+          </a>
+          <Link
+            href="/docs"
+            className="block text-sm text-muted hover:text-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            Docs
+          </Link>
+          <a
+            href="https://github.com/hamchowderr/foreman"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
+          >
             <GitHubIcon /> GitHub
           </a>
           <div className="pt-2">

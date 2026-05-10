@@ -117,26 +117,25 @@ export const foremanLLMJudgeScorer = createScorer({
     model: JUDGE_MODEL,
     instructions: JUDGE_INSTRUCTIONS,
   },
-}).generateScore({
-  description: "Compare agent response to expected behavior using the judge.",
-  // Duplicate judge on the prompt object too — the runner only invokes the
-  // LLM when judge is present here. Top-level scorer.judge alone is not enough.
-  judge: {
-    model: JUDGE_MODEL,
-    instructions: JUDGE_INSTRUCTIONS,
-  },
-  createPrompt: ({ run }) => {
-    const userInput =
-      typeof run.input === "string"
-        ? run.input
-        : JSON.stringify(run.input).slice(0, 500);
-    const agentText = extractAgentText(run.output) || "(no text response)";
-    const actualTools = extractActualToolNames(run.output);
-    const gt = (run as unknown as { groundTruth?: GroundTruth }).groundTruth;
-    const expected =
-      gt?.expected_behavior?.expected_behavior ?? "(no expected_behavior provided)";
+})
+  .generateScore({
+    description: "Compare agent response to expected behavior using the judge.",
+    // Duplicate judge on the prompt object too — the runner only invokes the
+    // LLM when judge is present here. Top-level scorer.judge alone is not enough.
+    judge: {
+      model: JUDGE_MODEL,
+      instructions: JUDGE_INSTRUCTIONS,
+    },
+    createPrompt: ({ run }) => {
+      const userInput =
+        typeof run.input === "string" ? run.input : JSON.stringify(run.input).slice(0, 500);
+      const agentText = extractAgentText(run.output) || "(no text response)";
+      const actualTools = extractActualToolNames(run.output);
+      const gt = (run as unknown as { groundTruth?: GroundTruth }).groundTruth;
+      const expected =
+        gt?.expected_behavior?.expected_behavior ?? "(no expected_behavior provided)";
 
-    return `<user_request>
+      return `<user_request>
 ${userInput}
 </user_request>
 
@@ -153,26 +152,24 @@ ${actualTools.length === 0 ? "(none)" : actualTools.join(" → ")}
 </actual_tool_calls>
 
 Score (0.0–1.0):`;
-  },
-}).generateReason({
-  description: "Explain the score in one or two sentences.",
-  judge: {
-    model: JUDGE_MODEL,
-    instructions:
-      "You explain quality judgments. Given an agent run and the score it received, write 1-2 sentences explaining what the agent did well or poorly. Be specific. No preamble.",
-  },
-  createPrompt: ({ run, results, score }) => {
-    const userInput =
-      typeof run.input === "string"
-        ? run.input
-        : JSON.stringify(run.input).slice(0, 200);
-    const agentText = extractAgentText(run.output) || "(no text response)";
-    const actualTools = extractActualToolNames(run.output);
-    const gt = (run as unknown as { groundTruth?: GroundTruth }).groundTruth;
-    const expected =
-      gt?.expected_behavior?.expected_behavior ?? "(no expected_behavior)";
+    },
+  })
+  .generateReason({
+    description: "Explain the score in one or two sentences.",
+    judge: {
+      model: JUDGE_MODEL,
+      instructions:
+        "You explain quality judgments. Given an agent run and the score it received, write 1-2 sentences explaining what the agent did well or poorly. Be specific. No preamble.",
+    },
+    createPrompt: ({ run, score }) => {
+      const userInput =
+        typeof run.input === "string" ? run.input : JSON.stringify(run.input).slice(0, 200);
+      const agentText = extractAgentText(run.output) || "(no text response)";
+      const actualTools = extractActualToolNames(run.output);
+      const gt = (run as unknown as { groundTruth?: GroundTruth }).groundTruth;
+      const expected = gt?.expected_behavior?.expected_behavior ?? "(no expected_behavior)";
 
-    return `User request: ${userInput}
+      return `User request: ${userInput}
 
 Expected behavior: ${expected}
 
@@ -183,5 +180,5 @@ Actual tool calls: ${actualTools.length === 0 ? "(none)" : actualTools.join(" �
 Score given: ${score}
 
 In 1-2 sentences, explain why this score was assigned. Be specific about what the agent did well or poorly.`;
-  },
-});
+    },
+  });

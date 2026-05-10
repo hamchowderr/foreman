@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { authMiddleware } from "./middleware";
-import type { AppEnv } from "./types";
 import { getSupabase } from "@/lib/db";
 import { createApiKey } from "@/lib/identity";
+import { authMiddleware } from "./middleware";
+import type { AppEnv } from "./types";
 
 const apiKeys = new Hono<AppEnv>();
 
@@ -48,11 +48,7 @@ apiKeys.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const supabase = getSupabase();
 
-  const { error } = await supabase
-    .from("api_key")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
+  const { error } = await supabase.from("api_key").delete().eq("id", id).eq("user_id", userId);
 
   if (error) return c.json({ error: "Failed to revoke key" }, 500);
   return c.json({ ok: true });

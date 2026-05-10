@@ -45,9 +45,20 @@ jobs:
       - run: npm ci
       - name: Build web (also type-checks)
         run: cd packages/web && npm run build
-      # Lint deliberately omitted: there's a 624-error / 194-warning Biome
-      # backlog from never-enforced rules. Tracked in foreman-(TBD); will be
-      # added to CI once the backlog is cleared.
+
+  lint:
+    name: lint (biome)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Biome check (lint + format)
+        run: npm run lint
 
   deps:
     name: dep uniqueness

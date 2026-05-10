@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
 import { createZapierSdk } from "@zapier/zapier-sdk";
+import { z } from "zod";
 
 const ZAPIER_CONNECTIONS_PAGE = "https://zapier.com/app/connections";
 
@@ -51,7 +51,7 @@ export const connectZapierTool = createTool({
       .optional()
       .describe(
         "The app slug to connect (e.g. 'gmail', 'slack', 'notion'). " +
-        "If omitted, returns the general Zapier connections page URL.",
+          "If omitted, returns the general Zapier connections page URL.",
       ),
   }),
   onInputStart: ({ toolCallId }) => {
@@ -59,7 +59,9 @@ export const connectZapierTool = createTool({
   },
   onInputAvailable: ({ input, toolCallId }) => {
     const slug = (input as any)?.appSlug ?? "(generic)";
-    console.log(`[tool:connect_zapier] Input available: appSlug=${slug} (callId=${toolCallId.slice(0, 8)})`);
+    console.log(
+      `[tool:connect_zapier] Input available: appSlug=${slug} (callId=${toolCallId.slice(0, 8)})`,
+    );
   },
   onOutput: ({ output, toolName }) => {
     console.log(

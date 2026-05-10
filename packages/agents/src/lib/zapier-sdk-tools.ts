@@ -1,17 +1,17 @@
 import { createTool } from "@mastra/core/tools";
 import {
   createZapierSdk,
-  ZapierError,
-  ZapierAuthenticationError,
-  ZapierRateLimitError,
-  ZapierNotFoundError,
-  ZapierAppNotFoundError,
-  ZapierResourceNotFoundError,
   ZapierActionError,
-  ZapierTimeoutError,
-  ZapierRelayError,
-  ZapierValidationError,
+  ZapierAppNotFoundError,
+  ZapierAuthenticationError,
   ZapierConfigurationError,
+  ZapierError,
+  ZapierNotFoundError,
+  ZapierRateLimitError,
+  ZapierRelayError,
+  ZapierResourceNotFoundError,
+  ZapierTimeoutError,
+  ZapierValidationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
 import { requestUserContext } from "./request-user-context";
@@ -123,7 +123,7 @@ const DEFAULT_MAX_ITEMS = 100;
  * - Production + no credentials: Client Credentials from ZAPIER_CLIENT_ID/SECRET.
  */
 function resolveCredentials(
-  explicit?: string | (() => Promise<string>)
+  explicit?: string | (() => Promise<string>),
 ): Parameters<typeof createZapierSdk>[0]["credentials"] {
   if (explicit) return explicit;
   const isDev = process.env.FOREMAN_MODE === "dev";
@@ -170,7 +170,7 @@ let _defaultToolsCache: Record<string, ReturnType<typeof createTool>> | undefine
  */
 export function generateZapierTools(
   credentials?: string | (() => Promise<string>),
-  connections?: Record<string, { connectionId: number }>
+  connections?: Record<string, { connectionId: number }>,
 ) {
   if (!credentials && !connections && _defaultToolsCache) {
     return _defaultToolsCache;
@@ -194,10 +194,7 @@ export function generateZapierTools(
     if (EXCLUDED_METHODS.has(fn.name)) continue;
 
     const toolName = toKebab(fn.name);
-    const description =
-      fn.description ||
-      fn.inputSchema?.description ||
-      `Execute ${fn.name}`;
+    const description = fn.description || fn.inputSchema?.description || `Execute ${fn.name}`;
 
     const isReadOnly = READ_ONLY.has(fn.name);
     const isDestructive = APPROVAL_REQUIRED.has(fn.name);
@@ -213,16 +210,14 @@ export function generateZapierTools(
     };
 
     if (fn.inputSchema) {
-      const sdkFn = (sdk as any)[fn.name] as (args: any) => Promise<any>;
+      const _sdkFn = (sdk as any)[fn.name] as (args: any) => Promise<any>;
 
       // Some SDK schemas (e.g. getProfile) come pre-wrapped in z.optional().
       // Unwrap before handing to Mastra — otherwise Mastra wraps again and
       // zod v4's toJSONSchema rejects optional-of-optional as non-representable.
       const raw = fn.inputSchema as unknown as z.ZodTypeAny;
       const unwrapped =
-        (raw as any)?._zod?.def?.type === "optional"
-          ? (raw as any)._zod.def.innerType
-          : raw;
+        (raw as any)?._zod?.def?.type === "optional" ? (raw as any)._zod.def.innerType : raw;
 
       const summarize = createSummarizer(fn.name);
       tools[toolName] = createTool({
@@ -253,7 +248,7 @@ export function generateZapierTools(
       });
     } else if (fn.inputParameters) {
       // Positional-params function (fetch)
-      const sdkFn = (sdk as any)[fn.name] as (...args: any[]) => Promise<any>;
+      const _sdkFn = (sdk as any)[fn.name] as (...args: any[]) => Promise<any>;
 
       // Build a Zod schema from input parameters.
       // fetch has url (required) and init (optional).
@@ -264,7 +259,10 @@ export function generateZapierTools(
         if (isRequired) {
           shape[param.name] = z.any().describe((param as any).description || param.name);
         } else {
-          shape[param.name] = z.any().optional().describe((param as any).description || param.name);
+          shape[param.name] = z
+            .any()
+            .optional()
+            .describe((param as any).description || param.name);
         }
       }
 
@@ -305,7 +303,7 @@ export function generateZapierTools(
  */
 export function generateUserZapierTools(
   credentials: string,
-  connections?: Record<string, { connectionId: number }>
+  connections?: Record<string, { connectionId: number }>,
 ) {
   return generateZapierTools(credentials, connections);
 }
@@ -324,7 +322,15 @@ export function getDefaultZapierTools() {
  * Handle SDK errors using instanceof checks against the SDK's typed error classes.
  * Returns structured error objects so the agent can explain errors to users.
  */
-function handleSdkError(err: unknown, methodName: string): { error: string; code: string; retryable: boolean; suggestedRecovery?: { action: string; appKey: string | null } } {
+function handleSdkError(
+  err: unknown,
+  methodName: string,
+): {
+  error: string;
+  code: string;
+  retryable: boolean;
+  suggestedRecovery?: { action: string; appKey: string | null };
+} {
   // Use instanceof for type-safe error handling against the SDK's error hierarchy
   if (err instanceof ZapierAuthenticationError) {
     const ae = err as any;
@@ -366,9 +372,7 @@ function handleSdkError(err: unknown, methodName: string): { error: string; code
 
   if (err instanceof ZapierActionError) {
     const ae = err as any;
-    const detail = ae.actionErrors
-      ? JSON.stringify(ae.actionErrors)
-      : ae.message;
+    const detail = ae.actionErrors ? JSON.stringify(ae.actionErrors) : ae.message;
     return {
       error: `Action failed (${ae.appKey ?? "unknown"}/${ae.actionKey ?? "unknown"}): ${detail}`,
       code: "ACTION_FAILED",
@@ -448,8 +452,19 @@ function createSummarizer(fnName: string) {
       const summarized = items.map((item: any) => {
         if (typeof item !== "object" || !item) return item;
         const {
-          id, name, title, key, app, appKey, app_name, app_key, account_type,
-          slug, status, type, actionType,
+          id,
+          name,
+          title,
+          key,
+          app,
+          appKey,
+          app_name,
+          app_key,
+          account_type,
+          slug,
+          status,
+          type,
+          actionType,
           ...rest
         } = item;
         const summary: Record<string, unknown> = {};
@@ -497,7 +512,7 @@ function createSummarizer(fnName: string) {
 
 function trimDeep(obj: any, maxLen: number): any {
   if (typeof obj === "string") {
-    return obj.length > maxLen ? obj.slice(0, maxLen) + "..." : obj;
+    return obj.length > maxLen ? `${obj.slice(0, maxLen)}...` : obj;
   }
   if (Array.isArray(obj)) {
     return obj.slice(0, 30).map((v) => trimDeep(v, maxLen));

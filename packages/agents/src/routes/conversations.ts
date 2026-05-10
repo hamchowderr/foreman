@@ -1,8 +1,8 @@
+import { toAISdkV5Messages } from "@mastra/ai-sdk/ui";
 import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
-import { getMastra } from "@/mastra";
-import { toAISdkV5Messages } from "@mastra/ai-sdk/ui";
 import { validateParam } from "@/lib/validation";
+import { getMastra } from "@/mastra";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -17,7 +17,9 @@ conversations.post("/", async (c) => {
   const supabase = getSupabase();
 
   let body: any = {};
-  try { body = await c.req.json(); } catch {}
+  try {
+    body = await c.req.json();
+  } catch {}
   const id = body.id || crypto.randomUUID();
   const now = new Date().toISOString();
 
@@ -68,7 +70,7 @@ conversations.get("/", async (c) => {
       title: conv.title,
       created_at: conv.created_at,
       updated_at: conv.updated_at,
-    }))
+    })),
   );
 });
 
@@ -140,7 +142,11 @@ conversations.patch("/:id", async (c) => {
   if (!existing) return c.json({ error: "Not found" }, 404);
 
   let body: any;
-  try { body = await c.req.json(); } catch { return c.json({ error: "Invalid JSON" }, 400); }
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
 
   const title = typeof body.title === "string" ? body.title.trim().slice(0, 80) : undefined;
   if (!title) return c.json({ error: "title is required" }, 400);

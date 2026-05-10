@@ -1,9 +1,9 @@
-import type {
-  ProcessOutputStreamArgs,
-  ProcessOutputResultArgs,
-  OutputProcessor,
-} from "@mastra/core/processors";
 import type { MastraDBMessage } from "@mastra/core/agent";
+import type {
+  OutputProcessor,
+  ProcessOutputResultArgs,
+  ProcessOutputStreamArgs,
+} from "@mastra/core/processors";
 import type { ChunkType } from "@mastra/core/stream";
 
 /**

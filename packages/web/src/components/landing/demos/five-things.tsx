@@ -1,16 +1,16 @@
 "use client";
 
-import { motion, AnimatePresence } from "motion/react";
-import { useEffect, useState, type ComponentType } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { type ComponentType, useEffect, useState } from "react";
+import {
+  BRAND_COLORS,
+  DiscordBrand,
+  GithubBrand,
+  SlackBrand,
+  TelegramBrand,
+} from "@/components/icons/brands";
 import { Check, ChevronRight, Globe } from "@/components/icons/hi";
 import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
-import {
-  SlackBrand,
-  DiscordBrand,
-  TelegramBrand,
-  GithubBrand,
-  BRAND_COLORS,
-} from "@/components/icons/brands";
 
 type ChannelSkin = {
   id: "slack" | "discord" | "telegram" | "web" | "github";
@@ -215,7 +215,9 @@ export function FiveThingsReplay() {
                 0{i + 1}
               </span>
               <div className="flex-1 min-w-0">
-                <div className={`text-sm font-medium truncate ${selected ? "text-foreground" : ""}`}>
+                <div
+                  className={`text-sm font-medium truncate ${selected ? "text-foreground" : ""}`}
+                >
                   {s.title}
                 </div>
                 <div className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
@@ -225,7 +227,9 @@ export function FiveThingsReplay() {
                   >
                     <sSkin.Icon size={8} color={sSkin.brandText} />
                   </span>
-                  <span className="truncate">{s.description} · in {sSkin.label}</span>
+                  <span className="truncate">
+                    {s.description} · in {sSkin.label}
+                  </span>
                 </div>
               </div>
               <ChevronRight
@@ -240,120 +244,118 @@ export function FiveThingsReplay() {
 
       {/* Replay pane */}
       <TiltedSpotlight>
-      <div className="rounded-2xl border border-border bg-surface overflow-hidden min-h-[400px] flex flex-col">
-        {/* Channel-themed header */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={skin.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="px-4 py-2.5 flex items-center gap-2.5 shrink-0"
-            style={{ backgroundColor: skin.brand, color: skin.brandText }}
-          >
-            <skin.Icon size={16} color={skin.brandText} />
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold leading-tight truncate">
-                {skin.label}
-              </span>
-              <span
-                className="text-[10px] leading-tight truncate"
-                style={{ color: skin.brandText, opacity: 0.75 }}
-              >
-                {skin.sub}
-              </span>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-        <div className="p-4 space-y-3 flex-1">
-          {scene.chat
-            .slice(0, step + 1)
-            .filter((m, i, arr) => {
-              if (m.role !== "thinking") return true;
-              return i === arr.length - 1;
-            })
-            .map((msg, i) => (
+        <div className="rounded-2xl border border-border bg-surface overflow-hidden min-h-[400px] flex flex-col">
+          {/* Channel-themed header */}
+          <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeId}-${i}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              key={skin.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="px-4 py-2.5 flex items-center gap-2.5 shrink-0"
+              style={{ backgroundColor: skin.brand, color: skin.brandText }}
             >
-              {msg.role === "user" && (
-                <div className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-foreground text-background px-4 py-2 text-sm">
-                    {msg.text}
-                  </div>
-                </div>
-              )}
-              {msg.role === "thinking" && (
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
-                    F
-                  </div>
-                  <div className="rounded-2xl rounded-bl-sm bg-background border border-border px-4 py-2.5 flex items-center gap-1">
-                    <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                    <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                    <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                  </div>
-                </div>
-              )}
-              {msg.role === "agent" && (
-                <div className="flex items-start gap-2">
-                  <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold shrink-0">
-                    F
-                  </div>
-                  <div className="flex-1 min-w-0 rounded-2xl rounded-bl-sm bg-background border border-border px-4 py-2 text-sm">
-                    {msg.text}
-                  </div>
-                </div>
-              )}
-              {msg.role === "proposal" && (
-                <div className="flex items-start gap-2">
-                  <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold shrink-0">
-                    F
-                  </div>
-                  <div className="flex-1 min-w-0 rounded-2xl rounded-bl-sm bg-background border border-border overflow-hidden">
-                    <div className="px-4 py-2 border-b border-border flex items-center justify-between">
-                      <span className="text-xs font-medium">
-                        {msg.app} · {msg.action}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider text-muted">
-                        needs approval
-                      </span>
-                    </div>
-                    <div className="px-4 py-3 space-y-1.5 text-xs font-mono">
-                      {msg.fields.map((f) => (
-                        <div key={f.key} className="flex gap-2">
-                          <span className="text-muted w-16 shrink-0">{f.key}</span>
-                          <span className="truncate">{f.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="px-4 py-2.5 border-t border-border flex items-center gap-2">
-                      <span className="rounded bg-foreground text-background px-2.5 py-1 text-xs font-medium">
-                        Approve
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {msg.role === "sent" && (
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
-                    F
-                  </div>
-                  <div className="rounded-2xl rounded-bl-sm bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20 px-4 py-2 text-sm flex items-center gap-2">
-                    <Check className="h-4 w-4" />
-                    {msg.text}
-                  </div>
-                </div>
-              )}
+              <skin.Icon size={16} color={skin.brandText} />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-semibold leading-tight truncate">{skin.label}</span>
+                <span
+                  className="text-[10px] leading-tight truncate"
+                  style={{ color: skin.brandText, opacity: 0.75 }}
+                >
+                  {skin.sub}
+                </span>
+              </div>
             </motion.div>
-          ))}
+          </AnimatePresence>
+          <div className="p-4 space-y-3 flex-1">
+            {scene.chat
+              .slice(0, step + 1)
+              .filter((m, i, arr) => {
+                if (m.role !== "thinking") return true;
+                return i === arr.length - 1;
+              })
+              .map((msg, i) => (
+                <motion.div
+                  key={`${activeId}-${i}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {msg.role === "user" && (
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-foreground text-background px-4 py-2 text-sm">
+                        {msg.text}
+                      </div>
+                    </div>
+                  )}
+                  {msg.role === "thinking" && (
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
+                        F
+                      </div>
+                      <div className="rounded-2xl rounded-bl-sm bg-background border border-border px-4 py-2.5 flex items-center gap-1">
+                        <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                        <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                        <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                      </div>
+                    </div>
+                  )}
+                  {msg.role === "agent" && (
+                    <div className="flex items-start gap-2">
+                      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold shrink-0">
+                        F
+                      </div>
+                      <div className="flex-1 min-w-0 rounded-2xl rounded-bl-sm bg-background border border-border px-4 py-2 text-sm">
+                        {msg.text}
+                      </div>
+                    </div>
+                  )}
+                  {msg.role === "proposal" && (
+                    <div className="flex items-start gap-2">
+                      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold shrink-0">
+                        F
+                      </div>
+                      <div className="flex-1 min-w-0 rounded-2xl rounded-bl-sm bg-background border border-border overflow-hidden">
+                        <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+                          <span className="text-xs font-medium">
+                            {msg.app} · {msg.action}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-wider text-muted">
+                            needs approval
+                          </span>
+                        </div>
+                        <div className="px-4 py-3 space-y-1.5 text-xs font-mono">
+                          {msg.fields.map((f) => (
+                            <div key={f.key} className="flex gap-2">
+                              <span className="text-muted w-16 shrink-0">{f.key}</span>
+                              <span className="truncate">{f.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="px-4 py-2.5 border-t border-border flex items-center gap-2">
+                          <span className="rounded bg-foreground text-background px-2.5 py-1 text-xs font-medium">
+                            Approve
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {msg.role === "sent" && (
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
+                        F
+                      </div>
+                      <div className="rounded-2xl rounded-bl-sm bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20 px-4 py-2 text-sm flex items-center gap-2">
+                        <Check className="h-4 w-4" />
+                        {msg.text}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+          </div>
         </div>
-      </div>
       </TiltedSpotlight>
     </div>
   );

@@ -1,7 +1,7 @@
 import { getSupabase } from "../db";
 
 export async function loadUserConnectionsMap(
-  userId: string
+  userId: string,
 ): Promise<Record<string, { connectionId: number }>> {
   const supabase = getSupabase();
   const { data: rows } = await supabase
@@ -18,7 +18,7 @@ export async function loadUserConnectionsMap(
 
 export async function resolveConnection(
   userId: string,
-  connection: string | undefined
+  connection: string | undefined,
 ): Promise<string | undefined> {
   if (!connection) return undefined;
   if (/^\d+$/.test(connection)) return connection;
@@ -34,7 +34,7 @@ export async function resolveConnection(
 
   if (!data) {
     throw new Error(
-      `Unknown connection alias "${connection}" for user ${userId}. Register it in connection_alias.`
+      `Unknown connection alias "${connection}" for user ${userId}. Register it in connection_alias.`,
     );
   }
 

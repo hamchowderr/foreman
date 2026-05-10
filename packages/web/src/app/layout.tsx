@@ -16,8 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Foreman",
-  description:
-    "AI assistant that helps you take actions across 9000+ apps via Zapier",
+  description: "AI assistant that helps you take actions across 9000+ apps via Zapier",
 };
 
 export default function RootLayout({

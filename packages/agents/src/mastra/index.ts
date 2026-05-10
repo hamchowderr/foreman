@@ -1,29 +1,30 @@
 import { enableFileLogging } from "../lib/file-logger";
+
 enableFileLogging();
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Mastra } from "@mastra/core";
-import { MastraCompositeStore } from "@mastra/core/storage";
-import { MastraEditor } from "@mastra/editor";
-import { PostgresStore } from "@mastra/pg";
-import { DuckDBStore } from "@mastra/duckdb";
-import { Observability, ConsoleExporter, DefaultExporter } from "@mastra/observability";
-import { PinoLogger } from "@mastra/loggers";
 import { toAISdkStream } from "@mastra/ai-sdk";
-import { registerApiRoute } from "@mastra/core/server";
-import { RequestContext } from "@mastra/core/request-context";
-import { createUIMessageStreamResponse, stepCountIs } from "ai";
+import { Mastra } from "@mastra/core";
 import type { Agent } from "@mastra/core/agent";
-import { createForemanAgent } from "./agents/foreman";
-import { createDiscoveryAgent } from "./agents/discovery";
-import { createExecutionAgent } from "./agents/execution";
-import { createHistoryAgent } from "./agents/history";
-import { createSupervisorAgent } from "./agents/supervisor";
-import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
+import { RequestContext } from "@mastra/core/request-context";
+import { registerApiRoute } from "@mastra/core/server";
+import { MastraCompositeStore } from "@mastra/core/storage";
+import { DuckDBStore } from "@mastra/duckdb";
+import { MastraEditor } from "@mastra/editor";
+import { PinoLogger } from "@mastra/loggers";
+import { ConsoleExporter, DefaultExporter, Observability } from "@mastra/observability";
+import { PostgresStore } from "@mastra/pg";
+import { createUIMessageStreamResponse, stepCountIs } from "ai";
+import type { MiddlewareHandler } from "hono";
 import { validateAgentCapabilities } from "../lib/providers";
 import { requestUserContext } from "../lib/request-user-context";
-import type { MiddlewareHandler } from "hono";
+import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
+import { createDiscoveryAgent } from "./agents/discovery";
+import { createExecutionAgent } from "./agents/execution";
+import { createForemanAgent } from "./agents/foreman";
+import { createHistoryAgent } from "./agents/history";
+import { createSupervisorAgent } from "./agents/supervisor";
 
 validateAgentCapabilities();
 
@@ -194,22 +195,28 @@ export function getMastra(): Mastra {
                   : await agent.declineToolCall({ runId: body.approveRunId });
 
                 return createUIMessageStreamResponse({
-                  stream: fixApprovalStream(
-                    toAISdkStream(result, { from: "agent" }),
-                  ),
+                  stream: fixApprovalStream(toAISdkStream(result, { from: "agent" })),
                 });
               }
 
               const lastMsg = Array.isArray(body.messages) ? body.messages.at(-1) : null;
               const text = lastMsg?.parts
-                ? lastMsg.parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("")
-                : typeof lastMsg?.content === "string" ? lastMsg.content
-                : typeof body.messages === "string" ? body.messages : "";
+                ? lastMsg.parts
+                    .filter((p: any) => p.type === "text")
+                    .map((p: any) => p.text)
+                    .join("")
+                : typeof lastMsg?.content === "string"
+                  ? lastMsg.content
+                  : typeof body.messages === "string"
+                    ? body.messages
+                    : "";
 
               const rid = body.resourceId || "";
               const incomingTid = body.threadId || body.id;
 
-              console.log(`[chat] request agentId=${agentId} incomingTid=${incomingTid} rid=${rid || "(empty)"}`);
+              console.log(
+                `[chat] request agentId=${agentId} incomingTid=${incomingTid} rid=${rid || "(empty)"}`,
+              );
 
               // Look up mastra_thread_id from the conversation table so memory loads correctly.
               let tid: string;
@@ -244,16 +251,20 @@ export function getMastra(): Mastra {
                         created_at: now,
                         updated_at: now,
                       },
-                      { onConflict: "id" }
+                      { onConflict: "id" },
                     );
                     if (insertErr) {
-                      console.error(`[chat] conversation upsert failed: ${insertErr.message} (code=${insertErr.code})`);
+                      console.error(
+                        `[chat] conversation upsert failed: ${insertErr.message} (code=${insertErr.code})`,
+                      );
                     } else {
                       console.log(`[chat] created thread mapping conv=${incomingTid} tid=${tid}`);
                     }
                   } else {
                     // rid empty — userId not yet loaded. Row will be written on next request.
-                    console.log(`[chat] rid empty, deferring row insert. Using incomingTid as tid=${tid}`);
+                    console.log(
+                      `[chat] rid empty, deferring row insert. Using incomingTid as tid=${tid}`,
+                    );
                   }
                 }
               } else {
@@ -267,25 +278,23 @@ export function getMastra(): Mastra {
               ]);
 
               const result = await requestUserContext.run({ userId: rid }, () =>
-                agent.stream(
-                  [{ role: "user" as const, content: text }],
-                  {
-                    stopWhen: stepCountIs(15),
-                    memory: { thread: tid, resource: rid },
-                    savePerStep: true,
-                    requestContext: rctx,
-                  }
-                )
+                agent.stream([{ role: "user" as const, content: text }], {
+                  stopWhen: stepCountIs(15),
+                  memory: { thread: tid, resource: rid },
+                  savePerStep: true,
+                  requestContext: rctx,
+                }),
               );
 
               return createUIMessageStreamResponse({
-                stream: fixApprovalStream(
-                  toAISdkStream(result, { from: "agent" }),
-                ),
+                stream: fixApprovalStream(toAISdkStream(result, { from: "agent" })),
               });
             } catch (err: any) {
               console.error("[chat] Error:", err?.message, err?.stack?.slice(0, 500));
-              return c.json({ error: err?.message || "Internal error", stack: err?.stack?.slice(0, 300) }, 500);
+              return c.json(
+                { error: err?.message || "Internal error", stack: err?.stack?.slice(0, 300) },
+                500,
+              );
             }
           },
         }),
@@ -300,7 +309,10 @@ export function getMastra(): Mastra {
             const m = c.get("mastra");
             const bg = m.backgroundTaskManager;
             if (!bg) {
-              return c.json({ error: "backgroundTasks is not enabled on this Mastra instance" }, 503);
+              return c.json(
+                { error: "backgroundTasks is not enabled on this Mastra instance" },
+                503,
+              );
             }
 
             const filter: Record<string, string> = {};
@@ -326,7 +338,11 @@ export function getMastra(): Mastra {
                   }
                 } catch (err: any) {
                   if (err?.name !== "AbortError") {
-                    out.enqueue(enc.encode(`event: error\ndata: ${JSON.stringify({ message: err?.message })}\n\n`));
+                    out.enqueue(
+                      enc.encode(
+                        `event: error\ndata: ${JSON.stringify({ message: err?.message })}\n\n`,
+                      ),
+                    );
                   }
                 } finally {
                   out.close();

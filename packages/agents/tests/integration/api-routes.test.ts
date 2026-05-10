@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { Hono } from "hono";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Module mocks (must be before imports) ───
 
@@ -27,9 +27,7 @@ vi.mock("@/lib/stream/transformer", () => ({
   createChunkTransformer: vi.fn(),
 }));
 vi.mock("@/lib/stream/sse", () => ({
-  encodeSSE: vi.fn((data: any) =>
-    new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)
-  ),
+  encodeSSE: vi.fn((data: any) => new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)),
   sseHeaders: vi.fn(() => ({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
@@ -50,29 +48,25 @@ vi.mock("@mastra/core/request-context", () => ({
 // ─── Mock helpers ───
 
 function createMockJwt(userId: string, orgId?: string): string {
-  const header = Buffer.from(
-    JSON.stringify({ alg: "RS256", typ: "JWT" })
-  ).toString("base64url");
+  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(
     JSON.stringify({
       sub: userId,
       exp: Math.floor(Date.now() / 1000) + 3600,
       org_id: orgId,
-    })
+    }),
   ).toString("base64url");
   const signature = Buffer.from("fake-signature").toString("base64url");
   return `${header}.${payload}.${signature}`;
 }
 
 function createExpiredJwt(userId: string): string {
-  const header = Buffer.from(
-    JSON.stringify({ alg: "RS256", typ: "JWT" })
-  ).toString("base64url");
+  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(
     JSON.stringify({
       sub: userId,
       exp: Math.floor(Date.now() / 1000) - 3600, // expired 1 hour ago
-    })
+    }),
   ).toString("base64url");
   const signature = Buffer.from("fake-signature").toString("base64url");
   return `${header}.${payload}.${signature}`;
@@ -89,17 +83,34 @@ const AUTH_HEADER = `Bearer ${createMockJwt("test-user-1", "test-org-1")}`;
 function createQueryBuilder(data: any = null) {
   const builder: any = {};
   const chainMethods = [
-    "select", "eq", "neq", "gt", "lt", "gte", "lte",
-    "in", "is", "not", "or", "and",
-    "limit", "order", "offset",
-    "insert", "update", "upsert", "delete",
-    "single", "maybeSingle",
+    "select",
+    "eq",
+    "neq",
+    "gt",
+    "lt",
+    "gte",
+    "lte",
+    "in",
+    "is",
+    "not",
+    "or",
+    "and",
+    "limit",
+    "order",
+    "offset",
+    "insert",
+    "update",
+    "upsert",
+    "delete",
+    "single",
+    "maybeSingle",
   ];
   for (const method of chainMethods) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
   // Terminal: await to get { data, error }
   const result = { data, error: null };
+  // biome-ignore lint/suspicious/noThenProperty: deliberate — mock makes the Supabase query builder thenable so tests can `await builder`
   builder.then = (resolve: any) => resolve(result);
   return builder;
 }
@@ -421,8 +432,7 @@ describe("API route integration tests", () => {
 // ── Health endpoint (webhook server on port 4112) ───────────────────────
 
 describe("Health endpoint", () => {
-  const WEBHOOK_URL =
-    process.env.WEBHOOK_URL || "http://localhost:4112";
+  const WEBHOOK_URL = process.env.WEBHOOK_URL || "http://localhost:4112";
 
   let reachable = false;
 
@@ -436,9 +446,7 @@ describe("Health endpoint", () => {
       reachable = false;
     }
     if (!reachable) {
-      console.warn(
-        `\n⚠  Webhook server not reachable at ${WEBHOOK_URL}. Skipping health tests.\n`
-      );
+      console.warn(`\n⚠  Webhook server not reachable at ${WEBHOOK_URL}. Skipping health tests.\n`);
     }
   });
 

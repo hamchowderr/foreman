@@ -1,6 +1,6 @@
 import { metrics } from "@opentelemetry/api";
 import type { AgentName } from "./models";
-import { primary, AGENT_MODELS } from "./models";
+import { AGENT_MODELS, primary } from "./models";
 
 export interface ModelPricing {
   inputPer1M: number;
@@ -61,9 +61,16 @@ export function calculateCost(model: string, usage: UsageTokens): CostBreakdown 
 
   if (!pricing) {
     return {
-      model, provider, inputTokens, outputTokens, cachedInputTokens,
-      inputCostUsd: 0, outputCostUsd: 0, cachedInputCostUsd: 0,
-      totalCostUsd: 0, pricingMissing: true,
+      model,
+      provider,
+      inputTokens,
+      outputTokens,
+      cachedInputTokens,
+      inputCostUsd: 0,
+      outputCostUsd: 0,
+      cachedInputCostUsd: 0,
+      totalCostUsd: 0,
+      pricingMissing: true,
     };
   }
 
@@ -72,8 +79,14 @@ export function calculateCost(model: string, usage: UsageTokens): CostBreakdown 
   const cachedInputCostUsd = (cachedInputTokens * cachedPer1M) / 1_000_000;
   const outputCostUsd = (outputTokens * pricing.outputPer1M) / 1_000_000;
   return {
-    model, provider, inputTokens, outputTokens, cachedInputTokens,
-    inputCostUsd, outputCostUsd, cachedInputCostUsd,
+    model,
+    provider,
+    inputTokens,
+    outputTokens,
+    cachedInputTokens,
+    inputCostUsd,
+    outputCostUsd,
+    cachedInputCostUsd,
     totalCostUsd: inputCostUsd + outputCostUsd + cachedInputCostUsd,
     pricingMissing: false,
   };
@@ -84,12 +97,10 @@ let _costCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"
 function getCostCounter() {
   if (!otelEnabled) return undefined;
   if (_costCounter) return _costCounter;
-  _costCounter = metrics
-    .getMeter("foreman-agents")
-    .createCounter("foreman.llm.cost.usd", {
-      description: "USD cost of LLM calls attributed to a Foreman agent.",
-      unit: "USD",
-    });
+  _costCounter = metrics.getMeter("foreman-agents").createCounter("foreman.llm.cost.usd", {
+    description: "USD cost of LLM calls attributed to a Foreman agent.",
+    unit: "USD",
+  });
   return _costCounter;
 }
 

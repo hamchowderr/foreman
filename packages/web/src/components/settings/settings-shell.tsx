@@ -13,10 +13,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div
-      className="min-h-svh flex flex-col"
-      style={{ backgroundColor: "#FFFDF9" }}
-    >
+    <div className="min-h-svh flex flex-col" style={{ backgroundColor: "#FFFDF9" }}>
       {/* Header */}
       <div
         className="flex items-center gap-4 px-8 py-4"
@@ -29,10 +26,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
           >
             F
           </span>
-          <span
-            className="text-sm font-semibold tracking-tight"
-            style={{ color: "#201515" }}
-          >
+          <span className="text-sm font-semibold tracking-tight" style={{ color: "#201515" }}>
             Foreman
           </span>
         </Link>
@@ -46,15 +40,11 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside
-          className="w-52 shrink-0 px-4 py-8"
-          style={{ borderRight: "1px solid #FFF3E6" }}
-        >
+        <aside className="w-52 shrink-0 px-4 py-8" style={{ borderRight: "1px solid #FFF3E6" }}>
           <nav className="flex flex-col gap-1">
             {NAV.map(({ label, href }) => {
               const active =
-                pathname === href ||
-                (href !== "/settings" && pathname.startsWith(href));
+                pathname === href || (href !== "/settings" && pathname.startsWith(href));
               return (
                 <Link
                   key={href}
@@ -64,9 +54,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
                     active ? "text-white" : "hover:bg-black/5",
                   )}
                   style={
-                    active
-                      ? { backgroundColor: "#FF4F00", color: "#fff" }
-                      : { color: "#201515" }
+                    active ? { backgroundColor: "#FF4F00", color: "#fff" } : { color: "#201515" }
                   }
                 >
                   {label}

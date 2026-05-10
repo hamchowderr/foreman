@@ -1,5 +1,5 @@
 import path from "node:path";
-import { loadConfig, startFromConfig, LLMock } from "@copilotkit/aimock";
+import { type LLMock, loadConfig, startFromConfig } from "@copilotkit/aimock";
 
 const PACKAGE_ROOT = path.join(__dirname, "..");
 const CONFIG_PATH = path.join(PACKAGE_ROOT, "aimock.json");

@@ -288,13 +288,13 @@ export function buildSystemPrompt(context: PromptContext = {}): string {
 
   if (context.connectedApps?.length) {
     sections.push(
-      `\n\n<connected_apps>\nThe user has these apps connected: ${context.connectedApps.join(", ")}. Use these when possible — don't ask the user to connect them again.\n</connected_apps>`
+      `\n\n<connected_apps>\nThe user has these apps connected: ${context.connectedApps.join(", ")}. Use these when possible — don't ask the user to connect them again.\n</connected_apps>`,
     );
   }
 
   if (context.recentActions?.length) {
     sections.push(
-      `\n\n<recent_actions>\n${context.recentActions.map((a) => `- ${a}`).join("\n")}\n</recent_actions>`
+      `\n\n<recent_actions>\n${context.recentActions.map((a) => `- ${a}`).join("\n")}\n</recent_actions>`,
     );
   }
 

@@ -1,8 +1,13 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
-import { PostgresStore, PgVector } from "@mastra/pg";
+import { PgVector, PostgresStore } from "@mastra/pg";
 import { contextInjector, piiRedactor } from "../../lib/processors";
-import { AGENT_MODELS, modelSettingsFor, onFinishCostLogger, systemPromptFor } from "../../lib/providers";
+import {
+  AGENT_MODELS,
+  modelSettingsFor,
+  onFinishCostLogger,
+  systemPromptFor,
+} from "../../lib/providers";
 
 const SUPERVISOR_PROMPT = `You are Foreman Supervisor, an AI assistant that helps users take actions across 9000+ apps via Zapier. You coordinate specialist agents to fulfill user requests.
 
@@ -27,7 +32,12 @@ interface SupervisorDeps {
   historyAgent: Agent;
 }
 
-export function createSupervisorAgent({ databaseUrl, discoveryAgent, executionAgent, historyAgent }: SupervisorDeps) {
+export function createSupervisorAgent({
+  databaseUrl,
+  discoveryAgent,
+  executionAgent,
+  historyAgent,
+}: SupervisorDeps) {
   return new Agent({
     id: "supervisor",
     name: "Foreman Supervisor",

@@ -14,12 +14,7 @@ import {
   useState,
 } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ChatMessage } from "@/lib/types";
 import { type ArtifactKind, artifactDefinitions } from "./artifact";
 import type { ArtifactToolbarItem } from "./create-artifact";
@@ -34,11 +29,7 @@ type ToolProps = {
   setIsToolbarVisible?: Dispatch<SetStateAction<boolean>>;
   isAnimating: boolean;
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
-  onClick: ({
-    sendMessage,
-  }: {
-    sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
-  }) => void;
+  onClick: ({ sendMessage }: { sendMessage: UseChatHelpers<ChatMessage>["sendMessage"] }) => void;
 };
 
 const Tool = ({
@@ -152,8 +143,7 @@ const ReadingLevelSelector = ({
   const yToLevel = useTransform(y, [0, -dragConstraints], [0, 5]);
 
   const [currentLevel, setCurrentLevel] = useState(2);
-  const [hasUserSelectedLevel, setHasUserSelectedLevel] =
-    useState<boolean>(false);
+  const [hasUserSelectedLevel, setHasUserSelectedLevel] = useState<boolean>(false);
 
   useEffect(() => {
     const unsubscribe = yToLevel.on("change", (latest) => {
@@ -188,7 +178,7 @@ const ReadingLevelSelector = ({
                 {
                   "bg-primary text-primary-foreground": currentLevel !== 2,
                   "bg-background text-foreground": currentLevel === 2,
-                }
+                },
               )}
               drag="y"
               dragConstraints={{ top: -dragConstraints, bottom: 0 }}
@@ -276,10 +266,7 @@ export const Tools = ({
   );
 };
 
-const createFixErrorTool = (
-  consoleOutput: string,
-  documentId?: string
-): ArtifactToolbarItem => ({
+const createFixErrorTool = (consoleOutput: string, documentId?: string): ArtifactToolbarItem => ({
   icon: <WrenchIcon className="size-4" />,
   description: "Fix error",
   onClick: ({ sendMessage: send }) => {
@@ -363,7 +350,7 @@ const PureToolbar = ({
   }, [status, setIsToolbarVisible]);
 
   const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifactKind
+    (definition) => definition.kind === artifactKind,
   );
 
   if (!artifactDefinition) {
@@ -371,10 +358,7 @@ const PureToolbar = ({
   }
 
   const toolsByArtifactKind = consoleError
-    ? [
-        createFixErrorTool(consoleError, documentId),
-        ...artifactDefinition.toolbar.slice(1),
-      ]
+    ? [createFixErrorTool(consoleError, documentId), ...artifactDefinition.toolbar.slice(1)]
     : artifactDefinition.toolbar;
 
   if (toolsByArtifactKind.length === 0) {

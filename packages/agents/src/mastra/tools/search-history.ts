@@ -12,22 +12,16 @@ export const searchHistoryTool = createTool({
   inputSchema: z.object({
     query: z
       .string()
-      .describe(
-        "Natural language description of what to search for in action history"
-      ),
+      .describe("Natural language description of what to search for in action history"),
     userId: z.string().describe("The user ID to search history for"),
-    topK: z
-      .number()
-      .optional()
-      .default(5)
-      .describe("Number of results to return (default 5)"),
+    topK: z.number().optional().default(5).describe("Number of results to return (default 5)"),
   }),
   outputSchema: z.object({
     results: z.array(
       z.object({
         score: z.number(),
         metadata: z.record(z.string(), z.unknown()),
-      })
+      }),
     ),
   }),
   toModelOutput: (output) => {

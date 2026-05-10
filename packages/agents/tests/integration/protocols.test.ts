@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const AGENT_URL = process.env.AGENT_URL || "http://localhost:4111";
 
@@ -15,7 +15,9 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:4111";
 async function serverIsReachable(): Promise<boolean> {
   try {
     // Use agent-card endpoint — only the real Mastra dev server serves this (not aimock)
-    const res = await fetch(`${AGENT_URL}/.well-known/foreman/agent-card.json`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${AGENT_URL}/.well-known/foreman/agent-card.json`, {
+      signal: AbortSignal.timeout(2000),
+    });
     return res.status === 200;
   } catch {
     return false;
@@ -38,9 +40,7 @@ describe("Protocol endpoints", () => {
   // ── Agent Card (A2A discovery) ────────────────────────────────────────
 
   describe("Agent card discovery", () => {
-    it("GET /.well-known/foreman/agent-card.json returns agent metadata", async ({
-      skip,
-    }) => {
+    it("GET /.well-known/foreman/agent-card.json returns agent metadata", async ({ skip }) => {
       if (!reachable) skip();
 
       const res = await fetch(`${AGENT_URL}/.well-known/foreman/agent-card.json`);

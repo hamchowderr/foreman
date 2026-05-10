@@ -10,12 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { cn } from "@/lib/utils";
-import {
-  CheckCircleFillIcon,
-  ChevronDownIcon,
-  GlobeIcon,
-  LockIcon,
-} from "./icons";
+import { CheckCircleFillIcon, ChevronDownIcon, GlobeIcon, LockIcon } from "./icons";
 
 export type VisibilityType = "private" | "public";
 
@@ -56,7 +51,7 @@ export function VisibilitySelector({
 
   const selectedVisibility = useMemo(
     () => visibilities.find((visibility) => visibility.id === visibilityType),
-    [visibilityType]
+    [visibilityType],
   );
 
   return (
@@ -65,7 +60,7 @@ export function VisibilitySelector({
         asChild
         className={cn(
           "w-fit data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
-          className
+          className,
         )}
       >
         <Button
@@ -95,9 +90,7 @@ export function VisibilitySelector({
             <div className="flex flex-col items-start gap-1">
               {visibility.label}
               {visibility.description && (
-                <div className="text-muted-foreground text-xs">
-                  {visibility.description}
-                </div>
+                <div className="text-muted-foreground text-xs">{visibility.description}</div>
               )}
             </div>
             <div className="text-foreground opacity-0 group-data-[active=true]/item:opacity-100 dark:text-foreground">

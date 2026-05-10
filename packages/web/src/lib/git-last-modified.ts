@@ -10,10 +10,10 @@ import path from "node:path";
 export function getLastModified(relativePath: string): Date {
   const repoRoot = path.resolve(process.cwd(), "../..");
   try {
-    const iso = execSync(
-      `git log -1 --format=%cI -- "${relativePath}"`,
-      { cwd: repoRoot, stdio: ["ignore", "pipe", "ignore"] },
-    )
+    const iso = execSync(`git log -1 --format=%cI -- "${relativePath}"`, {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
       .toString()
       .trim();
     if (iso) return new Date(iso);

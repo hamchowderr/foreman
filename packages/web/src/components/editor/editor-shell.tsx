@@ -1,8 +1,8 @@
 "use client";
 
+import { BotIcon, LogOut, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BotIcon, LogOut, PlusIcon } from "lucide-react";
 import { createClient } from "@/lib/client";
 import { EditorSidebarAgents } from "./editor-sidebar-agents";
 
@@ -24,10 +24,7 @@ export function EditorShell({
     <div className="flex h-dvh w-full bg-background text-foreground">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface md:flex">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <Link
-            href="/editor"
-            className="flex items-center gap-2 text-sm font-semibold"
-          >
+          <Link href="/editor" className="flex items-center gap-2 text-sm font-semibold">
             <BotIcon className="size-4 text-accent" />
             Agent Editor
           </Link>
@@ -61,10 +58,7 @@ export function EditorShell({
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-border bg-background/95 px-5 py-3 backdrop-blur md:hidden">
-          <Link
-            href="/editor"
-            className="flex items-center gap-2 text-sm font-semibold"
-          >
+          <Link href="/editor" className="flex items-center gap-2 text-sm font-semibold">
             <BotIcon className="size-4 text-accent" />
             Agent Editor
           </Link>

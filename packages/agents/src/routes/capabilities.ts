@@ -1,11 +1,7 @@
 import { Hono } from "hono";
+import { CAPABILITIES, getCapabilities, setCapability } from "@/lib/capabilities";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
-import {
-  getCapabilities,
-  setCapability,
-  CAPABILITIES,
-} from "@/lib/capabilities";
 
 const capabilities = new Hono<AppEnv>();
 
@@ -26,10 +22,7 @@ capabilities.put("/:capability", async (c) => {
 
   // Validate capability name
   if (!CAPABILITIES.includes(capability as any)) {
-    return c.json(
-      { error: `Unknown capability: ${capability}` },
-      400
-    );
+    return c.json({ error: `Unknown capability: ${capability}` }, 400);
   }
 
   let body: any;
@@ -39,10 +32,7 @@ capabilities.put("/:capability", async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
   if (typeof body.enabled !== "boolean") {
-    return c.json(
-      { error: "enabled (boolean) is required" },
-      400
-    );
+    return c.json({ error: "enabled (boolean) is required" }, 400);
   }
 
   await setCapability(userId, capability, body.enabled);

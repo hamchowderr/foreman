@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useDevConsole, type DevLogEntry, type LogLevel } from "@/hooks/use-dev-console";
+import { type DevLogEntry, type LogLevel, useDevConsole } from "@/hooks/use-dev-console";
 import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
 
 const LEVEL_COLORS: Record<LogLevel, string> = {
   debug: "text-muted-foreground",
@@ -30,24 +29,35 @@ function LogEntry({ entry }: { entry: DevLogEntry }) {
     fractionalSecondDigits: 3,
   } as Intl.DateTimeFormatOptions);
 
+  const toggleExpanded = () => {
+    if (entry.data) setExpanded(!expanded);
+  };
+
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: row contains rich layout (badges, flex children) that doesn't fit inside a native <button>; role/tabIndex/onKeyDown make it keyboard-accessible
     <div
+      role={entry.data ? "button" : undefined}
+      tabIndex={entry.data ? 0 : undefined}
       className="group flex flex-col border-b border-border/20 px-3 py-1.5 font-mono text-[11px] leading-relaxed hover:bg-muted/30"
-      onClick={() => entry.data && setExpanded(!expanded)}
+      onClick={toggleExpanded}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleExpanded();
+        }
+      }}
     >
       <div className="flex items-center gap-2">
         <span className="shrink-0 text-muted-foreground/60">{time}</span>
         <span
           className={cn(
             "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium uppercase",
-            CATEGORY_BADGES[entry.category]
+            CATEGORY_BADGES[entry.category],
           )}
         >
           {entry.category}
         </span>
-        <span className={cn("shrink-0", LEVEL_COLORS[entry.level])}>
-          [{entry.level}]
-        </span>
+        <span className={cn("shrink-0", LEVEL_COLORS[entry.level])}>[{entry.level}]</span>
         <span className="min-w-0 truncate text-foreground">{entry.message}</span>
         {entry.data !== undefined && (
           <span className="ml-auto shrink-0 text-muted-foreground/40">
@@ -57,9 +67,7 @@ function LogEntry({ entry }: { entry: DevLogEntry }) {
       </div>
       {expanded && entry.data !== undefined && (
         <pre className="mt-1 max-h-[200px] overflow-auto rounded bg-black/30 p-2 text-[10px] text-muted-foreground">
-          {typeof entry.data === "string"
-            ? entry.data
-            : JSON.stringify(entry.data, null, 2)}
+          {typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data, null, 2)}
         </pre>
       )}
     </div>
@@ -72,17 +80,18 @@ export function DevConsolePanel() {
   const [autoScroll, setAutoScroll] = useState(true);
   const [filter, setFilter] = useState<LogLevel | "all">("all");
 
-  // Only show in development
-  if (process.env.NODE_ENV !== "development") return null;
-
-  const filteredLogs =
-    filter === "all" ? logs : logs.filter((l) => l.level === filter);
+  const filteredLogs = filter === "all" ? logs : logs.filter((l) => l.level === filter);
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [filteredLogs.length, autoScroll]);
+
+  // Only show in development. Early-return must come AFTER all hooks
+  // (rules of hooks). NODE_ENV is build-time constant so this branch
+  // is dead-code-eliminated in production bundles.
+  if (process.env.NODE_ENV !== "development") return null;
 
   const errorCount = logs.filter((l) => l.level === "error").length;
 
@@ -108,9 +117,7 @@ export function DevConsolePanel() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] font-medium text-foreground">
-            Dev Console
-          </span>
+          <span className="font-mono text-[11px] font-medium text-foreground">Dev Console</span>
           <span className="font-mono text-[10px] text-muted-foreground">
             ({filteredLogs.length})
           </span>
@@ -122,7 +129,7 @@ export function DevConsolePanel() {
                 "rounded px-1.5 py-0.5 font-mono text-[9px] transition-colors",
                 filter === level
                   ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
               key={level}
               onClick={() => setFilter(level)}
@@ -142,7 +149,7 @@ export function DevConsolePanel() {
           <button
             className={cn(
               "rounded px-1.5 py-0.5 font-mono text-[9px]",
-              autoScroll ? "text-blue-400" : "text-muted-foreground"
+              autoScroll ? "text-blue-400" : "text-muted-foreground",
             )}
             onClick={() => setAutoScroll(!autoScroll)}
             type="button"

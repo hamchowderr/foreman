@@ -6,19 +6,22 @@
 //
 // If this fails, add an entry to "overrides" in the root package.json to
 // force a single version, then run `rm -rf node_modules package-lock.json && npm install`.
-import { execSync } from 'node:child_process';
+import { execSync } from "node:child_process";
 
-const MUST_BE_SINGLE = ['zod', 'postcss', '@mastra/core'];
+const MUST_BE_SINGLE = ["zod", "postcss", "@mastra/core"];
 
 let failed = false;
 for (const pkg of MUST_BE_SINGLE) {
   // npm ls exits non-zero when there are unmet peers, but still prints valid JSON.
   // Suppress stderr at the API level (cross-platform) and ignore exit code.
-  let out = '';
+  let out = "";
   try {
-    out = execSync(`npm ls ${pkg} --all --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    out = execSync(`npm ls ${pkg} --all --json`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
   } catch (err) {
-    out = err.stdout || '';
+    out = err.stdout || "";
   }
   if (!out) continue;
   const versions = new Set();
@@ -32,7 +35,9 @@ for (const pkg of MUST_BE_SINGLE) {
   };
   walk(JSON.parse(out));
   if (versions.size > 1) {
-    console.error(`\n[dep-uniqueness] ${pkg} has ${versions.size} resolved versions: ${[...versions].join(', ')}`);
+    console.error(
+      `\n[dep-uniqueness] ${pkg} has ${versions.size} resolved versions: ${[...versions].join(", ")}`,
+    );
     console.error(`  Add an override in root package.json:`);
     console.error(`    "overrides": { "${pkg}": "<version>" }`);
     console.error(`  Then: rm -rf node_modules package-lock.json && npm install`);

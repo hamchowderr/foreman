@@ -1,37 +1,36 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-
-import { createClient } from '@/lib/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/client";
 
 export function ForgotPasswordForm() {
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
-    setError(null)
+    e.preventDefault();
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
-      })
-      if (error) throw error
-      setSuccess(true)
+      });
+      if (error) throw error;
+      setSuccess(true);
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   if (success) {
     return (
@@ -50,7 +49,7 @@ export function ForgotPasswordForm() {
           Back to sign in
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -64,7 +63,9 @@ export function ForgotPasswordForm() {
 
       <form onSubmit={handleForgotPassword} className="space-y-5">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email
+          </Label>
           <Input
             id="email"
             type="email"
@@ -88,16 +89,19 @@ export function ForgotPasswordForm() {
           className="w-full h-10 bg-[#ff4a00] hover:bg-[#e64400] text-white rounded-md font-medium"
           disabled={isLoading}
         >
-          {isLoading ? 'Sending...' : 'Send reset email'}
+          {isLoading ? "Sending..." : "Send reset email"}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Remember your password?{' '}
-        <Link href="/auth/login" className="text-foreground font-medium underline underline-offset-4">
+        Remember your password?{" "}
+        <Link
+          href="/auth/login"
+          className="text-foreground font-medium underline underline-offset-4"
+        >
           Sign in
         </Link>
       </p>
     </div>
-  )
+  );
 }

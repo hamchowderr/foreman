@@ -1,20 +1,20 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  SlackIcon as HiSlackIcon,
-  DiscordIcon as HiDiscordIcon,
-  TelegramIcon as HiTelegramIcon,
-  GithubIcon as HiGithubIcon,
-  WhatsappIcon as HiWhatsappIcon,
-  MicrosoftIcon as HiMicrosoftIcon,
-  GoogleIcon as HiGoogleIcon,
-  StripeIcon as HiStripeIcon,
-  TrelloIcon as HiTrelloIcon,
-  Notion01Icon as HiNotionIcon,
-  TwitterIcon as HiTwitterIcon,
   Apple01Icon as HiAppleIcon,
+  DiscordIcon as HiDiscordIcon,
+  GithubIcon as HiGithubIcon,
+  GoogleIcon as HiGoogleIcon,
+  MicrosoftIcon as HiMicrosoftIcon,
+  Notion01Icon as HiNotionIcon,
+  SlackIcon as HiSlackIcon,
+  StripeIcon as HiStripeIcon,
+  TelegramIcon as HiTelegramIcon,
+  TrelloIcon as HiTrelloIcon,
+  TwitterIcon as HiTwitterIcon,
+  WhatsappIcon as HiWhatsappIcon,
 } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { SVGProps } from "react";
 
 type BrandProps = Omit<SVGProps<SVGSVGElement>, "color"> & {

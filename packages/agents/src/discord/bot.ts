@@ -1,10 +1,10 @@
-import { stepCountIs } from "ai";
-import { Chat } from "chat";
 import { createDiscordAdapter } from "@chat-adapter/discord";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { getMastra } from "../mastra";
-import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
+import { stepCountIs } from "ai";
+import { Chat } from "chat";
+import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { getMastra } from "../mastra";
 
 let _bot: Chat<{ discord: ReturnType<typeof createDiscordAdapter> }> | undefined;
 let _discordAdapter: ReturnType<typeof createDiscordAdapter> | undefined;
@@ -37,35 +37,33 @@ export async function getDiscordBot() {
     text: string,
     displayName?: string,
   ) {
-    const userId = await registerChannelUser(
-      "discord",
-      discordUserId,
-      displayName
-    );
+    const userId = await registerChannelUser("discord", discordUserId, displayName);
 
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from Discord, because resource is the same userId.
-    let postedStepTexts: string[] = [];
+    const postedStepTexts: string[] = [];
 
-    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
-      stopWhen: stepCountIs(10),
-      savePerStep: true,
-      memory: {
-        thread: `discord-${threadId}`,
-        resource: userId,
-      },
-      onStepFinish: async (step: any) => {
-        try {
-          if (step.text && step.finishReason === "tool-calls") {
-            await thread.post(step.text);
-            postedStepTexts.push(step.text);
+    const result = await requestUserContext.run({ userId }, () =>
+      agent.generate(text, {
+        stopWhen: stepCountIs(10),
+        savePerStep: true,
+        memory: {
+          thread: `discord-${threadId}`,
+          resource: userId,
+        },
+        onStepFinish: async (step: any) => {
+          try {
+            if (step.text && step.finishReason === "tool-calls") {
+              await thread.post(step.text);
+              postedStepTexts.push(step.text);
+            }
+          } catch {
+            // Don't let posting errors crash the agent
           }
-        } catch {
-          // Don't let posting errors crash the agent
-        }
-      },
-    }));
+        },
+      }),
+    );
 
     // result.text contains ALL step texts concatenated.
     // Strip out anything we already posted to avoid duplicates.
@@ -73,7 +71,10 @@ export async function getDiscordBot() {
     for (const posted of postedStepTexts) {
       finalText = finalText.replace(posted, "").trim();
     }
-    return finalText || (postedStepTexts.length > 0 ? null : "Something went wrong — I couldn't generate a response.");
+    return (
+      finalText ||
+      (postedStepTexts.length > 0 ? null : "Something went wrong — I couldn't generate a response.")
+    );
   }
 
   // Handle /link <code> command for account linking (DMs only)
@@ -89,17 +90,25 @@ export async function getDiscordBot() {
           message.author.fullName,
         );
         if (result.ok) {
-          await thread.post("Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.");
+          await thread.post(
+            "Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.",
+          );
         } else if (result.error === "expired") {
-          await thread.post("That code has expired. Generate a new one from your Foreman settings.");
+          await thread.post(
+            "That code has expired. Generate a new one from your Foreman settings.",
+          );
         } else if (result.error === "already_used") {
           await thread.post("That code has already been used. Generate a new one if needed.");
         } else {
-          await thread.post("Code not found. Check you copied it correctly, or generate a new one.");
+          await thread.post(
+            "Code not found. Check you copied it correctly, or generate a new one.",
+          );
         }
       } catch (err) {
         console.error("[discord] /link handler error:", err);
-        await thread.post("Something went wrong while linking your account. Please try again.").catch(() => {});
+        await thread
+          .post("Something went wrong while linking your account. Please try again.")
+          .catch(() => {});
       }
       return;
     }
@@ -115,7 +124,7 @@ export async function getDiscordBot() {
       thread.channelId,
       message.author.userId,
       message.text,
-      message.author.fullName
+      message.author.fullName,
     );
     if (reply) await thread.post(reply);
   });
@@ -132,7 +141,7 @@ export async function getDiscordBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       if (reply) {
         console.log("[discord] Final reply:", reply.substring(0, 100));
@@ -155,7 +164,7 @@ export async function getDiscordBot() {
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       if (reply) {
         console.log("[discord] Reply:", reply.substring(0, 100));

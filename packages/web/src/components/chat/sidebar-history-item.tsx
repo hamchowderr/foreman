@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { memo, useRef, useState } from "react";
-import { createClient } from "@/lib/client";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { createClient } from "@/lib/client";
 import type { Chat } from "@/lib/db/schema";
 import {
   DropdownMenu,
@@ -15,11 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import {
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "../ui/sidebar";
+import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 import {
   CheckCircleFillIcon,
   GlobeIcon,
@@ -60,7 +56,9 @@ const PureChatItem = ({
     }
 
     try {
-      const { data: { session } } = await createClient().auth.getSession();
+      const {
+        data: { session },
+      } = await createClient().auth.getSession();
       const token = session?.access_token ?? null;
       const agentUrl = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
       await fetch(`${agentUrl}/conversations/${chat.id}`, {
@@ -82,7 +80,6 @@ const PureChatItem = ({
     return (
       <SidebarMenuItem>
         <input
-          autoFocus
           className="h-8 w-full rounded-none border-b border-dashed border-sidebar-foreground/50 bg-transparent px-2 text-[13px] text-sidebar-foreground outline-none"
           onBlur={handleRename}
           onChange={(e) => setTitle(e.target.value)}
@@ -151,9 +148,7 @@ const PureChatItem = ({
                     <LockIcon size={12} />
                     <span>Private</span>
                   </div>
-                  {visibilityType === "private" ? (
-                    <CheckCircleFillIcon />
-                  ) : null}
+                  {visibilityType === "private" ? <CheckCircleFillIcon /> : null}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer flex-row justify-between"
@@ -171,10 +166,7 @@ const PureChatItem = ({
             </DropdownMenuPortal>
           </DropdownMenuSub>
 
-          <DropdownMenuItem
-            onSelect={() => onDelete(chat.id)}
-            variant="destructive"
-          >
+          <DropdownMenuItem onSelect={() => onDelete(chat.id)} variant="destructive">
             <TrashIcon />
             <span>Delete</span>
           </DropdownMenuItem>

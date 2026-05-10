@@ -8,64 +8,19 @@ const SunIcon = ({ size = 40 }: { size?: number }) => (
   <svg fill="none" height={size} viewBox="0 0 24 24" width={size}>
     <circle cx="12" cy="12" fill="currentColor" r="5" />
     <line stroke="currentColor" strokeWidth="2" x1="12" x2="12" y1="1" y2="3" />
-    <line
-      stroke="currentColor"
-      strokeWidth="2"
-      x1="12"
-      x2="12"
-      y1="21"
-      y2="23"
-    />
-    <line
-      stroke="currentColor"
-      strokeWidth="2"
-      x1="4.22"
-      x2="5.64"
-      y1="4.22"
-      y2="5.64"
-    />
-    <line
-      stroke="currentColor"
-      strokeWidth="2"
-      x1="18.36"
-      x2="19.78"
-      y1="18.36"
-      y2="19.78"
-    />
+    <line stroke="currentColor" strokeWidth="2" x1="12" x2="12" y1="21" y2="23" />
+    <line stroke="currentColor" strokeWidth="2" x1="4.22" x2="5.64" y1="4.22" y2="5.64" />
+    <line stroke="currentColor" strokeWidth="2" x1="18.36" x2="19.78" y1="18.36" y2="19.78" />
     <line stroke="currentColor" strokeWidth="2" x1="1" x2="3" y1="12" y2="12" />
-    <line
-      stroke="currentColor"
-      strokeWidth="2"
-      x1="21"
-      x2="23"
-      y1="12"
-      y2="12"
-    />
-    <line
-      stroke="currentColor"
-      strokeWidth="2"
-      x1="4.22"
-      x2="5.64"
-      y1="19.78"
-      y2="18.36"
-    />
-    <line
-      stroke="currentColor"
-      strokeWidth="2"
-      x1="18.36"
-      x2="19.78"
-      y1="5.64"
-      y2="4.22"
-    />
+    <line stroke="currentColor" strokeWidth="2" x1="21" x2="23" y1="12" y2="12" />
+    <line stroke="currentColor" strokeWidth="2" x1="4.22" x2="5.64" y1="19.78" y2="18.36" />
+    <line stroke="currentColor" strokeWidth="2" x1="18.36" x2="19.78" y1="5.64" y2="4.22" />
   </svg>
 );
 
 const MoonIcon = ({ size = 40 }: { size?: number }) => (
   <svg fill="none" height={size} viewBox="0 0 24 24" width={size}>
-    <path
-      d="M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79z"
-      fill="currentColor"
-    />
+    <path d="M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79z" fill="currentColor" />
   </svg>
 );
 
@@ -234,14 +189,13 @@ const SAMPLE = {
       "2024-10-11T03:00",
     ],
     temperature_2m: [
-      36.6, 32.8, 29.5, 28.6, 29.2, 28.2, 27.5, 26.6, 26.5, 26, 25, 23.5, 23.9,
-      24.2, 22.9, 21, 24, 28.1, 31.4, 33.9, 32.1, 28.9, 26.9, 25.2, 23, 21.1,
-      19.6, 18.6, 17.7, 16.8, 16.2, 15.5, 14.9, 14.4, 14.2, 13.7, 13.3, 12.9,
-      12.5, 13.5, 15.8, 17.7, 19.6, 21, 21.9, 22.3, 22, 20.7, 18.9, 17.9, 17.3,
-      17, 16.7, 16.2, 15.6, 15.2, 15, 15, 15.1, 14.8, 14.8, 14.9, 14.7, 14.8,
-      15.3, 16.2, 17.9, 19.6, 20.5, 21.6, 21, 20.7, 19.3, 18.7, 18.4, 17.9,
-      17.3, 17, 17, 16.8, 16.4, 16.2, 16, 15.8, 15.7, 15.4, 15.4, 16.1, 16.7,
-      17, 18.6, 19, 19.5, 19.4, 18.5, 17.9, 17.5, 16.7, 16.3, 16.1,
+      36.6, 32.8, 29.5, 28.6, 29.2, 28.2, 27.5, 26.6, 26.5, 26, 25, 23.5, 23.9, 24.2, 22.9, 21, 24,
+      28.1, 31.4, 33.9, 32.1, 28.9, 26.9, 25.2, 23, 21.1, 19.6, 18.6, 17.7, 16.8, 16.2, 15.5, 14.9,
+      14.4, 14.2, 13.7, 13.3, 12.9, 12.5, 13.5, 15.8, 17.7, 19.6, 21, 21.9, 22.3, 22, 20.7, 18.9,
+      17.9, 17.3, 17, 16.7, 16.2, 15.6, 15.2, 15, 15, 15.1, 14.8, 14.8, 14.9, 14.7, 14.8, 15.3,
+      16.2, 17.9, 19.6, 20.5, 21.6, 21, 20.7, 19.3, 18.7, 18.4, 17.9, 17.3, 17, 17, 16.8, 16.4,
+      16.2, 16, 15.8, 15.7, 15.4, 15.4, 16.1, 16.7, 17, 18.6, 19, 19.5, 19.4, 18.5, 17.9, 17.5,
+      16.7, 16.3, 16.1,
     ],
   },
   daily_units: {
@@ -250,13 +204,7 @@ const SAMPLE = {
     sunset: "iso8601",
   },
   daily: {
-    time: [
-      "2024-10-07",
-      "2024-10-08",
-      "2024-10-09",
-      "2024-10-10",
-      "2024-10-11",
-    ],
+    time: ["2024-10-07", "2024-10-08", "2024-10-09", "2024-10-10", "2024-10-11"],
     sunrise: [
       "2024-10-07T07:15",
       "2024-10-08T07:16",
@@ -278,17 +226,9 @@ function n(num: number): number {
   return Math.ceil(num);
 }
 
-export function Weather({
-  weatherAtLocation = SAMPLE,
-}: {
-  weatherAtLocation?: WeatherAtLocation;
-}) {
-  const currentHigh = Math.max(
-    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)
-  );
-  const currentLow = Math.min(
-    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)
-  );
+export function Weather({ weatherAtLocation = SAMPLE }: { weatherAtLocation?: WeatherAtLocation }) {
+  const currentHigh = Math.max(...weatherAtLocation.hourly.temperature_2m.slice(0, 24));
+  const currentLow = Math.min(...weatherAtLocation.hourly.temperature_2m.slice(0, 24));
 
   const isDay = isWithinInterval(new Date(weatherAtLocation.current.time), {
     start: new Date(weatherAtLocation.daily.sunrise[0]),
@@ -311,16 +251,16 @@ export function Weather({
   const hoursToShow = isMobile ? 5 : 6;
 
   const currentTimeIndex = weatherAtLocation.hourly.time.findIndex(
-    (time) => new Date(time) >= new Date(weatherAtLocation.current.time)
+    (time) => new Date(time) >= new Date(weatherAtLocation.current.time),
   );
 
   const displayTimes = weatherAtLocation.hourly.time.slice(
     currentTimeIndex,
-    currentTimeIndex + hoursToShow
+    currentTimeIndex + hoursToShow,
   );
   const displayTemperatures = weatherAtLocation.hourly.temperature_2m.slice(
     currentTimeIndex,
-    currentTimeIndex + hoursToShow
+    currentTimeIndex + hoursToShow,
   );
 
   const location =
@@ -335,9 +275,8 @@ export function Weather({
           "bg-gradient-to-br from-sky-400 via-blue-500 to-blue-600": isDay,
         },
         {
-          "bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900":
-            !isDay,
-        }
+          "bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900": !isDay,
+        },
       )}
     >
       <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
@@ -369,22 +308,17 @@ export function Weather({
           </div>
 
           <div className="text-right">
-            <div className="font-medium text-white/90 text-xs">
-              H: {n(currentHigh)}°
-            </div>
+            <div className="font-medium text-white/90 text-xs">H: {n(currentHigh)}°</div>
             <div className="text-white/70 text-xs">L: {n(currentLow)}°</div>
           </div>
         </div>
 
         <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-          <div className="mb-2 font-medium text-white/80 text-xs">
-            Hourly Forecast
-          </div>
+          <div className="mb-2 font-medium text-white/80 text-xs">Hourly Forecast</div>
           <div className="flex justify-between gap-1">
             {displayTimes.map((time, index) => {
               const hourTime = new Date(time);
-              const isCurrentHour =
-                hourTime.getHours() === new Date().getHours();
+              const isCurrentHour = hourTime.getHours() === new Date().getHours();
 
               return (
                 <div
@@ -392,7 +326,7 @@ export function Weather({
                     "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md px-1 py-1.5",
                     {
                       "bg-white/20": isCurrentHour,
-                    }
+                    },
                   )}
                   key={time}
                 >
@@ -419,14 +353,8 @@ export function Weather({
         </div>
 
         <div className="mt-2 flex justify-between text-white/60 text-xs">
-          <div>
-            Sunrise:{" "}
-            {format(new Date(weatherAtLocation.daily.sunrise[0]), "h:mm a")}
-          </div>
-          <div>
-            Sunset:{" "}
-            {format(new Date(weatherAtLocation.daily.sunset[0]), "h:mm a")}
-          </div>
+          <div>Sunrise: {format(new Date(weatherAtLocation.daily.sunrise[0]), "h:mm a")}</div>
+          <div>Sunset: {format(new Date(weatherAtLocation.daily.sunset[0]), "h:mm a")}</div>
         </div>
       </div>
     </div>

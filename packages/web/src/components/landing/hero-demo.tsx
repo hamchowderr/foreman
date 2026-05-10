@@ -1,7 +1,14 @@
 "use client";
 
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from "motion/react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { Check } from "@/components/icons/hi";
 
 type Step =

@@ -2,8 +2,6 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
-import { useCallback } from "react";
-import { createClient } from "@/lib/client";
 import { DefaultChatTransport } from "ai";
 import { usePathname } from "next/navigation";
 import {
@@ -11,13 +9,13 @@ import {
   type Dispatch,
   type ReactNode,
   type SetStateAction,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { useDataStream } from "@/components/chat/data-stream-provider";
@@ -27,10 +25,11 @@ import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useDevConsole } from "@/hooks/use-dev-console";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { createClient } from "@/lib/client";
 import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
-import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
+import { fetcher, generateUUID } from "@/lib/utils";
 
 type ActiveChatContextValue = {
   chatId: string;
@@ -67,12 +66,16 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const { log } = useDevConsole();
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
-    createClient().auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user.id ?? null);
-    });
+    createClient()
+      .auth.getSession()
+      .then(({ data: { session } }) => {
+        setUserId(session?.user.id ?? null);
+      });
   }, []);
   const getToken = useCallback(async () => {
-    const { data: { session } } = await createClient().auth.getSession();
+    const {
+      data: { session },
+    } = await createClient().auth.getSession();
     return session?.access_token ?? null;
   }, []);
   const getTokenRef = useRef(getToken);
@@ -104,19 +107,13 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 
   const { data: chatData, isLoading } = useSWR(
-    isNewChat
-      ? null
-      : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
+    isNewChat ? null : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
     fetcher,
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false },
   );
 
-  const initialMessages: ChatMessage[] = isNewChat
-    ? []
-    : (chatData?.messages ?? []);
-  const visibility: VisibilityType = isNewChat
-    ? "private"
-    : (chatData?.visibility ?? "private");
+  const initialMessages: ChatMessage[] = isNewChat ? [] : (chatData?.messages ?? []);
+  const visibility: VisibilityType = isNewChat ? "private" : (chatData?.visibility ?? "private");
 
   const {
     messages,
@@ -139,7 +136,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
             "state" in part &&
             part.state === "approval-responded" &&
             "approval" in part &&
-            (part.approval as { approved?: boolean })?.approved != null
+            (part.approval as { approved?: boolean })?.approved != null,
         ) ?? false
       );
     },
@@ -147,10 +144,15 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       api: `${process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111"}/chat/foreman`,
       fetch: async (input, init) => {
         const token = await getTokenRef.current();
-        logRef.current("info", "transport", `POST ${typeof input === "string" ? input : (input as Request).url}`, {
-          hasToken: !!token,
-          bodyLength: init?.body ? String(init.body).length : 0,
-        });
+        logRef.current(
+          "info",
+          "transport",
+          `POST ${typeof input === "string" ? input : (input as Request).url}`,
+          {
+            hasToken: !!token,
+            bodyLength: init?.body ? String(init.body).length : 0,
+          },
+        );
         const startTime = Date.now();
         try {
           const response = await fetch(input, {
@@ -164,11 +166,15 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
             response.ok ? "info" : "error",
             "transport",
             `Response ${response.status} (${Date.now() - startTime}ms)`,
-            { status: response.status, statusText: response.statusText }
+            { status: response.status, statusText: response.statusText },
           );
           return response;
         } catch (err) {
-          logRef.current("error", "transport", `Fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+          logRef.current(
+            "error",
+            "transport",
+            `Fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
           throw err;
         }
       },
@@ -182,9 +188,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
           .flatMap((m) => m.parts ?? [])
           .find(
             (p: any) =>
-              "state" in p &&
-              p.state === "approval-responded" &&
-              p.approval?.approved != null,
+              "state" in p && p.state === "approval-responded" && p.approval?.approved != null,
           ) as { approval: { id: string; approved: boolean; reason?: string } } | undefined;
 
         if (approvalPart) {
@@ -206,10 +210,11 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
         // Normal message — extract text and send to Mastra
         const lastMsg = request.messages.at(-1);
-        const text = lastMsg?.parts
-          ?.filter((p) => p.type === "text")
-          .map((p) => (p as { text: string }).text)
-          .join("") || "";
+        const text =
+          lastMsg?.parts
+            ?.filter((p) => p.type === "text")
+            .map((p) => (p as { text: string }).text)
+            .join("") || "";
         return {
           body: {
             messages: [{ role: "user", content: text }],
@@ -244,8 +249,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       ) {
         toast({
           type: "error",
-          description:
-            "Agent server is unavailable. Make sure it's running on port 4111.",
+          description: "Agent server is unavailable. Make sure it's running on port 4111.",
         });
       } else if (error.message?.includes("aborted")) {
         // Stream was cancelled by user — no need to show error
@@ -267,7 +271,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
         window.history.pushState(
           {},
           "",
-          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`,
         );
         // Persist the conversation so it appears in history and survives refresh
         getTokenRef.current().then((token) => {
@@ -280,13 +284,13 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
               body: JSON.stringify({ id: chatId }),
-            }
+            },
           ).catch(() => {});
         });
       }
       return sendMessage(...args);
     },
-    [isNewChat, chatId, sendMessage]
+    [isNewChat, chatId, sendMessage],
   );
 
   const loadedChatIds = useRef(new Set<string>());
@@ -337,7 +341,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       window.history.replaceState(
         {},
         "",
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`,
       );
       sendMessage({
         role: "user" as const,
@@ -384,7 +388,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote?chatId=${chatId}`
       : null,
     fetcher,
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false },
   );
 
   const value = useMemo<ActiveChatContextValue>(
@@ -425,14 +429,10 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       votes,
       currentModelId,
       showCreditCardAlert,
-    ]
+    ],
   );
 
-  return (
-    <ActiveChatContext.Provider value={value}>
-      {children}
-    </ActiveChatContext.Provider>
-  );
+  return <ActiveChatContext.Provider value={value}>{children}</ActiveChatContext.Provider>;
 }
 
 export function useActiveChat() {

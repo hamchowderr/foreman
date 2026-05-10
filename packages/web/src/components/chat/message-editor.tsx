@@ -23,10 +23,7 @@ export async function submitEditedMessage({
       return messages;
     }
 
-    return [
-      ...messages.slice(0, index),
-      { ...message, parts: [{ type: "text" as const, text }] },
-    ];
+    return [...messages.slice(0, index), { ...message, parts: [{ type: "text" as const, text }] }];
   });
 
   regenerate();

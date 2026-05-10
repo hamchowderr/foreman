@@ -20,9 +20,7 @@ async function main() {
   // Get most recent experiment
   const { experiments } = await dataset.listExperiments({ perPage: 50 });
   const sorted = experiments.sort(
-    (a, b) =>
-      new Date(b.createdAt as any).getTime() -
-      new Date(a.createdAt as any).getTime(),
+    (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime(),
   );
   const latest = sorted[0];
   console.log(`Latest experiment: ${latest.name}  id=${latest.id}`);
@@ -45,7 +43,9 @@ async function main() {
     const items = (out as any).results ?? [];
     const pagination = (out as any).pagination;
     if (typeof pagination?.total === "number") total = pagination.total;
-    console.log(`  page ${page}: got ${items.length} items (cumulative ${allResults.length + items.length}/${total})`);
+    console.log(
+      `  page ${page}: got ${items.length} items (cumulative ${allResults.length + items.length}/${total})`,
+    );
     if (items.length === 0) break;
     allResults.push(...items);
     page++;
@@ -63,7 +63,9 @@ async function main() {
   for (const k of Object.keys(allResults[0])) {
     const v = (allResults[0] as any)[k];
     if (k === "input" || k === "output" || k === "groundTruth") continue;
-    console.log(`  ${k}: ${typeof v === "object" ? JSON.stringify(v)?.slice(0, 200) : String(v)?.slice(0, 100)}`);
+    console.log(
+      `  ${k}: ${typeof v === "object" ? JSON.stringify(v)?.slice(0, 200) : String(v)?.slice(0, 100)}`,
+    );
   }
   console.log();
 
@@ -126,9 +128,7 @@ async function main() {
 
   for (const r of exp.results) {
     const inputStr = typeof r.input === "string" ? r.input : JSON.stringify(r.input);
-    const gt = (r as any).groundTruth as
-      | { category_hint?: string }
-      | undefined;
+    const gt = (r as any).groundTruth as { category_hint?: string } | undefined;
     const category = gt?.category_hint ?? null;
 
     let trajectoryScore: number | null = null;
@@ -184,18 +184,11 @@ async function main() {
     if (item.judgeScore !== null) bucket.judge.push(item.judgeScore);
   }
   console.log(
-    "category".padEnd(28) +
-      "n".padStart(4) +
-      "traj_avg".padStart(12) +
-      "judge_avg".padStart(12),
+    "category".padEnd(28) + "n".padStart(4) + "traj_avg".padStart(12) + "judge_avg".padStart(12),
   );
   for (const [cat, b] of [...byCategory.entries()].sort()) {
-    const tAvg = b.traj.length
-      ? b.traj.reduce((a, x) => a + x, 0) / b.traj.length
-      : NaN;
-    const jAvg = b.judge.length
-      ? b.judge.reduce((a, x) => a + x, 0) / b.judge.length
-      : NaN;
+    const tAvg = b.traj.length ? b.traj.reduce((a, x) => a + x, 0) / b.traj.length : NaN;
+    const jAvg = b.judge.length ? b.judge.reduce((a, x) => a + x, 0) / b.judge.length : NaN;
     console.log(
       cat.padEnd(28) +
         String(b.traj.length).padStart(4) +
@@ -211,7 +204,9 @@ async function main() {
     .sort((a, b) => (a.judgeScore as number) - (b.judgeScore as number))
     .slice(0, 10);
   for (const item of sortedItems) {
-    console.log(`\n[${item.category ?? "?"}] judge=${item.judgeScore}  traj=${item.trajectoryScore}`);
+    console.log(
+      `\n[${item.category ?? "?"}] judge=${item.judgeScore}  traj=${item.trajectoryScore}`,
+    );
     console.log(`  "${item.input.slice(0, 100)}${item.input.length > 100 ? "…" : ""}"`);
     if (item.judgeReason) {
       console.log(`  judge: ${item.judgeReason.slice(0, 250)}`);

@@ -40,7 +40,7 @@ function PureModelSelectorCompact({
   const { data: modelsData } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false, dedupingInterval: 3_600_000 }
+    { revalidateOnFocus: false, dedupingInterval: 3_600_000 },
   );
 
   const capabilities: Record<string, ModelCapabilities> | undefined =
@@ -72,20 +72,12 @@ function PureModelSelectorCompact({
           {(() => {
             const curatedIds = new Set(chatModels.map((m) => m.id));
             const allModels = dynamicModels
-              ? [
-                  ...chatModels,
-                  ...dynamicModels.filter((m) => !curatedIds.has(m.id)),
-                ]
+              ? [...chatModels, ...dynamicModels.filter((m) => !curatedIds.has(m.id))]
               : chatModels;
 
-            const grouped: Record<
-              string,
-              { model: ChatModel; curated: boolean }[]
-            > = {};
+            const grouped: Record<string, { model: ChatModel; curated: boolean }[]> = {};
             for (const model of allModels) {
-              const key = curatedIds.has(model.id)
-                ? "_available"
-                : model.provider;
+              const key = curatedIds.has(model.id) ? "_available" : model.provider;
               if (!grouped[key]) {
                 grouped[key] = [];
               }
@@ -129,11 +121,7 @@ function PureModelSelectorCompact({
 
             return sortedKeys.map((key) => (
               <ModelSelectorGroup
-                heading={
-                  key === "_available"
-                    ? "Available"
-                    : (providerNames[key] ?? key)
-                }
+                heading={key === "_available" ? "Available" : (providerNames[key] ?? key)}
                 key={key}
               >
                 {grouped[key].map(({ model, curated }) => {
@@ -144,7 +132,7 @@ function PureModelSelectorCompact({
                         "flex w-full",
                         model.id === selectedModel.id &&
                           "border-b border-dashed border-foreground/50",
-                        !curated && "opacity-40 cursor-default"
+                        !curated && "opacity-40 cursor-default",
                       )}
                       key={model.id}
                       onSelect={() => {
@@ -156,9 +144,7 @@ function PureModelSelectorCompact({
                         setOpen(false);
                         setTimeout(() => {
                           document
-                            .querySelector<HTMLTextAreaElement>(
-                              "[data-testid='multimodal-input']"
-                            )
+                            .querySelector<HTMLTextAreaElement>("[data-testid='multimodal-input']")
                             ?.focus();
                         }, 50);
                       }}
@@ -167,18 +153,10 @@ function PureModelSelectorCompact({
                       <ModelSelectorLogo provider={logoProvider} />
                       <ModelSelectorName>{model.name}</ModelSelectorName>
                       <div className="ml-auto flex items-center gap-2 text-foreground/70">
-                        {capabilities?.[model.id]?.tools && (
-                          <WrenchIcon className="size-3.5" />
-                        )}
-                        {capabilities?.[model.id]?.vision && (
-                          <EyeIcon className="size-3.5" />
-                        )}
-                        {capabilities?.[model.id]?.reasoning && (
-                          <BrainIcon className="size-3.5" />
-                        )}
-                        {!curated && (
-                          <LockIcon className="size-3 text-muted-foreground/50" />
-                        )}
+                        {capabilities?.[model.id]?.tools && <WrenchIcon className="size-3.5" />}
+                        {capabilities?.[model.id]?.vision && <EyeIcon className="size-3.5" />}
+                        {capabilities?.[model.id]?.reasoning && <BrainIcon className="size-3.5" />}
+                        {!curated && <LockIcon className="size-3 text-muted-foreground/50" />}
                       </div>
                     </ModelSelectorItem>
                   );

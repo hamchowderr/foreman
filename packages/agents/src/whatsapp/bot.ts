@@ -1,10 +1,10 @@
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
 import { stepCountIs } from "ai";
 import { Chat } from "chat";
-import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
-import { createMemoryState } from "@chat-adapter/state-memory";
-import { getMastra } from "../mastra";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { getMastra } from "../mastra";
 
 let _bot: Chat<{ whatsapp: ReturnType<typeof createWhatsAppAdapter> }> | undefined;
 let _whatsappAdapter: ReturnType<typeof createWhatsAppAdapter> | undefined;
@@ -36,23 +36,21 @@ export async function getWhatsAppBot() {
     text: string,
     displayName?: string,
   ) {
-    const userId = await registerChannelUser(
-      "whatsapp",
-      whatsappUserId,
-      displayName
-    );
+    const userId = await registerChannelUser("whatsapp", whatsappUserId, displayName);
 
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Slack
     // is available when they message from WhatsApp, because resource is the same userId.
-    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
-      stopWhen: stepCountIs(5),
-      savePerStep: true,
-      memory: {
-        thread: `whatsapp-${threadId}`,
-        resource: userId,
-      },
-    }));
+    const result = await requestUserContext.run({ userId }, () =>
+      agent.generate(text, {
+        stopWhen: stepCountIs(5),
+        savePerStep: true,
+        memory: {
+          thread: `whatsapp-${threadId}`,
+          resource: userId,
+        },
+      }),
+    );
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
@@ -62,11 +60,11 @@ export async function getWhatsAppBot() {
     try {
       console.log("[whatsapp] Message from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.channelId,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       console.log("[whatsapp] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -83,11 +81,11 @@ export async function getWhatsAppBot() {
       console.log("[whatsapp] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       console.log("[whatsapp] Reply:", reply?.substring(0, 100));
       await thread.post(reply);
@@ -101,11 +99,11 @@ export async function getWhatsAppBot() {
     if (!message.text) return;
     try {
       await thread.startTyping().catch(() => {});
-    const reply = await generateReply(
+      const reply = await generateReply(
         thread.id,
         message.author.userId,
         message.text,
-        message.author.fullName
+        message.author.fullName,
       );
       await thread.post(reply);
     } catch (err) {

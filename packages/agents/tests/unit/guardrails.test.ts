@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the capabilities module (used by checkAppAccess)
 vi.mock("@/lib/capabilities", () => ({
@@ -15,6 +15,7 @@ function createChain() {
     builder[m] = vi.fn().mockReturnValue(builder);
   }
   builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextSensitiveResult));
+  // biome-ignore lint/suspicious/noThenProperty: deliberate — mock makes the Supabase query builder thenable so tests can `await builder`
   builder.then = (resolve: any) => resolve(nextSensitiveResult);
   return builder;
 }
@@ -172,7 +173,7 @@ describe("guardrails", () => {
         "google_calendar",
         "search",
         "GoogleCalendar.find_events",
-        {}
+        {},
       );
       expect(result.allowed).toBe(true);
       expect(result.risk).toBeDefined();
@@ -181,9 +182,7 @@ describe("guardrails", () => {
     });
 
     it("blocks when rate limited", async () => {
-      const { runGuardrails, checkRateLimit } = await import(
-        "@/lib/guardrails"
-      );
+      const { runGuardrails, checkRateLimit } = await import("@/lib/guardrails");
       const userId = "guardrail-rate-limited-user";
 
       // Exhaust rate limit
@@ -196,7 +195,7 @@ describe("guardrails", () => {
         "google_calendar",
         "search",
         "GoogleCalendar.find_events",
-        {}
+        {},
       );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("Rate limit");
@@ -210,7 +209,7 @@ describe("guardrails", () => {
         "google_sheets",
         "write",
         "GoogleSheets.create_row",
-        { rows: items }
+        { rows: items },
       );
       expect(result.allowed).toBe(true);
       expect(result.requiresConfirmation).toBe(true);

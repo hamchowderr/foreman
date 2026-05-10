@@ -1,15 +1,6 @@
 "use client";
 
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
-import type { ComponentProps, ReactNode } from "react";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -18,7 +9,11 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 import { CodeBlock } from "./code-block";
 
@@ -28,7 +23,7 @@ export const Tool = ({ className, ...props }: ToolProps) => (
   <Collapsible
     className={cn(
       "group not-prose w-full overflow-hidden rounded-[16px] bg-[#E9E9EB] dark:bg-[#2C2C2E]",
-      className
+      className,
     )}
     {...props}
   />
@@ -86,15 +81,11 @@ export const ToolHeader = ({
   toolName,
   ...props
 }: ToolHeaderProps) => {
-  const derivedName =
-    type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
+  const derivedName = type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
 
   return (
     <CollapsibleTrigger
-      className={cn(
-        "flex w-full items-center justify-between gap-4 px-4 py-2.5",
-        className
-      )}
+      className={cn("flex w-full items-center justify-between gap-4 px-4 py-2.5", className)}
       {...props}
     >
       <div className="flex items-center gap-2">
@@ -115,7 +106,7 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
       "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 space-y-3 border-t border-[#C8C8CA]/60 px-4 py-3 text-popover-foreground outline-none dark:border-[#3A3A3C] data-[state=closed]:animate-out data-[state=open]:animate-in",
-      className
+      className,
     )}
     {...props}
   />
@@ -127,9 +118,7 @@ type ToolInputProps = ComponentProps<"div"> & {
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
   <div className={cn("space-y-1.5 overflow-hidden", className)} {...props}>
-    <h4 className="text-[11px] font-medium uppercase tracking-wide text-[#8E8E93]">
-      Parameters
-    </h4>
+    <h4 className="text-[11px] font-medium uppercase tracking-wide text-[#8E8E93]">Parameters</h4>
     <div className="rounded-xl bg-black/5 dark:bg-white/5">
       <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
     </div>
@@ -141,12 +130,7 @@ type ToolOutputProps = ComponentProps<"div"> & {
   errorText: ToolPart["errorText"];
 };
 
-export const ToolOutput = ({
-  className,
-  output,
-  errorText,
-  ...props
-}: ToolOutputProps) => {
+export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutputProps) => {
   if (!(output || errorText)) {
     return null;
   }
@@ -154,9 +138,7 @@ export const ToolOutput = ({
   let Output = <div>{output as ReactNode}</div>;
 
   if (typeof output === "object" && !isValidElement(output)) {
-    Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
-    );
+    Output = <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />;
   } else if (typeof output === "string") {
     Output = <CodeBlock code={output} language="json" />;
   }
@@ -169,9 +151,7 @@ export const ToolOutput = ({
       <div
         className={cn(
           "overflow-x-auto rounded-xl text-xs [&_table]:w-full",
-          errorText
-            ? "bg-[#FF3B30]/10 text-[#FF3B30]"
-            : "bg-black/5 dark:bg-white/5"
+          errorText ? "bg-[#FF3B30]/10 text-[#FF3B30]" : "bg-black/5 dark:bg-white/5",
         )}
       >
         {errorText && <div className="px-3 py-2">{errorText}</div>}

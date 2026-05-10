@@ -14,9 +14,9 @@ export async function handleSlackWebhook(c: Context): Promise<Response> {
   // (Slack has a 3-second timeout; bot init includes DB queries)
   try {
     const payload = JSON.parse(new TextDecoder().decode(body));
-    if (payload.type === 'url_verification') {
+    if (payload.type === "url_verification") {
       return new Response(JSON.stringify({ challenge: payload.challenge }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       });
     }
   } catch {}

@@ -1,27 +1,19 @@
 "use client";
 
-import { motion, AnimatePresence, useInView } from "motion/react";
+import { AnimatePresence, motion, useInView } from "motion/react";
+import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Brain, Globe, Terminal, Cpu } from "@/components/icons/hi";
 import {
-  SlackBrand,
-  TelegramBrand,
+  BRAND_COLORS,
   DiscordBrand,
   GithubBrand,
   GoogleBrand,
-  BRAND_COLORS,
+  SlackBrand,
+  TelegramBrand,
 } from "@/components/icons/brands";
-import type { ComponentType } from "react";
+import { Brain, Cpu, Globe, Terminal } from "@/components/icons/hi";
 
-type ChannelId =
-  | "slack"
-  | "telegram"
-  | "discord"
-  | "web"
-  | "github"
-  | "google"
-  | "mcp"
-  | "a2a";
+type ChannelId = "slack" | "telegram" | "discord" | "web" | "github" | "google" | "mcp" | "a2a";
 
 type Position = "tl" | "tr" | "bl" | "br";
 
@@ -70,8 +62,18 @@ const CHANNELS: Record<
   }
 > = {
   slack: { label: "Slack", Icon: SlackBrand, brand: BRAND_COLORS.slack, brandText: "#ffffff" },
-  telegram: { label: "Telegram", Icon: TelegramBrand, brand: BRAND_COLORS.telegram, brandText: "#ffffff" },
-  discord: { label: "Discord", Icon: DiscordBrand, brand: BRAND_COLORS.discord, brandText: "#ffffff" },
+  telegram: {
+    label: "Telegram",
+    Icon: TelegramBrand,
+    brand: BRAND_COLORS.telegram,
+    brandText: "#ffffff",
+  },
+  discord: {
+    label: "Discord",
+    Icon: DiscordBrand,
+    brand: BRAND_COLORS.discord,
+    brandText: "#ffffff",
+  },
   web: { label: "Web", Icon: Globe, brand: BRAND_COLORS.zapier, brandText: "#ffffff" },
   github: { label: "GitHub", Icon: GithubBrand, brand: "#1f2328", brandText: "#ffffff" },
   google: { label: "Google Chat", Icon: GoogleBrand, brand: "#1a73e8", brandText: "#ffffff" },
@@ -85,7 +87,9 @@ export function ChannelMemory() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.3, once: false });
   const [frameIdx, setFrameIdx] = useState(0);
-  const [phase, setPhase] = useState<"idle" | "user-sent" | "brain-in" | "brain-out" | "agent-replied">("idle");
+  const [phase, setPhase] = useState<
+    "idle" | "user-sent" | "brain-in" | "brain-out" | "agent-replied"
+  >("idle");
 
   useEffect(() => {
     if (!inView) return;
@@ -123,7 +127,10 @@ export function ChannelMemory() {
   const toChannel = CHANNELS[frame.slots[frame.to]];
 
   return (
-    <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden w-full flex flex-col">
+    <div
+      ref={ref}
+      className="rounded-2xl border border-border bg-surface overflow-hidden w-full flex flex-col"
+    >
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-3.5 w-3.5 text-accent" />
@@ -144,7 +151,11 @@ export function ChannelMemory() {
             const active = isSource || isTarget;
 
             const showUserMsg =
-              isSource && (phase === "user-sent" || phase === "brain-in" || phase === "brain-out" || phase === "agent-replied");
+              isSource &&
+              (phase === "user-sent" ||
+                phase === "brain-in" ||
+                phase === "brain-out" ||
+                phase === "agent-replied");
             const showAgentMsg = isTarget && phase === "agent-replied";
 
             return (
@@ -153,7 +164,9 @@ export function ChannelMemory() {
                 animate={{ opacity: active ? 1 : 0.55, scale: active ? 1 : 0.97 }}
                 transition={{ duration: 0.35 }}
                 className={`rounded-xl overflow-hidden border transition-colors min-h-0 flex flex-col ${
-                  active ? "border-accent/30 bg-background shadow-md" : "border-border bg-background/50"
+                  active
+                    ? "border-accent/30 bg-background shadow-md"
+                    : "border-border bg-background/50"
                 }`}
               >
                 <AnimatePresence mode="wait">
@@ -167,7 +180,9 @@ export function ChannelMemory() {
                     style={{ backgroundColor: ch.brand, color: ch.brandText }}
                   >
                     <ch.Icon size={13} color={ch.brandText} />
-                    <span className="text-[10px] sm:text-[11px] font-semibold truncate">{ch.label}</span>
+                    <span className="text-[10px] sm:text-[11px] font-semibold truncate">
+                      {ch.label}
+                    </span>
                   </motion.div>
                 </AnimatePresence>
                 <div className="flex-1 min-h-0 p-2 sm:p-2.5 flex flex-col justify-end gap-1.5 overflow-hidden">
@@ -220,19 +235,29 @@ export function ChannelMemory() {
         </div>
 
         <AnimatePresence>
-          {phase === "brain-in" && <FlowParticle from={frame.from} to="center" key={`in-${frameIdx}`} />}
-          {phase === "brain-out" && <FlowParticle from="center" to={frame.to} key={`out-${frameIdx}`} />}
+          {phase === "brain-in" && (
+            <FlowParticle from={frame.from} to="center" key={`in-${frameIdx}`} />
+          )}
+          {phase === "brain-out" && (
+            <FlowParticle from="center" to={frame.to} key={`out-${frameIdx}`} />
+          )}
         </AnimatePresence>
       </div>
 
       <div className="px-4 sm:px-5 py-3 border-t border-border bg-background/50 text-xs text-muted flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 truncate">
-          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: fromChannel.brand }} />
+          <span
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: fromChannel.brand }}
+          />
           <span className="font-medium">{fromChannel.label}</span>
           <span>→</span>
           <Brain className="h-3 w-3 text-accent shrink-0" />
           <span>→</span>
-          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: toChannel.brand }} />
+          <span
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: toChannel.brand }}
+          />
           <span className="font-medium">{toChannel.label}</span>
         </span>
         <span className="text-[10px] uppercase tracking-widest shrink-0">same user</span>
@@ -241,13 +266,7 @@ export function ChannelMemory() {
   );
 }
 
-function FlowParticle({
-  from,
-  to,
-}: {
-  from: Position | "center";
-  to: Position | "center";
-}) {
+function FlowParticle({ from, to }: { from: Position | "center"; to: Position | "center" }) {
   const positions: Record<Position | "center", { x: string; y: string }> = {
     tl: { x: "25%", y: "28%" },
     tr: { x: "75%", y: "28%" },

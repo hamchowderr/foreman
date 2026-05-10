@@ -29,7 +29,7 @@ export function AttachmentsPreview({
           key={attachment.url}
           onRemove={() => {
             setAttachments((currentAttachments) =>
-              currentAttachments.filter((a) => a.url !== attachment.url)
+              currentAttachments.filter((a) => a.url !== attachment.url),
             );
             if (fileInputRef.current) {
               fileInputRef.current.value = "";

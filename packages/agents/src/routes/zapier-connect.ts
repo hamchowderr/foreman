@@ -1,13 +1,13 @@
+import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
+import { getSupabase } from "@/lib/db";
+import { ensureUserExists, resolveFromSupabaseJwt } from "@/lib/identity";
 import {
-  consumeConnectToken,
   buildAuthorizeUrl,
+  consumeConnectToken,
   exchangeCodeAndStore,
   webConnectStateMap,
 } from "@/lib/zapier/connect";
-import { resolveFromSupabaseJwt, ensureUserExists } from "@/lib/identity";
-import { getSupabase } from "@/lib/db";
-import { randomBytes } from "node:crypto";
 
 const zapierConnect = new Hono();
 
@@ -68,7 +68,7 @@ zapierConnect.get("/connect/:token", async (c) => {
   if (!pending) {
     return c.html(
       `<html><body><h1>Link Expired</h1><p>This connect link has expired or has already been used. Please request a new one from the bot.</p></body></html>`,
-      400
+      400,
     );
   }
 
@@ -95,14 +95,14 @@ async function handleCallback(c: any) {
   if (error) {
     return c.html(
       `<html><body><h1>Connection Failed</h1><p>Zapier returned an error: ${escapeHtml(error)}</p><p>Please try again.</p></body></html>`,
-      400
+      400,
     );
   }
 
   if (!code || !state) {
     return c.html(
       `<html><body><h1>Invalid Request</h1><p>Missing authorization code or state parameter.</p></body></html>`,
-      400
+      400,
     );
   }
 
@@ -111,18 +111,23 @@ async function handleCallback(c: any) {
     webConnectStateMap.delete(state!);
     return c.html(
       `<html><body><h1>Session Expired</h1><p>The authorization session has expired. Please try connecting again.</p></body></html>`,
-      400
+      400,
     );
   }
   webConnectStateMap.delete(state);
 
   try {
-    await exchangeCodeAndStore(code, stateEntry.userId, stateEntry.codeVerifier, stateEntry.redirectUri);
+    await exchangeCodeAndStore(
+      code,
+      stateEntry.userId,
+      stateEntry.codeVerifier,
+      stateEntry.redirectUri,
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.html(
       `<html><body><h1>Connection Failed</h1><p>Could not complete the Zapier connection: ${escapeHtml(message)}</p></body></html>`,
-      500
+      500,
     );
   }
 
@@ -132,7 +137,7 @@ async function handleCallback(c: any) {
   }
 
   return c.html(
-    `<html><body style="font-family:system-ui;text-align:center;padding:4rem"><h1>Connected!</h1><p>Your Zapier account is now linked to Foreman. You can close this window and return to the bot.</p></body></html>`
+    `<html><body style="font-family:system-ui;text-align:center;padding:4rem"><h1>Connected!</h1><p>Your Zapier account is now linked to Foreman. You can close this window and return to the bot.</p></body></html>`,
   );
 }
 

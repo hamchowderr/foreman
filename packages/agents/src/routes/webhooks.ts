@@ -16,8 +16,7 @@ webhooks.post("/zapier", async (c) => {
   const secret = process.env.ZAPIER_WEBHOOK_SECRET;
   if (secret) {
     const provided =
-      c.req.header("x-webhook-secret") ??
-      c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
+      c.req.header("x-webhook-secret") ?? c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
 
     if (provided !== secret) {
       return c.json({ error: "Invalid webhook secret" }, 401);
@@ -33,10 +32,7 @@ webhooks.post("/zapier", async (c) => {
 
   // Basic shape validation before dispatching
   if (!payload.event || !payload.data) {
-    return c.json(
-      { error: "Missing required fields: event, data" },
-      400,
-    );
+    return c.json({ error: "Missing required fields: event, data" }, 400);
   }
 
   // Fire-and-forget: run the workflow asynchronously

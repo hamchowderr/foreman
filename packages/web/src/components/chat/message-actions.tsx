@@ -5,10 +5,7 @@ import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
-import {
-  MessageAction as Action,
-  MessageActions as Actions,
-} from "../ai-elements/message";
+import { MessageAction as Action, MessageActions as Actions } from "../ai-elements/message";
 import { CopyIcon, PencilEditIcon, ThumbDownIcon, ThumbUpIcon } from "./icons";
 
 export function PureMessageActions({
@@ -88,17 +85,14 @@ export function PureMessageActions({
         data-testid="message-upvote"
         disabled={vote?.isUpvoted}
         onClick={() => {
-          const upvote = fetch(
-            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({
-                chatId,
-                messageId: message.id,
-                type: "up",
-              }),
-            }
-          );
+          const upvote = fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              chatId,
+              messageId: message.id,
+              type: "up",
+            }),
+          });
 
           toast.promise(upvote, {
             loading: "Upvoting Response...",
@@ -111,7 +105,7 @@ export function PureMessageActions({
                   }
 
                   const votesWithoutCurrent = currentVotes.filter(
-                    (currentVote) => currentVote.messageId !== message.id
+                    (currentVote) => currentVote.messageId !== message.id,
                   );
 
                   return [
@@ -123,7 +117,7 @@ export function PureMessageActions({
                     },
                   ];
                 },
-                { revalidate: false }
+                { revalidate: false },
               );
 
               return "Upvoted Response!";
@@ -141,17 +135,14 @@ export function PureMessageActions({
         data-testid="message-downvote"
         disabled={vote && !vote.isUpvoted}
         onClick={() => {
-          const downvote = fetch(
-            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({
-                chatId,
-                messageId: message.id,
-                type: "down",
-              }),
-            }
-          );
+          const downvote = fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              chatId,
+              messageId: message.id,
+              type: "down",
+            }),
+          });
 
           toast.promise(downvote, {
             loading: "Downvoting Response...",
@@ -164,7 +155,7 @@ export function PureMessageActions({
                   }
 
                   const votesWithoutCurrent = currentVotes.filter(
-                    (currentVote) => currentVote.messageId !== message.id
+                    (currentVote) => currentVote.messageId !== message.id,
                   );
 
                   return [
@@ -176,7 +167,7 @@ export function PureMessageActions({
                     },
                   ];
                 },
-                { revalidate: false }
+                { revalidate: false },
               );
 
               return "Downvoted Response!";
@@ -192,16 +183,13 @@ export function PureMessageActions({
   );
 }
 
-export const MessageActions = memo(
-  PureMessageActions,
-  (prevProps, nextProps) => {
-    if (!equal(prevProps.vote, nextProps.vote)) {
-      return false;
-    }
-    if (prevProps.isLoading !== nextProps.isLoading) {
-      return false;
-    }
-
-    return true;
+export const MessageActions = memo(PureMessageActions, (prevProps, nextProps) => {
+  if (!equal(prevProps.vote, nextProps.vote)) {
+    return false;
   }
-);
+  if (prevProps.isLoading !== nextProps.isLoading) {
+    return false;
+  }
+
+  return true;
+});

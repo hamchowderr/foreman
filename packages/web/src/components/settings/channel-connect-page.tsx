@@ -1,148 +1,167 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
-import { createClient } from '@/lib/client'
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/client";
 
 interface Props {
-  channel: string
-  displayName: string
-  icon: React.ReactNode
-  iconColor?: string
-  description: string
-  botLink: string | null
-  botLinkLabel: string
-  steps: string[]
-  linkCommand?: string
+  channel: string;
+  displayName: string;
+  icon: React.ReactNode;
+  iconColor?: string;
+  description: string;
+  botLink: string | null;
+  botLinkLabel: string;
+  steps: string[];
+  linkCommand?: string;
 }
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
-const POLL_INTERVAL_MS = 4000
-const CODE_TTL_MS = 15 * 60 * 1000
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+const POLL_INTERVAL_MS = 4000;
+const CODE_TTL_MS = 15 * 60 * 1000;
 
 async function getToken() {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token ?? ''
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? "";
 }
 
 function formatSecondsLeft(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(s / 60)
-  const sec = s % 60
-  return `${m}:${sec.toString().padStart(2, '0')}`
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
   const copy = useCallback(() => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [text])
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [text]);
   return (
     <button
+      type="button"
       onClick={copy}
       className="text-xs px-2 py-1 rounded transition-colors"
-      style={{ backgroundColor: '#FFF3E6', color: copied ? '#065f46' : '#FF4F00' }}
+      style={{ backgroundColor: "#FFF3E6", color: copied ? "#065f46" : "#FF4F00" }}
     >
-      {copied ? 'Copied!' : label}
+      {copied ? "Copied!" : label}
     </button>
-  )
+  );
 }
 
-export function ChannelConnectPage({ channel, displayName, icon, iconColor, description, botLink, botLinkLabel, steps, linkCommand = '/link' }: Props) {
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const botConnected = searchParams?.get('connected') === '1'
-  const [linked, setLinked] = useState(false)
-  const [code, setCode] = useState<string | null>(null)
-  const [expiresAt, setExpiresAt] = useState<number | null>(null)
-  const [msLeft, setMsLeft] = useState(0)
-  const [generating, setGenerating] = useState(false)
-  const [checking, setChecking] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+export function ChannelConnectPage({
+  channel,
+  displayName,
+  icon,
+  iconColor,
+  description,
+  botLink,
+  botLinkLabel,
+  steps,
+  linkCommand = "/link",
+}: Props) {
+  const searchParams =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const botConnected = searchParams?.get("connected") === "1";
+  const [linked, setLinked] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [msLeft, setMsLeft] = useState(0);
+  const [generating, setGenerating] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // On mount: check if already linked
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const token = await getToken()
+    let cancelled = false;
+    (async () => {
+      const token = await getToken();
       try {
         const res = await fetch(`${AGENT_URL}/channel-links/identities`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok || cancelled) return
-        const { identities } = await res.json()
+        });
+        if (!res.ok || cancelled) return;
+        const { identities } = await res.json();
         if ((identities ?? []).some((i: { channel: string }) => i.channel === channel)) {
-          setLinked(true)
+          setLinked(true);
         }
       } catch {}
-    })()
-    return () => { cancelled = true }
-  }, [channel])
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [channel]);
 
   // Countdown timer
   useEffect(() => {
-    if (!expiresAt) return
+    if (!expiresAt) return;
     timerRef.current = setInterval(() => {
-      const left = expiresAt - Date.now()
-      setMsLeft(left)
+      const left = expiresAt - Date.now();
+      setMsLeft(left);
       if (left <= 0) {
-        clearInterval(timerRef.current!)
-        setCode(null)
-        setExpiresAt(null)
-        stopPolling()
+        clearInterval(timerRef.current!);
+        setCode(null);
+        setExpiresAt(null);
+        stopPolling();
       }
-    }, 1000)
-    return () => clearInterval(timerRef.current!)
-  }, [expiresAt])
+    }, 1000);
+    return () => clearInterval(timerRef.current!);
+  }, [expiresAt]);
 
   function stopPolling() {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
   }
 
   function startPolling() {
-    stopPolling()
+    stopPolling();
     pollRef.current = setInterval(async () => {
-      setChecking(true)
+      setChecking(true);
       try {
-        const token = await getToken()
+        const token = await getToken();
         const res = await fetch(`${AGENT_URL}/channel-links/identities`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) return
-        const { identities } = await res.json()
+        });
+        if (!res.ok) return;
+        const { identities } = await res.json();
         if ((identities ?? []).some((i: { channel: string }) => i.channel === channel)) {
-          setLinked(true)
-          setCode(null)
-          stopPolling()
+          setLinked(true);
+          setCode(null);
+          stopPolling();
         }
       } finally {
-        setChecking(false)
+        setChecking(false);
       }
-    }, POLL_INTERVAL_MS)
+    }, POLL_INTERVAL_MS);
   }
 
-  useEffect(() => () => stopPolling(), [])
+  useEffect(() => () => stopPolling(), []);
 
   async function generateCode() {
-    setGenerating(true)
+    setGenerating(true);
     try {
-      const token = await getToken()
+      const token = await getToken();
       const res = await fetch(`${AGENT_URL}/channel-links`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ channel }),
-      })
-      if (!res.ok) return
-      const data = await res.json()
-      setCode(data.code)
-      setExpiresAt(Date.now() + CODE_TTL_MS)
-      setMsLeft(CODE_TTL_MS)
-      startPolling()
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setCode(data.code);
+      setExpiresAt(Date.now() + CODE_TTL_MS);
+      setMsLeft(CODE_TTL_MS);
+      startPolling();
     } finally {
-      setGenerating(false)
+      setGenerating(false);
     }
   }
 
@@ -152,25 +171,35 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
         <div className="flex items-center gap-3">
           <div
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-            style={{ backgroundColor: iconColor ? `${iconColor}18` : '#f3f4f6' }}
+            style={{ backgroundColor: iconColor ? `${iconColor}18` : "#f3f4f6" }}
           >
             {icon}
           </div>
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: '#201515' }}>{displayName}</h1>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: '#d1fae5', color: '#065f46' }}>
+            <h1 className="text-xl font-semibold" style={{ color: "#201515" }}>
+              {displayName}
+            </h1>
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "#d1fae5", color: "#065f46" }}
+            >
               Connected
             </span>
           </div>
         </div>
-        <p className="text-sm" style={{ color: '#888' }}>
-          Your {displayName} account is linked. Messages you send the Foreman bot will use your Foreman identity, history, and Zapier connections.
+        <p className="text-sm" style={{ color: "#888" }}>
+          Your {displayName} account is linked. Messages you send the Foreman bot will use your
+          Foreman identity, history, and Zapier connections.
         </p>
-        <Link href="/settings/integrations" className="inline-block text-sm font-medium" style={{ color: '#FF4F00' }}>
+        <Link
+          href="/settings/integrations"
+          className="inline-block text-sm font-medium"
+          style={{ color: "#FF4F00" }}
+        >
           ← Back to integrations
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -179,20 +208,28 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
       <div className="flex items-center gap-3">
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-          style={{ backgroundColor: iconColor ? `${iconColor}18` : '#f3f4f6' }}
+          style={{ backgroundColor: iconColor ? `${iconColor}18` : "#f3f4f6" }}
         >
           {icon}
         </div>
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#201515' }}>{displayName}</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#888' }}>{description}</p>
+          <h1 className="text-xl font-semibold" style={{ color: "#201515" }}>
+            {displayName}
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: "#888" }}>
+            {description}
+          </p>
         </div>
       </div>
 
       {/* Bot connected banner */}
       {botConnected && (
-        <div className="rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: '#d1fae5', border: '1.5px solid #6ee7b7', color: '#065f46' }}>
-          ✓ {displayName} bot connected to your workspace. Now complete step 2 below to link your personal account.
+        <div
+          className="rounded-lg px-4 py-3 text-sm"
+          style={{ backgroundColor: "#d1fae5", border: "1.5px solid #6ee7b7", color: "#065f46" }}
+        >
+          ✓ {displayName} bot connected to your workspace. Now complete step 2 below to link your
+          personal account.
         </div>
       )}
 
@@ -203,64 +240,96 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          style={{ backgroundColor: '#201515' }}
+          style={{ backgroundColor: "#201515" }}
         >
           {botLinkLabel} ↗
         </a>
       ) : (
-        <div className="rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: '#fff7ed', border: '1.5px solid #FFBF6E', color: '#92400e' }}>
-          {displayName} bot not configured. Set <code className="font-mono text-xs">NEXT_PUBLIC_{channel.toUpperCase()}_INSTALL_URL</code> to enable the install link.
+        <div
+          className="rounded-lg px-4 py-3 text-sm"
+          style={{ backgroundColor: "#fff7ed", border: "1.5px solid #FFBF6E", color: "#92400e" }}
+        >
+          {displayName} bot not configured. Set{" "}
+          <code className="font-mono text-xs">NEXT_PUBLIC_{channel.toUpperCase()}_INSTALL_URL</code>{" "}
+          to enable the install link.
         </div>
       )}
 
       {/* Steps */}
       <div>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: '#201515' }}>How to connect</h2>
+        <h2 className="text-sm font-semibold mb-3" style={{ color: "#201515" }}>
+          How to connect
+        </h2>
         <ol className="space-y-3">
           {steps.map((step, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: numbered instruction list — order IS the identity
             <li key={i} className="flex gap-3">
               <span
                 className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-                style={{ backgroundColor: '#FF4F00' }}
+                style={{ backgroundColor: "#FF4F00" }}
               >
                 {i + 1}
               </span>
-              <span className="text-sm pt-0.5" style={{ color: '#201515' }}>{step}</span>
+              <span className="text-sm pt-0.5" style={{ color: "#201515" }}>
+                {step}
+              </span>
             </li>
           ))}
         </ol>
       </div>
 
       {/* Code generator */}
-      <div className="rounded-xl p-6 space-y-4" style={{ border: '1.5px solid #FFF3E6', backgroundColor: '#fff' }}>
-        <h2 className="text-sm font-semibold" style={{ color: '#201515' }}>Link Code</h2>
+      <div
+        className="rounded-xl p-6 space-y-4"
+        style={{ border: "1.5px solid #FFF3E6", backgroundColor: "#fff" }}
+      >
+        <h2 className="text-sm font-semibold" style={{ color: "#201515" }}>
+          Link Code
+        </h2>
 
         {!code ? (
           <button
+            type="button"
             onClick={generateCode}
             disabled={generating}
             className="rounded-lg px-5 py-2.5 text-sm font-medium text-white disabled:opacity-60 transition-opacity"
-            style={{ backgroundColor: '#FF4F00' }}
+            style={{ backgroundColor: "#FF4F00" }}
           >
-            {generating ? 'Generating…' : 'Generate Link Code'}
+            {generating ? "Generating…" : "Generate Link Code"}
           </button>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-mono text-3xl font-bold tracking-widest" style={{ color: '#201515' }}>
+              <span
+                className="font-mono text-3xl font-bold tracking-widest"
+                style={{ color: "#201515" }}
+              >
                 {code}
               </span>
               <CopyButton text={`${linkCommand} ${code}`} label="Copy command" />
             </div>
-            <p className="text-xs" style={{ color: '#888' }}>
-              Copy the command above, then open the Foreman bot in {displayName} and paste it.
-              {' '}Expires in <span style={{ color: msLeft < 60000 ? '#dc2626' : '#201515' }}>{formatSecondsLeft(msLeft)}</span>.
+            <p className="text-xs" style={{ color: "#888" }}>
+              Copy the command above, then open the Foreman bot in {displayName} and paste it.{" "}
+              Expires in{" "}
+              <span style={{ color: msLeft < 60000 ? "#dc2626" : "#201515" }}>
+                {formatSecondsLeft(msLeft)}
+              </span>
+              .
             </p>
-            {checking && <p className="text-xs" style={{ color: '#aaa' }}>Waiting for confirmation…</p>}
+            {checking && (
+              <p className="text-xs" style={{ color: "#aaa" }}>
+                Waiting for confirmation…
+              </p>
+            )}
             <button
-              onClick={() => { setCode(null); setExpiresAt(null); stopPolling() }}
+              type="button"
+              onClick={() => {
+                setCode(null);
+                setExpiresAt(null);
+                stopPolling();
+              }}
               className="text-xs underline"
-              style={{ color: '#aaa' }}
+              style={{ color: "#aaa" }}
             >
               Cancel
             </button>
@@ -268,9 +337,13 @@ export function ChannelConnectPage({ channel, displayName, icon, iconColor, desc
         )}
       </div>
 
-      <Link href="/settings/integrations" className="inline-block text-sm font-medium" style={{ color: '#FF4F00' }}>
+      <Link
+        href="/settings/integrations"
+        className="inline-block text-sm font-medium"
+        style={{ color: "#FF4F00" }}
+      >
         ← Back to integrations
       </Link>
     </div>
-  )
+  );
 }

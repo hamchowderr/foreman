@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockListen = vi.fn().mockResolvedValue("transcribed text");
 
@@ -37,7 +37,7 @@ describe("voice", () => {
       await speechToText(Buffer.from("fake-audio"), "audio/wav");
       expect(mockListen).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ filetype: "wav" })
+        expect.objectContaining({ filetype: "wav" }),
       );
     });
   });

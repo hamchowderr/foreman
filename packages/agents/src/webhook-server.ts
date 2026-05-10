@@ -1,13 +1,13 @@
 import http from "node:http";
-import { getSlackBot } from "./slack/bot";
-import { getTelegramBot } from "./telegram/bot";
-import { getTeamsBot } from "./teams/bot";
+import { getDiscordAdapter, getDiscordBot } from "./discord/bot";
 import { getGoogleChatBot } from "./gchat/bot";
-import { getWhatsAppBot } from "./whatsapp/bot";
 import { getGitHubBot } from "./github/bot";
-import { getLinearBot } from "./linear/bot";
 import { getiMessageBot } from "./imessage/bot";
-import { getDiscordBot, getDiscordAdapter } from "./discord/bot";
+import { getLinearBot } from "./linear/bot";
+import { getSlackBot } from "./slack/bot";
+import { getTeamsBot } from "./teams/bot";
+import { getTelegramBot } from "./telegram/bot";
+import { getWhatsAppBot } from "./whatsapp/bot";
 
 /**
  * Standalone webhook server using raw Node.js HTTP.
@@ -38,7 +38,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -56,7 +56,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -74,7 +74,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -92,7 +92,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         ...(req.method === "POST" ? { body: rawBody } : {}),
       });
@@ -128,7 +128,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -146,7 +146,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -164,7 +164,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -182,7 +182,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         body: rawBody,
       });
@@ -204,7 +204,7 @@ const server = http.createServer(async (req, res) => {
         headers: Object.fromEntries(
           Object.entries(req.headers)
             .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!])
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
         ),
         ...(req.method === "POST" ? { body: rawBody } : {}),
       });
@@ -243,23 +243,27 @@ server.listen(port, () => {
   // Initialize Discord bot — start Gateway WebSocket for receiving messages
   if (process.env.DISCORD_BOT_TOKEN) {
     (async () => {
-    try {
-      const bot = await getDiscordBot();
-      const adapter = getDiscordAdapter();
-      // Must initialize Chat instance before starting Gateway
-      await bot.initialize();
-      // Start Gateway listener in legacy mode (direct processing, no webhook forwarding)
-      adapter
-        .startGatewayListener(
-          { waitUntil: (p: Promise<unknown>) => { p.catch((err: unknown) => console.error("Discord Gateway error:", err)); } },
-          24 * 60 * 60 * 1000 // 24 hours
-        )
-        .then(() => console.log("Discord Gateway listener started"))
-        .catch((err: unknown) => console.error("Discord Gateway startup error:", err));
-      console.log("Discord bot initialized");
-    } catch (err) {
-      console.error("Failed to initialize Discord bot:", err);
-    }
+      try {
+        const bot = await getDiscordBot();
+        const adapter = getDiscordAdapter();
+        // Must initialize Chat instance before starting Gateway
+        await bot.initialize();
+        // Start Gateway listener in legacy mode (direct processing, no webhook forwarding)
+        adapter
+          .startGatewayListener(
+            {
+              waitUntil: (p: Promise<unknown>) => {
+                p.catch((err: unknown) => console.error("Discord Gateway error:", err));
+              },
+            },
+            24 * 60 * 60 * 1000, // 24 hours
+          )
+          .then(() => console.log("Discord Gateway listener started"))
+          .catch((err: unknown) => console.error("Discord Gateway startup error:", err));
+        console.log("Discord bot initialized");
+      } catch (err) {
+        console.error("Failed to initialize Discord bot:", err);
+      }
     })();
   }
 });

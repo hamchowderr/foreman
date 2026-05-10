@@ -79,9 +79,7 @@ export function SlashCommandMenu({
   selectedIndex,
 }: SlashCommandMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const filtered = slashCommands.filter((cmd) =>
-    cmd.name.startsWith(query.toLowerCase())
-  );
+  const filtered = slashCommands.filter((cmd) => cmd.name.startsWith(query.toLowerCase()));
 
   useEffect(() => {
     const selected = menuRef.current?.querySelector("[data-selected='true']");
@@ -107,7 +105,7 @@ export function SlashCommandMenu({
           <button
             className={cn(
               "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-              index === selectedIndex ? "bg-muted/70" : "hover:bg-muted/40"
+              index === selectedIndex ? "bg-muted/70" : "hover:bg-muted/40",
             )}
             data-selected={index === selectedIndex}
             key={cmd.name}
@@ -118,16 +116,10 @@ export function SlashCommandMenu({
             <div className="flex size-6 shrink-0 items-center justify-center text-muted-foreground/60">
               {cmd.icon}
             </div>
-            <span className="font-mono text-[13px] text-foreground">
-              /{cmd.name}
-            </span>
-            <span className="text-[12px] text-muted-foreground/50">
-              {cmd.description}
-            </span>
+            <span className="font-mono text-[13px] text-foreground">/{cmd.name}</span>
+            <span className="text-[12px] text-muted-foreground/50">{cmd.description}</span>
             {cmd.shortcut && (
-              <span className="ml-auto text-[11px] text-muted-foreground/30">
-                {cmd.shortcut}
-              </span>
+              <span className="ml-auto text-[11px] text-muted-foreground/30">{cmd.shortcut}</span>
             )}
           </button>
         ))}

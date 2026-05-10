@@ -1,9 +1,9 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
-import { getSupabase } from "../db";
 import { decryptToken, encryptToken } from "../crypto";
+import { getSupabase } from "../db";
 import { getEnv } from "../env";
-import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
 import { loadUserConnectionsMap } from "./aliases";
+import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
 
 // Must match the client ID used during the PKCE OAuth flow in connect.ts.
 // Tokens issued to a PKCE public client can only be refreshed with the same client_id and no secret.
@@ -16,7 +16,7 @@ const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
 
 async function refreshAccessToken(
   userId: string,
-  refreshToken: string
+  refreshToken: string,
 ): Promise<{ accessToken: string; refreshToken: string; expiresAt: Date }> {
   const res = await fetch(ZAPIER_TOKEN_URL, {
     method: "POST",

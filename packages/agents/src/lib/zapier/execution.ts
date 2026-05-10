@@ -1,12 +1,9 @@
-import { getSdkForUser } from "./sdk";
-import {
-  ZapierActionFailed,
-  ZapierCapabilityDenied,
-} from "./errors";
 import { checkCapability } from "../capabilities";
 import { runGuardrails } from "../guardrails";
 import { resolveConnection } from "./aliases";
+import { ZapierActionFailed, ZapierCapabilityDenied } from "./errors";
 import { normalizeAppKey } from "./normalize";
+import { getSdkForUser } from "./sdk";
 
 type ActionType =
   | "search"
@@ -30,10 +27,7 @@ const ACTION_TYPE_CAPABILITY: Record<string, string> = {
   filter: "execute",
 };
 
-async function requireCapability(
-  userId: string,
-  capability: string
-): Promise<void> {
+async function requireCapability(userId: string, capability: string): Promise<void> {
   const enabled = await checkCapability(userId, capability);
   if (!enabled) {
     throw new ZapierCapabilityDenied(capability, userId);
@@ -46,7 +40,7 @@ export async function runAction(
   actionType: string,
   action: string,
   inputs: Record<string, unknown>,
-  connection?: string
+  connection?: string,
 ) {
   app = normalizeAppKey(app);
   const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
@@ -57,7 +51,7 @@ export async function runAction(
   if (!guardrailResult.allowed) {
     throw new ZapierCapabilityDenied(
       guardrailResult.reason ?? "Action blocked by guardrails",
-      userId
+      userId,
     );
   }
   if (guardrailResult.requiresConfirmation) {
@@ -99,10 +93,7 @@ export async function runAction(
     });
     return result;
   } catch (err) {
-    throw new ZapierActionFailed(
-      action,
-      err instanceof Error ? err.message : String(err)
-    );
+    throw new ZapierActionFailed(action, err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -114,7 +105,7 @@ export async function rawFetch(
     headers?: Record<string, string>;
     body?: unknown;
     connection: string;
-  }
+  },
 ) {
   await requireCapability(userId, "raw_api");
 
@@ -132,7 +123,7 @@ export async function rawFetch(
   } catch (err) {
     throw new ZapierActionFailed(
       `raw_fetch:${url}`,
-      err instanceof Error ? err.message : String(err)
+      err instanceof Error ? err.message : String(err),
     );
   }
 }

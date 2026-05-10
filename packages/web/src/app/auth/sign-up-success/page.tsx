@@ -1,6 +1,6 @@
-import Link from 'next/link'
-import { AuthShell } from '@/components/auth-shell'
-import { MailCheck } from 'lucide-react'
+import { MailCheck } from "lucide-react";
+import Link from "next/link";
+import { AuthShell } from "@/components/auth-shell";
 
 export default function Page() {
   return (
@@ -13,26 +13,33 @@ export default function Page() {
           <div className="space-y-1.5">
             <h2 className="text-2xl font-semibold tracking-tight">Check your inbox</h2>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
-              We sent a confirmation link to your email. Click it to activate your account and get started.
+              We sent a confirmation link to your email. Click it to activate your account and get
+              started.
             </p>
           </div>
         </div>
 
         <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          Didn&apos;t get an email? Check your spam folder, or{' '}
-          <Link href="/auth/sign-up" className="text-foreground font-medium underline underline-offset-4">
+          Didn&apos;t get an email? Check your spam folder, or{" "}
+          <Link
+            href="/auth/sign-up"
+            className="text-foreground font-medium underline underline-offset-4"
+          >
             try again
           </Link>
           .
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already confirmed?{' '}
-          <Link href="/auth/login" className="text-foreground font-medium underline underline-offset-4">
+          Already confirmed?{" "}
+          <Link
+            href="/auth/login"
+            className="text-foreground font-medium underline underline-offset-4"
+          >
             Sign in
           </Link>
         </p>
       </div>
     </AuthShell>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import { source } from "@/lib/source";
 import { getLastModified } from "@/lib/git-last-modified";
+import { source } from "@/lib/source";
 
 function xmlEscape(input: string): string {
   return input
@@ -11,9 +11,10 @@ function xmlEscape(input: string): string {
 }
 
 export function GET() {
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://foreman.otakusolutions.io"
-  ).replace(/\/$/, "");
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://foreman.otakusolutions.io").replace(
+    /\/$/,
+    "",
+  );
 
   const pages = source.getPages();
 
@@ -33,9 +34,7 @@ export function GET() {
   const channelLink = `${siteUrl}/docs`;
   const channelTitle = "Foreman docs";
   const channelDescription = "Updates to the Foreman documentation";
-  const lastBuildDate = (
-    items[0]?.lastModified ?? new Date()
-  ).toUTCString();
+  const lastBuildDate = (items[0]?.lastModified ?? new Date()).toUTCString();
 
   const itemsXml = items
     .map(

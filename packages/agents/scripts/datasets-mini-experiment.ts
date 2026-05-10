@@ -11,12 +11,8 @@
 process.env.DUCKDB_PATH = process.env.DUCKDB_PATH ?? "./data/smoke.duckdb";
 
 const { mastra } = await import("../src/mastra");
-const { foremanTrajectoryScorer } = await import(
-  "../src/lib/scorers/foreman-trajectory"
-);
-const { foremanLLMJudgeScorer } = await import(
-  "../src/lib/scorers/foreman-llm-judge"
-);
+const { foremanTrajectoryScorer } = await import("../src/lib/scorers/foreman-trajectory");
+const { foremanLLMJudgeScorer } = await import("../src/lib/scorers/foreman-llm-judge");
 
 const TEST_CASES = [
   {
@@ -100,7 +96,9 @@ async function main() {
     maxRetries: 0,
   });
 
-  console.log(`      status=${summary.status} succ=${summary.succeededCount}/${summary.totalItems} fail=${summary.failedCount}\n`);
+  console.log(
+    `      status=${summary.status} succ=${summary.succeededCount}/${summary.totalItems} fail=${summary.failedCount}\n`,
+  );
 
   console.log("[4/4] Per-item results:");
   for (const r of summary.results ?? []) {

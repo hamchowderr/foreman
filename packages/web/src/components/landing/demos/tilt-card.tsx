@@ -2,13 +2,13 @@
 
 import {
   motion,
+  useMotionTemplate,
   useMotionValue,
+  useReducedMotion,
   useSpring,
   useTransform,
-  useMotionTemplate,
-  useReducedMotion,
 } from "motion/react";
-import type { ReactNode, MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useRef } from "react";
 
 export function TiltCard({

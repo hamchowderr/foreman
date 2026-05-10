@@ -1,15 +1,14 @@
 "use client";
 
 import { motion } from "motion/react";
-import { MessageSquare, Eye, Check } from "@/components/icons/hi";
+import { Check, Eye, MessageSquare } from "@/components/icons/hi";
 import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 
 const STEPS = [
   {
     num: "01",
     title: "Say it in plain English",
-    body:
-      "In Slack, web, voice, or any channel. No app name, no action name, no syntax.",
+    body: "In Slack, web, voice, or any channel. No app name, no action name, no syntax.",
     icon: MessageSquare,
     preview: (
       <div className="rounded-lg bg-background/70 border border-border/50 p-3 text-[11px] font-mono text-muted">
@@ -20,8 +19,7 @@ const STEPS = [
   {
     num: "02",
     title: "Review the draft",
-    body:
-      "Foreman picks the right app and action, fills every field, and shows you exactly what it's about to do.",
+    body: "Foreman picks the right app and action, fills every field, and shows you exactly what it's about to do.",
     icon: Eye,
     preview: (
       <div className="rounded-lg bg-background/70 border border-border/50 p-3 space-y-1 text-[11px] font-mono">
@@ -43,8 +41,7 @@ const STEPS = [
   {
     num: "03",
     title: "Approve and it runs",
-    body:
-      "One click. Audit trail in your action history. Save it as a workflow if you'll use it again.",
+    body: "One click. Audit trail in your action history. Save it as a workflow if you'll use it again.",
     icon: Check,
     preview: (
       <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-3 text-[11px] font-mono text-green-600 dark:text-green-400 flex items-center gap-2">

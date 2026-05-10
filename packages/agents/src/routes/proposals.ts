@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
-import { getMastra } from "@/mastra";
 import { loadOwnedProposal } from "@/lib/proposals";
+import { indexActionRun } from "@/lib/rag";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import type { AppChunk } from "@/lib/stream/types";
-import { getInputFieldChoices, ZapierReauthRequired } from "@/lib/zapier";
-import { indexActionRun } from "@/lib/rag";
 import { validateParam } from "@/lib/validation";
+import { getInputFieldChoices, ZapierReauthRequired } from "@/lib/zapier";
+import { getMastra } from "@/mastra";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -124,7 +124,7 @@ proposals.post("/:id/approve", async (c) => {
                 executedAt: new Date(),
               },
               proposal,
-              userId
+              userId,
             ).catch((err) => console.error("[RAG] Failed to index action run:", err));
 
             const appChunk: AppChunk = {
@@ -139,7 +139,10 @@ proposals.post("/:id/approve", async (c) => {
             const errorMsg =
               error instanceof Error ? error.message : String(error ?? "Unknown error");
 
-            if (errorMsg.includes("ZAPIER_REAUTH_REQUIRED") || error instanceof ZapierReauthRequired) {
+            if (
+              errorMsg.includes("ZAPIER_REAUTH_REQUIRED") ||
+              error instanceof ZapierReauthRequired
+            ) {
               await supabase
                 .from("action_proposal")
                 .update({ status: "failed", updated_at: new Date().toISOString() })
@@ -151,7 +154,7 @@ proposals.post("/:id/approve", async (c) => {
                   code: "REAUTH_REQUIRED",
                   message: "Zapier re-authentication required",
                   proposalId: id,
-                })
+                }),
               );
             } else {
               await supabase
@@ -165,7 +168,7 @@ proposals.post("/:id/approve", async (c) => {
                   code: "EXECUTION_ERROR",
                   message: errorMsg,
                   proposalId: id,
-                })
+                }),
               );
             }
           } else if (chunk.type === "text-delta") {
@@ -189,7 +192,7 @@ proposals.post("/:id/approve", async (c) => {
               code: "REAUTH_REQUIRED",
               message: "Zapier re-authentication required",
               proposalId: id,
-            })
+            }),
           );
         } else {
           controller.enqueue(
@@ -198,7 +201,7 @@ proposals.post("/:id/approve", async (c) => {
               code: "EXECUTION_ERROR",
               message: errorMsg,
               proposalId: id,
-            })
+            }),
           );
         }
       } finally {
@@ -264,7 +267,7 @@ proposals.post("/:id/decline", async (c) => {
             type: "error",
             code: "DECLINE_ERROR",
             message: err instanceof Error ? err.message : String(err),
-          })
+          }),
         );
       } finally {
         controller.close();
@@ -299,7 +302,7 @@ proposals.get("/:id/field-choices/:fieldKey", async (c) => {
     proposal.action_type,
     proposal.action_key,
     fieldKey,
-    proposal.connection_id ?? undefined
+    proposal.connection_id ?? undefined,
   );
 
   return c.json({ choices });

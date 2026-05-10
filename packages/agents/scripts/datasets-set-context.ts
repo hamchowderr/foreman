@@ -50,7 +50,9 @@ async function main() {
   }
 
   console.log(`Updated: ${updated}\n`);
-  console.log(`Each item now has its own threadId (exp-<id-prefix>) and shared resourceId="${RESOURCE_ID}".`);
+  console.log(
+    `Each item now has its own threadId (exp-<id-prefix>) and shared resourceId="${RESOURCE_ID}".`,
+  );
   console.log("=== DONE ===");
   process.exit(0);
 }

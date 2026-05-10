@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Shield, Eye, Lock, Gauge, Users, Ban, Check, ChevronDown } from "@/components/icons/hi";
+import { Ban, Check, ChevronDown, Eye, Gauge, Lock, Shield, Users } from "@/components/icons/hi";
 import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 
 type Guardrail = {
@@ -72,9 +72,7 @@ export function GuardrailCards() {
             <div
               key={g.id}
               className={`rounded-xl border overflow-hidden transition-colors ${
-                selected
-                  ? "border-accent/40 bg-accent/[0.03]"
-                  : "border-border/60 bg-background"
+                selected ? "border-accent/40 bg-accent/[0.03]" : "border-border/60 bg-background"
               }`}
             >
               <button
@@ -115,9 +113,7 @@ export function GuardrailCards() {
                     }}
                     className="overflow-hidden"
                   >
-                    <div className="border-t border-border/60 bg-background/50 p-4">
-                      {g.demo()}
-                    </div>
+                    <div className="border-t border-border/60 bg-background/50 p-4">{g.demo()}</div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -132,7 +128,13 @@ export function GuardrailCards() {
           {GUARDRAILS.map((g) => {
             const selected = g.id === activeId;
             return (
-              <TiltedSpotlight key={g.id} radius="rounded-xl" maxTilt={5} spotlightSize={220} className="h-full">
+              <TiltedSpotlight
+                key={g.id}
+                radius="rounded-xl"
+                maxTilt={5}
+                spotlightSize={220}
+                className="h-full"
+              >
                 <button
                   type="button"
                   onClick={() => setActiveId(g.id)}
@@ -160,29 +162,29 @@ export function GuardrailCards() {
         </div>
 
         <TiltedSpotlight className="sticky top-20 self-start h-full flex">
-        <div className="rounded-2xl border border-border bg-surface overflow-hidden h-full w-full flex flex-col">
-          <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <active.icon className="h-3.5 w-3.5 text-accent" />
-              <span className="text-xs font-medium">{active.title}</span>
+          <div className="rounded-2xl border border-border bg-surface overflow-hidden h-full w-full flex flex-col">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <active.icon className="h-3.5 w-3.5 text-accent" />
+                <span className="text-xs font-medium">{active.title}</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-muted">live</span>
             </div>
-            <span className="text-[10px] uppercase tracking-widest text-muted">live</span>
+            <div className="p-5 min-h-[260px] flex-1 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeId}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="w-full"
+                >
+                  {active.demo()}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
-          <div className="p-5 min-h-[260px] flex-1 flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeId}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
-                className="w-full"
-              >
-                {active.demo()}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
         </TiltedSpotlight>
       </div>
     </>
@@ -203,15 +205,27 @@ function ApprovalDemo() {
           <span className="text-[9px] text-accent uppercase tracking-wider">awaiting approval</span>
         </div>
         <div className="p-3 text-xs space-y-0.5 font-mono">
-          <div><span className="text-muted">board</span> Personal</div>
-          <div><span className="text-muted">list</span> Archive</div>
-          <div><span className="text-muted">cards</span> 14</div>
+          <div>
+            <span className="text-muted">board</span> Personal
+          </div>
+          <div>
+            <span className="text-muted">list</span> Archive
+          </div>
+          <div>
+            <span className="text-muted">cards</span> 14
+          </div>
         </div>
         <div className="px-3 py-2 border-t border-accent/10 flex gap-2">
-          <button type="button" className="flex-1 rounded bg-foreground text-background text-xs py-1.5 font-medium">
+          <button
+            type="button"
+            className="flex-1 rounded bg-foreground text-background text-xs py-1.5 font-medium"
+          >
             Approve
           </button>
-          <button type="button" className="flex-1 rounded border border-border text-xs py-1.5 text-muted">
+          <button
+            type="button"
+            className="flex-1 rounded border border-border text-xs py-1.5 text-muted"
+          >
             Decline
           </button>
         </div>
@@ -290,8 +304,8 @@ function BlockedDemo() {
           </span>
         </div>
         <p className="text-xs text-muted leading-relaxed">
-          I can't run actions against Chase without an explicit admin opt-in. Enable it in
-          Settings → Sensitive Apps to allow banking actions.
+          I can't run actions against Chase without an explicit admin opt-in. Enable it in Settings
+          → Sensitive Apps to allow banking actions.
         </p>
       </div>
     </div>
@@ -331,7 +345,10 @@ function OrgDemo() {
         { label: "Require approval for deletes", value: "on", admin: true },
         { label: "Per-user rate limit", value: "30/min", admin: false },
       ].map((row) => (
-        <div key={row.label} className="flex items-center justify-between rounded-lg bg-background border border-border px-3 py-2">
+        <div
+          key={row.label}
+          className="flex items-center justify-between rounded-lg bg-background border border-border px-3 py-2"
+        >
           <div className="flex flex-col">
             <span className="text-sm">{row.label}</span>
             {row.admin && (

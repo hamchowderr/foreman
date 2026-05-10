@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
 import { createMDX } from "fumadocs-mdx/next";
+import type { NextConfig } from "next";
 
 const withMDX = createMDX();
 
@@ -12,10 +12,7 @@ const nextConfig: NextConfig = {
     incomingRequests: false,
   },
   images: {
-    remotePatterns: [
-      { hostname: "avatar.vercel.sh" },
-      { hostname: "img.clerk.com" },
-    ],
+    remotePatterns: [{ hostname: "avatar.vercel.sh" }, { hostname: "img.clerk.com" }],
   },
   cacheComponents: true,
   experimental: {

@@ -14,10 +14,11 @@
  *
  * See: vault note reference_foreman_mastra_dev_hang.md
  */
-import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "..", "..");
 const ROOT_NODE_MODULES = join(REPO_ROOT, "node_modules");
@@ -64,7 +65,10 @@ function findVersions(packageName: string): Map<string, string[]> {
 
       // A directory is a "resolved package" if its trailing path segments
       // match `packageName` (handles both "zod" and "@mastra/core").
-      const rel = full.slice(ROOT_NODE_MODULES.length + 1).split(sep).join("/");
+      const rel = full
+        .slice(ROOT_NODE_MODULES.length + 1)
+        .split(sep)
+        .join("/");
       const tailLen = packageName.split("/").length;
       const tail = rel.split("/").slice(-tailLen).join("/");
       if (tail !== packageName) continue;
@@ -83,7 +87,7 @@ function findVersions(packageName: string): Map<string, string[]> {
       if (!version) continue;
 
       if (!versions.has(version)) versions.set(version, []);
-      versions.get(version)!.push("/" + rel);
+      versions.get(version)!.push(`/${rel}`);
     }
   }
 
@@ -98,8 +102,8 @@ describe("Workspace dependency overrides (mastra dev hang regression)", () => {
       `Expected exactly 1 zod version, found ${versions.size}:\n${JSON.stringify(
         Object.fromEntries(versions),
         null,
-        2
-      )}\n\nMultiple zod copies trigger the mastra dev hang. Re-add the zod override in root package.json.`
+        2,
+      )}\n\nMultiple zod copies trigger the mastra dev hang. Re-add the zod override in root package.json.`,
     ).toBe(1);
   });
 
@@ -110,8 +114,8 @@ describe("Workspace dependency overrides (mastra dev hang regression)", () => {
       `Expected exactly 1 @mastra/core version, found ${versions.size}:\n${JSON.stringify(
         Object.fromEntries(versions),
         null,
-        2
-      )}\n\nMultiple @mastra/core copies cause mastra build to fail with ERESOLVE. Re-add the @mastra/core override in root package.json.`
+        2,
+      )}\n\nMultiple @mastra/core copies cause mastra build to fail with ERESOLVE. Re-add the @mastra/core override in root package.json.`,
     ).toBe(1);
   });
 });

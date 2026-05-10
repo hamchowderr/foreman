@@ -31,9 +31,7 @@ export const chatModels: ChatModel[] = [
 
 export const allowedModelIds = new Set(chatModels.map((m) => m.id));
 
-export async function getCapabilities(): Promise<
-  Record<string, ModelCapabilities>
-> {
+export async function getCapabilities(): Promise<Record<string, ModelCapabilities>> {
   return {
     foreman: { tools: true, vision: false, reasoning: true },
   };
@@ -51,7 +49,7 @@ export const modelsByProvider = chatModels.reduce(
     acc[model.provider].push(model);
     return acc;
   },
-  {} as Record<string, ChatModel[]>
+  {} as Record<string, ChatModel[]>,
 );
 
 export const isDemo = false;

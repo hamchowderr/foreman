@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 
 /**
  * Cross-channel memory design verification.
@@ -65,15 +65,13 @@ describe("cross-channel memory config", () => {
 
       it("uses channel-prefixed thread ID", () => {
         source = readBotSource(channel);
-        expect(source).toMatch(
-          new RegExp(`thread:\\s*\`${channel}-\\$\\{threadId\\}\``)
-        );
+        expect(source).toMatch(new RegExp(`thread:\\s*\`${channel}-\\$\\{threadId\\}\``));
       });
 
       it("imports registerChannelUser from identity module", () => {
         source = readBotSource(channel);
         expect(source).toMatch(
-          /import\s*\{[^}]*registerChannelUser[^}]*\}\s*from\s*["'].*identity["']/
+          /import\s*\{[^}]*registerChannelUser[^}]*\}\s*from\s*["'].*identity["']/,
         );
       });
     });

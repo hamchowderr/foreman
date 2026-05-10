@@ -61,9 +61,7 @@ export const imageArtifact = new Artifact({
           ctx?.drawImage(img, 0, 0);
           canvas.toBlob((blob) => {
             if (blob) {
-              navigator.clipboard.write([
-                new ClipboardItem({ "image/png": blob }),
-              ]);
+              navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
             }
           }, "image/png");
         };

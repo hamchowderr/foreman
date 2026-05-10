@@ -24,7 +24,7 @@ setInterval(() => {
 
 export async function checkRateLimit(
   userId: string,
-  limits?: { perMinute?: number; perHour?: number }
+  limits?: { perMinute?: number; perHour?: number },
 ): Promise<{ allowed: boolean; retryAfterMs?: number }> {
   const perMinute = limits?.perMinute ?? 30;
   const perHour = limits?.perHour ?? 200;
@@ -85,7 +85,7 @@ const MESSAGING_APPS = new Set([
 export function assessActionRisk(
   actionType: string,
   actionKey: string,
-  inputs: Record<string, unknown>
+  inputs: Record<string, unknown>,
 ): ActionRisk {
   const keyLower = actionKey.toLowerCase();
 
@@ -160,9 +160,7 @@ export const SENSITIVE_APP_CATEGORIES: Record<string, string[]> = {
 };
 
 /** Flat set of all sensitive app keys for fast lookup. */
-const SENSITIVE_APPS = new Set(
-  Object.values(SENSITIVE_APP_CATEGORIES).flat()
-);
+const SENSITIVE_APPS = new Set(Object.values(SENSITIVE_APP_CATEGORIES).flat());
 
 /** Returns which category a sensitive app belongs to, or null. */
 function getSensitiveCategory(appKey: string): string | null {
@@ -175,7 +173,7 @@ function getSensitiveCategory(appKey: string): string | null {
 
 export async function checkAppAccess(
   userId: string,
-  appKey: string
+  appKey: string,
 ): Promise<{ allowed: boolean; reason?: string }> {
   const lower = appKey.toLowerCase();
 
@@ -190,7 +188,7 @@ export async function checkAppAccess(
   // checkCapability returns true if no row exists, but for sensitive apps we want opt-in,
   // so we invert: the flag must be explicitly set to true.
   const capKey = `app:${category}`;
-  const enabled = await checkCapability(userId, capKey);
+  const _enabled = await checkCapability(userId, capKey);
 
   // checkCapability defaults to true (no row = enabled). For sensitive apps,
   // we need the opposite: no row = blocked. So we check if a row exists
@@ -213,10 +211,7 @@ export async function checkAppAccess(
  * Check a sensitive-app capability. Unlike checkCapability (which defaults to true),
  * this defaults to FALSE — sensitive apps are opt-in.
  */
-async function checkSensitiveAppCapability(
-  userId: string,
-  capability: string
-): Promise<boolean> {
+async function checkSensitiveAppCapability(userId: string, capability: string): Promise<boolean> {
   const supabase = getSupabase();
   const { data } = await supabase
     .from("capability_flag")
@@ -235,7 +230,7 @@ async function checkSensitiveAppCapability(
 
 export function needsBulkConfirmation(
   inputs: Record<string, unknown>,
-  threshold?: number
+  threshold?: number,
 ): boolean {
   const max = threshold ?? 5;
   for (const value of Object.values(inputs)) {
@@ -260,7 +255,7 @@ export async function runGuardrails(
   appKey: string,
   actionType: string,
   actionKey: string,
-  inputs: Record<string, unknown>
+  inputs: Record<string, unknown>,
 ): Promise<GuardrailResult> {
   // 1. Rate limit
   const rateCheck = await checkRateLimit(userId);

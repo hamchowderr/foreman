@@ -46,7 +46,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
               window.history.pushState(
                 {},
                 "",
-                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`,
               );
               sendMessage({
                 role: "user",
@@ -63,16 +63,13 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   );
 }
 
-export const SuggestedActions = memo(
-  PureSuggestedActions,
-  (prevProps, nextProps) => {
-    if (prevProps.chatId !== nextProps.chatId) {
-      return false;
-    }
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
-      return false;
-    }
-
-    return true;
+export const SuggestedActions = memo(PureSuggestedActions, (prevProps, nextProps) => {
+  if (prevProps.chatId !== nextProps.chatId) {
+    return false;
   }
-);
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
+    return false;
+  }
+
+  return true;
+});

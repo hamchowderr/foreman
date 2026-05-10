@@ -1,10 +1,10 @@
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { createTelegramAdapter } from "@chat-adapter/telegram";
 import { stepCountIs } from "ai";
 import { Chat } from "chat";
-import { createTelegramAdapter } from "@chat-adapter/telegram";
-import { createMemoryState } from "@chat-adapter/state-memory";
-import { getMastra } from "../mastra";
-import { registerChannelUser, redeemChannelLinkCode } from "../lib/identity";
+import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { getMastra } from "../mastra";
 
 let _bot: Chat<{ telegram: ReturnType<typeof createTelegramAdapter> }> | undefined;
 let _telegramAdapter: ReturnType<typeof createTelegramAdapter> | undefined;
@@ -39,23 +39,21 @@ export async function getTelegramBot() {
     displayName?: string,
   ) {
     // Auto-register Telegram user → Foreman user (idempotent)
-    const userId = await registerChannelUser(
-      "telegram",
-      telegramUserId,
-      displayName
-    );
+    const userId = await registerChannelUser("telegram", telegramUserId, displayName);
 
     // Memory: thread = channel-specific conversation, resource = unified user ID.
     // Semantic recall works across channels — what user said on Discord
     // is available when they message from Telegram, because resource is the same userId.
-    const result = await requestUserContext.run({ userId }, () => agent.generate(text, {
-      stopWhen: stepCountIs(5),
-      savePerStep: true,
-      memory: {
-        thread: `telegram-${threadId}`,
-        resource: userId,
-      },
-    }));
+    const result = await requestUserContext.run({ userId }, () =>
+      agent.generate(text, {
+        stopWhen: stepCountIs(5),
+        savePerStep: true,
+        memory: {
+          thread: `telegram-${threadId}`,
+          resource: userId,
+        },
+      }),
+    );
     return result.text || "Something went wrong — I couldn't generate a response.";
   }
 
@@ -71,7 +69,9 @@ export async function getTelegramBot() {
         message.author.fullName,
       );
       if (result.ok) {
-        await thread.post("Your Telegram account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.");
+        await thread.post(
+          "Your Telegram account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.",
+        );
       } else if (result.error === "expired") {
         await thread.post("That code has expired. Generate a new one from your Foreman settings.");
       } else if (result.error === "already_used") {
@@ -92,7 +92,7 @@ export async function getTelegramBot() {
       thread.channelId,
       message.author.userId,
       message.text,
-      message.author.fullName
+      message.author.fullName,
     );
     await thread.post(reply);
   });
@@ -106,7 +106,7 @@ export async function getTelegramBot() {
       thread.id,
       message.author.userId,
       message.text,
-      message.author.fullName
+      message.author.fullName,
     );
     await thread.post(reply);
   });
@@ -119,7 +119,7 @@ export async function getTelegramBot() {
       thread.id,
       message.author.userId,
       message.text,
-      message.author.fullName
+      message.author.fullName,
     );
     await thread.post(reply);
   });

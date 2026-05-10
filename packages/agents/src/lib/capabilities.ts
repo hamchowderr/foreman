@@ -1,19 +1,10 @@
 import { getSupabase } from "./db";
 
-export const CAPABILITIES = [
-  "search",
-  "read",
-  "write",
-  "execute",
-  "raw_api",
-  "voice",
-] as const;
+export const CAPABILITIES = ["search", "read", "write", "execute", "raw_api", "voice"] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
 
-export async function getCapabilities(
-  userId: string
-): Promise<Record<string, boolean>> {
+export async function getCapabilities(userId: string): Promise<Record<string, boolean>> {
   const supabase = getSupabase();
   const { data: rows } = await supabase
     .from("capability_flag")
@@ -33,21 +24,15 @@ export async function getCapabilities(
 export async function setCapability(
   userId: string,
   capability: string,
-  enabled: boolean
+  enabled: boolean,
 ): Promise<void> {
   const supabase = getSupabase();
   await supabase
     .from("capability_flag")
-    .upsert(
-      { user_id: userId, capability, enabled },
-      { onConflict: "user_id,capability" }
-    );
+    .upsert({ user_id: userId, capability, enabled }, { onConflict: "user_id,capability" });
 }
 
-export async function checkCapability(
-  userId: string,
-  capability: string
-): Promise<boolean> {
+export async function checkCapability(userId: string, capability: string): Promise<boolean> {
   const supabase = getSupabase();
   const { data } = await supabase
     .from("capability_flag")

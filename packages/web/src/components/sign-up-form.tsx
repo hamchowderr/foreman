@@ -1,32 +1,31 @@
-'use client'
+"use client";
 
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import Link from 'next/link'
-
-import { createClient } from '@/lib/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/client";
 
 export function SignUpForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [repeatPassword, setRepeatPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
-    setError(null)
+    e.preventDefault();
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
 
     if (password !== repeatPassword) {
-      setError('Passwords do not match')
-      setIsLoading(false)
-      return
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -34,15 +33,15 @@ export function SignUpForm() {
         email,
         password,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding` },
-      })
-      if (error) throw error
-      router.push('/auth/sign-up-success')
+      });
+      if (error) throw error;
+      router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-7">
@@ -53,7 +52,9 @@ export function SignUpForm() {
 
       <form onSubmit={handleSignUp} className="space-y-5">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email
+          </Label>
           <Input
             id="email"
             type="email"
@@ -67,7 +68,9 @@ export function SignUpForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium">
+            Password
+          </Label>
           <Input
             id="password"
             type="password"
@@ -81,7 +84,9 @@ export function SignUpForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="repeat-password" className="text-sm font-medium">Confirm password</Label>
+          <Label htmlFor="repeat-password" className="text-sm font-medium">
+            Confirm password
+          </Label>
           <Input
             id="repeat-password"
             type="password"
@@ -105,16 +110,19 @@ export function SignUpForm() {
           className="w-full h-10 bg-[#ff4a00] hover:bg-[#e64400] text-white rounded-md font-medium"
           disabled={isLoading}
         >
-          {isLoading ? 'Creating account...' : 'Create account'}
+          {isLoading ? "Creating account..." : "Create account"}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{' '}
-        <Link href="/auth/login" className="text-foreground font-medium underline underline-offset-4">
+        Already have an account?{" "}
+        <Link
+          href="/auth/login"
+          className="text-foreground font-medium underline underline-offset-4"
+        >
           Sign in
         </Link>
       </p>
     </div>
-  )
+  );
 }

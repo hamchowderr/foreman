@@ -1,98 +1,98 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  SlackIcon,
   DiscordIcon,
+  ElectricPlugsIcon,
+  MicrosoftIcon,
+  SlackIcon,
   TelegramIcon,
   WhatsappIcon,
-  MicrosoftIcon,
-  ElectricPlugsIcon,
-} from '@hugeicons/core-free-icons'
-import { BRAND_COLORS } from '@/components/icons/brands'
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
+import { BRAND_COLORS } from "@/components/icons/brands";
 
 interface Props {
-  connectedChannels: string[]
+  connectedChannels: string[];
 }
 
 const CHANNELS = [
   {
-    key: 'mcp',
-    label: 'MCP / API',
+    key: "mcp",
+    label: "MCP / API",
     icon: ElectricPlugsIcon,
-    iconColor: '#FF4F00',
-    description: 'Connect Claude Desktop, Cursor, or any MCP client directly to Foreman.',
-    href: '/settings/integrations/mcp',
+    iconColor: "#FF4F00",
+    description: "Connect Claude Desktop, Cursor, or any MCP client directly to Foreman.",
+    href: "/settings/integrations/mcp",
     available: true,
   },
   {
-    key: 'telegram',
-    label: 'Telegram',
+    key: "telegram",
+    label: "Telegram",
     icon: TelegramIcon,
     iconColor: BRAND_COLORS.telegram,
-    description: 'Chat with Foreman via Telegram DMs or group mentions.',
-    href: '/settings/integrations/telegram',
+    description: "Chat with Foreman via Telegram DMs or group mentions.",
+    href: "/settings/integrations/telegram",
     available: true,
   },
   {
-    key: 'discord',
-    label: 'Discord',
+    key: "discord",
+    label: "Discord",
     icon: DiscordIcon,
     iconColor: BRAND_COLORS.discord,
-    description: 'Mention @Foreman in any Discord channel or DM the bot.',
-    href: '/settings/integrations/discord',
+    description: "Mention @Foreman in any Discord channel or DM the bot.",
+    href: "/settings/integrations/discord",
     available: true,
   },
   {
-    key: 'slack',
-    label: 'Slack',
+    key: "slack",
+    label: "Slack",
     icon: SlackIcon,
     iconColor: BRAND_COLORS.slack,
-    description: 'Add Foreman to your Slack workspace and trigger actions from any channel.',
-    href: '/settings/integrations/slack',
+    description: "Add Foreman to your Slack workspace and trigger actions from any channel.",
+    href: "/settings/integrations/slack",
     available: true,
   },
   {
-    key: 'teams',
-    label: 'Microsoft Teams',
+    key: "teams",
+    label: "Microsoft Teams",
     icon: MicrosoftIcon,
     iconColor: BRAND_COLORS.microsoft,
-    description: 'Coming soon.',
-    href: '#',
+    description: "Coming soon.",
+    href: "#",
     available: false,
   },
   {
-    key: 'whatsapp',
-    label: 'WhatsApp',
+    key: "whatsapp",
+    label: "WhatsApp",
     icon: WhatsappIcon,
     iconColor: BRAND_COLORS.whatsapp,
-    description: 'Coming soon.',
-    href: '#',
+    description: "Coming soon.",
+    href: "#",
     available: false,
   },
-]
+];
 
 export function IntegrationsHub({ connectedChannels }: Props) {
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-1" style={{ color: '#201515' }}>
+      <h1 className="text-xl font-semibold mb-1" style={{ color: "#201515" }}>
         Integrations
       </h1>
-      <p className="text-sm mb-8" style={{ color: '#888' }}>
+      <p className="text-sm mb-8" style={{ color: "#888" }}>
         Connect Foreman to the tools and channels you already use.
       </p>
 
       <div className="grid gap-4">
         {CHANNELS.map((ch) => {
-          const connected = connectedChannels.includes(ch.key)
+          const connected = connectedChannels.includes(ch.key);
           return (
             <div
               key={ch.key}
               className="flex items-center justify-between rounded-xl p-5"
               style={{
-                border: '1.5px solid #FFF3E6',
-                backgroundColor: '#fff',
+                border: "1.5px solid #FFF3E6",
+                backgroundColor: "#fff",
                 opacity: ch.available ? 1 : 0.6,
               }}
             >
@@ -110,13 +110,13 @@ export function IntegrationsHub({ connectedChannels }: Props) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold" style={{ color: '#201515' }}>
+                    <span className="text-sm font-semibold" style={{ color: "#201515" }}>
                       {ch.label}
                     </span>
                     {connected && (
                       <span
                         className="rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{ backgroundColor: '#d1fae5', color: '#065f46' }}
+                        style={{ backgroundColor: "#d1fae5", color: "#065f46" }}
                       >
                         Connected
                       </span>
@@ -124,13 +124,13 @@ export function IntegrationsHub({ connectedChannels }: Props) {
                     {!ch.available && (
                       <span
                         className="rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}
+                        style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
                       >
                         Coming soon
                       </span>
                     )}
                   </div>
-                  <p className="text-xs mt-0.5" style={{ color: '#888' }}>
+                  <p className="text-xs mt-0.5" style={{ color: "#888" }}>
                     {ch.description}
                   </p>
                 </div>
@@ -141,17 +141,17 @@ export function IntegrationsHub({ connectedChannels }: Props) {
                   href={ch.href}
                   className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
                   style={{
-                    backgroundColor: connected ? '#FFF3E6' : '#FF4F00',
-                    color: connected ? '#FF4F00' : '#fff',
+                    backgroundColor: connected ? "#FFF3E6" : "#FF4F00",
+                    color: connected ? "#FF4F00" : "#fff",
                   }}
                 >
-                  {connected ? 'Manage' : 'Connect'}
+                  {connected ? "Manage" : "Connect"}
                 </Link>
               )}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

@@ -30,7 +30,10 @@ function single(value: string | undefined, fallback: string): string {
 function chain(value: string | undefined, fallback: string): ModelSpec {
   const trimmed = value?.trim();
   if (!trimmed) return fallback;
-  const parts = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = trimmed
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (parts.length === 0) return fallback;
   if (parts.length === 1) return parts[0];
   return parts.map((model) => ({ model, maxRetries: FALLBACK_MAX_RETRIES }));

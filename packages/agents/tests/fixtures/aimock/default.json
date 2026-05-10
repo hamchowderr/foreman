@@ -46,7 +46,14 @@
         "toolCalls": [
           {
             "name": "execute_action",
-            "arguments": { "actionId": "gmail_send_email", "params": { "to": "test@example.com", "subject": "Test", "body": "Hello from Foreman" } }
+            "arguments": {
+              "actionId": "gmail_send_email",
+              "params": {
+                "to": "test@example.com",
+                "subject": "Test",
+                "body": "Hello from Foreman"
+              }
+            }
           }
         ]
       }

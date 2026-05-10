@@ -19,7 +19,7 @@ function bufferToStream(buffer: Buffer): NodeJS.ReadableStream {
 }
 
 function mimeToFiletype(
-  mimeType: string
+  mimeType: string,
 ): "mp3" | "mp4" | "mpeg" | "mpga" | "m4a" | "wav" | "webm" {
   if (mimeType.includes("wav")) return "wav";
   if (mimeType.includes("mp3")) return "mp3";
@@ -29,10 +29,7 @@ function mimeToFiletype(
   return "webm";
 }
 
-export async function speechToText(
-  audioBuffer: Buffer,
-  mimeType = "audio/webm"
-): Promise<string> {
+export async function speechToText(audioBuffer: Buffer, mimeType = "audio/webm"): Promise<string> {
   const openai = getOpenAIVoice();
   const stream = bufferToStream(audioBuffer);
   return openai.listen(stream, { filetype: mimeToFiletype(mimeType) });

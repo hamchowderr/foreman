@@ -1,19 +1,10 @@
-import { source } from "@/lib/source";
-import { getLastModified } from "@/lib/git-last-modified";
-import {
-  DocsPage,
-  DocsBody,
-  DocsDescription,
-  DocsTitle,
-} from "fumadocs-ui/page";
+import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
+import { getLastModified } from "@/lib/git-last-modified";
+import { source } from "@/lib/source";
 import { useMDXComponents } from "@/mdx-components";
 
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ slug?: string[] }>;
-}) {
+export default async function Page({ params }: { params: Promise<{ slug?: string[] }> }) {
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) notFound();
@@ -48,11 +39,7 @@ export function generateStaticParams() {
   return source.generateParams();
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug?: string[] }>;
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ slug?: string[] }> }) {
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) return {};

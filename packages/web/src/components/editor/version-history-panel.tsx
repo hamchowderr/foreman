@@ -1,8 +1,8 @@
 "use client";
 
 import { RotateCcwIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { StoredAgentVersion } from "@/lib/stored-agents-client";
+import { cn } from "@/lib/utils";
 
 interface Props {
   versions: StoredAgentVersion[];
@@ -20,9 +20,7 @@ export function VersionHistoryPanel({
   onRestore,
 }: Props) {
   if (versions.length === 0) {
-    return (
-      <div className="p-4 text-xs text-muted">No versions yet.</div>
-    );
+    return <div className="p-4 text-xs text-muted">No versions yet.</div>;
   }
 
   // Latest-first ordering is assumed from the API, but sort defensively.
@@ -39,9 +37,7 @@ export function VersionHistoryPanel({
             <div
               className={cn(
                 "rounded-md border p-2 text-sm transition-colors",
-                isSelected
-                  ? "border-accent/40 bg-accent/5"
-                  : "border-transparent hover:bg-surface"
+                isSelected ? "border-accent/40 bg-accent/5" : "border-transparent hover:bg-surface",
               )}
             >
               <button
@@ -51,9 +47,7 @@ export function VersionHistoryPanel({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs font-semibold">
-                      v{v.version}
-                    </span>
+                    <span className="font-mono text-xs font-semibold">v{v.version}</span>
                     {v.is_draft ? (
                       <span className="rounded-sm bg-muted/20 px-1 py-0.5 text-[10px] text-muted">
                         draft
@@ -69,8 +63,8 @@ export function VersionHistoryPanel({
                     )}
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-muted">
-                    {formatTimestamp(v.published_at ?? v.created_at)} ·{" "}
-                    {v.tools.length} tool{v.tools.length === 1 ? "" : "s"}
+                    {formatTimestamp(v.published_at ?? v.created_at)} · {v.tools.length} tool
+                    {v.tools.length === 1 ? "" : "s"}
                   </div>
                 </div>
               </button>

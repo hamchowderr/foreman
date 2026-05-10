@@ -1,18 +1,18 @@
-import { SiteNav } from "@/components/landing/site-nav";
-import { Hero } from "@/components/landing/sections/hero";
-import { WhyNotZap } from "@/components/landing/sections/why-not-zap";
-import { HowItWorks } from "@/components/landing/sections/how-it-works";
-import { ReasoningTrace } from "@/components/landing/sections/reasoning-trace";
-import { ToolDiscoverySection } from "@/components/landing/sections/tool-discovery-section";
 import { Channels } from "@/components/landing/sections/channels";
-import { Guardrails } from "@/components/landing/sections/guardrails";
-import { HistorySection } from "@/components/landing/sections/history-section";
-import { PiiSection } from "@/components/landing/sections/pii-section";
-import { Workflows } from "@/components/landing/sections/workflows";
-import { Hosting } from "@/components/landing/sections/hosting";
-import { FiveThings } from "@/components/landing/sections/five-things";
 import { ClosingCta } from "@/components/landing/sections/closing-cta";
+import { FiveThings } from "@/components/landing/sections/five-things";
+import { Guardrails } from "@/components/landing/sections/guardrails";
+import { Hero } from "@/components/landing/sections/hero";
+import { HistorySection } from "@/components/landing/sections/history-section";
+import { Hosting } from "@/components/landing/sections/hosting";
+import { HowItWorks } from "@/components/landing/sections/how-it-works";
+import { PiiSection } from "@/components/landing/sections/pii-section";
+import { ReasoningTrace } from "@/components/landing/sections/reasoning-trace";
 import { SiteFooter } from "@/components/landing/sections/site-footer";
+import { ToolDiscoverySection } from "@/components/landing/sections/tool-discovery-section";
+import { WhyNotZap } from "@/components/landing/sections/why-not-zap";
+import { Workflows } from "@/components/landing/sections/workflows";
+import { SiteNav } from "@/components/landing/site-nav";
 
 export default function LandingPage() {
   return (

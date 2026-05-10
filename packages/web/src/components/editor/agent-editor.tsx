@@ -1,22 +1,11 @@
 "use client";
 
+import { ChevronLeftIcon, HistoryIcon, Loader2Icon, RocketIcon, TrashIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import useSWR, { useSWRConfig } from "swr";
-import { createClient } from "@/lib/client";
 import { toast } from "sonner";
-import {
-  ChevronLeftIcon,
-  HistoryIcon,
-  Loader2Icon,
-  RocketIcon,
-  TrashIcon,
-} from "lucide-react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import useSWR, { useSWRConfig } from "swr";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -34,12 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/client";
 import {
-  storedAgentsApi,
   type StoredAgent,
   type StoredAgentVersion,
+  storedAgentsApi,
 } from "@/lib/stored-agents-client";
+import { cn } from "@/lib/utils";
 import { ToolsPicker } from "./tools-picker";
 import { VersionHistoryPanel } from "./version-history-panel";
 
@@ -54,7 +48,9 @@ const AUTOSAVE_DEBOUNCE_MS = 800;
 type SaveState = "clean" | "dirty" | "saving" | "error";
 
 async function getToken() {
-  const { data: { session } } = await createClient().auth.getSession();
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
   return session?.access_token ?? null;
 }
 
@@ -67,23 +63,17 @@ export function AgentEditor({ agentId }: { agentId: string }) {
     error: agentError,
     isLoading: agentLoading,
     mutate: mutateAgent,
-  } = useSWR<StoredAgent>(
-    ["stored-agent", agentId],
-    async () => {
-      const token = await getToken();
-      return storedAgentsApi.get(token ?? "", agentId);
-    }
-  );
+  } = useSWR<StoredAgent>(["stored-agent", agentId], async () => {
+    const token = await getToken();
+    return storedAgentsApi.get(token ?? "", agentId);
+  });
 
-  const {
-    data: versions,
-    mutate: mutateVersions,
-  } = useSWR<StoredAgentVersion[]>(
+  const { data: versions, mutate: mutateVersions } = useSWR<StoredAgentVersion[]>(
     ["stored-agent-versions", agentId],
     async () => {
       const token = await getToken();
       return storedAgentsApi.listVersions(token ?? "", agentId);
-    }
+    },
   );
 
   // The editor targets whichever version is selected. Default: the latest
@@ -125,8 +115,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
 
   const isDraft = selectedVersion?.is_draft ?? false;
   const isPublished = !!selectedVersion && !selectedVersion.is_draft;
-  const isCurrentPublished =
-    isPublished && agent?.current_version_id === selectedVersion?.id;
+  const isCurrentPublished = isPublished && agent?.current_version_id === selectedVersion?.id;
 
   // Autosave: debounce buffer changes into a PATCH on the draft. Refuses to
   // run on published versions — the user has to explicitly fork to a new
@@ -140,16 +129,11 @@ export function AgentEditor({ agentId }: { agentId: string }) {
       setSaveState("saving");
       try {
         const token = await getToken();
-        await storedAgentsApi.updateDraft(
-          token ?? "",
-          agentId,
-          selectedVersion.id,
-          {
-            instructions: buffer.instructions,
-            tools: buffer.tools,
-            model: buffer.model,
-          }
-        );
+        await storedAgentsApi.updateDraft(token ?? "", agentId, selectedVersion.id, {
+          instructions: buffer.instructions,
+          tools: buffer.tools,
+          model: buffer.model,
+        });
         setSaveState("clean");
         mutateVersions();
       } catch (err) {
@@ -191,16 +175,11 @@ export function AgentEditor({ agentId }: { agentId: string }) {
     if (saveState !== "clean" && buffer) {
       try {
         const token = await getToken();
-        await storedAgentsApi.updateDraft(
-          token ?? "",
-          agentId,
-          selectedVersion.id,
-          {
-            instructions: buffer.instructions,
-            tools: buffer.tools,
-            model: buffer.model,
-          }
-        );
+        await storedAgentsApi.updateDraft(token ?? "", agentId, selectedVersion.id, {
+          instructions: buffer.instructions,
+          tools: buffer.tools,
+          model: buffer.model,
+        });
         setSaveState("clean");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to save before publish");
@@ -210,8 +189,11 @@ export function AgentEditor({ agentId }: { agentId: string }) {
 
     try {
       const token = await getToken();
-      const { agent: updatedAgent, version: updatedVersion } =
-        await storedAgentsApi.publish(token ?? "", agentId, selectedVersion.id);
+      const { agent: updatedAgent, version: updatedVersion } = await storedAgentsApi.publish(
+        token ?? "",
+        agentId,
+        selectedVersion.id,
+      );
       mutateAgent(updatedAgent, { revalidate: false });
       globalMutate(["stored-agents-list"]);
       globalMutate(["stored-agents-sidebar"]);
@@ -287,9 +269,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
     );
   }
   if (!agent || !buffer || !selectedVersion) {
-    return (
-      <div className="p-10 text-sm text-muted">Loading version…</div>
-    );
+    return <div className="p-10 text-sm text-muted">Loading version…</div>;
   }
 
   return (
@@ -352,10 +332,14 @@ export function AgentEditor({ agentId }: { agentId: string }) {
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
             <section>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+              <label
+                htmlFor="agent-description"
+                className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted"
+              >
                 Description
               </label>
               <Textarea
+                id="agent-description"
                 value={descBuffer ?? ""}
                 onChange={(e) => setDescBuffer(e.target.value)}
                 onBlur={commitMetadata}
@@ -368,7 +352,10 @@ export function AgentEditor({ agentId }: { agentId: string }) {
 
             <section>
               <div className="mb-1 flex items-center justify-between">
-                <label className="text-xs font-medium uppercase tracking-wide text-muted">
+                <label
+                  htmlFor="agent-instructions"
+                  className="text-xs font-medium uppercase tracking-wide text-muted"
+                >
                   Instructions
                 </label>
                 <span className="text-xs text-muted">
@@ -376,6 +363,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
                 </span>
               </div>
               <Textarea
+                id="agent-instructions"
                 value={buffer.instructions}
                 readOnly={!isDraft}
                 onChange={(e) => updateBuffer({ instructions: e.target.value })}
@@ -383,7 +371,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
                 rows={16}
                 className={cn(
                   "font-mono text-sm leading-relaxed",
-                  !isDraft && "bg-surface/50 text-muted"
+                  !isDraft && "bg-surface/50 text-muted",
                 )}
                 maxLength={50000}
               />
@@ -396,7 +384,10 @@ export function AgentEditor({ agentId }: { agentId: string }) {
             </section>
 
             <section>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+              <label
+                htmlFor="agent-model"
+                className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted"
+              >
                 Model
               </label>
               <Select
@@ -404,7 +395,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
                 disabled={!isDraft}
                 onValueChange={(v) => updateBuffer({ model: v })}
               >
-                <SelectTrigger className="max-w-md">
+                <SelectTrigger id="agent-model" className="max-w-md">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -422,6 +413,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
             </section>
 
             <section>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: ToolsPicker is a custom multi-input picker; visual label is fine */}
               <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted">
                 Tools
               </label>
@@ -454,8 +446,8 @@ export function AgentEditor({ agentId }: { agentId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this agent?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently deletes the agent and all {versions?.length ?? 0}{" "}
-              version{versions?.length === 1 ? "" : "s"}. This cannot be undone.
+              This permanently deletes the agent and all {versions?.length ?? 0} version
+              {versions?.length === 1 ? "" : "s"}. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -468,13 +460,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
   );
 }
 
-function VersionBadge({
-  version,
-  isCurrent,
-}: {
-  version: StoredAgentVersion;
-  isCurrent: boolean;
-}) {
+function VersionBadge({ version, isCurrent }: { version: StoredAgentVersion; isCurrent: boolean }) {
   if (version.is_draft) {
     return <Badge variant="outline">draft v{version.version}</Badge>;
   }

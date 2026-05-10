@@ -1,5 +1,4 @@
-const AGENT_SERVER_URL =
-  process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+const AGENT_SERVER_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
 export interface StoredAgentVersion {
   id: string;
@@ -37,11 +36,7 @@ export interface CatalogTool {
  * by the caller. For server-side calls, use `fetchServer` which reads the
  * token via `@clerk/nextjs/server`.
  */
-async function fetchJson<T>(
-  path: string,
-  token: string | null,
-  init?: RequestInit
-): Promise<T> {
+async function fetchJson<T>(path: string, token: string | null, init?: RequestInit): Promise<T> {
   if (!token) throw new Error("Unauthorized");
   const res = await fetch(`${AGENT_SERVER_URL}${path}`, {
     ...init,
@@ -66,8 +61,7 @@ async function fetchJson<T>(
 export const storedAgentsApi = {
   list: (token: string) => fetchJson<StoredAgent[]>("/stored/agents", token),
 
-  get: (token: string, id: string) =>
-    fetchJson<StoredAgent>(`/stored/agents/${id}`, token),
+  get: (token: string, id: string) => fetchJson<StoredAgent>(`/stored/agents/${id}`, token),
 
   create: (token: string, body: { name: string; description?: string }) =>
     fetchJson<StoredAgent>("/stored/agents", token, {
@@ -75,11 +69,7 @@ export const storedAgentsApi = {
       body: JSON.stringify(body),
     }),
 
-  update: (
-    token: string,
-    id: string,
-    body: { name?: string; description?: string | null }
-  ) =>
+  update: (token: string, id: string, body: { name?: string; description?: string | null }) =>
     fetchJson<StoredAgent>(`/stored/agents/${id}`, token, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -92,16 +82,9 @@ export const storedAgentsApi = {
     fetchJson<StoredAgentVersion[]>(`/stored/agents/${id}/versions`, token),
 
   getVersion: (token: string, id: string, versionId: string) =>
-    fetchJson<StoredAgentVersion>(
-      `/stored/agents/${id}/versions/${versionId}`,
-      token
-    ),
+    fetchJson<StoredAgentVersion>(`/stored/agents/${id}/versions/${versionId}`, token),
 
-  createDraft: (
-    token: string,
-    id: string,
-    body?: { sourceVersionId?: string }
-  ) =>
+  createDraft: (token: string, id: string, body?: { sourceVersionId?: string }) =>
     fetchJson<StoredAgentVersion>(`/stored/agents/${id}/versions`, token, {
       method: "POST",
       body: JSON.stringify(body ?? {}),
@@ -116,21 +99,19 @@ export const storedAgentsApi = {
       tools?: string[];
       model?: string;
       notes?: string | null;
-    }
+    },
   ) =>
-    fetchJson<StoredAgentVersion>(
-      `/stored/agents/${id}/versions/${versionId}`,
-      token,
-      { method: "PATCH", body: JSON.stringify(body) }
-    ),
+    fetchJson<StoredAgentVersion>(`/stored/agents/${id}/versions/${versionId}`, token, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 
   publish: (token: string, id: string, versionId: string) =>
     fetchJson<{ agent: StoredAgent; version: StoredAgentVersion }>(
       `/stored/agents/${id}/versions/${versionId}/publish`,
       token,
-      { method: "POST" }
+      { method: "POST" },
     ),
 
-  listTools: (token: string) =>
-    fetchJson<{ tools: CatalogTool[] }>("/stored/agents/tools", token),
+  listTools: (token: string) => fetchJson<{ tools: CatalogTool[] }>("/stored/agents/tools", token),
 };

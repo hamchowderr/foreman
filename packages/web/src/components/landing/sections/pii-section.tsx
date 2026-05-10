@@ -1,8 +1,8 @@
-import { Reveal } from "@/components/landing/reveal";
+import { Check } from "@/components/icons/hi";
 import { PiiTypewriter } from "@/components/landing/demos/pii-typewriter";
+import { Reveal } from "@/components/landing/reveal";
 import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "@/components/icons/hi";
 
 const BULLETS = [
   "Catches emails, phone numbers, cards, SSNs, API keys",
@@ -17,15 +17,16 @@ export function PiiSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
           <Reveal>
-            <Badge variant="accent" className="mb-4">Sensitive info stays out of sight</Badge>
+            <Badge variant="accent" className="mb-4">
+              Sensitive info stays out of sight
+            </Badge>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
               Personal details get hidden before you see them.
             </h2>
             <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-              When Foreman pulls data back from your apps, it scans the answer
-              for anything sensitive — email addresses, phone numbers, card
-              numbers, API keys — and blanks them out. You still get the
-              answer. You just don't get the raw data spilled into your chat.
+              When Foreman pulls data back from your apps, it scans the answer for anything
+              sensitive — email addresses, phone numbers, card numbers, API keys — and blanks them
+              out. You still get the answer. You just don't get the raw data spilled into your chat.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {BULLETS.map((line) => (

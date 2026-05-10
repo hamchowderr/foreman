@@ -22,7 +22,7 @@ export async function* executeWorkflow(
   workflowId: string,
   userId: string,
   inputs: Record<string, string>,
-  orgId?: string
+  _orgId?: string,
 ): AsyncGenerator<WorkflowEvent> {
   const supabase = getSupabase();
 
@@ -87,7 +87,7 @@ export async function* executeWorkflow(
         template.actionType as string,
         template.actionKey as string,
         resolved,
-        template.connectionId as string | undefined
+        template.connectionId as string | undefined,
       );
 
       yield {

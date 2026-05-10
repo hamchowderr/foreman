@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test("homepage redirects unauthenticated users to sign-up", async ({ page }) => {
   await page.goto("/");
@@ -27,9 +27,7 @@ test.describe("authenticated chat flow", () => {
     await page.locator('button[type="submit"]').click();
 
     // Wait for sign-up to complete (session cookie set)
-    await page.waitForResponse(
-      (res) => res.url().includes("/api/auth") && res.status() === 200
-    );
+    await page.waitForResponse((res) => res.url().includes("/api/auth") && res.status() === 200);
 
     // Navigate to home
     await page.goto("/");
@@ -40,9 +38,7 @@ test.describe("authenticated chat flow", () => {
     await page.getByTestId("new-chat-button").click();
 
     // Should show the chat input
-    await expect(
-      page.locator('textarea[placeholder="Message Foreman..."]')
-    ).toBeVisible();
+    await expect(page.locator('textarea[placeholder="Message Foreman..."]')).toBeVisible();
   });
 
   test("can send a message and see mock LLM response", async ({ page }) => {
@@ -56,13 +52,11 @@ test.describe("authenticated chat flow", () => {
     await page.locator("button", { hasText: "Send" }).click();
 
     // User message should appear
-    await expect(page.locator(".justify-end .rounded-xl").first()).toContainText(
-      "hello"
-    );
+    await expect(page.locator(".justify-end .rounded-xl").first()).toContainText("hello");
 
     // Agent response should stream in (from LLMock greeting fixture)
-    await expect(
-      page.locator(".justify-start .rounded-xl").first()
-    ).toContainText("Foreman", { timeout: 10000 });
+    await expect(page.locator(".justify-start .rounded-xl").first()).toContainText("Foreman", {
+      timeout: 10000,
+    });
   });
 });

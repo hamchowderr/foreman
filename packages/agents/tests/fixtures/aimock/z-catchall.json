@@ -2,7 +2,9 @@
   "fixtures": [
     {
       "match": {},
-      "response": { "content": "I can help you with your Zapier automations. Try asking me to discover your connected apps, list actions for an app, or execute an action." }
+      "response": {
+        "content": "I can help you with your Zapier automations. Try asking me to discover your connected apps, list actions for an app, or execute an action."
+      }
     }
   ]
 }

@@ -1,19 +1,19 @@
-import { Reveal } from "@/components/landing/reveal";
-import { ChannelMemory } from "@/components/landing/demos/channel-memory";
-import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
-import { Badge } from "@/components/ui/badge";
-import { Globe, Terminal, Cpu } from "@/components/icons/hi";
 import {
-  SlackBrand,
+  AppleBrand,
+  BRAND_COLORS,
   DiscordBrand,
-  TelegramBrand,
   GithubBrand,
   GoogleBrand,
   MicrosoftBrand,
+  SlackBrand,
+  TelegramBrand,
   WhatsappBrand,
-  AppleBrand,
-  BRAND_COLORS,
 } from "@/components/icons/brands";
+import { Cpu, Globe, Terminal } from "@/components/icons/hi";
+import { ChannelMemory } from "@/components/landing/demos/channel-memory";
+import { Reveal } from "@/components/landing/reveal";
+import { TiltedSpotlight } from "@/components/landing/tilted-spotlight";
+import { Badge } from "@/components/ui/badge";
 
 const CHANNELS = [
   { name: "Slack", avail: true, Icon: SlackBrand },
@@ -35,13 +35,15 @@ export function Channels() {
     <section id="channels" className="py-14 sm:py-20 md:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
-          <Badge variant="accent" className="mb-4">One brain, everywhere</Badge>
+          <Badge variant="accent" className="mb-4">
+            One brain, everywhere
+          </Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             Same memory across every channel.
           </h2>
           <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-            Ask in Slack, follow up from Telegram, approve from your phone.
-            Your apps, preferences, and action history travel with you.
+            Ask in Slack, follow up from Telegram, approve from your phone. Your apps, preferences,
+            and action history travel with you.
           </p>
         </Reveal>
 

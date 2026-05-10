@@ -71,9 +71,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
     if (mode === "diff") {
       const selectedContent = getDocumentContentById(currentVersionIndex);
       const prevContent =
-        currentVersionIndex > 0
-          ? getDocumentContentById(currentVersionIndex - 1)
-          : selectedContent;
+        currentVersionIndex > 0 ? getDocumentContentById(currentVersionIndex - 1) : selectedContent;
 
       return (
         <div className="flex flex-row px-4 py-8 md:px-16 md:py-12 lg:px-20">

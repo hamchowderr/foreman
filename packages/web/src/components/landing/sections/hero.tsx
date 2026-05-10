@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Reveal } from "@/components/landing/reveal";
-import { HeroDemo } from "@/components/landing/hero-demo";
+import { ArrowRight, GitBranch, Shield, Zap } from "@/components/icons/hi";
 import { MagneticButton } from "@/components/landing/demos/magnetic-button";
-import { Button } from "@/components/ui/button";
+import { HeroDemo } from "@/components/landing/hero-demo";
+import { Reveal } from "@/components/landing/reveal";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Shield, GitBranch, ArrowRight } from "@/components/icons/hi";
+import { Button } from "@/components/ui/button";
 
 export function Hero() {
   return (
@@ -17,8 +17,8 @@ export function Hero() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 md:pt-28 pb-12 sm:pb-20 grid md:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
         <Reveal className="space-y-6 sm:space-y-8" direction="up">
           <Badge variant="accent" className="gap-1.5 py-1 px-3">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-            A chat driver for your Zapier account
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />A chat driver for
+            your Zapier account
           </Badge>
 
           <h1 className="text-[2.25rem] sm:text-5xl lg:text-[3.5rem] font-semibold tracking-[-0.035em] leading-[1.08]">
@@ -28,10 +28,9 @@ export function Hero() {
           </h1>
 
           <p className="text-base sm:text-lg text-muted max-w-lg leading-relaxed">
-            Your Zapier account already has 9,000+ app connections.
-            Foreman drives them from chat — Slack, Discord, Telegram, MCP —
-            with approval gates and an audit trail. No agent builder,
-            no knowledge base to maintain, no per-agent config.
+            Your Zapier account already has 9,000+ app connections. Foreman drives them from chat —
+            Slack, Discord, Telegram, MCP — with approval gates and an audit trail. No agent
+            builder, no knowledge base to maintain, no per-agent config.
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -59,7 +58,10 @@ export function Hero() {
 
         <Reveal direction="up" delay={0.15} className="relative">
           <HeroDemo />
-          <div aria-hidden className="absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-accent/[0.08] blur-3xl -z-10" />
+          <div
+            aria-hidden
+            className="absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-accent/[0.08] blur-3xl -z-10"
+          />
         </Reveal>
       </div>
     </section>

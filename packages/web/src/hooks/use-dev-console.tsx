@@ -2,12 +2,12 @@
 
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 
 export type LogLevel = "info" | "warn" | "error" | "debug";
@@ -29,7 +29,7 @@ type DevConsoleContextValue = {
     level: LogLevel,
     category: DevLogEntry["category"],
     message: string,
-    data?: unknown
+    data?: unknown,
   ) => void;
   clear: () => void;
 };
@@ -45,12 +45,7 @@ export function DevConsoleProvider({ children }: { children: ReactNode }) {
   logsRef.current = logs;
 
   const log = useCallback(
-    (
-      level: LogLevel,
-      category: DevLogEntry["category"],
-      message: string,
-      data?: unknown
-    ) => {
+    (level: LogLevel, category: DevLogEntry["category"], message: string, data?: unknown) => {
       const entry: DevLogEntry = {
         id: `log-${++logCounter}`,
         timestamp: Date.now(),
@@ -65,7 +60,7 @@ export function DevConsoleProvider({ children }: { children: ReactNode }) {
         return next.length > 500 ? next.slice(-500) : next;
       });
     },
-    []
+    [],
   );
 
   const clear = useCallback(() => setLogs([]), []);

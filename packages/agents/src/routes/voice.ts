@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { authMiddleware } from "./middleware";
-import type { AppEnv } from "./types";
 import { checkCapability } from "@/lib/capabilities";
 import { speechToText } from "@/lib/voice";
+import { authMiddleware } from "./middleware";
+import type { AppEnv } from "./types";
 
 const voice = new Hono<AppEnv>();
 
@@ -19,7 +19,7 @@ voice.post("/transcribe", async (c) => {
   }
 
   const body = await c.req.parseBody();
-  const file = body["file"];
+  const file = body.file;
 
   if (!(file instanceof File)) {
     return c.json({ error: "file field is required (multipart)" }, 400);

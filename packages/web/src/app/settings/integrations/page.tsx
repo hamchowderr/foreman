@@ -1,28 +1,30 @@
-import { Suspense } from 'react'
-import { createClient } from '@/lib/server'
-import { IntegrationsHub } from '@/components/settings/integrations-hub'
+import { Suspense } from "react";
+import { IntegrationsHub } from "@/components/settings/integrations-hub";
+import { createClient } from "@/lib/server";
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || 'http://localhost:4111'
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
 async function IntegrationsContent() {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  let connectedChannels: string[] = []
+  let connectedChannels: string[] = [];
   if (session) {
     try {
       const res = await fetch(`${AGENT_URL}/channel-links/identities`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-        cache: 'no-store',
-      })
+        cache: "no-store",
+      });
       if (res.ok) {
-        const { identities } = await res.json()
-        connectedChannels = (identities ?? []).map((i: { channel: string }) => i.channel)
+        const { identities } = await res.json();
+        connectedChannels = (identities ?? []).map((i: { channel: string }) => i.channel);
       }
     } catch {}
   }
 
-  return <IntegrationsHub connectedChannels={connectedChannels} />
+  return <IntegrationsHub connectedChannels={connectedChannels} />;
 }
 
 export default function IntegrationsPage() {
@@ -30,5 +32,5 @@ export default function IntegrationsPage() {
     <Suspense fallback={<IntegrationsHub connectedChannels={[]} />}>
       <IntegrationsContent />
     </Suspense>
-  )
+  );
 }

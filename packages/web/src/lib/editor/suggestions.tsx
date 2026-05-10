@@ -36,10 +36,7 @@ function findPositionsInDoc(doc: Node, searchText: string): Position | null {
   return positions;
 }
 
-export function projectWithPositions(
-  doc: Node,
-  suggestions: Suggestion[]
-): UISuggestion[] {
+export function projectWithPositions(doc: Node, suggestions: Suggestion[]): UISuggestion[] {
   return suggestions.map((suggestion) => {
     const positions = findPositionsInDoc(doc, suggestion.originalText);
 

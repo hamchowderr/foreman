@@ -1,11 +1,8 @@
-import { source } from "@/lib/source";
 import { generateOGImage } from "fumadocs-ui/og";
 import { notFound } from "next/navigation";
+import { source } from "@/lib/source";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ slug: string[] }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params;
   // Last segment is `image.png` — strip it before looking up the page.
   const pageSlug = slug.slice(0, -1);

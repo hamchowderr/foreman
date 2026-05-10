@@ -1,5 +1,5 @@
-import { Reveal } from "@/components/landing/reveal";
 import { GuardrailCards } from "@/components/landing/demos/guardrail-cards";
+import { Reveal } from "@/components/landing/reveal";
 import { Badge } from "@/components/ui/badge";
 
 export function Guardrails() {
@@ -7,12 +7,16 @@ export function Guardrails() {
     <section className="bg-surface/50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-24">
         <Reveal className="max-w-2xl mb-10 sm:mb-14">
-          <Badge variant="accent" className="mb-4">Safe by construction</Badge>
+          <Badge variant="accent" className="mb-4">
+            Safe by construction
+          </Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             An AI with a leash.
           </h2>
           <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
-            Driving real apps means real mistakes are possible. Foreman ships approval gates, PII redaction, rate limits, and an audit trail on by default — not as a setting you have to remember to turn on.
+            Driving real apps means real mistakes are possible. Foreman ships approval gates, PII
+            redaction, rate limits, and an audit trail on by default — not as a setting you have to
+            remember to turn on.
           </p>
         </Reveal>
         <Reveal delay={0.1}>

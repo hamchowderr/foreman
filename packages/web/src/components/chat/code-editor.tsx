@@ -47,9 +47,7 @@ function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
     if (editorRef.current) {
       const updateListener = EditorView.updateListener.of((update) => {
         if (update.docChanged) {
-          const transaction = update.transactions.find(
-            (tr) => !tr.annotation(Transaction.remote)
-          );
+          const transaction = update.transactions.find((tr) => !tr.annotation(Transaction.remote));
 
           if (transaction) {
             const newContent = update.state.doc.toString();
@@ -67,8 +65,7 @@ function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
           if (!dom) {
             return;
           }
-          const atBottom =
-            dom.scrollHeight - dom.scrollTop - dom.clientHeight < 40;
+          const atBottom = dom.scrollHeight - dom.scrollTop - dom.clientHeight < 40;
           userScrolledRef.current = !atBottom;
         },
       });
@@ -77,13 +74,7 @@ function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
 
       const newState = EditorState.create({
         doc: editorRef.current.state.doc,
-        extensions: [
-          basicSetup,
-          python(),
-          oneDark,
-          updateListener,
-          scrollListener,
-        ],
+        extensions: [basicSetup, python(), oneDark, updateListener, scrollListener],
         selection: currentSelection,
       });
 
@@ -126,10 +117,7 @@ function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
   }, [content, status]);
 
   return (
-    <div
-      className="not-prose relative w-full min-h-[300px] pb-[calc(50dvh)]"
-      ref={containerRef}
-    />
+    <div className="not-prose relative w-full min-h-[300px] pb-[calc(50dvh)]" ref={containerRef} />
   );
 }
 

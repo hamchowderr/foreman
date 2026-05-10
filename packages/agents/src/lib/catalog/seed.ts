@@ -45,11 +45,14 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
           page = await sdk.listApps({ cursor });
           break;
         } catch (err: any) {
-          const isRetryable = err.statusCode === 503 || err.statusCode === 429 || err.statusCode === 502;
+          const isRetryable =
+            err.statusCode === 503 || err.statusCode === 429 || err.statusCode === 502;
           if (isRetryable && retries < MAX_RETRIES) {
             retries++;
             const wait = Math.min(retries * 3000, 15000);
-            log(`  Transient error (${err.statusCode}), retry ${retries}/${MAX_RETRIES} in ${wait / 1000}s...`);
+            log(
+              `  Transient error (${err.statusCode}), retry ${retries}/${MAX_RETRIES} in ${wait / 1000}s...`,
+            );
             await sleep(wait);
           } else {
             throw err;
@@ -106,11 +109,7 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
           .map((c: any) => c.name ?? c.slug)
           .filter(Boolean);
 
-        const embeddingText = buildEmbeddingText(
-          app.title,
-          categoryNames,
-          actionDescriptions,
-        );
+        const embeddingText = buildEmbeddingText(app.title, categoryNames, actionDescriptions);
 
         // Upsert into app_catalog
         const supabase = getSupabase();
@@ -125,14 +124,13 @@ export async function seedCatalog(options: SeedOptions = {}): Promise<{
             embedding_text: embeddingText,
             synced_at: new Date().toISOString(),
           },
-          { onConflict: "app_key" }
+          { onConflict: "app_key" },
         );
 
         appsInserted++;
       }
 
       log(`  Processed ${Math.min(i + BATCH, apps.length)}/${apps.length} apps`);
-
     }
 
     log(`Inserted/updated ${appsInserted} apps in app_catalog`);

@@ -1,20 +1,44 @@
 "use client";
 
-import { motion, AnimatePresence, useInView } from "motion/react";
+import { AnimatePresence, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Search, Toolbox } from "@/components/icons/hi";
 
 // 33 MCP tools loosely modeled after zapier-sdk
 const ALL_TOOLS = [
-  "run-action", "search-actions", "list-apps", "list-connections",
-  "find-field-choices", "get-app", "fetch", "request", "auth-check",
-  "list-tables", "create-table", "delete-table", "create-table-records",
-  "update-table-records", "delete-table-records", "read-table-records",
-  "create-table-fields", "delete-table-fields", "list-users",
-  "get-webhook", "list-webhooks", "create-webhook", "delete-webhook",
-  "poll-trigger", "list-triggers", "get-action-schema", "list-files",
-  "upload-file", "download-file", "get-account", "list-teams",
-  "get-usage", "get-health",
+  "run-action",
+  "search-actions",
+  "list-apps",
+  "list-connections",
+  "find-field-choices",
+  "get-app",
+  "fetch",
+  "request",
+  "auth-check",
+  "list-tables",
+  "create-table",
+  "delete-table",
+  "create-table-records",
+  "update-table-records",
+  "delete-table-records",
+  "read-table-records",
+  "create-table-fields",
+  "delete-table-fields",
+  "list-users",
+  "get-webhook",
+  "list-webhooks",
+  "create-webhook",
+  "delete-webhook",
+  "poll-trigger",
+  "list-triggers",
+  "get-action-schema",
+  "list-files",
+  "upload-file",
+  "download-file",
+  "get-account",
+  "list-teams",
+  "get-usage",
+  "get-health",
 ];
 
 type Prompt = {
@@ -25,11 +49,23 @@ type Prompt = {
 const PROMPTS: Prompt[] = [
   {
     text: "Email Jake the Q3 deck",
-    matches: ["search-actions", "get-action-schema", "find-field-choices", "upload-file", "run-action"],
+    matches: [
+      "search-actions",
+      "get-action-schema",
+      "find-field-choices",
+      "upload-file",
+      "run-action",
+    ],
   },
   {
     text: "Create a Stripe invoice for $4,900",
-    matches: ["list-apps", "search-actions", "get-action-schema", "find-field-choices", "run-action"],
+    matches: [
+      "list-apps",
+      "search-actions",
+      "get-action-schema",
+      "find-field-choices",
+      "run-action",
+    ],
   },
   {
     text: "What apps am I connected to?",

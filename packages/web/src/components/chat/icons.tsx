@@ -1,4 +1,4 @@
-const BotIcon = () => {
+const _BotIcon = () => {
   return (
     <svg
       height="16"
@@ -17,7 +17,7 @@ const BotIcon = () => {
   );
 };
 
-const UserIcon = () => {
+const _UserIcon = () => {
   return (
     <svg
       data-testid="geist-icon"
@@ -37,7 +37,7 @@ const UserIcon = () => {
   );
 };
 
-const AttachmentIcon = () => {
+const _AttachmentIcon = () => {
   return (
     <svg
       height="16"
@@ -56,7 +56,7 @@ const AttachmentIcon = () => {
   );
 };
 
-const VercelIcon = ({ size = 17 }) => {
+const _VercelIcon = ({ size = 17 }) => {
   return (
     <svg
       height={size}
@@ -65,17 +65,12 @@ const VercelIcon = ({ size = 17 }) => {
       viewBox="0 0 16 16"
       width={size}
     >
-      <path
-        clipRule="evenodd"
-        d="M8 1L16 15H0L8 1Z"
-        fill="currentColor"
-        fillRule="evenodd"
-      />
+      <path clipRule="evenodd" d="M8 1L16 15H0L8 1Z" fill="currentColor" fillRule="evenodd" />
     </svg>
   );
 };
 
-const GitIcon = () => {
+const _GitIcon = () => {
   return (
     <svg
       height="16"
@@ -101,7 +96,7 @@ const GitIcon = () => {
   );
 };
 
-const BoxIcon = ({ size = 16 }: { size: number }) => {
+const _BoxIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -120,7 +115,7 @@ const BoxIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-const HomeIcon = ({ size = 16 }: { size: number }) => {
+const _HomeIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -139,7 +134,7 @@ const HomeIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-const GPSIcon = ({ size = 16 }: { size: number }) => {
+const _GPSIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -160,7 +155,7 @@ const GPSIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-const InvoiceIcon = ({ size = 16 }: { size: number }) => {
+const _InvoiceIcon = ({ size = 16 }: { size: number }) => {
   return (
     <svg
       height={size}
@@ -179,7 +174,7 @@ const InvoiceIcon = ({ size = 16 }: { size: number }) => {
   );
 };
 
-const LogoOpenAI = ({ size = 16 }: { size?: number }) => {
+const _LogoOpenAI = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -196,7 +191,7 @@ const LogoOpenAI = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const LogoGoogle = ({ size = 16 }: { size?: number }) => {
+const _LogoGoogle = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       data-testid="geist-icon"
@@ -226,7 +221,7 @@ const LogoGoogle = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const LogoAnthropic = () => {
+const _LogoAnthropic = () => {
   return (
     <svg
       height="18px"
@@ -246,7 +241,7 @@ const LogoAnthropic = () => {
   );
 };
 
-const RouteIcon = ({ size = 16 }: { size?: number }) => {
+const _RouteIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -295,12 +290,7 @@ export const LoaderIcon = ({ size = 16 }: { size?: number }) => {
     >
       <g clipPath="url(#clip0_2393_1490)">
         <path d="M8 0V4" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="M8 16V12"
-          opacity="0.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
+        <path d="M8 16V12" opacity="0.5" stroke="currentColor" strokeWidth="1.5" />
         <path
           d="M3.29773 1.52783L5.64887 4.7639"
           opacity="0.9"
@@ -359,7 +349,7 @@ export const LoaderIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const UploadIcon = ({ size = 16 }: { size?: number }) => {
+const _UploadIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       data-testid="geist-icon"
@@ -379,7 +369,7 @@ const UploadIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const MenuIcon = ({ size = 16 }: { size?: number }) => {
+const _MenuIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -417,7 +407,7 @@ export const PencilEditIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const CheckedSquare = ({ size = 16 }: { size?: number }) => {
+const _CheckedSquare = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -436,7 +426,7 @@ const CheckedSquare = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const UncheckedSquare = ({ size = 16 }: { size?: number }) => {
+const _UncheckedSquare = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -458,7 +448,7 @@ const UncheckedSquare = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const MoreIcon = ({ size = 16 }: { size?: number }) => {
+const _MoreIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -496,7 +486,7 @@ export const TrashIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const InfoIcon = ({ size = 16 }: { size?: number }) => {
+const _InfoIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -550,12 +540,7 @@ export const StopIcon = ({
       width={size}
       {...props}
     >
-      <path
-        clipRule="evenodd"
-        d="M3 3H13V13H3V3Z"
-        fill="currentColor"
-        fillRule="evenodd"
-      />
+      <path clipRule="evenodd" d="M3 3H13V13H3V3Z" fill="currentColor" fillRule="evenodd" />
     </svg>
   );
 };
@@ -690,7 +675,7 @@ export const RedoIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const DeltaIcon = ({ size = 16 }: { size?: number }) => (
+const _DeltaIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
@@ -707,7 +692,7 @@ const DeltaIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const CpuIcon = ({ size = 16 }: { size?: number }) => (
+const _CpuIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     fill="none"
     height={size}
@@ -768,7 +753,7 @@ export const SummarizeIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const SidebarLeftIcon = ({ size = 16 }: { size?: number }) => (
+const _SidebarLeftIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
@@ -785,7 +770,7 @@ const SidebarLeftIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const PlusIcon = ({ size = 16 }: { size?: number }) => (
+const _PlusIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"
@@ -950,7 +935,7 @@ export const LockIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const EyeIcon = ({ size = 16 }: { size?: number }) => {
+const _EyeIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -1026,7 +1011,7 @@ export const PlayIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const PythonIcon = ({ size = 16 }: { size?: number }) => {
+const _PythonIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -1066,7 +1051,7 @@ export const TerminalWindowIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-const TerminalIcon = ({ size = 16 }: { size?: number }) => {
+const _TerminalIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -1159,7 +1144,7 @@ export const FullscreenIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const DownloadIcon = ({ size = 16 }: { size?: number }) => (
+const _DownloadIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
     strokeLinejoin="round"

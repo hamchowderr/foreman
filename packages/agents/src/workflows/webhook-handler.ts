@@ -1,11 +1,7 @@
-import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const zapierEventSchema = z.enum([
-  "new_record",
-  "updated_record",
-  "trigger_fired",
-]);
+const zapierEventSchema = z.enum(["new_record", "updated_record", "trigger_fired"]);
 
 const webhookPayloadSchema = z.object({
   event: zapierEventSchema,
@@ -78,10 +74,7 @@ const processEvent = createStep({
 
     switch (event) {
       case "new_record":
-        console.log(
-          `[Webhook] New record from ${source}:`,
-          JSON.stringify(data),
-        );
+        console.log(`[Webhook] New record from ${source}:`, JSON.stringify(data));
         result = {
           status: "processed",
           event,
@@ -90,10 +83,7 @@ const processEvent = createStep({
         break;
 
       case "updated_record":
-        console.log(
-          `[Webhook] Updated record from ${source}:`,
-          JSON.stringify(data),
-        );
+        console.log(`[Webhook] Updated record from ${source}:`, JSON.stringify(data));
         result = {
           status: "processed",
           event,
@@ -102,10 +92,7 @@ const processEvent = createStep({
         break;
 
       case "trigger_fired":
-        console.log(
-          `[Webhook] Trigger fired from ${source}:`,
-          JSON.stringify(data),
-        );
+        console.log(`[Webhook] Trigger fired from ${source}:`, JSON.stringify(data));
         result = {
           status: "processed",
           event,

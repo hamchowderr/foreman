@@ -24,13 +24,10 @@ export function useFileUpload({
     formData.append("file", file);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/files/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/files/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -59,7 +56,7 @@ export function useFileUpload({
         const uploadPromises = files.map((file) => uploadFile(file));
         const uploadedAttachments = await Promise.all(uploadPromises);
         const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined
+          (attachment) => attachment !== undefined,
         );
 
         setAttachments((currentAttachments) => [
@@ -72,7 +69,7 @@ export function useFileUpload({
         setUploadQueue([]);
       }
     },
-    [setAttachments, setUploadQueue, uploadFile]
+    [setAttachments, setUploadQueue, uploadFile],
   );
 
   const handlePaste = useCallback(
@@ -82,9 +79,7 @@ export function useFileUpload({
         return;
       }
 
-      const imageItems = Array.from(items).filter((item) =>
-        item.type.startsWith("image/")
-      );
+      const imageItems = Array.from(items).filter((item) => item.type.startsWith("image/"));
 
       if (imageItems.length === 0) {
         return;
@@ -105,20 +100,17 @@ export function useFileUpload({
           (attachment) =>
             attachment !== undefined &&
             attachment.url !== undefined &&
-            attachment.contentType !== undefined
+            attachment.contentType !== undefined,
         );
 
-        setAttachments((curr) => [
-          ...curr,
-          ...(successfullyUploadedAttachments as Attachment[]),
-        ]);
+        setAttachments((curr) => [...curr, ...(successfullyUploadedAttachments as Attachment[])]);
       } catch (_error) {
         toast.error("Failed to upload pasted image(s)");
       } finally {
         setUploadQueue([]);
       }
     },
-    [setAttachments, setUploadQueue, uploadFile]
+    [setAttachments, setUploadQueue, uploadFile],
   );
 
   useEffect(() => {

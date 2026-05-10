@@ -1,5 +1,5 @@
-import { getSupabase } from "./db";
 import { createHash, randomUUID } from "node:crypto";
+import { getSupabase } from "./db";
 
 // ─── Supabase JWT Resolution ───
 
@@ -12,12 +12,13 @@ export interface SupabaseJwtResult {
  * Validate a Supabase JWT via the admin client and extract user ID + org.
  * Uses the service_role client which verifies the JWT server-side.
  */
-export async function resolveFromSupabaseJwt(
-  token: string
-): Promise<SupabaseJwtResult | null> {
+export async function resolveFromSupabaseJwt(token: string): Promise<SupabaseJwtResult | null> {
   try {
     const supabase = getSupabase();
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
     if (error || !user) return null;
 
     return {
@@ -42,7 +43,7 @@ export async function ensureUserExists(userId: string): Promise<void> {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-    { onConflict: "id", ignoreDuplicates: true }
+    { onConflict: "id", ignoreDuplicates: true },
   );
 }
 
@@ -78,7 +79,7 @@ export async function resolveFromApiKey(key: string): Promise<string | null> {
 export async function createApiKey(
   userId: string,
   name: string,
-  scopes: string[] = ["read", "write", "execute"]
+  scopes: string[] = ["read", "write", "execute"],
 ): Promise<{ id: string; key: string }> {
   const supabase = getSupabase();
   const id = randomUUID();
@@ -101,7 +102,7 @@ export async function createApiKey(
 
 export async function resolveFromChannel(
   channel: string,
-  channelUserId: string
+  channelUserId: string,
 ): Promise<string | null> {
   const supabase = getSupabase();
   const { data } = await supabase
@@ -118,7 +119,7 @@ export async function resolveFromChannel(
 export async function registerChannelUser(
   channel: string,
   channelUserId: string,
-  displayName?: string
+  displayName?: string,
 ): Promise<string> {
   const existing = await resolveFromChannel(channel, channelUserId);
   if (existing) return existing;
@@ -180,10 +181,7 @@ export async function redeemChannelLinkCode(
   if (data.expires_at < now) return { ok: false, error: "expired" };
 
   // Mark code as used
-  await supabase
-    .from("channel_link_code")
-    .update({ used_at: now })
-    .eq("id", data.id);
+  await supabase.from("channel_link_code").update({ used_at: now }).eq("id", data.id);
 
   // Upsert channel_identity: link this channel account to the web user
   const { data: existing } = await supabase
@@ -218,16 +216,27 @@ export async function redeemChannelLinkCode(
 export interface ResolvedIdentity {
   userId: string;
   orgId?: string;
-  channel: "web" | "telegram" | "slack" | "discord" | "mcp" | "a2a" | "dev" | "teams" | "gchat" | "whatsapp" | "github" | "linear" | "imessage";
+  channel:
+    | "web"
+    | "telegram"
+    | "slack"
+    | "discord"
+    | "mcp"
+    | "a2a"
+    | "dev"
+    | "teams"
+    | "gchat"
+    | "whatsapp"
+    | "github"
+    | "linear"
+    | "imessage";
 }
 
 /**
  * Resolve user identity from request headers.
  * Tries: Bearer token (Supabase JWT) → X-API-Key → null.
  */
-export async function resolveFromRequest(
-  request: Request
-): Promise<ResolvedIdentity | null> {
+export async function resolveFromRequest(request: Request): Promise<ResolvedIdentity | null> {
   const authHeader = request.headers.get("authorization");
 
   // 1. Bearer token (Supabase JWT)

@@ -27,7 +27,7 @@ export async function getInputFieldsSchema(
   app: string,
   actionType: string,
   action: string,
-  connection?: string
+  connection?: string,
 ) {
   const sdk = await getSdkForUser(userId);
   const { data } = await sdk.getInputFieldsSchema({
@@ -45,7 +45,7 @@ export async function getInputFieldChoices(
   actionType: string,
   action: string,
   inputField: string,
-  connection?: string
+  connection?: string,
 ) {
   const sdk = await getSdkForUser(userId);
   const { data } = await sdk.listInputFieldChoices({

@@ -2,11 +2,11 @@ import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import { validateParam } from "@/lib/validation";
+import { executeWorkflow } from "@/lib/workflows/engine";
+import { extractParams } from "@/lib/workflows/params";
+import { saveWorkflowFromConversation } from "@/lib/workflows/save";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
-import { executeWorkflow } from "@/lib/workflows/engine";
-import { saveWorkflowFromConversation } from "@/lib/workflows/save";
-import { extractParams } from "@/lib/workflows/params";
 
 const workflows = new Hono<AppEnv>();
 
@@ -61,7 +61,7 @@ workflows.get("/", async (c) => {
       parameters: JSON.parse(w.parameters),
       created_at: w.created_at,
       updated_at: w.updated_at,
-    }))
+    })),
   );
 });
 
@@ -83,7 +83,7 @@ workflows.get("/templates", async (c) => {
       parameters: JSON.parse(w.parameters),
       created_at: w.created_at,
       updated_at: w.updated_at,
-    }))
+    })),
   );
 });
 
@@ -173,7 +173,10 @@ workflows.post("/:id/clone", async (c) => {
   const newSteps = (sourceSteps ?? []).map((s: any) => {
     const template = JSON.parse(s.proposal_template) as Record<string, unknown>;
     const rawConnection = template.connectionId;
-    if (typeof rawConnection === "number" || (typeof rawConnection === "string" && /^\d+$/.test(rawConnection))) {
+    if (
+      typeof rawConnection === "number" ||
+      (typeof rawConnection === "string" && /^\d+$/.test(rawConnection))
+    ) {
       delete template.connectionId;
     }
     return {
@@ -276,7 +279,7 @@ workflows.get("/:id/runs", async (c) => {
       status: r.status,
       created_at: r.created_at,
       completed_at: r.completed_at ?? null,
-    }))
+    })),
   );
 });
 
@@ -302,7 +305,11 @@ workflows.post("/:id/run", async (c) => {
   }
 
   let body: any;
-  try { body = await c.req.json(); } catch { body = {}; }
+  try {
+    body = await c.req.json();
+  } catch {
+    body = {};
+  }
   const inputs = body.inputs ?? {};
 
   const inputsStr = JSON.stringify(inputs);
@@ -324,7 +331,7 @@ workflows.post("/:id/run", async (c) => {
             type: "error",
             code: "WORKFLOW_RUN_ERROR",
             message: err instanceof Error ? err.message : String(err),
-          })
+          }),
         );
       } finally {
         controller.close();

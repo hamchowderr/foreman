@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Supabase mock ───
 
@@ -6,12 +6,23 @@ let nextQueryResult: any = { data: null, error: null };
 
 function createChain() {
   const builder: any = {};
-  const chainMethods = ["select", "eq", "neq", "limit", "order", "insert", "update", "upsert", "delete"];
+  const chainMethods = [
+    "select",
+    "eq",
+    "neq",
+    "limit",
+    "order",
+    "insert",
+    "update",
+    "upsert",
+    "delete",
+  ];
   for (const method of chainMethods) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextQueryResult));
   builder.maybeSingle = vi.fn().mockImplementation(() => Promise.resolve(nextQueryResult));
+  // biome-ignore lint/suspicious/noThenProperty: deliberate — mock makes the Supabase query builder thenable so tests can `await builder`
   builder.then = (resolve: any) => resolve(nextQueryResult);
   return builder;
 }
@@ -27,7 +38,13 @@ const mockSupabase = {
 
 vi.mock("@/lib/db", () => ({
   getSupabase: () => mockSupabase,
-  __mocks: { mockAuth, mockSupabase, setNextResult: (r: any) => { nextQueryResult = r; } },
+  __mocks: {
+    mockAuth,
+    mockSupabase,
+    setNextResult: (r: any) => {
+      nextQueryResult = r;
+    },
+  },
 }));
 
 describe("identity", () => {

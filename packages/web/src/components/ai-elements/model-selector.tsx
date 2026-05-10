@@ -1,5 +1,5 @@
+import type { Popover as PopoverPrimitive } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
-
 import {
   Command,
   CommandEmpty,
@@ -10,19 +10,12 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import type { Popover as PopoverPrimitive } from "radix-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export type ModelSelectorProps = React.ComponentProps<typeof PopoverPrimitive.Root>;
 
-export const ModelSelector = (props: ModelSelectorProps) => (
-  <Popover {...props} />
-);
+export const ModelSelector = (props: ModelSelectorProps) => <Popover {...props} />;
 
 export type ModelSelectorTriggerProps = ComponentProps<typeof PopoverTrigger>;
 
@@ -44,24 +37,19 @@ export const ModelSelectorContent = ({
     align="start"
     className={cn(
       "w-[280px] p-0 rounded-xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-float)]",
-      className
+      className,
     )}
     side="top"
     sideOffset={8}
     {...props}
   >
-    <Command className="**:data-[slot=command-input-wrapper]:h-auto">
-      {children}
-    </Command>
+    <Command className="**:data-[slot=command-input-wrapper]:h-auto">{children}</Command>
   </PopoverContent>
 );
 
 export type ModelSelectorInputProps = ComponentProps<typeof CommandInput>;
 
-export const ModelSelectorInput = ({
-  className,
-  ...props
-}: ModelSelectorInputProps) => (
+export const ModelSelectorInput = ({ className, ...props }: ModelSelectorInputProps) => (
   <CommandInput className={cn("h-auto py-2.5 text-[13px]", className)} {...props} />
 );
 
@@ -73,15 +61,11 @@ export const ModelSelectorList = ({ className, ...props }: ModelSelectorListProp
 
 export type ModelSelectorEmptyProps = ComponentProps<typeof CommandEmpty>;
 
-export const ModelSelectorEmpty = (props: ModelSelectorEmptyProps) => (
-  <CommandEmpty {...props} />
-);
+export const ModelSelectorEmpty = (props: ModelSelectorEmptyProps) => <CommandEmpty {...props} />;
 
 export type ModelSelectorGroupProps = ComponentProps<typeof CommandGroup>;
 
-export const ModelSelectorGroup = (props: ModelSelectorGroupProps) => (
-  <CommandGroup {...props} />
-);
+export const ModelSelectorGroup = (props: ModelSelectorGroupProps) => <CommandGroup {...props} />;
 
 export type ModelSelectorItemProps = ComponentProps<typeof CommandItem>;
 
@@ -95,18 +79,13 @@ export const ModelSelectorShortcut = (props: ModelSelectorShortcutProps) => (
   <CommandShortcut {...props} />
 );
 
-export type ModelSelectorSeparatorProps = ComponentProps<
-  typeof CommandSeparator
->;
+export type ModelSelectorSeparatorProps = ComponentProps<typeof CommandSeparator>;
 
 export const ModelSelectorSeparator = (props: ModelSelectorSeparatorProps) => (
   <CommandSeparator {...props} />
 );
 
-export type ModelSelectorLogoProps = Omit<
-  ComponentProps<"img">,
-  "src" | "alt"
-> & {
+export type ModelSelectorLogoProps = Omit<ComponentProps<"img">, "src" | "alt"> & {
   provider:
     | "moonshotai-cn"
     | "lucidquery"
@@ -168,11 +147,7 @@ export type ModelSelectorLogoProps = Omit<
     | (string & {});
 };
 
-export const ModelSelectorLogo = ({
-  provider,
-  className,
-  ...props
-}: ModelSelectorLogoProps) => (
+export const ModelSelectorLogo = ({ provider, className, ...props }: ModelSelectorLogoProps) => (
   <img
     {...props}
     alt={`${provider} logo`}
@@ -185,14 +160,11 @@ export const ModelSelectorLogo = ({
 
 export type ModelSelectorLogoGroupProps = ComponentProps<"div">;
 
-export const ModelSelectorLogoGroup = ({
-  className,
-  ...props
-}: ModelSelectorLogoGroupProps) => (
+export const ModelSelectorLogoGroup = ({ className, ...props }: ModelSelectorLogoGroupProps) => (
   <div
     className={cn(
       "flex shrink-0 items-center -space-x-1 [&>img]:rounded-full [&>img]:p-px [&>img]:ring-1 [&>img]:ring-border/30",
-      className
+      className,
     )}
     {...props}
   />
@@ -200,9 +172,6 @@ export const ModelSelectorLogoGroup = ({
 
 export type ModelSelectorNameProps = ComponentProps<"span">;
 
-export const ModelSelectorName = ({
-  className,
-  ...props
-}: ModelSelectorNameProps) => (
+export const ModelSelectorName = ({ className, ...props }: ModelSelectorNameProps) => (
   <span className={cn("flex-1 truncate text-left", className)} {...props} />
 );

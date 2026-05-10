@@ -1,18 +1,14 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
-import { auth } from "@/lib/auth";
 import { EditorShell } from "@/components/editor/editor-shell";
+import { auth } from "@/lib/auth";
 
 export const metadata = {
   title: "Agent Editor — Foreman",
 };
 
-export default function EditorLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function EditorLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Toaster
@@ -37,8 +33,6 @@ async function EditorAuthGate({ children }: { children: React.ReactNode }) {
     redirect("/sign-in?redirect_url=/editor");
   }
   return (
-    <EditorShell user={{ id: session.user.id, email: session.user.email }}>
-      {children}
-    </EditorShell>
+    <EditorShell user={{ id: session.user.id, email: session.user.email }}>{children}</EditorShell>
   );
 }

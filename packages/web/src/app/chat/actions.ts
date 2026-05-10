@@ -2,24 +2,19 @@
 
 import type { UIMessage } from "ai";
 import { cookies } from "next/headers";
+import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { auth } from "@/lib/auth";
 import { createClient } from "@/lib/server";
-import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { getTextFromMessage } from "@/lib/utils";
 
-const AGENT_SERVER_URL =
-  process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+const AGENT_SERVER_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
   cookieStore.set("chat-model", model);
 }
 
-export async function generateTitleFromUserMessage({
-  message,
-}: {
-  message: UIMessage;
-}) {
+export async function generateTitleFromUserMessage({ message }: { message: UIMessage }) {
   const text = getTextFromMessage(message);
   return text.split(/\s+/).slice(0, 6).join(" ").trim() || "New Chat";
 }
@@ -42,7 +37,9 @@ export async function updateChatVisibility({
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const supabase = await createClient();
-  const { data: { session: supaSession } } = await supabase.auth.getSession();
+  const {
+    data: { session: supaSession },
+  } = await supabase.auth.getSession();
   if (!supaSession) throw new Error("Unauthorized");
 
   const res = await fetch(`${AGENT_SERVER_URL}/conversations/${chatId}`, {

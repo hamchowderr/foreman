@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock every module the processor reaches into. The barrel re-exports
 // listUserConnections, but loadUserConnectionsMap and searchAppCatalog
@@ -83,9 +83,7 @@ describe("contextInjector", () => {
   });
 
   it("uses app_key as fallback when app_name is missing", async () => {
-    mockedListUserConnections.mockResolvedValue([
-      { app_key: "custom_app" },
-    ]);
+    mockedListUserConnections.mockResolvedValue([{ app_key: "custom_app" }]);
     const requestContext = new Map([["userId", "user-1"]]);
 
     const result = await contextInjector.processInput!({

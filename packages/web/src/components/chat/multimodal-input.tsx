@@ -29,15 +29,11 @@ import {
 import { AttachmentsButton } from "./multimodal/attachments-button";
 import { AttachmentsPreview } from "./multimodal/attachments-preview";
 import { useFileUpload } from "./multimodal/file-upload";
+import { MicButton } from "./multimodal/mic-button";
 import { ModelSelectorCompact } from "./multimodal/model-selector-compact";
 import { createSlashHandler } from "./multimodal/slash-handler";
-import { MicButton } from "./multimodal/mic-button";
 import { StopButton } from "./multimodal/stop-button";
-import {
-  type SlashCommand,
-  SlashCommandMenu,
-  slashCommands,
-} from "./slash-commands";
+import { type SlashCommand, SlashCommandMenu, slashCommands } from "./slash-commands";
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 
@@ -69,9 +65,7 @@ function PureMultimodalInput({
   setAttachments: Dispatch<SetStateAction<Attachment[]>>;
   messages: UIMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
-  sendMessage:
-    | UseChatHelpers<ChatMessage>["sendMessage"]
-    | (() => Promise<void>);
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"] | (() => Promise<void>);
   className?: string;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
@@ -92,10 +86,7 @@ function PureMultimodalInput({
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
 
-  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
-    "input",
-    ""
-  );
+  const [localStorageInput, setLocalStorageInput] = useLocalStorage("input", "");
 
   useEffect(() => {
     if (!hasAutoFocused.current && width) {
@@ -145,7 +136,7 @@ function PureMultimodalInput({
       });
       handler(cmd);
     },
-    [chatId, setInput, setMessages, router, setTheme, resolvedTheme]
+    [chatId, setInput, setMessages, router, setTheme, resolvedTheme],
   );
 
   const { handleFileChange } = useFileUpload({
@@ -155,11 +146,7 @@ function PureMultimodalInput({
   });
 
   const submitForm = useCallback(() => {
-    window.history.pushState(
-      {},
-      "",
-      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
-    );
+    window.history.pushState({}, "", `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`);
 
     sendMessage({
       role: "user",
@@ -279,7 +266,7 @@ function PureMultimodalInput({
           onKeyDown={(e) => {
             if (slashOpen) {
               const filtered = slashCommands.filter((cmd) =>
-                cmd.name.startsWith(slashQuery.toLowerCase())
+                cmd.name.startsWith(slashQuery.toLowerCase()),
               );
               if (e.key === "ArrowDown") {
                 e.preventDefault();
@@ -309,9 +296,7 @@ function PureMultimodalInput({
               onCancelEdit();
             }
           }}
-          placeholder={
-            editingMessage ? "Edit your message..." : "Ask anything..."
-          }
+          placeholder={editingMessage ? "Edit your message..." : "Ask anything..."}
           ref={textareaRef}
           value={input}
         />
@@ -324,14 +309,9 @@ function PureMultimodalInput({
             />
             <MicButton
               disabled={status === "submitted"}
-              onTranscript={(text) =>
-                setInput((prev) => (prev ? `${prev} ${text}` : text))
-              }
+              onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
             />
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
+            <ModelSelectorCompact onModelChange={onModelChange} selectedModelId={selectedModelId} />
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -342,7 +322,7 @@ function PureMultimodalInput({
                 "h-7 w-7 rounded-xl transition-all duration-200",
                 input.trim()
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
-                  : "bg-muted text-muted-foreground/25 cursor-not-allowed"
+                  : "bg-muted text-muted-foreground/25 cursor-not-allowed",
               )}
               data-testid="send-button"
               disabled={!input.trim() || uploadQueue.length > 0}
@@ -358,34 +338,31 @@ function PureMultimodalInput({
   );
 }
 
-export const MultimodalInput = memo(
-  PureMultimodalInput,
-  (prevProps, nextProps) => {
-    if (prevProps.input !== nextProps.input) {
-      return false;
-    }
-    if (prevProps.status !== nextProps.status) {
-      return false;
-    }
-    if (!equal(prevProps.attachments, nextProps.attachments)) {
-      return false;
-    }
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
-      return false;
-    }
-    if (prevProps.selectedModelId !== nextProps.selectedModelId) {
-      return false;
-    }
-    if (prevProps.editingMessage !== nextProps.editingMessage) {
-      return false;
-    }
-    if (prevProps.isLoading !== nextProps.isLoading) {
-      return false;
-    }
-    if (prevProps.messages.length !== nextProps.messages.length) {
-      return false;
-    }
-
-    return true;
+export const MultimodalInput = memo(PureMultimodalInput, (prevProps, nextProps) => {
+  if (prevProps.input !== nextProps.input) {
+    return false;
   }
-);
+  if (prevProps.status !== nextProps.status) {
+    return false;
+  }
+  if (!equal(prevProps.attachments, nextProps.attachments)) {
+    return false;
+  }
+  if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
+    return false;
+  }
+  if (prevProps.selectedModelId !== nextProps.selectedModelId) {
+    return false;
+  }
+  if (prevProps.editingMessage !== nextProps.editingMessage) {
+    return false;
+  }
+  if (prevProps.isLoading !== nextProps.isLoading) {
+    return false;
+  }
+  if (prevProps.messages.length !== nextProps.messages.length) {
+    return false;
+  }
+
+  return true;
+});

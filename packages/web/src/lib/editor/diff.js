@@ -46,48 +46,31 @@ export const patchDocumentNode = (schema, oldNode, newNode) => {
   const diffNewChildren = newChildren.slice(left, newChildLen - right);
 
   if (diffOldChildren.length && diffNewChildren.length) {
-    const matchedNodes = matchNodes(
-      schema,
-      diffOldChildren,
-      diffNewChildren
-    ).sort((a, b) => b.count - a.count);
+    const matchedNodes = matchNodes(schema, diffOldChildren, diffNewChildren).sort(
+      (a, b) => b.count - a.count,
+    );
     const bestMatch = matchedNodes[0];
     if (bestMatch) {
-      const { oldStartIndex, newStartIndex, oldEndIndex, newEndIndex } =
-        bestMatch;
+      const { oldStartIndex, newStartIndex, oldEndIndex, newEndIndex } = bestMatch;
       const oldBeforeMatchChildren = diffOldChildren.slice(0, oldStartIndex);
       const newBeforeMatchChildren = diffNewChildren.slice(0, newStartIndex);
 
       finalLeftChildren.push(
-        ...patchRemainNodes(
-          schema,
-          oldBeforeMatchChildren,
-          newBeforeMatchChildren
-        )
+        ...patchRemainNodes(schema, oldBeforeMatchChildren, newBeforeMatchChildren),
       );
-      finalLeftChildren.push(
-        ...diffOldChildren.slice(oldStartIndex, oldEndIndex)
-      );
+      finalLeftChildren.push(...diffOldChildren.slice(oldStartIndex, oldEndIndex));
 
       const oldAfterMatchChildren = diffOldChildren.slice(oldEndIndex);
       const newAfterMatchChildren = diffNewChildren.slice(newEndIndex);
 
       finalRightChildren.unshift(
-        ...patchRemainNodes(
-          schema,
-          oldAfterMatchChildren,
-          newAfterMatchChildren
-        )
+        ...patchRemainNodes(schema, oldAfterMatchChildren, newAfterMatchChildren),
       );
     } else {
-      finalLeftChildren.push(
-        ...patchRemainNodes(schema, diffOldChildren, diffNewChildren)
-      );
+      finalLeftChildren.push(...patchRemainNodes(schema, diffOldChildren, diffNewChildren));
     }
   } else {
-    finalLeftChildren.push(
-      ...patchRemainNodes(schema, diffOldChildren, diffNewChildren)
-    );
+    finalLeftChildren.push(...patchRemainNodes(schema, diffOldChildren, diffNewChildren));
   }
 
   return createNewNode(oldNode, [...finalLeftChildren, ...finalRightChildren]);
@@ -95,11 +78,7 @@ export const patchDocumentNode = (schema, oldNode, newNode) => {
 
 const matchNodes = (_schema, oldChildren, newChildren) => {
   const matches = [];
-  for (
-    let oldStartIndex = 0;
-    oldStartIndex < oldChildren.length;
-    oldStartIndex++
-  ) {
+  for (let oldStartIndex = 0; oldStartIndex < oldChildren.length; oldStartIndex++) {
     const oldStartNode = oldChildren[oldStartIndex];
     const newStartIndex = findMatchNode(newChildren, oldStartNode);
 
@@ -149,24 +128,17 @@ const patchRemainNodes = (schema, oldChildren, newChildren) => {
     const leftNewNode = newChildren[left];
     const rightOldNode = oldChildren[oldChildLen - right - 1];
     const rightNewNode = newChildren[newChildLen - right - 1];
-    let updateLeft =
-      !isTextNode(leftOldNode) && matchNodeType(leftOldNode, leftNewNode);
-    let updateRight =
-      !isTextNode(rightOldNode) && matchNodeType(rightOldNode, rightNewNode);
+    let updateLeft = !isTextNode(leftOldNode) && matchNodeType(leftOldNode, leftNewNode);
+    let updateRight = !isTextNode(rightOldNode) && matchNodeType(rightOldNode, rightNewNode);
     if (Array.isArray(leftOldNode) && Array.isArray(leftNewNode)) {
-      finalLeftChildren.push(
-        ...patchTextNodes(schema, leftOldNode, leftNewNode)
-      );
+      finalLeftChildren.push(...patchTextNodes(schema, leftOldNode, leftNewNode));
       left += 1;
       continue;
     }
 
     if (updateLeft && updateRight) {
       const equalityLeft = computeChildEqualityFactor(leftOldNode, leftNewNode);
-      const equalityRight = computeChildEqualityFactor(
-        rightOldNode,
-        rightNewNode
-      );
+      const equalityRight = computeChildEqualityFactor(rightOldNode, rightNewNode);
       if (equalityLeft < equalityRight) {
         updateLeft = false;
       } else {
@@ -174,23 +146,15 @@ const patchRemainNodes = (schema, oldChildren, newChildren) => {
       }
     }
     if (updateLeft) {
-      finalLeftChildren.push(
-        patchDocumentNode(schema, leftOldNode, leftNewNode)
-      );
+      finalLeftChildren.push(patchDocumentNode(schema, leftOldNode, leftNewNode));
       left += 1;
     } else if (updateRight) {
-      finalRightChildren.unshift(
-        patchDocumentNode(schema, rightOldNode, rightNewNode)
-      );
+      finalRightChildren.unshift(patchDocumentNode(schema, rightOldNode, rightNewNode));
       right += 1;
     } else {
       // Delete and insert
-      finalLeftChildren.push(
-        createDiffNode(schema, leftOldNode, DiffType.Deleted)
-      );
-      finalLeftChildren.push(
-        createDiffNode(schema, leftNewNode, DiffType.Inserted)
-      );
+      finalLeftChildren.push(createDiffNode(schema, leftOldNode, DiffType.Deleted));
+      finalLeftChildren.push(createDiffNode(schema, leftNewNode, DiffType.Inserted));
       left += 1;
     }
   }
@@ -202,7 +166,7 @@ const patchRemainNodes = (schema, oldChildren, newChildren) => {
       ...oldChildren
         .slice(left, left + deleteNodeLen)
         .flat()
-        .map((node) => createDiffNode(schema, node, DiffType.Deleted))
+        .map((node) => createDiffNode(schema, node, DiffType.Deleted)),
     );
   }
 
@@ -211,7 +175,7 @@ const patchRemainNodes = (schema, oldChildren, newChildren) => {
       ...newChildren
         .slice(left, left + insertNodeLen)
         .flat()
-        .map((node) => createDiffNode(schema, node, DiffType.Inserted))
+        .map((node) => createDiffNode(schema, node, DiffType.Inserted)),
     );
   }
 
@@ -231,19 +195,14 @@ export const patchTextNodes = (schema, oldNode, newNode) => {
   const newSentences = tokenizeSentences(newText);
 
   // Map sentences to unique characters
-  const { chars1, chars2, lineArray } = sentencesToChars(
-    oldSentences,
-    newSentences
-  );
+  const { chars1, chars2, lineArray } = sentencesToChars(oldSentences, newSentences);
 
   // Perform the diff
   let diffs = dmp.diff_main(chars1, chars2, false);
 
   // Convert back to sentences
   diffs = diffs.map(([type, text]) => {
-    const sentences = text
-      .split("")
-      .map((char) => lineArray[char.charCodeAt(0)]);
+    const sentences = text.split("").map((char) => lineArray[char.charCodeAt(0)]);
     return [type, sentences];
   });
 
@@ -253,7 +212,7 @@ export const patchTextNodes = (schema, oldNode, newNode) => {
       const node = createTextNode(
         schema,
         sentence,
-        type === DiffType.Unchanged ? [] : [createDiffMark(schema, type)]
+        type === DiffType.Unchanged ? [] : [createDiffMark(schema, type)],
       );
       return node;
     });
@@ -324,8 +283,7 @@ export const isNodeEqual = (node1, node2) => {
   }
   if (isNode1Array) {
     return (
-      node1.length === node2.length &&
-      node1.every((node, index) => isNodeEqual(node, node2[index]))
+      node1.length === node2.length && node1.every((node, index) => isNodeEqual(node, node2[index]))
     );
   }
 
@@ -416,19 +374,13 @@ export const getNodeText = (node) => node.text;
 export const isTextNode = (node) => node.type?.name === "text";
 
 export const matchNodeType = (node1, node2) =>
-  node1.type?.name === node2.type?.name ||
-  (Array.isArray(node1) && Array.isArray(node2));
+  node1.type?.name === node2.type?.name || (Array.isArray(node1) && Array.isArray(node2));
 
 export const createNewNode = (oldNode, children) => {
   if (!oldNode.type) {
     throw new Error("oldNode.type is undefined");
   }
-  return new Node(
-    oldNode.type,
-    oldNode.attrs,
-    Fragment.fromArray(children),
-    oldNode.marks
-  );
+  return new Node(oldNode.type, oldNode.attrs, Fragment.fromArray(children), oldNode.marks);
 };
 
 export const createDiffNode = (schema, node, type) => {
@@ -448,8 +400,8 @@ function mapDocumentNode(node, mapper) {
     Fragment.from(
       node.content.content
         .map((currentNode) => mapDocumentNode(currentNode, mapper))
-        .filter((n) => n)
-    )
+        .filter((n) => n),
+    ),
   );
   return mapper(copy) || copy;
 }

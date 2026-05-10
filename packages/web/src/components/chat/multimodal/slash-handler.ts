@@ -37,7 +37,7 @@ export function createSlashHandler({
         break;
       case "model": {
         const modelBtn = document.querySelector<HTMLButtonElement>(
-          "[data-testid='model-selector']"
+          "[data-testid='model-selector']",
         );
         modelBtn?.click();
         break;
@@ -50,10 +50,9 @@ export function createSlashHandler({
           action: {
             label: "Delete",
             onClick: () => {
-              fetch(
-                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatId}`,
-                { method: "DELETE" }
-              );
+              fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatId}`, {
+                method: "DELETE",
+              });
               router.push("/");
               toast.success("Chat deleted");
             },

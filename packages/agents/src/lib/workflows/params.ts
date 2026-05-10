@@ -27,13 +27,11 @@ export function extractParams(template: Record<string, unknown>): string[] {
 /** Deep-substitute {{param}} placeholders with provided values. */
 export function substituteParams(
   template: Record<string, unknown>,
-  values: Record<string, string>
+  values: Record<string, string>,
 ): Record<string, unknown> {
   function walk(value: unknown): unknown {
     if (typeof value === "string") {
-      return value.replace(PARAM_RE, (full, key) =>
-        key in values ? values[key] : full
-      );
+      return value.replace(PARAM_RE, (full, key) => (key in values ? values[key] : full));
     }
     if (Array.isArray(value)) {
       return value.map(walk);
@@ -54,7 +52,7 @@ export function substituteParams(
 /** Validate that all required parameters have been provided. */
 export function validateParams(
   template: Record<string, unknown>,
-  values: Record<string, string>
+  values: Record<string, string>,
 ): { valid: boolean; missing: string[] } {
   const required = extractParams(template);
   const missing = required.filter((p) => !(p in values));

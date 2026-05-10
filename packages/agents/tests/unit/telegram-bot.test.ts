@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
 import { randomBytes } from "node:crypto";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Prevent real Telegram API calls during adapter init
 vi.mock("@chat-adapter/telegram", () => ({
@@ -10,6 +10,7 @@ vi.mock("@chat-adapter/telegram", () => ({
 }));
 
 vi.mock("chat", () => ({
+  // biome-ignore lint/complexity/useArrowFunction: must be a constructable function — `new Chat()` is called in production code
   Chat: vi.fn().mockImplementation(function () {
     return {
       onDirectMessage: vi.fn(),

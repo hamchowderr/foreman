@@ -1,17 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence, useInView } from "motion/react";
-import { useEffect, useRef, useState } from "react";
-import {
-  ScanEye,
-  Lock,
-  Mail,
-  Phone,
-  IdCard,
-  Key,
-  CreditCard,
-} from "@/components/icons/hi";
+import { AnimatePresence, motion, useInView } from "motion/react";
 import type { ComponentType } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CreditCard, IdCard, Key, Lock, Mail, Phone, ScanEye } from "@/components/icons/hi";
 
 type Token = {
   text: string;
@@ -101,9 +93,7 @@ export function PiiTypewriter() {
         <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <ScanEye className="h-4 w-4 text-accent shrink-0" />
-            <span className="text-xs font-medium text-muted truncate">
-              Sensitive data filter
-            </span>
+            <span className="text-xs font-medium text-muted truncate">Sensitive data filter</span>
           </div>
           <motion.span
             animate={{ color: redacted ? "var(--accent)" : "var(--muted)" }}
@@ -183,13 +173,7 @@ function SensitiveToken({
   );
 }
 
-function Metric({
-  label,
-  Icon,
-}: {
-  label: string;
-  Icon: ComponentType<{ className?: string }>;
-}) {
+function Metric({ label, Icon }: { label: string; Icon: ComponentType<{ className?: string }> }) {
   return (
     <span className="flex items-center gap-1.5">
       <Icon className="h-3.5 w-3.5 text-accent" />

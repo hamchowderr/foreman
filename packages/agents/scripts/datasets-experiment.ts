@@ -24,23 +24,15 @@
 process.env.DUCKDB_PATH = process.env.DUCKDB_PATH ?? "./data/smoke.duckdb";
 
 const { mastra } = await import("../src/mastra");
-const { foremanTrajectoryScorer } = await import(
-  "../src/lib/scorers/foreman-trajectory"
-);
-const { foremanLLMJudgeScorer } = await import(
-  "../src/lib/scorers/foreman-llm-judge"
-);
+const { foremanTrajectoryScorer } = await import("../src/lib/scorers/foreman-trajectory");
+const { foremanLLMJudgeScorer } = await import("../src/lib/scorers/foreman-llm-judge");
 
 const DATASET_NAME = "foreman-baseline-v1";
 
 async function main() {
   const args = process.argv.slice(2);
   const limitIdx = args.indexOf("--limit");
-  const limit = args.includes("--full")
-    ? Infinity
-    : limitIdx >= 0
-      ? Number(args[limitIdx + 1])
-      : 5;
+  const limit = args.includes("--full") ? Infinity : limitIdx >= 0 ? Number(args[limitIdx + 1]) : 5;
   const isAsync = args.includes("--async");
 
   console.log("=== Foreman Datasets — Run Experiment ===");
@@ -77,13 +69,9 @@ async function main() {
   };
 
   if (isAsync) {
-    const { experimentId, status } = await dataset.startExperimentAsync(
-      startOpts as any,
-    );
+    const { experimentId, status } = await dataset.startExperimentAsync(startOpts as any);
     console.log(`Started:   experimentId=${experimentId} status=${status}`);
-    console.log(
-      "Poll with: dataset.getExperiment({ experimentId }) until status='completed'.",
-    );
+    console.log("Poll with: dataset.getExperiment({ experimentId }) until status='completed'.");
     console.log(
       `View in Studio: http://localhost:4111/experiments  (or /datasets/${dataset.id} → Experiments tab)`,
     );
@@ -114,9 +102,7 @@ async function main() {
     }
   }
 
-  console.log(
-    `\nView in Studio: http://localhost:4111/datasets/${dataset.id} → Experiments tab`,
-  );
+  console.log(`\nView in Studio: http://localhost:4111/datasets/${dataset.id} → Experiments tab`);
   process.exit(0);
 }
 

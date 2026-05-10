@@ -1,10 +1,10 @@
 import "./docs.css";
+import DefaultSearchDialog from "fumadocs-ui/components/dialog/search-default";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import DefaultSearchDialog from "fumadocs-ui/components/dialog/search-default";
+import type { ReactNode } from "react";
 import { DocsBanner } from "@/components/docs-banner";
 import { source } from "@/lib/source";
-import type { ReactNode } from "react";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (

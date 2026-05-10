@@ -1,31 +1,24 @@
 import { Agent } from "@mastra/core/agent";
-import { Workspace, LocalFilesystem, LocalSandbox } from "@mastra/core/workspace";
-import { Memory } from "@mastra/memory";
-import { PostgresStore, PgVector } from "@mastra/pg";
-import {
-  createAnswerRelevancyScorer,
-  createToxicityScorer,
-} from "@mastra/evals/scorers/prebuilt";
 import { ToolSearchProcessor } from "@mastra/core/processors";
+import { LocalFilesystem, LocalSandbox, Workspace } from "@mastra/core/workspace";
+import { createAnswerRelevancyScorer, createToxicityScorer } from "@mastra/evals/scorers/prebuilt";
+import { Memory } from "@mastra/memory";
+import { PgVector, PostgresStore } from "@mastra/pg";
+import { OpenAIVoice } from "@mastra/voice-openai";
 import { stepCountIs } from "ai";
 import { contextInjector, piiRedactor } from "../../lib/processors";
+import { buildSystemPrompt, type PromptContext } from "../../lib/prompt-template";
 import {
-  buildSystemPrompt,
-  type PromptContext,
-} from "../../lib/prompt-template";
-import { OpenAIVoice } from "@mastra/voice-openai";
-import { searchHistoryTool } from "../tools/search-history";
-import { forkConversationTool } from "../tools/fork-conversation";
-import { connectZapierTool } from "../tools/connect-zapier";
-import { getDefaultZapierTools } from "../../lib/zapier-sdk-tools";
-import {
-  MODELS,
   AGENT_MODELS,
+  MODELS,
   modelSettingsFor,
   onFinishCostLogger,
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { connectZapierTool } from "../tools/connect-zapier";
+import { forkConversationTool } from "../tools/fork-conversation";
+import { searchHistoryTool } from "../tools/search-history";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -109,7 +102,10 @@ function buildForemanInputProcessors() {
   try {
     sdkTools = generateZapierTools();
   } catch (err) {
-    console.error("[foreman] generateZapierTools failed in inputProcessors; ToolSearchProcessor will index nothing:", err);
+    console.error(
+      "[foreman] generateZapierTools failed in inputProcessors; ToolSearchProcessor will index nothing:",
+      err,
+    );
   }
   const searchableTools: Record<string, any> = {};
   for (const [name, tool] of Object.entries(sdkTools)) {
@@ -149,8 +145,7 @@ export function createForemanAgent(databaseUrl: string) {
   return new Agent({
     id: "foreman",
     name: "Foreman",
-    description:
-      "AI assistant that helps users take actions across 9000+ apps via Zapier",
+    description: "AI assistant that helps users take actions across 9000+ apps via Zapier",
     instructions: systemPromptFor("foreman", buildSystemPrompt()),
     model: AGENT_MODELS.foreman,
     defaultOptions: {

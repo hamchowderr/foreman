@@ -1,14 +1,10 @@
 import { Hono } from "hono";
+import { setCapability } from "@/lib/capabilities";
+import { checkAppAccess, checkRateLimit, SENSITIVE_APP_CATEGORIES } from "@/lib/guardrails";
+import { getOrgGuardrailConfig } from "@/lib/guardrails-config";
+import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
-import {
-  checkRateLimit,
-  SENSITIVE_APP_CATEGORIES,
-  checkAppAccess,
-} from "@/lib/guardrails";
-import { getOrgGuardrailConfig } from "@/lib/guardrails-config";
-import { setCapability } from "@/lib/capabilities";
-import { validateParam } from "@/lib/validation";
 
 const guardrails = new Hono<AppEnv>();
 
@@ -81,10 +77,7 @@ guardrails.put("/app-access/:appKey", async (c) => {
   }
 
   if (!category) {
-    return c.json(
-      { error: `${appKey} is not a sensitive app. No access toggle needed.` },
-      400
-    );
+    return c.json({ error: `${appKey} is not a sensitive app. No access toggle needed.` }, 400);
   }
 
   // Set the capability flag for the entire category

@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
-import { authMiddleware } from "./middleware";
-import { validateParam } from "@/lib/validation";
-import type { AppEnv } from "./types";
 import { getToolCatalog } from "@/lib/tool-catalog";
+import { validateParam } from "@/lib/validation";
+import { authMiddleware } from "./middleware";
+import type { AppEnv } from "./types";
 
 const storedAgents = new Hono<AppEnv>();
 
@@ -129,8 +129,7 @@ storedAgents.post("/", async (c) => {
   if (initialTools === null) {
     return c.json({ error: "tools must be an array of tool id strings" }, 400);
   }
-  const initialModel =
-    typeof model === "string" && model.trim() ? model.trim() : DEFAULT_MODEL;
+  const initialModel = typeof model === "string" && model.trim() ? model.trim() : DEFAULT_MODEL;
 
   const now = new Date().toISOString();
   const agentId = crypto.randomUUID();
@@ -178,7 +177,7 @@ storedAgents.get("/", async (c) => {
     (agents ?? []).map(async (a: any) => {
       const latest = await getLatestVersion(a.id);
       return serializeAgent(a, latest);
-    })
+    }),
   );
 
   return c.json(results);
@@ -221,7 +220,10 @@ storedAgents.patch("/:id", async (c) => {
     patch.name = body.name.trim();
   }
   if (body.description !== undefined) {
-    if (body.description !== null && (typeof body.description !== "string" || body.description.length > MAX_DESC_LEN)) {
+    if (
+      body.description !== null &&
+      (typeof body.description !== "string" || body.description.length > MAX_DESC_LEN)
+    ) {
       return c.json({ error: "description must be a string (max 2000 chars) or null" }, 400);
     }
     patch.description = body.description;
@@ -252,10 +254,7 @@ storedAgents.delete("/:id", async (c) => {
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   // Null out current_version_id first to avoid FK conflicts
-  await supabase
-    .from("stored_agent")
-    .update({ current_version_id: null })
-    .eq("id", id);
+  await supabase.from("stored_agent").update({ current_version_id: null }).eq("id", id);
   await supabase.from("stored_agent_version").delete().eq("agent_id", id);
   await supabase.from("stored_agent").delete().eq("id", id);
   return c.json({ ok: true });
@@ -311,7 +310,9 @@ storedAgents.post("/:id/versions", async (c) => {
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
 
   let body: any = {};
-  try { body = await c.req.json(); } catch {}
+  try {
+    body = await c.req.json();
+  } catch {}
 
   const supabase = getSupabase();
   const agent = await loadAgent(id, userId);
@@ -352,10 +353,7 @@ storedAgents.post("/:id/versions", async (c) => {
     published_at: null,
     created_at: now,
   });
-  await supabase
-    .from("stored_agent")
-    .update({ updated_at: now })
-    .eq("id", id);
+  await supabase.from("stored_agent").update({ updated_at: now }).eq("id", id);
 
   const { data: created } = await supabase
     .from("stored_agent_version")
@@ -393,10 +391,7 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
     .maybeSingle();
   if (!v) return c.json({ error: "Not found" }, 404);
   if (v.published_at !== null) {
-    return c.json(
-      { error: "Cannot edit a published version. Create a new draft instead." },
-      409
-    );
+    return c.json({ error: "Cannot edit a published version. Create a new draft instead." }, 409);
   }
 
   const patch: Record<string, any> = {};
@@ -420,7 +415,10 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
     patch.model = body.model.trim();
   }
   if (body.notes !== undefined) {
-    if (body.notes !== null && (typeof body.notes !== "string" || body.notes.length > MAX_NOTES_LEN)) {
+    if (
+      body.notes !== null &&
+      (typeof body.notes !== "string" || body.notes.length > MAX_NOTES_LEN)
+    ) {
       return c.json({ error: "notes must be a string (max 1000 chars) or null" }, 400);
     }
     patch.notes = body.notes;
@@ -431,10 +429,7 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
   }
 
   await supabase.from("stored_agent_version").update(patch).eq("id", versionId);
-  await supabase
-    .from("stored_agent")
-    .update({ updated_at: new Date().toISOString() })
-    .eq("id", id);
+  await supabase.from("stored_agent").update({ updated_at: new Date().toISOString() }).eq("id", id);
 
   const { data: updated } = await supabase
     .from("stored_agent_version")
@@ -467,10 +462,7 @@ storedAgents.post("/:id/versions/:versionId/publish", async (c) => {
 
   const now = new Date().toISOString();
   if (v.published_at === null) {
-    await supabase
-      .from("stored_agent_version")
-      .update({ published_at: now })
-      .eq("id", versionId);
+    await supabase.from("stored_agent_version").update({ published_at: now }).eq("id", versionId);
   }
   await supabase
     .from("stored_agent")

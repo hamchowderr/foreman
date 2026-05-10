@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import { createClient } from "@supabase/supabase-js";
+import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * Live Supabase integration tests.
@@ -35,7 +35,7 @@ describe("Supabase live integration", () => {
     if (!reachable) {
       console.warn(
         `\n⚠  Supabase not reachable at ${SUPABASE_URL}. Skipping live tests.\n` +
-        `   Start it with: npx supabase start\n`
+          `   Start it with: npx supabase start\n`,
       );
       return;
     }
@@ -79,7 +79,7 @@ describe("Supabase live integration", () => {
         .from("capability_flag")
         .upsert(
           { user_id: testUserId, capability: "voice", enabled: false },
-          { onConflict: "user_id,capability" }
+          { onConflict: "user_id,capability" },
         );
       expect(writeErr).toBeNull();
 

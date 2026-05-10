@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/server";
 
-const AGENT_SERVER_URL =
-  process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+const AGENT_SERVER_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const token = session.access_token;
 
@@ -20,8 +21,7 @@ export async function GET(request: Request) {
     });
 
     if (!res.ok) {
-      if (res.status === 404)
-        return NextResponse.json({ messages: [], visibility: "private" });
+      if (res.status === 404) return NextResponse.json({ messages: [], visibility: "private" });
       return NextResponse.json({ error: "Failed to fetch" }, { status: res.status });
     }
 

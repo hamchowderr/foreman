@@ -1,6 +1,6 @@
 import { getSupabase } from "@/lib/db";
-import { extractParams } from "./params";
 import { normalizeAppKey } from "@/lib/zapier/normalize";
+import { extractParams } from "./params";
 
 /** Heuristic: values that look like they should become parameters. */
 const PARAMETERIZE_PATTERNS = [
@@ -12,7 +12,7 @@ const PARAMETERIZE_PATTERNS = [
   /^\+?\d[\d\s\-()]{6,}$/,
 ];
 
-function shouldParameterize(key: string, value: unknown): boolean {
+function shouldParameterize(_key: string, value: unknown): boolean {
   if (typeof value !== "string") return false;
   return PARAMETERIZE_PATTERNS.some((re) => re.test(value));
 }
@@ -33,7 +33,7 @@ export async function saveWorkflowFromConversation(
   conversationId: string,
   userId: string,
   name: string,
-  orgId?: string
+  _orgId?: string,
 ): Promise<{ workflowId: string; steps: number; parameters: string[] }> {
   const supabase = getSupabase();
 
@@ -59,9 +59,7 @@ export async function saveWorkflowFromConversation(
     .order("created_at", { ascending: true });
 
   if (!proposals || proposals.length === 0) {
-    throw new Error(
-      "No executed actions found in this conversation to save as a workflow"
-    );
+    throw new Error("No executed actions found in this conversation to save as a workflow");
   }
 
   const workflowId = crypto.randomUUID();

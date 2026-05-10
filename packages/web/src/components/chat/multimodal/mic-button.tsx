@@ -79,7 +79,7 @@ export function MicButton({ onTranscript, disabled }: MicButtonProps) {
         "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
         isRecording
           ? "border-red-500/40 bg-red-500/10 text-red-500 animate-pulse hover:bg-red-500/20"
-          : "text-muted-foreground/50 hover:border-border hover:text-foreground"
+          : "text-muted-foreground/50 hover:border-border hover:text-foreground",
       )}
       disabled={disabled}
       onClick={isRecording ? stop : start}
