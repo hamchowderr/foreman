@@ -16,7 +16,7 @@
  *
  * See: vault note reference_foreman_mastra_dev_hang.md
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // The agents construct embedders/scorers/voice at factory-call time, all of
 // which validate API keys synchronously. Provide placeholder keys so the
@@ -28,17 +28,15 @@ process.env.ANTHROPIC_API_KEY ??= "sk-ant-test-not-used";
 const createZapierSdkSpy = vi.fn(() => {
   throw new Error(
     "Zapier SDK was instantiated at module load or agent construction. " +
-    "This re-introduces the mastra dev hang. The SDK must be deferred to " +
-    "request time via Mastra's DynamicArgument tools/inputProcessors function form. " +
-    "See vault note reference_foreman_mastra_dev_hang.md."
+      "This re-introduces the mastra dev hang. The SDK must be deferred to " +
+      "request time via Mastra's DynamicArgument tools/inputProcessors function form. " +
+      "See vault note reference_foreman_mastra_dev_hang.md.",
   );
 });
 
 vi.mock("@zapier/zapier-sdk", async () => {
   // Preserve real error classes so `instanceof` checks in handleSdkError still work.
-  const actual = await vi.importActual<typeof import("@zapier/zapier-sdk")>(
-    "@zapier/zapier-sdk"
-  );
+  const actual = await vi.importActual<typeof import("@zapier/zapier-sdk")>("@zapier/zapier-sdk");
   return {
     ...actual,
     createZapierSdk: createZapierSdkSpy,
@@ -46,7 +44,11 @@ vi.mock("@zapier/zapier-sdk", async () => {
 });
 
 describe("Zapier SDK lazy-init (mastra dev hang regression)", () => {
-  it("does not call createZapierSdk when importing agent modules", async () => {
+  it("does not call createZapierSdk when importing agent modules", {
+    timeout: 30_000,
+  }, async () => {
+    // Cold-imports three large module trees (Mastra core + memory + chat
+    // adapters + zapier-sdk). 2-3s nominal; pad timeout to 30s for shared CI.
     await import("../../src/mastra/agents/foreman");
     await import("../../src/mastra/agents/discovery");
     await import("../../src/mastra/agents/execution");

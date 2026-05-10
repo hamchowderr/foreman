@@ -1,12 +1,21 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
-  "organizeImports": {
-    "enabled": true
+  "files": {
+    "experimentalScannerIgnores": [
+      "node_modules",
+      ".next",
+      ".mastra",
+      ".vercel",
+      "dist",
+      "drizzle",
+      ".source",
+      ".beads"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -20,32 +29,51 @@
       "recommended": true,
       "complexity": {
         "noExtraBooleanCast": "error",
-        "noMultipleSpacesInRegularExpressionLiterals": "error"
+        "noAdjacentSpacesInRegex": "error"
       },
       "correctness": {
         "noUnusedVariables": "warn",
         "noUnusedImports": "warn",
-        "useExhaustiveDependencies": "off"
+        "noUnusedFunctionParameters": "warn",
+        "useExhaustiveDependencies": "off",
+        "useHookAtTopLevel": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",
-        "noAssignInExpressions": "off"
+        "noAssignInExpressions": "off",
+        "noArrayIndexKey": "warn",
+        "noCommentText": "warn",
+        "noTsIgnore": "warn",
+        "noDocumentCookie": "warn",
+        "useIterableCallbackReturn": "error",
+        "noThenProperty": "error",
+        "noDoubleEquals": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "warn"
       },
       "style": {
         "noNonNullAssertion": "off",
-        "useConst": "error"
+        "useImportType": "warn",
+        "useTemplate": "warn",
+        "useNodejsImportProtocol": "warn"
+      },
+      "a11y": {
+        "noSvgWithoutTitle": "off",
+        "useButtonType": "warn",
+        "useSemanticElements": "warn",
+        "useValidAnchor": "warn",
+        "useKeyWithClickEvents": "warn",
+        "noLabelWithoutControl": "warn",
+        "noStaticElementInteractions": "warn",
+        "useFocusableInteractive": "warn",
+        "noAutofocus": "warn",
+        "noRedundantRoles": "warn",
+        "useAriaPropsForRole": "warn"
+      },
+      "performance": {
+        "noImgElement": "warn"
       }
     }
-  },
-  "files": {
-    "ignore": [
-      "node_modules",
-      ".next",
-      ".mastra",
-      ".vercel",
-      "dist",
-      "drizzle",
-      "*.json"
-    ]
   }
 }
