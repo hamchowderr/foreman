@@ -40,10 +40,10 @@ describe("env validation", () => {
     process.env.DATABASE_URL = "file:./test.db";
     process.env.ENCRYPTION_KEY = "b".repeat(64);
     process.env.DEV_ZAPIER_OVERRIDE = "some-token";
-    process.env.FOREMAN_MODE = "production";
+    process.env.FOREMAN_MODE = "self_hosted";
     const { validateEnv } = await import("@/lib/env");
     const env = validateEnv();
     expect(env.DEV_ZAPIER_OVERRIDE).toBe("some-token");
-    expect(env.FOREMAN_MODE).toBe("production");
+    expect(env.FOREMAN_MODE).toBe("self_hosted");
   });
 });

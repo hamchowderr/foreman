@@ -74,29 +74,25 @@ entirely — the agent only sees the canonical equivalents.
 
 ## Modes
 
-Foreman runs in one of three modes:
+Foreman runs in one of two modes:
 
-<Tabs items={["dev", "production", "self_hosted"]}>
+<Tabs items={["dev", "self_hosted"]}>
   <Tab value="dev">
     Uses your personal Zapier CLI login. One-time
     `npx @zapier/zapier-sdk-cli login` and you're done.
   </Tab>
-  <Tab value="production">
+  <Tab value="self_hosted">
     Multi-tenant. Each user connects their own Zapier account. Requires
     `ZAPIER_CLIENT_ID` and `ZAPIER_CLIENT_SECRET` (from
-    `npx zapier-sdk create-client-credentials`).
-  </Tab>
-  <Tab value="self_hosted">
-    Same per-user OAuth model as `production`, just running on your own
-    infrastructure (VPS, Coolify, Docker host). Each user has their own
-    Zapier connection — nothing is shared between users.
+    `npx zapier-sdk create-client-credentials`). Runs anywhere — your VPS,
+    Coolify, Docker host, our hosted environment, etc.
   </Tab>
 </Tabs>
 
-Set `FOREMAN_MODE=dev|production|self_hosted` in `.env`.
+Set `FOREMAN_MODE=dev|self_hosted` in `.env`.
 
 ## Encryption
 
-For the `production` mode, per-user Zapier OAuth tokens live in the
+In `self_hosted` mode, per-user Zapier OAuth tokens live in the
 `zapier_identity` table, encrypted with **AES-256-GCM** using
 `ENCRYPTION_KEY` from env. Key rotation rewrites every row.

@@ -118,8 +118,6 @@ For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel web
 | **Dev** | `dev` (default) | Local development on a single machine | Single Zapier CLI login (`npx @zapier/zapier-sdk-cli login`). No client credentials needed. |
 | **Self-hosted** | `self_hosted` | Running Foreman for real users on your own infra (VPS, cluster, etc.) | Each user OAuths their own Zapier account through the Foreman UI. Requires `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET`. |
 
-> The code also accepts `production` as a synonym for `self_hosted` — that's the value we tag our own hosted deploy at https://foreman.otakusolutions.io with. From a code-path standpoint they are identical. As a self-hoster you should use `self_hosted`.
-
 Self-hosted is **not** a single-shared-account mode. Each user still connects their own Zapier account — Foreman just runs on infrastructure you own instead of ours.
 
 ## Channels
