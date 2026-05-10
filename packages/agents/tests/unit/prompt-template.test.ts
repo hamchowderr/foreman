@@ -37,6 +37,36 @@ describe("buildSystemPrompt", () => {
     expect(result).toContain("fork_conversation");
   });
 
+  it("references the workflow + trigger tools by name", () => {
+    const result = buildSystemPrompt();
+    expect(result).toContain("save_workflow");
+    expect(result).toContain("list_workflows");
+    expect(result).toContain("run_workflow");
+    expect(result).toContain("attach_trigger");
+    expect(result).toContain("list_workflow_triggers");
+    expect(result).toContain("detach_trigger");
+  });
+
+  it("forbids redirecting users to zapier.com for tasks", () => {
+    const result = buildSystemPrompt();
+    expect(result).toContain("<do_not_redirect>");
+    // The phrase "go to zapier.com" should appear ONLY inside the prohibition,
+    // never as a positive instruction. Spot-check via the prohibition text.
+    expect(result).toMatch(/NEVER tell the user to "go to zapier\.com"/);
+  });
+
+  it("warns against repeated discovery loops", () => {
+    const result = buildSystemPrompt();
+    expect(result).toContain("<no_exploration_loops>");
+    expect(result).toContain("do not call it again");
+  });
+
+  it("includes scheduled-workflow + channel-triggered-workflow examples", () => {
+    const result = buildSystemPrompt();
+    expect(result).toContain('name="scheduled-workflow"');
+    expect(result).toContain('name="channel-triggered-workflow"');
+  });
+
   it("returns base prompt with empty context", () => {
     const result = buildSystemPrompt({});
     expect(result).toContain("You are Foreman");
