@@ -109,102 +109,37 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 | API client     | `web/src/lib/api-client.ts` — all agent server calls                     |
 | Workflows page | `web/src/app/workflows/`                                                 |
 
-## Getting Started
+## Evaluation pipeline
 
-First-time setup requires a running local Supabase instance before `npm run dev`:
+Foreman uses Mastra's Datasets API to score the agent against a labeled set of real-world automation requests.
 
-```bash
-npx supabase start                         # Boots local Postgres/pgvector on :54422; applies supabase/migrations/*.sql automatically
-```
+- **Dataset:** `foreman-baseline-v1` — 80 items sourced from Zapier community + templates, each tagged with `category_hint` and `expected_behavior`.
+- **Scorers** (`agents/src/lib/scorers/`):
+  - `foreman-trajectory.ts` — relaxed-subsequence match of expected vs. actual tool calls; reads `MastraDBMessage.content.parts` (the modern Mastra shape).
+  - `foreman-llm-judge.ts` — Haiku 4.5 grades the agent's text response against `groundTruth.expected_behavior`. Catches text-quality regressions trajectory can't.
+- **Scripts** (run from `packages/agents`):
+  - `npm run datasets:smoke` / `:load-raw` / `:label` — dataset construction
+  - `npm run datasets:mini-experiment` — 2-item smoke before paying for full
+  - `npm run datasets:experiment -- --full` — full 80
+  - `npm run datasets:analyze` — per-scorer averages, per-category breakdown, worst-10 items with judge reasoning
+- **Storage:** scorer rows live in the `scores` storage domain (Postgres) keyed by `runId = experimentId`. `datasets:analyze` joins via `scoresStore.listScoresByRunId`.
 
-## ngrok (optional — only for channel webhooks)
+## CI
 
-ngrok is only needed if you're testing **incoming channel webhooks** (Slack, Discord, Telegram, Linear) that require a public URL. The Zapier OAuth callback uses `ZAPIER_REDIRECT_URI=http://localhost:4111/zapier/callback` (set in `.env.local`) — no ngrok required.
+`.github/workflows/test.yml` runs four jobs on every push to `main` and every PR:
 
-If you do need ngrok (e.g., for channel webhooks):
+| Job | What |
+|---|---|
+| **agents** | `npm test` — vitest workspace projects. AIMock starts in-process via `tests/aimock-setup.ts` globalSetup. |
+| **web** | `next build` for `packages/web` (also type-checks). |
+| **lint** | `npm run lint` — Biome. |
+| **deps** | `npm ci` — postinstall runs `scripts/check-dep-uniqueness.mjs`. |
 
-```bash
-ngrok http 4111                            # Get a new public URL
-```
+Real provider keys are deliberately absent from CI. Anything that leaks into a non-mocked path fails loudly.
 
-Then update `packages/agents/.env.local` → `AGENT_SERVER_URL=https://<new-url>.ngrok-free.app`
+## Dev runbook
 
-Restart the agents server so it picks up the new URL:
-
-```bash
-cd packages/agents && npm run build && npm run start   # Windows: mastra dev hangs (IPC). Linux/Mac: npm run dev. Local quirk only — do not put in public docs.
-```
-
-## Dev Commands
-
-```bash
-# Prereq: local DB
-npx supabase start                         # Supabase (Postgres :54422, Studio :54423)
-npx supabase stop                          # Shut it down
-
-# Dev servers
-cd packages/agents && npm run build && npm run start   # Agents (:4111). Windows workaround for mastra dev IPC hang — Linux/Mac use `npm run dev`.
-cd packages/web && npm run dev                          # Next.js (:3000)
-cd packages/agents && npm run start:webhooks            # Channel webhooks (:4112)
-
-# Build
-cd packages/agents && npm run build        # mastra build → .mastra/output/
-cd packages/agents && npm run build:vercel  # for Vercel deployment
-
-# Database
-npx supabase db reset                      # apply migrations from supabase/migrations/
-
-# Lint
-npm run lint && npm run format
-```
-
-## Testing
-
-```bash
-# Unit + integration (mocked, fast — runs in CI on every PR)
-cd packages/agents && npm test
-
-# SDK integration (real Zapier API — needs `npx @zapier/zapier-sdk-cli login`)
-cd packages/agents && npm run test:sdk          # all
-cd packages/agents && npm run test:sdk:read     # read-only
-cd packages/agents && npm run test:sdk:write    # creates + deletes a real Zapier Table
-
-# Live integration (real local Supabase)
-cd packages/agents && npm run test:live
-
-# Integration (API routes, protocols)
-cd packages/agents && npm test -- tests/integration
-
-# E2E (browser)
-cd packages/web && npx playwright test
-
-# Mock mode (no real LLM/API)
-cd packages/agents && npm run dev:mock
-
-# Devserver-startup hang regression (skipped by default — opt in)
-RUN_DEVSERVER_STARTUP=1 npx vitest run \
-  packages/agents/tests/integration/devserver-startup.test.ts
-```
-
-SDK tests use `vitest.sdk.config.ts` (no aimock). Unit/integration tests use `vitest.config.ts` (with aimock globalSetup).
-
-The `devserver-startup` test spawns `mastra dev` and polls the API port — it hangs on Windows (documented IPC issue) and currently times out on Linux CI, so it's gated behind `RUN_DEVSERVER_STARTUP=1`. Run locally on-demand when bisecting startup regressions.
-
-## Deploy
-
-| Component | Target        | Config                                                |
-| --------- | ------------- | ----------------------------------------------------- |
-| Web       | Vercel        | `vercel.json`                                         |
-| Agents    | VPS (Coolify) | `Dockerfile.agents`, UUID: `oqshe32xh3v8zva7tt6r4aff` |
-| Agents    | Vercel (alt)  | `npm run build:vercel` + Turso for LibSQL             |
-
-## Env Vars
-
-**agents/.env.local:** `DATABASE_URL`, `ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FOREMAN_MODE` (dev/production/self_hosted), `ZAPIER_CLIENT_ID`, `ZAPIER_CLIENT_SECRET`
-
-**web/.env.local:** `NEXT_PUBLIC_AGENT_SERVER_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-
-Channel tokens (optional): `TELEGRAM_BOT_TOKEN`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID`
+For requirements, full quick-start, env vars, ngrok, deployment, and the testing tier table — see [README.md](README.md). This file is for navigating the codebase; the README is for running it.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 

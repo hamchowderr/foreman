@@ -8,6 +8,7 @@
 ## Table of Contents
 
 - [What it is](#what-it-is)
+- [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [Architecture](#architecture)
 - [Stack](#stack)
@@ -23,6 +24,17 @@
 Tell Foreman what you want done in plain language — "send Sarah an email", "create a Trello card for tomorrow", "search my Gmail for invoices" — and it figures out which connected app and action to use, shows you what it plans to do for approval, then executes.
 
 Foreman lives on the web, in Slack, Discord, Telegram, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage. Same agent, same memory, same connected apps across every channel.
+
+## Requirements
+
+Install before the quick start below:
+
+- **Node.js 22+** — agents and web both run on Node 22 (`node --version`).
+- **npm 10+** — bundled with Node 22.
+- **Docker Desktop** (or any Docker daemon) — `npx supabase start` boots local Postgres + pgvector inside Docker.
+- **git** — for cloning and the `bd dolt` issue-tracker sync.
+- **ngrok** *(optional)* — only if you're testing incoming channel webhooks (Slack, Discord, Telegram, Linear) against the real platforms.
+- **Zapier CLI account** *(optional, for SDK tests)* — `npx @zapier/zapier-sdk-cli login` once.
 
 ## Quick start
 
@@ -45,7 +57,7 @@ cd packages/agents && npm run build && npm run start
 cd packages/web && npm run dev
 ```
 
-For the full env-var list see [`packages/agents/CLAUDE.md`](packages/agents/CLAUDE.md). For incoming channel webhooks (Slack, Discord, Telegram, Linear), also run `cd packages/agents && npm run start:webhooks` on port 4112.
+For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel webhooks (Slack, Discord, Telegram, Linear), also run `cd packages/agents && npm run start:webhooks` on port 4112.
 
 ## Architecture
 
@@ -127,7 +139,7 @@ Self-hosted is **not** a single-shared-account mode. It is Production deployed o
 | MCP | Mastra built-in | `GET /mcp/*` — Claude Code, ChatGPT, etc. |
 | A2A | Mastra built-in | `POST /a2a/foreman` — agent-to-agent |
 
-Per-channel webhook URLs and platform setup live in [`packages/agents/CLAUDE.md`](packages/agents/CLAUDE.md).
+Per-channel webhook URLs and platform setup live in [`CLAUDE.md`](CLAUDE.md).
 
 ## Deployment
 
@@ -166,7 +178,7 @@ For deterministic mock-mode dev (no real LLM/voice/MCP/A2A): `cd packages/agents
 - **Lint / format:** `npm run lint` (Biome), `npm run lint:fix`, `npm run format`.
 - **Local tunnel:** `ngrok http 4112` for testing channel webhooks against real platforms. Update each platform's webhook URL after restarting ngrok.
 
-Deeper developer docs (file inventory, route table, custom tools, processors, memory config, schema, prompt internals) live in [`packages/agents/CLAUDE.md`](packages/agents/CLAUDE.md) and [`packages/agents/AGENTS.md`](packages/agents/AGENTS.md). The README is for orientation; CLAUDE.md is for working in the code.
+Deeper developer docs (file inventory, route table, custom tools, processors, memory config, schema, prompt internals) live in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). The README is for orientation; CLAUDE.md is for working in the code.
 
 ## Links
 
@@ -175,7 +187,7 @@ Deeper developer docs (file inventory, route table, custom tools, processors, me
 - [Zapier SDK docs](https://docs.zapier.com/sdk)
 - [Supabase docs](https://supabase.com/docs)
 - [shadcn/ui docs](https://ui.shadcn.com/docs)
-- Internal: [`packages/agents/CLAUDE.md`](packages/agents/CLAUDE.md), [`packages/agents/AGENTS.md`](packages/agents/AGENTS.md)
+- Internal: [`CLAUDE.md`](CLAUDE.md), [`AGENTS.md`](AGENTS.md)
 
 ## License
 
