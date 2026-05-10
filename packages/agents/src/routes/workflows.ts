@@ -87,6 +87,37 @@ workflows.get("/templates", async (c) => {
   );
 });
 
+// DELETE /:id — irreversible. Cascades to workflow_step + workflow_run.
+workflows.delete("/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid workflow id" }, 400);
+  }
+  const supabase = getSupabase();
+
+  // Verify ownership before deleting anything
+  const { data: existing } = await supabase
+    .from("workflow")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (!existing) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  // Cascade manually: runs → steps → workflow.
+  // (FK cascade isn't declared on the schema today; explicit delete keeps
+  // the data path obvious and avoids surprises if migrations diverge.)
+  await supabase.from("workflow_run").delete().eq("workflow_id", id);
+  await supabase.from("workflow_step").delete().eq("workflow_id", id);
+  await supabase.from("workflow").delete().eq("id", id);
+
+  return c.json({ ok: true, id });
+});
+
 // PATCH /:id — update workflow metadata
 workflows.patch("/:id", async (c) => {
   const userId = c.get("userId");

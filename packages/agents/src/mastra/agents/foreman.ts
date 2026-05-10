@@ -17,11 +17,14 @@ import {
   toolsWithCacheControl,
 } from "../../lib/providers";
 import { connectZapierTool } from "../tools/connect-zapier";
+import { deleteWorkflowTool } from "../tools/delete-workflow";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { getWorkflowTool } from "../tools/get-workflow";
 import { listWorkflowsTool } from "../tools/list-workflows";
+import { runWorkflowTool } from "../tools/run-workflow";
 import { saveWorkflowTool } from "../tools/save-workflow";
 import { searchHistoryTool } from "../tools/search-history";
+import { updateWorkflowTool } from "../tools/update-workflow";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -97,6 +100,9 @@ function buildForemanTools() {
     save_workflow: saveWorkflowTool,
     list_workflows: listWorkflowsTool,
     get_workflow: getWorkflowTool,
+    run_workflow: runWorkflowTool,
+    update_workflow: updateWorkflowTool,
+    delete_workflow: deleteWorkflowTool,
     ...coreTools,
   });
   return _foremanToolsCache;

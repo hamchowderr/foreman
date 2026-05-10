@@ -32,6 +32,9 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("save_workflow");
     expect(toolNames).toContain("list_workflows");
     expect(toolNames).toContain("get_workflow");
+    expect(toolNames).toContain("run_workflow");
+    expect(toolNames).toContain("update_workflow");
+    expect(toolNames).toContain("delete_workflow");
   }, 30000);
 
   it("foreman agent uses AGENT_MODELS.foreman as its model", async () => {
