@@ -6,6 +6,7 @@ import {
   PenSquareIcon,
   Settings2Icon,
   TrashIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -115,6 +116,20 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <span className="font-medium">New chat</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {user && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      tooltip="Workflows"
+                    >
+                      <Link href="/workflows" onClick={() => setOpenMobile(false)}>
+                        <WorkflowIcon className="size-4" />
+                        <span className="text-[13px]">Workflows</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 {user && (
                   <SidebarMenuItem>
                     <SidebarMenuButton

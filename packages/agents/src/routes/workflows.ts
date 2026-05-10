@@ -150,10 +150,13 @@ workflows.patch("/:id", async (c) => {
   if (typeof body.is_template === "boolean") {
     patch.is_template = body.is_template;
   }
+  if (typeof body.name === "string" && body.name.trim().length > 0) {
+    patch.name = body.name.trim();
+  }
 
   await supabase.from("workflow").update(patch).eq("id", id);
 
-  return c.json({ ok: true, id, is_template: patch.is_template ?? existing.is_template });
+  return c.json({ ok: true, id, ...patch });
 });
 
 // POST /:id/clone — clone a template into caller's workspace
@@ -466,6 +469,42 @@ workflows.get("/:id/triggers", async (c) => {
       updatedAt: t.updated_at,
     })),
   );
+});
+
+// PATCH /:id/triggers/:triggerId — toggle a trigger's enabled flag
+workflows.patch("/:id/triggers/:triggerId", async (c) => {
+  const userId = c.get("userId");
+  const workflowId = validateParam(c.req.param("id"), "id");
+  const triggerId = validateParam(c.req.param("triggerId"), "triggerId");
+  if (!workflowId || !triggerId) return c.json({ error: "Invalid id" }, 400);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+  if (typeof body.enabled !== "boolean") {
+    return c.json({ error: "enabled (boolean) is required" }, 400);
+  }
+
+  const supabase = getSupabase();
+  const { data: wf } = await supabase
+    .from("workflow")
+    .select("id")
+    .eq("id", workflowId)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (!wf) return c.json({ error: "Not found" }, 404);
+
+  await supabase
+    .from("workflow_trigger")
+    .update({ enabled: body.enabled, updated_at: new Date().toISOString() })
+    .eq("id", triggerId)
+    .eq("workflow_id", workflowId);
+
+  return c.json({ ok: true, id: triggerId, enabled: body.enabled });
 });
 
 // DELETE /:id/triggers/:triggerId — detach a trigger
