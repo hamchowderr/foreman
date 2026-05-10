@@ -7,6 +7,7 @@ import { getSupabase } from "../lib/db";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
+import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;
 let _slackAdapter: ReturnType<typeof createSlackAdapter> | undefined;
@@ -94,6 +95,15 @@ async function _createAndInitBot() {
     if (!message.text) return;
     if (/^\/?\s*link\s+[A-Z0-9]{8}$/i.test(message.text.trim())) return;
     try {
+      // Channel-trigger short-circuit: if a workflow_trigger matches the
+      // message, fire the workflow and skip the conversational reply.
+      const fired = await matchAndFireChannelTriggers({
+        channel: "slack",
+        text: message.text,
+        from: message.author.userId,
+        room: thread.channelId,
+      });
+      if (fired > 0) return;
       console.log("[slack] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
       const reply = await generateReply(
@@ -114,6 +124,13 @@ async function _createAndInitBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     try {
+      const fired = await matchAndFireChannelTriggers({
+        channel: "slack",
+        text: message.text,
+        from: message.author.userId,
+        room: thread.id,
+      });
+      if (fired > 0) return;
       console.log("[slack] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});

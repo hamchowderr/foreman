@@ -5,6 +5,7 @@ import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
+import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ whatsapp: ReturnType<typeof createWhatsAppAdapter> }> | undefined;
 let _whatsappAdapter: ReturnType<typeof createWhatsAppAdapter> | undefined;
@@ -58,6 +59,13 @@ export async function getWhatsAppBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     try {
+      const fired = await matchAndFireChannelTriggers({
+        channel: "whatsapp",
+        text: message.text,
+        from: message.author.userId,
+        room: thread.channelId,
+      });
+      if (fired > 0) return;
       console.log("[whatsapp] Message from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
       const reply = await generateReply(
@@ -78,6 +86,13 @@ export async function getWhatsAppBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     try {
+      const fired = await matchAndFireChannelTriggers({
+        channel: "whatsapp",
+        text: message.text,
+        from: message.author.userId,
+        room: thread.id,
+      });
+      if (fired > 0) return;
       console.log("[whatsapp] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});

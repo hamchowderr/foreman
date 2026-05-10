@@ -5,6 +5,7 @@ import { Chat } from "chat";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
+import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ telegram: ReturnType<typeof createTelegramAdapter> }> | undefined;
 let _telegramAdapter: ReturnType<typeof createTelegramAdapter> | undefined;
@@ -87,6 +88,13 @@ export async function getTelegramBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     if (message.text.trim().startsWith("/link")) return;
+    const fired = await matchAndFireChannelTriggers({
+      channel: "telegram",
+      text: message.text,
+      from: message.author.userId,
+      room: thread.channelId,
+    });
+    if (fired > 0) return;
     await thread.startTyping().catch(() => {});
     const reply = await generateReply(
       thread.channelId,
@@ -100,6 +108,13 @@ export async function getTelegramBot() {
   // Handle @-mentions in group chats.
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
+    const fired = await matchAndFireChannelTriggers({
+      channel: "telegram",
+      text: message.text,
+      from: message.author.userId,
+      room: thread.id,
+    });
+    if (fired > 0) return;
     await thread.subscribe();
     await thread.startTyping().catch(() => {});
     const reply = await generateReply(

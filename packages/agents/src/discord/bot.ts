@@ -5,6 +5,7 @@ import { Chat } from "chat";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
+import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ discord: ReturnType<typeof createDiscordAdapter> }> | undefined;
 let _discordAdapter: ReturnType<typeof createDiscordAdapter> | undefined;
@@ -118,6 +119,13 @@ export async function getDiscordBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     if (message.text.trim().startsWith("/link")) return;
+    const fired = await matchAndFireChannelTriggers({
+      channel: "discord",
+      text: message.text,
+      from: message.author.userId,
+      room: thread.channelId,
+    });
+    if (fired > 0) return;
     await thread.startTyping().catch(() => {});
     const reply = await generateStreamedReply(
       thread,
@@ -132,6 +140,13 @@ export async function getDiscordBot() {
   // Handle @-mentions in channels
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
+    const fired = await matchAndFireChannelTriggers({
+      channel: "discord",
+      text: message.text,
+      from: message.author.userId,
+      room: thread.id,
+    });
+    if (fired > 0) return;
     await thread.subscribe();
     await thread.startTyping().catch(() => {});
     try {

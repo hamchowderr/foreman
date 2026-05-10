@@ -5,6 +5,7 @@ import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
+import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ teams: ReturnType<typeof createTeamsAdapter> }> | undefined;
 let _teamsAdapter: ReturnType<typeof createTeamsAdapter> | undefined;
@@ -57,6 +58,13 @@ export async function getTeamsBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     try {
+      const fired = await matchAndFireChannelTriggers({
+        channel: "teams",
+        text: message.text,
+        from: message.author.userId,
+        room: thread.channelId,
+      });
+      if (fired > 0) return;
       console.log("[teams] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
       const reply = await generateReply(
@@ -76,6 +84,13 @@ export async function getTeamsBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     try {
+      const fired = await matchAndFireChannelTriggers({
+        channel: "teams",
+        text: message.text,
+        from: message.author.userId,
+        room: thread.id,
+      });
+      if (fired > 0) return;
       console.log("[teams] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});
