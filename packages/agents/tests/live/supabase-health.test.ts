@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
+import type { Database } from "@/lib/db/database.types";
 
 /**
  * Live Supabase integration tests.
@@ -28,7 +29,7 @@ async function supabaseIsReachable(): Promise<boolean> {
 
 describe("Supabase live integration", () => {
   let reachable = false;
-  let supabase: ReturnType<typeof createClient>;
+  let supabase: ReturnType<typeof createClient<Database>>;
 
   beforeAll(async () => {
     reachable = await supabaseIsReachable();
@@ -39,7 +40,7 @@ describe("Supabase live integration", () => {
       );
       return;
     }
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    supabase = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   });
 
   describe("DB connectivity", () => {

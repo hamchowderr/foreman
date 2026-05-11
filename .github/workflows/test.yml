@@ -74,3 +74,22 @@ jobs:
       # validates that there are no duplicate-resolved versions across the
       # workspace. A bare `npm ci` failure here is a real signal.
       - run: npm ci
+
+  db-types:
+    name: db types fresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: npm ci
+      - name: Start local Supabase
+        run: npx supabase start
+      - name: Verify generated types match migrations
+        run: cd packages/agents && npm run db:types:check

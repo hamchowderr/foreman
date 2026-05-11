@@ -8,6 +8,7 @@
 import { RequestContext } from "@mastra/core/request-context";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Database } from "@/lib/db/database.types";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54421";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -32,7 +33,7 @@ function ctx({ userId, conversationId }: { userId: string; conversationId?: stri
 
 describe("workflow trigger tools — live Supabase", () => {
   let reachable = false;
-  let supabase: ReturnType<typeof createClient>;
+  let supabase: ReturnType<typeof createClient<Database>>;
 
   const testRunId = `wf-trig-${Date.now()}`;
   const userId = `${testRunId}-user`;
@@ -47,7 +48,7 @@ describe("workflow trigger tools — live Supabase", () => {
       );
       return;
     }
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    supabase = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const now = new Date().toISOString();
     const { error: userErr } = await supabase.from("user").insert({

@@ -65,7 +65,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     return cached.sdk;
   }
 
-  // Load from database — when orgId is set, try shared org connection first
+  // Load from database — when workspaceId is set, try shared workspace connection first
   const supabase = getSupabase();
   let identity: Record<string, any> | null = null;
 
@@ -73,7 +73,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     const { data } = await supabase
       .from("zapier_identity")
       .select("*")
-      .eq("org_id", orgId)
+      .eq("workspace_id", orgId)
       .limit(1)
       .maybeSingle();
     identity = data;

@@ -1,6 +1,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { getSupabase } from "@/lib/db";
+import type { Database } from "@/lib/db/database.types";
 
 export const updateWorkflowTool = createTool({
   id: "update_workflow",
@@ -53,7 +54,9 @@ export const updateWorkflowTool = createTool({
     if (rErr) throw new Error(`update_workflow: ${rErr.message}`);
     if (!existing) throw new Error(`update_workflow: workflow ${workflowId} not found`);
 
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const patch: Database["public"]["Tables"]["workflow"]["Update"] = {
+      updated_at: new Date().toISOString(),
+    };
     if (name !== undefined) patch.name = name;
     if (isTemplate !== undefined) patch.is_template = isTemplate;
 

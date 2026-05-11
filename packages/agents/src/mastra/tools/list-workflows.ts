@@ -55,7 +55,7 @@ export const listWorkflowsTool = createTool({
       .select("id, name, parameters, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false })
-      .limit(limit);
+      .limit(limit ?? 20);
 
     if (error) throw new Error(`list_workflows: ${error.message}`);
 

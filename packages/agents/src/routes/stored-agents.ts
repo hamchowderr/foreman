@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
+import type { Database } from "@/lib/db/database.types";
 import { getToolCatalog } from "@/lib/tool-catalog";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
@@ -212,7 +213,7 @@ storedAgents.patch("/:id", async (c) => {
   const agent = await loadAgent(id, userId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
-  const patch: Record<string, any> = {};
+  const patch: Database["public"]["Tables"]["stored_agent"]["Update"] = {};
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim() || body.name.length > MAX_NAME_LEN) {
       return c.json({ error: "name must be 1-120 chars" }, 400);
@@ -394,7 +395,7 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
     return c.json({ error: "Cannot edit a published version. Create a new draft instead." }, 409);
   }
 
-  const patch: Record<string, any> = {};
+  const patch: Database["public"]["Tables"]["stored_agent_version"]["Update"] = {};
   if (body.instructions !== undefined) {
     if (typeof body.instructions !== "string" || body.instructions.length > MAX_INSTRUCTIONS_LEN) {
       return c.json({ error: "instructions must be a string (max 50KB)" }, 400);

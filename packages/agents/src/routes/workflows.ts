@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
+import type { Database } from "@/lib/db/database.types";
 import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
 import { validateParam } from "@/lib/validation";
 import { executeWorkflow } from "@/lib/workflows/engine";
@@ -146,7 +147,9 @@ workflows.patch("/:id", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+  const patch: Database["public"]["Tables"]["workflow"]["Update"] = {
+    updated_at: new Date().toISOString(),
+  };
   if (typeof body.is_template === "boolean") {
     patch.is_template = body.is_template;
   }

@@ -12,6 +12,7 @@
 import { RequestContext } from "@mastra/core/request-context";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Database } from "@/lib/db/database.types";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54421";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -36,7 +37,7 @@ function ctx({ userId, conversationId }: { userId: string; conversationId?: stri
 
 describe("workflow tools — live Supabase", () => {
   let reachable = false;
-  let supabase: ReturnType<typeof createClient>;
+  let supabase: ReturnType<typeof createClient<Database>>;
 
   // Single user + conversation reused by tests, cleaned up in afterAll.
   // Unique per run so concurrent test runs don't collide.
@@ -54,13 +55,13 @@ describe("workflow tools — live Supabase", () => {
       );
       return;
     }
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    supabase = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Seed: user + conversation. Tests that need executed proposals will
     // insert them on-demand so we can vary the fixture per test.
-    // NOTE: the `user` table uses camelCase columns (emailVerified, createdAt,
-    // updatedAt) while every other table is snake_case. The TS UserRow interface
-    // in schema.ts has the wrong shape.
+    // The `user` table uses camelCase columns (emailVerified, createdAt,
+    // updatedAt); every other Foreman table is snake_case. The generated
+    // Database types reflect that — so do these fixtures.
     const now = new Date().toISOString();
     const { error: userErr } = await supabase.from("user").insert({
       id: userId,
