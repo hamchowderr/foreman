@@ -1740,6 +1740,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      mastra_channel_config: {
+        Row: {
+          data: Json;
+          platform: string;
+          updatedAt: string;
+          updatedAtZ: string | null;
+        };
+        Insert: {
+          data: Json;
+          platform: string;
+          updatedAt: string;
+          updatedAtZ?: string | null;
+        };
+        Update: {
+          data?: Json;
+          platform?: string;
+          updatedAt?: string;
+          updatedAtZ?: string | null;
+        };
+        Relationships: [];
+      };
+      mastra_channel_installations: {
+        Row: {
+          agentId: string;
+          configHash: string | null;
+          createdAt: string;
+          createdAtZ: string | null;
+          data: Json;
+          error: string | null;
+          id: string;
+          platform: string;
+          status: string;
+          updatedAt: string;
+          updatedAtZ: string | null;
+          webhookId: string | null;
+        };
+        Insert: {
+          agentId: string;
+          configHash?: string | null;
+          createdAt: string;
+          createdAtZ?: string | null;
+          data: Json;
+          error?: string | null;
+          id: string;
+          platform: string;
+          status: string;
+          updatedAt: string;
+          updatedAtZ?: string | null;
+          webhookId?: string | null;
+        };
+        Update: {
+          agentId?: string;
+          configHash?: string | null;
+          createdAt?: string;
+          createdAtZ?: string | null;
+          data?: Json;
+          error?: string | null;
+          id?: string;
+          platform?: string;
+          status?: string;
+          updatedAt?: string;
+          updatedAtZ?: string | null;
+          webhookId?: string | null;
+        };
+        Relationships: [];
+      };
       mastra_dataset_items: {
         Row: {
           createdAt: string;
@@ -2454,6 +2520,93 @@ export type Database = {
           updatedAt?: string;
           updatedAtZ?: string | null;
           workingMemory?: string | null;
+        };
+        Relationships: [];
+      };
+      mastra_schedule_triggers: {
+        Row: {
+          actual_fire_at: number;
+          error: string | null;
+          id: string;
+          metadata: Json | null;
+          outcome: string;
+          parent_trigger_id: string | null;
+          run_id: string | null;
+          schedule_id: string;
+          scheduled_fire_at: number;
+          trigger_kind: string;
+        };
+        Insert: {
+          actual_fire_at: number;
+          error?: string | null;
+          id: string;
+          metadata?: Json | null;
+          outcome: string;
+          parent_trigger_id?: string | null;
+          run_id?: string | null;
+          schedule_id: string;
+          scheduled_fire_at: number;
+          trigger_kind: string;
+        };
+        Update: {
+          actual_fire_at?: number;
+          error?: string | null;
+          id?: string;
+          metadata?: Json | null;
+          outcome?: string;
+          parent_trigger_id?: string | null;
+          run_id?: string | null;
+          schedule_id?: string;
+          scheduled_fire_at?: number;
+          trigger_kind?: string;
+        };
+        Relationships: [];
+      };
+      mastra_schedules: {
+        Row: {
+          created_at: number;
+          cron: string;
+          id: string;
+          last_fire_at: number | null;
+          last_run_id: string | null;
+          metadata: Json | null;
+          next_fire_at: number;
+          owner_id: string | null;
+          owner_type: string | null;
+          status: string;
+          target: Json;
+          timezone: string | null;
+          updated_at: number;
+        };
+        Insert: {
+          created_at: number;
+          cron: string;
+          id: string;
+          last_fire_at?: number | null;
+          last_run_id?: string | null;
+          metadata?: Json | null;
+          next_fire_at: number;
+          owner_id?: string | null;
+          owner_type?: string | null;
+          status: string;
+          target: Json;
+          timezone?: string | null;
+          updated_at: number;
+        };
+        Update: {
+          created_at?: number;
+          cron?: string;
+          id?: string;
+          last_fire_at?: number | null;
+          last_run_id?: string | null;
+          metadata?: Json | null;
+          next_fire_at?: number;
+          owner_id?: string | null;
+          owner_type?: string | null;
+          status?: string;
+          target?: Json;
+          timezone?: string | null;
+          updated_at?: number;
         };
         Relationships: [];
       };
