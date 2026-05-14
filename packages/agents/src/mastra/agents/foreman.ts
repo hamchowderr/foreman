@@ -16,6 +16,7 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import { attachTriggerTool } from "../tools/attach-trigger";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { deleteWorkflowTool } from "../tools/delete-workflow";
