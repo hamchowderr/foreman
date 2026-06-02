@@ -50,7 +50,7 @@ export function SiteFooter() {
               </span>
               <span className="font-semibold text-foreground">Foreman</span>
             </div>
-            <p className="text-xs text-muted mt-3 leading-relaxed max-w-[220px]">
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-[220px]">
               A chat driver for your Zapier account. Drive 9,000+ app connections you already built.
             </p>
           </div>
@@ -64,7 +64,7 @@ export function SiteFooter() {
               <ul className="space-y-2 text-sm">
                 {col.links.map((link) => {
                   const className =
-                    "text-muted hover:text-foreground transition-colors break-words";
+                    "text-muted-foreground hover:text-foreground transition-colors break-words";
                   if (link.external) {
                     return (
                       <li key={link.label}>
@@ -96,7 +96,7 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted">
+        <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>
             &copy;{" "}
             <Suspense fallback={null}>

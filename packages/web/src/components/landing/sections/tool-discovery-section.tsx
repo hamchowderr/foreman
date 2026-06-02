@@ -23,7 +23,7 @@ export function ToolDiscoverySection() {
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
               Every action. Every table. Every message.
             </h2>
-            <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+            <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
               Actions, Zapier Tables, authenticated HTTP, connection discovery — 33 SDK tools in
               all. Foreman searches and loads only what a request needs, so it stays fast across
               9,000+ apps.

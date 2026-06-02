@@ -1,5 +1,6 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { Bot, User } from "lucide-react";
 import { useEffect } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -13,6 +14,12 @@ import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
+
+const MessageAvatar = ({ isUser }: { isUser: boolean }) => (
+  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+    {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
+  </div>
+);
 
 function getAlwaysAllowedTools(): Set<string> {
   try {
@@ -40,9 +47,12 @@ const ApprovalButtons = ({
   toolName: string;
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
 }) => (
-  <div className="flex items-center justify-end gap-1.5 border-t border-[#C8C8CA]/60 px-3 py-2.5 dark:border-[#3A3A3C]">
+  <div className="flex items-center gap-2 border-t border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
+    <span className="flex-1 text-[12px] text-muted-foreground">
+      This action needs your approval before it runs.
+    </span>
     <button
-      className="rounded-full px-3 py-1 text-[13px] text-[#FF3B30] transition-colors hover:bg-[#FF3B30]/10"
+      className="rounded-md px-3 py-1 text-[13px] text-destructive transition-colors hover:bg-destructive/10"
       onClick={() => {
         addToolApprovalResponse({
           id: approvalId,
@@ -52,10 +62,10 @@ const ApprovalButtons = ({
       }}
       type="button"
     >
-      Deny
+      Decline
     </button>
     <button
-      className="rounded-full px-3 py-1 text-[13px] text-[#8E8E93] transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+      className="rounded-md px-3 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-muted"
       onClick={() => {
         addAlwaysAllowedTool(toolName);
         addToolApprovalResponse({ id: approvalId, approved: true });
@@ -65,13 +75,13 @@ const ApprovalButtons = ({
       Always Allow
     </button>
     <button
-      className="rounded-full bg-[#007AFF] px-3 py-1 text-[13px] text-white transition-colors hover:bg-[#0A84FF] dark:bg-[#0A84FF]"
+      className="rounded-md bg-primary px-3 py-1 text-[13px] text-primary-foreground transition-colors hover:bg-primary/80"
       onClick={() => {
         addToolApprovalResponse({ id: approvalId, approved: true });
       }}
       type="button"
     >
-      Allow
+      Approve
     </button>
   </div>
 );
@@ -227,10 +237,10 @@ const PurePreviewMessage = ({
       return (
         <MessageContent
           className={cn(
-            "text-[15px] leading-[1.5]",
+            "text-[15px] leading-[1.5] text-foreground",
             isUserMsg
-              ? "w-fit max-w-[min(75%,52ch)] overflow-hidden break-words rounded-[18px] rounded-br-[4px] bg-[#007AFF] px-4 py-2.5 text-white dark:bg-[#0A84FF]"
-              : "w-fit max-w-full overflow-hidden break-words rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-2.5 text-[#1C1C1E] dark:bg-[#2C2C2E] dark:text-[#F2F2F7]",
+              ? "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-lg bg-secondary px-4 py-2.5"
+              : "w-full max-w-full overflow-hidden break-words",
           )}
           data-testid="message-content"
           key={key}
@@ -413,10 +423,10 @@ const PurePreviewMessage = ({
   );
 
   const content = isThinking ? (
-    <div className="flex w-fit items-center gap-1 rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-3 dark:bg-[#2C2C2E]">
-      <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
-      <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
-      <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
+    <div className="flex items-center gap-1 py-1.5">
+      <span className="typing-dot size-2 rounded-full bg-muted-foreground" />
+      <span className="typing-dot size-2 rounded-full bg-muted-foreground" />
+      <span className="typing-dot size-2 rounded-full bg-muted-foreground" />
     </div>
   ) : (
     <>
@@ -435,16 +445,16 @@ const PurePreviewMessage = ({
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
-      <div
-        className={cn(
-          isUser ? "flex flex-col items-end gap-1.5" : "flex flex-col items-start gap-1.5",
-        )}
-      >
-        {isAssistant ? (
-          <div className="flex min-w-0 max-w-[80%] flex-col gap-1.5">{content}</div>
-        ) : (
-          content
-        )}
+      <div className={cn("flex items-start gap-2.5", isUser && "flex-row-reverse")}>
+        <MessageAvatar isUser={isUser} />
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 flex-col gap-1.5",
+            isUser ? "items-end" : "items-start",
+          )}
+        >
+          {content}
+        </div>
       </div>
     </div>
   );
@@ -459,11 +469,12 @@ export const ThinkingMessage = () => {
       data-role="assistant"
       data-testid="message-assistant-loading"
     >
-      <div className="flex flex-col items-start">
-        <div className="flex w-fit items-center gap-1 rounded-[18px] rounded-bl-[4px] bg-[#E9E9EB] px-4 py-3 dark:bg-[#2C2C2E]">
-          <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
-          <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
-          <span className="typing-dot size-2 rounded-full bg-[#8E8E93]" />
+      <div className="flex items-start gap-2.5">
+        <MessageAvatar isUser={false} />
+        <div className="flex items-center gap-1 py-1.5">
+          <span className="typing-dot size-2 rounded-full bg-muted-foreground" />
+          <span className="typing-dot size-2 rounded-full bg-muted-foreground" />
+          <span className="typing-dot size-2 rounded-full bg-muted-foreground" />
         </div>
       </div>
     </div>

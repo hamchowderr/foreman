@@ -30,6 +30,16 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Apply the saved color theme preset before paint to avoid a flash. */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: tiny inline theme bootstrap
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var v=localStorage.getItem('foreman:theme-preset');if(v&&v!=='default')document.documentElement.setAttribute('data-theme-preset',v);}catch(e){}})();",
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <Suspense>
           <ThemeProvider

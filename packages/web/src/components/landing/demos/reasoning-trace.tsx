@@ -160,7 +160,7 @@ export function ReasoningTrace() {
           <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-3.5 w-3.5 text-accent" />
-              <span className="text-xs font-mono text-muted">prompt</span>
+              <span className="text-xs font-mono text-muted-foreground">prompt</span>
             </div>
             <div className="flex items-center gap-1">
               {SCENES.map((_, i) => (
@@ -200,7 +200,7 @@ export function ReasoningTrace() {
                 <div className="h-7 w-7 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center">
                   <Brain className="h-3.5 w-3.5" />
                 </div>
-                <div className="text-xs text-muted leading-relaxed">{scene.aside}</div>
+                <div className="text-xs text-muted-foreground leading-relaxed">{scene.aside}</div>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -213,9 +213,9 @@ export function ReasoningTrace() {
           <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-xs font-mono text-muted">reasoning trace</span>
+              <span className="text-xs font-mono text-muted-foreground">reasoning trace</span>
             </div>
-            <span className="text-[10px] font-mono text-muted tabular-nums">{totalElapsed}ms</span>
+            <span className="text-[10px] font-mono text-muted-foreground tabular-nums">{totalElapsed}ms</span>
           </div>
 
           <div className="p-4 sm:p-5 flex-1 font-mono text-[11px] sm:text-xs space-y-2 min-h-[280px]">
@@ -230,7 +230,7 @@ export function ReasoningTrace() {
                   className="grid grid-cols-[auto_1fr_auto] gap-2 items-start"
                 >
                   <span className="text-accent whitespace-nowrap">{step.tool}</span>
-                  <span className="text-muted break-all">
+                  <span className="text-muted-foreground break-all">
                     <span className="opacity-60">(</span>
                     {step.args}
                     <span className="opacity-60">)</span>
@@ -240,7 +240,7 @@ export function ReasoningTrace() {
                       {step.result}
                     </span>
                   </span>
-                  <span className="text-muted/70 tabular-nums whitespace-nowrap">
+                  <span className="text-muted-foreground/70 tabular-nums whitespace-nowrap">
                     {step.elapsedMs}ms
                   </span>
                 </motion.div>
@@ -258,7 +258,7 @@ export function ReasoningTrace() {
                   <span className="h-5 w-5 rounded-md bg-accent/15 text-accent inline-flex items-center justify-center">
                     <Check className="h-3 w-3" />
                   </span>
-                  <span className="text-[11px] sm:text-xs text-muted">{scene.finalLabel}</span>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground">{scene.finalLabel}</span>
                 </motion.div>
               )}
             </AnimatePresence>

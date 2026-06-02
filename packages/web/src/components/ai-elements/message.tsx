@@ -280,7 +280,7 @@ const StreamdownLink = ({
 }: JSX.IntrinsicElements["a"] & { node?: unknown }) => (
   <a
     href={href}
-    className="break-all cursor-pointer text-[#007AFF] underline underline-offset-2 decoration-[#007AFF]/40 transition-[text-decoration-color] hover:decoration-[#007AFF] dark:text-[#0A84FF] dark:decoration-[#0A84FF]/40 dark:hover:decoration-[#0A84FF]"
+    className="break-all cursor-pointer text-primary underline underline-offset-2 decoration-primary/40 transition-[text-decoration-color] hover:decoration-primary"
     {...props}
   >
     {children}

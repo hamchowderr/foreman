@@ -13,7 +13,7 @@ export function Workflows() {
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             A workflow is just a conversation you saved.
           </h2>
-          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+          <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
             When a sequence works, say &apos;save that.&apos; Foreman extracts the steps into a
             reusable workflow with streamed progress and run history. No canvas, no trigger picker,
             no 14-field mapping — just the chat you already had.

@@ -73,7 +73,7 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between gap-3 border-b border-border p-3">
         <div className="relative flex-1">
-          <SearchIcon className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
+          <SearchIcon className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -81,11 +81,11 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
             className="h-8 pl-8 text-sm"
           />
         </div>
-        <div className="shrink-0 text-xs text-muted">{selected.length} selected</div>
+        <div className="shrink-0 text-xs text-muted-foreground">{selected.length} selected</div>
       </div>
 
       <div className="max-h-[420px] overflow-y-auto p-2">
-        {isLoading && <p className="p-3 text-sm text-muted">Loading tool catalog…</p>}
+        {isLoading && <p className="p-3 text-sm text-muted-foreground">Loading tool catalog…</p>}
         {error && (
           <p className="p-3 text-sm text-destructive">
             Failed to load tools: {(error as Error).message}
@@ -124,7 +124,7 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
 
             {orphans.length > 0 && (
               <div className="mt-2 rounded-md border border-dashed border-border p-3">
-                <p className="mb-2 text-xs text-muted">
+                <p className="mb-2 text-xs text-muted-foreground">
                   Tools no longer in catalog (kept so you can remove them):
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -177,7 +177,7 @@ function Group({
             {icon}
             {title}
           </div>
-          <div className="text-[11px] text-muted">{subtitle}</div>
+          <div className="text-[11px] text-muted-foreground">{subtitle}</div>
         </div>
         <Badge variant="outline">
           {selectedCount}/{tools.length}
@@ -211,7 +211,7 @@ function Group({
                       </span>
                     )}
                   </div>
-                  <p className="line-clamp-2 text-xs text-muted">{t.description}</p>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{t.description}</p>
                 </div>
               </label>
             </li>

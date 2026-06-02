@@ -13,7 +13,7 @@ export function WhyNotZap() {
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             Zapier Agents builds. Foreman drives.
           </h2>
-          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+          <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
             Zapier Agents is a builder — you configure a named agent, seed its knowledge, pick its
             actions. Foreman is a driver — one agent over your whole Zapier account, no setup, no
             knowledge base to maintain. If your connections are already there, just talk to them.

@@ -92,10 +92,10 @@ export function GuardrailCards() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-sm">{g.title}</h3>
-                  <p className="text-xs text-muted leading-relaxed mt-0.5">{g.body}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{g.body}</p>
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 text-muted shrink-0 transition-transform duration-200 mt-1 ${
+                  className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 mt-1 ${
                     selected ? "rotate-180 text-accent" : ""
                   }`}
                 />
@@ -154,7 +154,7 @@ export function GuardrailCards() {
                     <g.icon className="h-4 w-4" />
                   </div>
                   <h3 className="font-semibold text-sm mb-1">{g.title}</h3>
-                  <p className="text-xs text-muted leading-relaxed">{g.body}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{g.body}</p>
                 </button>
               </TiltedSpotlight>
             );
@@ -168,7 +168,7 @@ export function GuardrailCards() {
                 <active.icon className="h-3.5 w-3.5 text-accent" />
                 <span className="text-xs font-medium">{active.title}</span>
               </div>
-              <span className="text-[10px] uppercase tracking-widest text-muted">live</span>
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">live</span>
             </div>
             <div className="p-5 min-h-[260px] flex-1 flex items-center justify-center">
               <AnimatePresence mode="wait">
@@ -206,13 +206,13 @@ function ApprovalDemo() {
         </div>
         <div className="p-3 text-xs space-y-0.5 font-mono">
           <div>
-            <span className="text-muted">board</span> Personal
+            <span className="text-muted-foreground">board</span> Personal
           </div>
           <div>
-            <span className="text-muted">list</span> Archive
+            <span className="text-muted-foreground">list</span> Archive
           </div>
           <div>
-            <span className="text-muted">cards</span> 14
+            <span className="text-muted-foreground">cards</span> 14
           </div>
         </div>
         <div className="px-3 py-2 border-t border-accent/10 flex gap-2">
@@ -224,7 +224,7 @@ function ApprovalDemo() {
           </button>
           <button
             type="button"
-            className="flex-1 rounded border border-border text-xs py-1.5 text-muted"
+            className="flex-1 rounded border border-border text-xs py-1.5 text-muted-foreground"
           >
             Decline
           </button>
@@ -237,7 +237,7 @@ function ApprovalDemo() {
 function PiiDemo() {
   return (
     <div className="font-mono text-xs sm:text-sm space-y-2">
-      <div className="text-muted">// raw output</div>
+      <div className="text-muted-foreground">// raw output</div>
       <div className="rounded bg-red-500/5 border border-red-500/20 p-2.5 text-red-600 dark:text-red-400 break-all">
         Contact: jane@acme.com, token: sk_live_51HxK2f, SSN: 123-45-6789
       </div>
@@ -250,7 +250,7 @@ function PiiDemo() {
           ↓
         </motion.span>
       </div>
-      <div className="text-muted">// after processor</div>
+      <div className="text-muted-foreground">// after processor</div>
       <div className="rounded bg-accent/5 border border-accent/20 p-2.5 text-foreground break-all">
         Contact: <span className="bg-accent/20 text-accent rounded px-1">[EMAIL]</span>, token:{" "}
         <span className="bg-accent/20 text-accent rounded px-1">[API_KEY]</span>, SSN:{" "}
@@ -266,7 +266,7 @@ function EncryptionDemo() {
   return (
     <div className="font-mono text-xs space-y-2">
       <div>
-        <div className="text-muted mb-1">// plaintext (never stored)</div>
+        <div className="text-muted-foreground mb-1">// plaintext (never stored)</div>
         <div className="rounded border border-red-500/20 bg-red-500/5 px-2.5 py-2 text-red-600 dark:text-red-400 break-all line-through opacity-70">
           {plain}
         </div>
@@ -279,7 +279,7 @@ function EncryptionDemo() {
         AES-256-GCM
       </motion.div>
       <div>
-        <div className="text-muted mb-1">// at rest</div>
+        <div className="text-muted-foreground mb-1">// at rest</div>
         <div className="rounded border border-accent/20 bg-accent/5 px-2.5 py-2 text-foreground break-all">
           {encrypted}
         </div>
@@ -303,7 +303,7 @@ function BlockedDemo() {
             Banking access is blocked
           </span>
         </div>
-        <p className="text-xs text-muted leading-relaxed">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           I can't run actions against Chase without an explicit admin opt-in. Enable it in Settings
           → Sensitive Apps to allow banking actions.
         </p>
@@ -318,7 +318,7 @@ function RateDemo() {
       <div className="rounded-xl border border-border bg-background p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium">Actions this minute</span>
-          <span className="text-xs font-mono tabular-nums text-muted">28 / 30</span>
+          <span className="text-xs font-mono tabular-nums text-muted-foreground">28 / 30</span>
         </div>
         <div className="h-2 rounded-full bg-border overflow-hidden">
           <motion.div
@@ -328,7 +328,7 @@ function RateDemo() {
             className="h-full bg-gradient-to-r from-accent to-red-500"
           />
         </div>
-        <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted flex items-center gap-2">
+        <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground flex items-center gap-2">
           <Gauge className="h-3.5 w-3.5 text-accent" />
           Queueing further requests to protect your Zapier quota.
         </div>

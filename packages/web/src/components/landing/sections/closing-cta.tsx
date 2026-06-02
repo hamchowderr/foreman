@@ -23,7 +23,7 @@ export function ClosingCta() {
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-[-0.03em] max-w-2xl mx-auto">
                 You already built the connections. Start driving them.
               </h2>
-              <p className="text-muted mt-4 sm:mt-5 text-base sm:text-lg max-w-xl mx-auto">
+              <p className="text-muted-foreground mt-4 sm:mt-5 text-base sm:text-lg max-w-xl mx-auto">
                 Connect your Zapier account once. Then talk to it from any chat app you already use.
                 Approval-gated, audit-logged, open source. Free while we&apos;re in alpha.
               </p>

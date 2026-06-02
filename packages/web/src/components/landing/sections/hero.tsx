@@ -27,7 +27,7 @@ export function Hero() {
             <span className="text-accent">Drive the one you already have.</span>
           </h1>
 
-          <p className="text-base sm:text-lg text-muted max-w-lg leading-relaxed">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-lg leading-relaxed">
             Your Zapier account already has 9,000+ app connections. Foreman drives them from chat —
             Slack, Discord, Telegram, MCP — with approval gates and an audit trail. No agent
             builder, no knowledge base to maintain, no per-agent config.
@@ -43,7 +43,7 @@ export function Hero() {
             </MagneticButton>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted pt-1">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground pt-1">
             <span className="flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5 text-accent" /> 9,000+ apps
             </span>

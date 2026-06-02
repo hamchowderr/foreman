@@ -93,7 +93,7 @@ export function PiiTypewriter() {
         <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <ScanEye className="h-4 w-4 text-accent shrink-0" />
-            <span className="text-xs font-medium text-muted truncate">Sensitive data filter</span>
+            <span className="text-xs font-medium text-muted-foreground truncate">Sensitive data filter</span>
           </div>
           <motion.span
             animate={{ color: redacted ? "var(--accent)" : "var(--muted)" }}
@@ -123,7 +123,7 @@ export function PiiTypewriter() {
             )}
           </p>
         </div>
-        <div className="px-5 py-3 border-t border-border bg-background/50 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] sm:text-xs text-muted">
+        <div className="px-5 py-3 border-t border-border bg-background/50 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] sm:text-xs text-muted-foreground">
           <Metric label="emails" Icon={Mail} />
           <Metric label="phones" Icon={Phone} />
           <Metric label="SSNs" Icon={IdCard} />

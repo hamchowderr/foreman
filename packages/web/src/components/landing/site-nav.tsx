@@ -40,7 +40,7 @@ export function SiteNav() {
           <NavLink href="#hosting">Pricing</NavLink>
           <Link
             href="/docs"
-            className="px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors rounded-md hover:bg-surface"
+            className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-surface"
           >
             Docs
           </Link>
@@ -48,7 +48,7 @@ export function SiteNav() {
             href="https://github.com/hamchowderr/foreman"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <GitHubIcon />
             GitHub
@@ -80,35 +80,35 @@ export function SiteNav() {
         <div className="md:hidden border-t border-border bg-background px-6 py-4 space-y-3 animate-fade-in">
           <a
             href="#features"
-            className="block text-sm text-muted hover:text-foreground"
+            className="block text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(false)}
           >
             Features
           </a>
           <a
             href="#how"
-            className="block text-sm text-muted hover:text-foreground"
+            className="block text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(false)}
           >
             How it works
           </a>
           <a
             href="#channels"
-            className="block text-sm text-muted hover:text-foreground"
+            className="block text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(false)}
           >
             Channels
           </a>
           <a
             href="#hosting"
-            className="block text-sm text-muted hover:text-foreground"
+            className="block text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(false)}
           >
             Pricing
           </a>
           <Link
             href="/docs"
-            className="block text-sm text-muted hover:text-foreground"
+            className="block text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(false)}
           >
             Docs
@@ -117,7 +117,7 @@ export function SiteNav() {
             href="https://github.com/hamchowderr/foreman"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <GitHubIcon /> GitHub
           </a>
@@ -142,7 +142,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <a
       href={href}
-      className="px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors rounded-md hover:bg-surface"
+      className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-surface"
     >
       {children}
     </a>

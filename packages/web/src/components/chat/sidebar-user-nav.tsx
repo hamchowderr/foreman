@@ -1,18 +1,23 @@
 "use client";
 
-import { ChevronUp } from "lucide-react";
+import { Check, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth";
 import { createClient } from "@/lib/client";
+import { applyThemePreset, getStoredThemePreset, THEME_PRESETS } from "@/lib/theme-presets";
 
 function emailToHue(email: string): number {
   let hash = 0;
@@ -25,6 +30,16 @@ function emailToHue(email: string): number {
 export function SidebarUserNav({ user }: { user: SessionUser }) {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
+  const [preset, setPreset] = useState("default");
+
+  useEffect(() => {
+    setPreset(getStoredThemePreset());
+  }, []);
+
+  const handleSelectPreset = (value: string) => {
+    applyThemePreset(value);
+    setPreset(value);
+  };
 
   const handleSignOut = async () => {
     await createClient().auth.signOut();
@@ -64,6 +79,27 @@ export function SidebarUserNav({ user }: { user: SessionUser }) {
             >
               {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="text-[13px]" data-testid="user-nav-item-preset">
+                Color theme
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="rounded-lg border border-border/60 bg-card/95 backdrop-blur-xl">
+                {THEME_PRESETS.map((p) => (
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2 text-[13px]"
+                    key={p.value}
+                    onSelect={() => handleSelectPreset(p.value)}
+                  >
+                    <span
+                      className="size-3 shrink-0 rounded-full ring-1 ring-border/60"
+                      style={{ background: p.swatch }}
+                    />
+                    <span className="flex-1 truncate">{p.name}</span>
+                    {preset === p.value && <Check className="size-3.5 shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer text-[13px]"

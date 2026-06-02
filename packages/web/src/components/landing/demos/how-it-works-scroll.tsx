@@ -11,7 +11,7 @@ const STEPS = [
     body: "In Slack, web, voice, or any channel. No app name, no action name, no syntax.",
     icon: MessageSquare,
     preview: (
-      <div className="rounded-lg bg-background/70 border border-border/50 p-3 text-[11px] font-mono text-muted">
+      <div className="rounded-lg bg-background/70 border border-border/50 p-3 text-[11px] font-mono text-muted-foreground">
         <span className="text-accent">you</span> email Jake the Q3 deck
       </div>
     ),
@@ -24,15 +24,15 @@ const STEPS = [
     preview: (
       <div className="rounded-lg bg-background/70 border border-border/50 p-3 space-y-1 text-[11px] font-mono">
         <div className="flex gap-2">
-          <span className="text-muted w-8">to</span>
+          <span className="text-muted-foreground w-8">to</span>
           <span>jake@acme.com</span>
         </div>
         <div className="flex gap-2">
-          <span className="text-muted w-8">re</span>
+          <span className="text-muted-foreground w-8">re</span>
           <span>Q3 deck</span>
         </div>
         <div className="flex gap-2">
-          <span className="text-muted w-8">file</span>
+          <span className="text-muted-foreground w-8">file</span>
           <span>Q3-Review.pdf</span>
         </div>
       </div>
@@ -88,7 +88,7 @@ function StepCard({ step, index }: { step: Step; index: number }) {
             <span className="text-accent font-mono text-sm font-semibold">{step.num}</span>
           </div>
           <h3 className="font-semibold mb-2">{step.title}</h3>
-          <p className="text-sm text-muted leading-relaxed mb-5">{step.body}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-5">{step.body}</p>
           {step.preview}
         </div>
       </TiltedSpotlight>

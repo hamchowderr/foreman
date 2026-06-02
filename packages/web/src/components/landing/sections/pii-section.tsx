@@ -23,7 +23,7 @@ export function PiiSection() {
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
               Personal details get hidden before you see them.
             </h2>
-            <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+            <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
               When Foreman pulls data back from your apps, it scans the answer for anything
               sensitive — email addresses, phone numbers, card numbers, API keys — and blanks them
               out. You still get the answer. You just don't get the raw data spilled into your chat.

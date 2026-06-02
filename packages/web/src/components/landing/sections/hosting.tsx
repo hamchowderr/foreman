@@ -25,7 +25,7 @@ export function Hosting() {
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             Alpha-hosted or on your own server.
           </h2>
-          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+          <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
             Use our alpha to try it free. Self-host when you&apos;re ready to run it for your team
             or your clients — one Docker container, your data stays yours, full source on GitHub.
           </p>
@@ -42,7 +42,7 @@ export function Hosting() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold">Foreman Cloud</h3>
-                      <p className="text-xs text-muted">Free during alpha</p>
+                      <p className="text-xs text-muted-foreground">Free during alpha</p>
                     </div>
                   </div>
                   <Badge variant="outline">Alpha</Badge>
@@ -72,7 +72,7 @@ export function Hosting() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-foreground/5 flex items-center justify-center">
-                    <Server className="h-4 w-4 text-muted" />
+                    <Server className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -81,7 +81,7 @@ export function Hosting() {
                         MIT
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       One Docker container. Your server, your data. Full source on GitHub.
                     </p>
                   </div>
@@ -92,7 +92,7 @@ export function Hosting() {
                   </a>
                 </Button>
               </div>
-              <div className="mt-4 rounded-lg bg-background border border-border/40 p-3 font-mono text-xs text-muted overflow-x-auto">
+              <div className="mt-4 rounded-lg bg-background border border-border/40 p-3 font-mono text-xs text-muted-foreground overflow-x-auto">
                 <span className="text-accent">$</span> docker run -p 4111:4111 foreman
               </div>
             </div>

@@ -13,7 +13,7 @@ export function ReasoningTrace() {
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             Foreman shows its work.
           </h2>
-          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+          <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
             Every prompt becomes a sequence of tool calls — lookups, discoveries, argument
             resolution. You see the full trace before anything writes, so you always know how it got
             to the draft.

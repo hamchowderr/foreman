@@ -255,7 +255,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
 
   if (agentLoading) {
     return (
-      <div className="flex h-full items-center justify-center p-10 text-sm text-muted">
+      <div className="flex h-full items-center justify-center p-10 text-sm text-muted-foreground">
         <Loader2Icon className="mr-2 size-4 animate-spin" />
         Loading agent…
       </div>
@@ -269,7 +269,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
     );
   }
   if (!agent || !buffer || !selectedVersion) {
-    return <div className="p-10 text-sm text-muted">Loading version…</div>;
+    return <div className="p-10 text-sm text-muted-foreground">Loading version…</div>;
   }
 
   return (
@@ -279,7 +279,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link
             href="/editor"
-            className="rounded-md p-1 text-muted transition-colors hover:bg-surface hover:text-foreground"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
             aria-label="Back to agents"
           >
             <ChevronLeftIcon className="size-4" />
@@ -320,7 +320,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
             size="icon-sm"
             onClick={() => setDeleteOpen(true)}
             title="Delete agent"
-            className="text-muted hover:text-destructive"
+            className="text-muted-foreground hover:text-destructive"
           >
             <TrashIcon className="size-4" />
           </Button>
@@ -334,7 +334,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
             <section>
               <label
                 htmlFor="agent-description"
-                className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted"
+                className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground"
               >
                 Description
               </label>
@@ -354,11 +354,11 @@ export function AgentEditor({ agentId }: { agentId: string }) {
               <div className="mb-1 flex items-center justify-between">
                 <label
                   htmlFor="agent-instructions"
-                  className="text-xs font-medium uppercase tracking-wide text-muted"
+                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                 >
                   Instructions
                 </label>
-                <span className="text-xs text-muted">
+                <span className="text-xs text-muted-foreground">
                   {buffer.instructions.length.toLocaleString()} chars
                 </span>
               </div>
@@ -371,12 +371,12 @@ export function AgentEditor({ agentId }: { agentId: string }) {
                 rows={16}
                 className={cn(
                   "font-mono text-sm leading-relaxed",
-                  !isDraft && "bg-surface/50 text-muted",
+                  !isDraft && "bg-surface/50 text-muted-foreground",
                 )}
                 maxLength={50000}
               />
               {!isDraft && (
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Published versions are read-only. Click{" "}
                   <span className="font-medium">Edit as new draft</span> to change them.
                 </p>
@@ -386,7 +386,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
             <section>
               <label
                 htmlFor="agent-model"
-                className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted"
+                className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground"
               >
                 Model
               </label>
@@ -414,7 +414,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
 
             <section>
               {/* biome-ignore lint/a11y/noLabelWithoutControl: ToolsPicker is a custom multi-input picker; visual label is fine */}
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted">
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Tools
               </label>
               <ToolsPicker
@@ -427,7 +427,7 @@ export function AgentEditor({ agentId }: { agentId: string }) {
         </div>
 
         <aside className="hidden w-72 shrink-0 flex-col border-l border-border bg-surface/40 lg:flex">
-          <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <HistoryIcon className="size-3.5" />
             Version history
           </div>
@@ -482,14 +482,14 @@ function SaveIndicator({
   if (!isDraft) return null;
   if (state === "saving") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
         <Loader2Icon className="size-3 animate-spin" />
         Saving…
       </span>
     );
   }
   if (state === "dirty") {
-    return <span className="text-xs text-muted">Unsaved…</span>;
+    return <span className="text-xs text-muted-foreground">Unsaved…</span>;
   }
   if (state === "error") {
     return (
@@ -498,5 +498,5 @@ function SaveIndicator({
       </span>
     );
   }
-  return <span className="text-xs text-muted">Draft saved</span>;
+  return <span className="text-xs text-muted-foreground">Draft saved</span>;
 }

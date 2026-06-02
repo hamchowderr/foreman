@@ -536,7 +536,7 @@ export function ZapVsForemanRace() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.25 }}
-                  className="text-[10px] font-mono text-muted truncate"
+                  className="text-[10px] font-mono text-muted-foreground truncate"
                 >
                   · {scene.subtitle}
                 </motion.span>
@@ -572,7 +572,7 @@ export function ZapVsForemanRace() {
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-accent" />
               <span className="text-xs font-semibold">Foreman</span>
-              <span className="text-[10px] font-mono text-muted">One prompt</span>
+              <span className="text-[10px] font-mono text-muted-foreground">One prompt</span>
             </div>
             <span className="text-[10px] font-mono text-accent tabular-nums">
               {(Math.min(sceneElapsedMs, FOREMAN_MS) / 1000).toFixed(1)}s
@@ -604,7 +604,7 @@ export function ZapVsForemanRace() {
                 >
                   <div className="px-3 py-1.5 border-b border-border/50 flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                    <span className="text-[10px] font-mono text-muted">reasoning</span>
+                    <span className="text-[10px] font-mono text-muted-foreground">reasoning</span>
                   </div>
                   <div className="px-3 py-2 text-[10px] font-mono space-y-1.5">
                     {scene.trace.slice(0, traceShown).map((c, i) => (
@@ -618,7 +618,7 @@ export function ZapVsForemanRace() {
                         <Check className="h-2.5 w-2.5 text-green-600 dark:text-green-400 mt-[2px] shrink-0" />
                         <div className="min-w-0 flex-1">
                           <span className="text-accent">{c.tool}</span>
-                          <span className="text-muted">
+                          <span className="text-muted-foreground">
                             <span className="opacity-60">(</span>
                             {c.args}
                             <span className="opacity-60">)</span>
@@ -686,7 +686,7 @@ export function ZapVsForemanRace() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-muted">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
           {phase === "complete" ? (
             <span className="text-accent font-medium">
@@ -724,7 +724,7 @@ export function ZapVsForemanRace() {
 function PhasePill({ phase }: { phase: Phase }) {
   if (phase === "building") {
     return (
-      <span className="text-[9px] uppercase tracking-widest font-medium text-muted/80 border border-border rounded px-1.5 py-0.5">
+      <span className="text-[9px] uppercase tracking-widest font-medium text-muted-foreground/80 border border-border rounded px-1.5 py-0.5">
         editing
       </span>
     );
@@ -780,7 +780,7 @@ function ZapCanvas({
       <div className="grid grid-cols-2 gap-4 sm:gap-8 pt-1">
         <div className="flex flex-col items-center gap-1.5 relative">
           <div className="absolute -top-2 left-1/2 w-px h-2 bg-border" />
-          <span className="text-[9px] font-mono text-muted bg-background/80 px-1.5 py-0.5 rounded-full border border-border">
+          <span className="text-[9px] font-mono text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded-full border border-border">
             Path A
           </span>
           {pathANodes.map((node, i) => (
@@ -794,7 +794,7 @@ function ZapCanvas({
         </div>
         <div className="flex flex-col items-center gap-1.5 relative">
           <div className="absolute -top-2 left-1/2 w-px h-2 bg-border" />
-          <span className="text-[9px] font-mono text-muted bg-background/80 px-1.5 py-0.5 rounded-full border border-border">
+          <span className="text-[9px] font-mono text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded-full border border-border">
             Path B
           </span>
           {pathBNodes.map((node, i) => (
@@ -853,13 +853,13 @@ function ZapNodeCard({
           transition={{ duration: 0.9, repeat: Infinity }}
         />
       )}
-      <span className="text-[9px] font-mono text-muted tabular-nums w-4 shrink-0">{node.n}.</span>
+      <span className="text-[9px] font-mono text-muted-foreground tabular-nums w-4 shrink-0">{node.n}.</span>
       <AppDot color={node.color} letter={node.letter} />
       <div className="flex-1 min-w-0 leading-tight">
         <div className={`font-medium truncate ${compact ? "text-[10px]" : "text-[11px]"}`}>
           {node.action}
         </div>
-        <div className={`text-muted truncate ${compact ? "text-[8px]" : "text-[9px]"}`}>
+        <div className={`text-muted-foreground truncate ${compact ? "text-[8px]" : "text-[9px]"}`}>
           {node.app}
         </div>
       </div>

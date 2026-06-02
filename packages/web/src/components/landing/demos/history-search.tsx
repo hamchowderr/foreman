@@ -221,12 +221,12 @@ export function HistorySearch({
     <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden">
       <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center gap-2">
         <History className="h-4 w-4 text-accent" />
-        <span className="text-xs font-medium text-muted">Recent activity</span>
+        <span className="text-xs font-medium text-muted-foreground">Recent activity</span>
       </div>
 
       <div className="p-4 sm:p-5">
         <div className="flex items-center gap-2 rounded-lg bg-background border border-border px-3 py-2.5">
-          <Search className="h-4 w-4 text-muted shrink-0" />
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="text-sm flex-1 min-w-0">
             {typed}
             {!showResults && (
@@ -254,12 +254,12 @@ export function HistorySearch({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium text-sm truncate">{result.title}</span>
-                        <span className="text-[10px] font-mono text-muted tabular-nums shrink-0">
+                        <span className="text-[10px] font-mono text-muted-foreground tabular-nums shrink-0">
                           {(result.score * 100).toFixed(0)}%
                         </span>
                       </div>
-                      <div className="text-xs text-muted mt-0.5 truncate">{result.snippet}</div>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted">
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate">{result.snippet}</div>
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                         <span>{result.app}</span>
                         <span>·</span>
                         <span>{result.date}</span>

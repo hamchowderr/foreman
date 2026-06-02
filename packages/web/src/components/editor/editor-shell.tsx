@@ -31,7 +31,7 @@ export function EditorShell({
           <button
             type="button"
             onClick={() => router.push("/editor?new=1")}
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs text-muted-foreground transition-colors hover:border-accent hover:text-accent"
             title="New agent"
           >
             <PlusIcon className="size-3" />
@@ -42,12 +42,12 @@ export function EditorShell({
         <div className="mt-auto border-t border-border px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="truncate text-xs text-muted">{user.email}</div>
+              <div className="truncate text-xs text-muted-foreground">{user.email}</div>
             </div>
             <button
               type="button"
               onClick={handleSignOut}
-              className="shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-background hover:text-foreground"
+              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
               title="Sign out"
             >
               <LogOut className="size-3.5" />
@@ -65,7 +65,7 @@ export function EditorShell({
           <button
             type="button"
             onClick={handleSignOut}
-            className="rounded-md p-1 text-muted transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title="Sign out"
           >
             <LogOut className="size-4" />

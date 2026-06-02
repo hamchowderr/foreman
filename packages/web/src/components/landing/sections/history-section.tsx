@@ -37,7 +37,7 @@ export function HistorySection() {
                 </motion.h2>
               </AnimatePresence>
             </div>
-            <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+            <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
               Every action Foreman runs gets indexed with embeddings. Ask a fuzzy question and get
               the exact email, card, or invoice back — plus a relevance score. No keywords required.
             </p>

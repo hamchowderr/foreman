@@ -209,7 +209,7 @@ export function FiveThingsReplay() {
             >
               <span
                 className={`text-[10px] font-mono tabular-nums mt-1 w-5 shrink-0 ${
-                  selected ? "text-accent font-semibold" : "text-muted"
+                  selected ? "text-accent font-semibold" : "text-muted-foreground"
                 }`}
               >
                 0{i + 1}
@@ -220,7 +220,7 @@ export function FiveThingsReplay() {
                 >
                   {s.title}
                 </div>
-                <div className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
+                <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
                   <span
                     className="inline-flex items-center justify-center h-3 w-3 rounded-sm shrink-0"
                     style={{ backgroundColor: sSkin.brand }}
@@ -234,7 +234,7 @@ export function FiveThingsReplay() {
               </div>
               <ChevronRight
                 className={`h-4 w-4 shrink-0 mt-1 transition-transform ${
-                  selected ? "translate-x-0.5 text-accent" : "text-muted"
+                  selected ? "translate-x-0.5 text-accent" : "text-muted-foreground"
                 }`}
               />
             </button>
@@ -321,14 +321,14 @@ export function FiveThingsReplay() {
                           <span className="text-xs font-medium">
                             {msg.app} · {msg.action}
                           </span>
-                          <span className="text-[10px] uppercase tracking-wider text-muted">
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                             needs approval
                           </span>
                         </div>
                         <div className="px-4 py-3 space-y-1.5 text-xs font-mono">
                           {msg.fields.map((f) => (
                             <div key={f.key} className="flex gap-2">
-                              <span className="text-muted w-16 shrink-0">{f.key}</span>
+                              <span className="text-muted-foreground w-16 shrink-0">{f.key}</span>
                               <span className="truncate">{f.value}</span>
                             </div>
                           ))}

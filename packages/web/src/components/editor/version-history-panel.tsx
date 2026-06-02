@@ -20,7 +20,7 @@ export function VersionHistoryPanel({
   onRestore,
 }: Props) {
   if (versions.length === 0) {
-    return <div className="p-4 text-xs text-muted">No versions yet.</div>;
+    return <div className="p-4 text-xs text-muted-foreground">No versions yet.</div>;
   }
 
   // Latest-first ordering is assumed from the API, but sort defensively.
@@ -49,7 +49,7 @@ export function VersionHistoryPanel({
                   <div className="flex items-center gap-1.5">
                     <span className="font-mono text-xs font-semibold">v{v.version}</span>
                     {v.is_draft ? (
-                      <span className="rounded-sm bg-muted/20 px-1 py-0.5 text-[10px] text-muted">
+                      <span className="rounded-sm bg-muted/20 px-1 py-0.5 text-[10px] text-muted-foreground">
                         draft
                       </span>
                     ) : isCurrent ? (
@@ -57,12 +57,12 @@ export function VersionHistoryPanel({
                         published
                       </span>
                     ) : (
-                      <span className="rounded-sm bg-muted/10 px-1 py-0.5 text-[10px] text-muted">
+                      <span className="rounded-sm bg-muted/10 px-1 py-0.5 text-[10px] text-muted-foreground">
                         archived
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 truncate text-[11px] text-muted">
+                  <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
                     {formatTimestamp(v.published_at ?? v.created_at)} · {v.tools.length} tool
                     {v.tools.length === 1 ? "" : "s"}
                   </div>
@@ -76,7 +76,7 @@ export function VersionHistoryPanel({
                 <button
                   type="button"
                   onClick={() => onRestore(v.id)}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted transition-colors hover:text-accent"
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-accent"
                 >
                   <RotateCcwIcon className="size-3" />
                   Restore to new draft

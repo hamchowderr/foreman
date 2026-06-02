@@ -127,14 +127,14 @@ export function ToolDiscovery() {
     <div ref={ref} className="rounded-2xl border border-border bg-surface overflow-hidden">
       <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center gap-2">
         <Toolbox className="h-4 w-4 text-accent" />
-        <Search className="h-3 w-3 text-muted" />
-        <span className="text-xs font-medium text-muted">Toolbox search</span>
+        <Search className="h-3 w-3 text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">Toolbox search</span>
       </div>
 
       {/* Input */}
       <div className="px-4 sm:px-5 pt-5 pb-3">
         <div className="flex items-center gap-2 rounded-lg bg-background border border-border px-3 py-2.5">
-          <Search className="h-3.5 w-3.5 text-muted shrink-0" />
+          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-sm flex-1 min-w-0 truncate">
             {typed}
             {phase === "typing" && (
@@ -142,7 +142,7 @@ export function ToolDiscovery() {
             )}
           </span>
         </div>
-        <div className="mt-2 flex items-center justify-between text-[11px] text-muted">
+        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
           <AnimatePresence mode="wait">
             <motion.span
               key={phase}

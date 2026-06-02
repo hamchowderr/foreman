@@ -13,7 +13,7 @@ export function Guardrails() {
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             An AI with a leash.
           </h2>
-          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+          <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
             Driving real apps means real mistakes are possible. Foreman ships approval gates, PII
             redaction, rate limits, and an audit trail on by default — not as a setting you have to
             remember to turn on.

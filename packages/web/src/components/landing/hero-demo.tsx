@@ -88,7 +88,7 @@ export function HeroDemo() {
         <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
         <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/80" />
         <span className="h-2.5 w-2.5 rounded-full bg-green-400/80" />
-        <span className="ml-3 text-xs text-muted font-mono">foreman · slack</span>
+        <span className="ml-3 text-xs text-muted-foreground font-mono">foreman · slack</span>
       </div>
       <div className="p-4 sm:p-6 space-y-3 min-h-[340px] sm:min-h-[380px] text-sm">
         <AnimatePresence>
@@ -174,7 +174,7 @@ function ProposalCard() {
           </button>
           <button
             type="button"
-            className="rounded-md border border-border px-3 py-1 text-xs text-muted"
+            className="rounded-md border border-border px-3 py-1 text-xs text-muted-foreground"
           >
             Edit
           </button>
@@ -187,7 +187,7 @@ function ProposalCard() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2">
-      <span className="text-muted w-12 sm:w-14 shrink-0">{label}</span>
+      <span className="text-muted-foreground w-12 sm:w-14 shrink-0">{label}</span>
       <span className="font-mono truncate">{value}</span>
     </div>
   );

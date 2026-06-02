@@ -57,7 +57,7 @@ export function AgentListView() {
       <header className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Your agents</h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Custom agent definitions — instructions, tools, and published versions.
           </p>
         </div>
@@ -67,7 +67,7 @@ export function AgentListView() {
         </Button>
       </header>
 
-      {isLoading && <p className="text-sm text-muted">Loading agents…</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">Loading agents…</p>}
       {error && (
         <p className="text-sm text-destructive">
           Failed to load agents: {(error as Error).message}
@@ -101,9 +101,9 @@ export function AgentListView() {
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-xl border border-dashed border-border p-12 text-center">
-      <BotIcon className="mx-auto mb-3 size-8 text-muted" />
+      <BotIcon className="mx-auto mb-3 size-8 text-muted-foreground" />
       <h2 className="text-base font-medium">No agents yet</h2>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+      <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
         Create your first agent to define instructions, pick tools, and publish versions you can
         reference elsewhere.
       </p>
@@ -138,10 +138,10 @@ function AgentCard({ agent }: { agent: StoredAgent }) {
           <Badge variant="outline">v{latest.version}</Badge>
         ) : null}
       </div>
-      <p className="line-clamp-3 min-h-[3.5em] text-sm text-muted">
+      <p className="line-clamp-3 min-h-[3.5em] text-sm text-muted-foreground">
         {agent.description || "No description"}
       </p>
-      <div className="mt-4 flex items-center justify-between text-xs text-muted">
+      <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
         <span>{latest ? `${latest.tools.length} tools` : "—"}</span>
         <span>Updated {formatRelative(agent.updated_at)}</span>
       </div>
@@ -227,7 +227,7 @@ function NewAgentDialog({
             </div>
             <div>
               <label htmlFor="new-agent-description" className="mb-1 block text-sm font-medium">
-                Description <span className="text-xs font-normal text-muted">(optional)</span>
+                Description <span className="text-xs font-normal text-muted-foreground">(optional)</span>
               </label>
               <Textarea
                 id="new-agent-description"

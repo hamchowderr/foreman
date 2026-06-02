@@ -41,7 +41,7 @@ export function Channels() {
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
             Same memory across every channel.
           </h2>
-          <p className="text-muted mt-4 text-base sm:text-lg leading-relaxed">
+          <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
             Ask in Slack, follow up from Telegram, approve from your phone. Your apps, preferences,
             and action history travel with you.
           </p>
@@ -69,7 +69,7 @@ export function Channels() {
                     className={`relative rounded-xl border flex flex-col items-center justify-center gap-2 p-3 text-xs sm:text-sm transition-colors ${
                       c.avail
                         ? "border-border bg-surface hover:border-accent/40"
-                        : "border-border/40 bg-surface/40 text-muted"
+                        : "border-border/40 bg-surface/40 text-muted-foreground"
                     }`}
                   >
                     <span className={`${c.avail ? "" : "opacity-50"}`}>
@@ -86,7 +86,7 @@ export function Channels() {
                     </span>
                     <span className="font-medium text-center leading-tight">{c.name}</span>
                     {!c.avail && (
-                      <span className="absolute top-1.5 right-1.5 text-[9px] uppercase tracking-wider text-muted/70">
+                      <span className="absolute top-1.5 right-1.5 text-[9px] uppercase tracking-wider text-muted-foreground/70">
                         soon
                       </span>
                     )}

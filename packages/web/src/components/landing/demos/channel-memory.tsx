@@ -134,9 +134,9 @@ export function ChannelMemory() {
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-mono text-muted">shared memory</span>
+          <span className="text-xs font-mono text-muted-foreground">shared memory</span>
         </div>
-        <span className="text-[10px] uppercase tracking-widest text-muted hidden sm:inline">
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground hidden sm:inline">
           one user · any channel
         </span>
       </div>
@@ -244,7 +244,7 @@ export function ChannelMemory() {
         </AnimatePresence>
       </div>
 
-      <div className="px-4 sm:px-5 py-3 border-t border-border bg-background/50 text-xs text-muted flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-5 py-3 border-t border-border bg-background/50 text-xs text-muted-foreground flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 truncate">
           <span
             className="h-2 w-2 rounded-full shrink-0"

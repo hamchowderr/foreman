@@ -168,7 +168,7 @@ export function WorkflowExtraction() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="text-xs font-mono text-muted truncate"
+                className="text-xs font-mono text-muted-foreground truncate"
               >
                 conversation {scenario.convoId}
               </motion.span>
@@ -231,7 +231,7 @@ export function WorkflowExtraction() {
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <GitBranch className="h-3.5 w-3.5 text-accent shrink-0" />
-              <span className="text-xs font-medium text-muted truncate">Workflow</span>
+              <span className="text-xs font-medium text-muted-foreground truncate">Workflow</span>
             </div>
             <AnimatePresence>
               {phase === "done" && (
@@ -254,7 +254,7 @@ export function WorkflowExtraction() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="h-full min-h-[240px] flex items-center justify-center text-sm text-muted"
+                  className="h-full min-h-[240px] flex items-center justify-center text-sm text-muted-foreground"
                 >
                   No workflow yet.
                 </motion.div>
@@ -264,7 +264,7 @@ export function WorkflowExtraction() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="h-full min-h-[240px] flex flex-col items-center justify-center gap-3 text-sm text-muted"
+                  className="h-full min-h-[240px] flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground"
                 >
                   <motion.div
                     animate={{ rotate: 360 }}
@@ -350,14 +350,14 @@ export function WorkflowExtraction() {
                               transition={{ duration: 0.9, repeat: Infinity }}
                             />
                           ) : (
-                            <span className="text-muted">{i + 1}</span>
+                            <span className="text-muted-foreground">{i + 1}</span>
                           )}
                         </motion.div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-semibold">{step.app}</div>
-                          <div className="text-xs text-muted truncate">{step.action}</div>
+                          <div className="text-xs text-muted-foreground truncate">{step.action}</div>
                         </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted shrink-0" />
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </motion.div>
                     );
                   })}
