@@ -1,3 +1,4 @@
+import path from "node:path";
 import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 
@@ -14,13 +15,20 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ hostname: "avatar.vercel.sh" }, { hostname: "img.clerk.com" }],
   },
+  // Monorepo: pin the workspace root explicitly (two levels up from packages/web)
+  // so Turbopack doesn't have to infer it from lockfile location.
+  turbopack: {
+    root: path.join(import.meta.dirname, "..", ".."),
+  },
   cacheComponents: true,
   experimental: {
     prefetchInlining: true,
     cachedNavigations: true,
     appNewScrollHandler: true,
     inlineCss: true,
-    turbopackFileSystemCacheForDev: true,
+    // turbopackFileSystemCacheForDev intentionally OFF: the experimental Turbopack
+    // dev FS cache triggers a process-spawn/OOM storm on Windows (see foreman-5rph).
+    preloadEntriesOnStart: false,
   },
 };
 
