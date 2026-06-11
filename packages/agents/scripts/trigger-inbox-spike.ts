@@ -30,6 +30,8 @@ type Args = {
   keep: boolean;
   leaseLimit: number;
   json: boolean;
+  inbox?: string; // operate on an existing inbox (phase 2) instead of creating one
+  waitSeconds: number; // poll-for-ready + lease-retry budget
 };
 
 function parseArgs(argv: string[]): Args {
@@ -45,8 +47,12 @@ function parseArgs(argv: string[]): Args {
     keep: has("keep"),
     leaseLimit: Number(get("lease") ?? 5),
     json: has("json"),
+    inbox: get("inbox"),
+    waitSeconds: Number(get("wait") ?? 0),
   };
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function resolveCredentials(): { clientId: string; clientSecret: string } | string | undefined {
   if (process.env.DEV_ZAPIER_OVERRIDE) return process.env.DEV_ZAPIER_OVERRIDE;
@@ -129,91 +135,125 @@ async function main() {
     log(`  ${i.id}  status=${i.status}  ${i.subscription?.app_key}/${i.subscription?.action_key}`);
   }
 
-  if (!args.liveCreate) {
+  if (!args.liveCreate && !args.inbox) {
     hr("DONE (discovery only)");
-    log("Re-run with --live-create to exercise ensure→lease→ack/release→delete.");
-    log("That CREATES a real inbox on Zapier and leases real messages.");
+    log("Re-run with --live-create to ensure→lease→ack/release→delete,");
+    log("or --inbox=<id> --wait=120 to drain an existing inbox.");
     return;
   }
 
-  // ===================== LIVE LIFECYCLE (creates real resources) =====================
-  // Resolve a connection for the app (trigger inboxes bind to a connection).
-  hr("CONNECTION");
-  let connection: string | number | undefined;
-  try {
-    const { data: conn } = await (sdk as any).findFirstConnection({
+  // ===================== LIVE LIFECYCLE (creates/uses real resources) =====================
+  let inboxId: string;
+  if (args.inbox) {
+    inboxId = args.inbox;
+    hr("USING EXISTING INBOX");
+    log(`inbox ${inboxId}`);
+  } else {
+    // Resolve a connection for the app — trigger inboxes bind to a connection,
+    // and without one the inbox transitions to initialization_failure.
+    hr("CONNECTION");
+    let connection: string | number | undefined;
+    try {
+      const { data: conn } = await (sdk as any).findFirstConnection({
+        app: args.app,
+        expired: false,
+      });
+      connection = conn?.id;
+      log(
+        connection
+          ? `using connection ${connection}`
+          : "no connection found — inbox will fail to initialize",
+      );
+    } catch (err) {
+      log(`findFirstConnection failed: ${(err as Error).message}`);
+    }
+
+    hr("ensureTriggerInbox");
+    const { data: inbox } = await (sdk as any).ensureTriggerInbox({
+      name: `foreman-spike-${args.app}-${pick.key}`,
       app: args.app,
-      expired: false,
+      action: pick.key,
+      ...(connection ? { connection } : {}),
     });
-    connection = conn?.id;
-    log(
-      connection ? `using connection ${connection}` : "no connection found (ensure may still work)",
-    );
-  } catch (err) {
-    log(`findFirstConnection failed: ${(err as Error).message}`);
+    inboxId = inbox.id;
+    log(`inbox id=${inbox.id} status=${inbox.status} conn=${inbox.subscription?.connection_id}`);
   }
 
-  hr("ensureTriggerInbox");
-  const { data: inbox } = await (sdk as any).ensureTriggerInbox({
-    name: `foreman-spike-${args.app}-${pick.key}`,
-    app: args.app,
-    action: pick.key,
-    ...(connection ? { connection } : {}),
-  });
-  log(`inbox id=${inbox.id} status=${inbox.status}`);
-  log(
-    `subscription: ${inbox.subscription?.app_key}/${inbox.subscription?.action_key} conn=${inbox.subscription?.connection_id}`,
-  );
+  // --- Poll until the inbox leaves "initializing" (up to --wait seconds) ---
+  if (args.waitSeconds > 0) {
+    hr(`POLL READY (≤${args.waitSeconds}s)`);
+    const deadline = Date.now() + args.waitSeconds * 1000;
+    let status = "initializing";
+    while (Date.now() < deadline) {
+      const { data: cur } = await (sdk as any).getTriggerInbox({ inbox: inboxId });
+      status = cur.status;
+      log(`  status=${status}`);
+      if (status !== "initializing") break;
+      await sleep(5000);
+    }
+  }
 
   try {
+    // --- Lease, retrying until a message arrives or the --wait budget is spent ---
     hr("leaseTriggerInboxMessages");
-    const { data: leased } = await (sdk as any).leaseTriggerInboxMessages({
-      inbox: inbox.id,
-      leaseLimit: args.leaseLimit,
-      leaseSeconds: 60,
-    });
-    const msgs = leased.results ?? [];
-    log(
-      `lease_id=${leased.lease_id} leased=${msgs.length} until=${leased.leased_until} inbox=${leased.inbox_attributes?.status}`,
-    );
+    const deadline = Date.now() + Math.max(0, args.waitSeconds) * 1000;
+    let msgs: any[] = [];
+    let leaseId: string | null = null;
+    let attempt = 0;
+    while (true) {
+      attempt++;
+      const { data: leased } = await (sdk as any).leaseTriggerInboxMessages({
+        inbox: inboxId,
+        leaseLimit: args.leaseLimit,
+        leaseSeconds: 60,
+      });
+      leaseId = leased.lease_id;
+      msgs = leased.results ?? [];
+      log(
+        `  attempt ${attempt}: lease_id=${leaseId} leased=${msgs.length} inbox=${leased.inbox_attributes?.status}`,
+      );
+      if (msgs.length > 0 || Date.now() >= deadline) break;
+      await sleep(8000);
+    }
+
     for (const m of msgs) {
       log(
         `  msg ${m.id}  lease_count=${m.message_attributes?.lease_count}  dup=${m.message_attributes?.possible_duplicate_data}  err=${m.message_attributes?.error_message ?? "-"}`,
       );
     }
 
-    if (leased.lease_id && msgs.length > 0) {
-      // Ack the first message (simulate success), release the rest (simulate retry).
+    if (leaseId && msgs.length > 0) {
+      // Ack the first (simulate success), release the rest (simulate retry).
       const [first, ...rest] = msgs.map((m: any) => m.id);
       hr("ackTriggerInboxMessages (first)");
       const { data: acked } = await (sdk as any).ackTriggerInboxMessages({
-        inbox: inbox.id,
-        lease: leased.lease_id,
+        inbox: inboxId,
+        lease: leaseId,
         messages: [first],
       });
       log(`acked_id=${acked.acked_id} (${acked.results?.length ?? 0} results)`);
-
       if (rest.length) {
         hr("releaseTriggerInboxMessages (rest → retry)");
         const { data: released } = await (sdk as any).releaseTriggerInboxMessages({
-          inbox: inbox.id,
-          lease: leased.lease_id,
+          inbox: inboxId,
+          lease: leaseId,
           messages: rest,
         });
         log(`released_id=${released.released_id} (${released.results?.length ?? 0} results)`);
       }
     } else {
       log(
-        "No messages to ack/release (inbox empty — expected for a brand-new inbox with no recent events).",
+        "No messages leased. issue_v2 is a POLLING trigger — Zapier collects events on its own cadence (minutes). Open an issue, wait, then re-drain with --inbox=<id> --wait=120.",
       );
     }
   } finally {
     if (!args.keep) {
       hr("deleteTriggerInbox (cleanup)");
-      await (sdk as any).deleteTriggerInbox({ inbox: inbox.id });
-      log(`deleted inbox ${inbox.id}`);
+      await (sdk as any).deleteTriggerInbox({ inbox: inboxId });
+      log(`deleted inbox ${inboxId}`);
     } else {
-      log(`--keep set: leaving inbox ${inbox.id} alive for inspection.`);
+      log(`--keep set: leaving inbox ${inboxId} alive.`);
+      log(`Next: open a ${args.app} event, then run: --inbox=${inboxId} --wait=180`);
     }
   }
 
