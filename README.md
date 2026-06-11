@@ -1,96 +1,277 @@
-# Foreman
+<div align="center">
 
-> AI assistant that takes actions across 9,000+ apps via Zapier.
->
-> **Alpha** — active development. Self-hostable today, hosted version coming soon.
-> Questions: **tylan@otakusolutions.io**
+# 👷 Foreman
 
-## Table of Contents
+### Describe the task. It gets done — across 9,000+ apps, from any chat.
 
-- [What it is](#what-it-is)
-- [Requirements](#requirements)
-- [Quick start](#quick-start)
-- [Architecture](#architecture)
-- [Stack](#stack)
-- [Modes](#modes)
-- [Channels](#channels)
-- [Deployment](#deployment)
-- [Testing](#testing)
-- [Links](#links)
+**Foreman is an AI assistant that takes real actions across 9,000+ apps through [Zapier](https://zapier.com/).** Tell it what you want in plain language — _"send Sarah the Q3 deck"_, _"create a Trello card for tomorrow"_, _"search my Gmail for unpaid invoices"_ — and it figures out which connected app and action to use, shows you exactly what it plans to do for approval, then executes. Same agent, same memory, same connected apps whether you're on the web, in Slack, Discord, Telegram, Teams, and more.
 
-## What it is
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](#-license)
+[![Status: alpha](https://img.shields.io/badge/status-alpha-orange)]()
+[![Node: 22+](https://img.shields.io/badge/node-22%2B-339933?logo=node.js&logoColor=white)](#-getting-started)
+[![Built on Mastra](https://img.shields.io/badge/built%20on-Mastra-000)](https://mastra.ai)
+[![Powered by Zapier SDK](https://img.shields.io/badge/powered%20by-Zapier%20SDK-FF4A00?logo=zapier&logoColor=white)](https://docs.zapier.com/sdk)
+[![Website](https://img.shields.io/badge/website-foreman.otakusolutions.io-111)](https://foreman.otakusolutions.io)
 
-Tell Foreman what you want done in plain language — "send Sarah an email", "create a Trello card for tomorrow", "search my Gmail for invoices" — and it figures out which connected app and action to use, shows you what it plans to do for approval, then executes.
+</div>
 
-Foreman lives on the web, in Slack, Discord, Telegram, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage. Same agent, same memory, same connected apps across every channel.
+![Foreman Screenshot](docs/screenshot.png)
 
-## Requirements
+> _Screenshot placeholder — to be added._
 
-Install before the quick start below:
+---
+
+## ⚡ What it does
+
+Tell Foreman what you want, in plain English:
+
+> _"Email Sarah the Q3 deck, then log it in Notion."_ · _"Create a Trello card for tomorrow's standup."_ · _"Search my Gmail for unpaid invoices this month."_
+
+Foreman figures out **which connected app and action** fits — out of [9,000+ on Zapier](https://zapier.com/apps) — drafts exactly what it's about to do, and **shows it to you as an approval card first**. You approve, edit, or decline. Only then does it run for real. Nothing destructive happens behind your back.
+
+Then just keep talking:
+
+> _"Actually CC the whole team."_ · _"Do the same for the August numbers."_ · _"Schedule it for 9am instead."_
+
+It's the **same agent across every surface** — the web app, Slack, Discord, Telegram, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, and iMessage — with one shared memory and one set of connected accounts. Start a task in Slack, finish it on the web.
+
+Under the hood it isn't a single mega-prompt. Foreman is a small team of focused [Mastra](https://mastra.ai/) agents (discovery, execution, history, supervisor) that load only the Zapier tools a request needs — so it acts against the APIs that **actually exist**, with approval gates and per-user auth built in.
+
+---
+
+## 💬 What a request looks like
+
+One message → a proposed action you can see and approve → a real result on disk in the connected app.
+
+<details>
+<summary><b>"Email Sarah the Q3 deck and log it in Notion"</b> — click to expand</summary>
+
+**You:**
+
+> Email Sarah the Q3 deck and log it in Notion.
+
+**Foreman** finds the matching Zapier actions and proposes the first one as an **approval card** — no execution yet:
+
+```
+┌─ Action proposal ─────────────────────────────┐
+│  Gmail · Send Email                           │
+│  to:       sarah@acme.com                     │
+│  subject:  Q3 deck                            │
+│  body:     Hi Sarah — Q3 deck attached …      │
+│  attach:   Q3-deck.pdf                        │
+│                                               │
+│   [ ✅ Approve ]  [ ✏️ Edit ]  [ ❌ Decline ] │
+└───────────────────────────────────────────────┘
+```
+
+**You** approve → Foreman runs it via the Zapier SDK, then proposes the **Notion** step:
+
+```
+✓ Gmail · Send Email — sent (run #4131)
+
+┌─ Action proposal ─────────────────────────────┐
+│  Notion · Create Database Item               │
+│  database:  Sent Reports                      │
+│  title:     Q3 deck → Sarah                   │
+│  date:      2026-06-11                         │
+│   [ ✅ Approve ]  [ ✏️ Edit ]  [ ❌ Decline ] │
+└───────────────────────────────────────────────┘
+```
+
+Every run is recorded (who, what, when, result) and searchable later — _"what did I send Sarah last quarter?"_
+
+</details>
+
+> Illustrative — the real apps, fields, and steps vary with your prompt and which accounts you've connected. Write actions always surface as an approval card before they run.
+
+---
+
+## 🎯 Why Foreman?
+
+- **🌐 One agent, every channel.** Web, Slack, Discord, Telegram, Microsoft Teams, Google Chat, WhatsApp, GitHub, Linear, iMessage — plus MCP and A2A for other agents. Same memory and connected apps everywhere.
+- **✋ Approval-gated by default.** Write and delete actions never fire silently — Foreman shows you a proposal card and waits for **approve / edit / decline**. Read-only discovery runs freely.
+- **🔌 9,000+ apps, real APIs.** Actions come straight from [`@zapier/zapier-sdk`](https://docs.zapier.com/sdk) as auto-generated tools — no hand-wired integrations, no hallucinated endpoints. Parameter names come from Zapier's own schemas.
+- **🧠 Memory that follows you.** Conversations, action history, and embeddings live in Postgres + pgvector, so Foreman remembers context and you can semantically search past runs.
+- **🔐 Per-user auth.** Each person connects **their own** Zapier account through an OAuth (PKCE) flow — Foreman never shares one god-account across users.
+- **🏠 Self-hostable today.** Run the whole stack on your own infra. Hosted version coming soon.
+- **🤖 Model choice.** Claude Sonnet 4.6 for reasoning, Haiku 4.5 for fast steps — swappable via the provider layer.
+- **🎙️ Voice in.** Speak a request — Whisper drops it into the box.
+
+---
+
+## 🧠 How it works
+
+```
+        "Email Sarah the Q3 deck and log it in Notion"
+                            │
+                            ▼
+            ┌──────────────────────────────────┐
+            │          Foreman agent           │   Claude Sonnet 4.6
+            │   Mastra + ToolSearch over 34    │
+            │     live Zapier SDK tools        │
+            └────────────────┬─────────────────┘
+                             │ picks app + action, fills params
+                             ▼
+            ┌──────────────────────────────────┐
+            │         Action proposal          │   shown to you as
+            │    "Gmail · Send Email to …"     │   an approval card
+            └────────────────┬─────────────────┘
+                  approve?    │   ✅ / ✏️ edit / ❌
+                             ▼
+            ┌──────────────────────────────────┐
+            │     Zapier SDK · runAction       │   executes for real
+            └────────────────┬─────────────────┘
+                             ▼
+              result + run history (Postgres + pgvector)
+```
+
+A request lands from any channel, hits the **Foreman agent**, which loads only the Zapier tools that request needs (via a tool-search processor rather than stuffing all 34 into the prompt). Write actions become **proposals**; you approve them; the **Zapier SDK** runs them; the result and full run record persist to Postgres. Discovery, execution, and history are split into focused sub-agents so each step stays cheap and reliable.
+
+---
+
+## 🔐 Proposals & approval — safe by construction
+
+Foreman draws a hard line between **reading** and **changing the world**:
+
+- ✅ **Read-only discovery** (list channels, search records, fetch a row) runs immediately — it's harmless.
+- ⏸️ **Writes and deletes pause for approval.** A proposal card shows the exact app, action, and every field before anything runs. You approve, edit the fields, or decline.
+- 🧾 **Every run is recorded** — app, action, inputs, result, who triggered it, when — and is semantically searchable afterward.
+- 🛡️ **Guardrails** apply rate limits and risk assessment; an output processor redacts PII before responses leave the agent.
+
+The set of write/delete tools that require approval is explicit (9 of them), separate from the 17 read-only discovery tools — so the boundary is defined in code, not guessed at runtime.
+
+---
+
+## 🔌 Channels
+
+| Channel | Adapter | Status |
+|---|---|---|
+| Web | Next.js frontend | ✅ Working |
+| Slack | `@chat-adapter/slack` | ✅ Working |
+| Telegram | `@chat-adapter/telegram` | ✅ Working |
+| Discord | `@chat-adapter/discord` | ✅ Working _(needs both `:4111` and `:4112`)_ |
+| Google Chat | `@chat-adapter/gchat` | ✅ Working |
+| GitHub | `@chat-adapter/github` | ✅ Working |
+| Linear | `@chat-adapter/linear` | ✅ Working |
+| Microsoft Teams | `@chat-adapter/teams` | 🚧 In progress — pending M365 license |
+| WhatsApp | `@chat-adapter/whatsapp` | 🚧 In progress |
+| iMessage | `chat-adapter-imessage` | 🚧 In progress _(requires macOS host)_ |
+| MCP | Mastra built-in | `GET /mcp/*` — Claude Code, ChatGPT, etc. |
+| A2A | Mastra built-in | `POST /a2a/foreman` — agent-to-agent |
+
+Each platform user is mapped to a Foreman user via the `channel_identity` table. Per-channel webhook URLs and platform setup live in [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## 🚀 Getting started
+
+**Prerequisites:**
 
 - **Node.js 22+** — agents and web both run on Node 22 (`node --version`).
 - **npm 10+** — bundled with Node 22.
 - **Docker Desktop** (or any Docker daemon) — `npx supabase start` boots local Postgres + pgvector inside Docker.
 - **git** — for cloning and the `bd dolt` issue-tracker sync.
-- **ngrok** *(optional)* — only if you're testing incoming channel webhooks (Slack, Discord, Telegram, Linear) against the real platforms.
-- **Zapier CLI account** *(optional, for SDK tests)* — `npx @zapier/zapier-sdk-cli login` once.
+- **ngrok** _(optional)_ — only for testing incoming channel webhooks (Slack, Discord, Telegram, Linear) against the real platforms.
+- **Zapier CLI account** _(optional, for SDK tests)_ — `npx @zapier/zapier-sdk-cli login` once.
 
-## Quick start
-
-Five commands from a clean checkout to a working local dev environment.
+Five commands from a clean checkout to a working local dev environment:
 
 ```bash
 # 1. Install all workspace deps
 npm install
 
-# 2. Generate an encryption key. Copy it into packages/agents/.env.local as ENCRYPTION_KEY.
+# 2. Generate an encryption key → copy into packages/agents/.env.local as ENCRYPTION_KEY
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# 3. Boot local Supabase (Postgres + pgvector on shifted ports). Copy service_role + anon keys into packages/agents/.env.local.
+# 3. Boot local Supabase (Postgres + pgvector, shifted ports)
+#    → copy the service_role + anon keys into packages/agents/.env.local
 npx supabase start
 
-# 4. Build and start the agents server (port 4111). Use `npm run start`, not `npm run dev` — `mastra dev` hangs on Windows.
+# 4. Build + start the agents server (:4111)
+#    Use `npm run start`, NOT `npm run dev` — `mastra dev` hangs on Windows.
 cd packages/agents && npm run build && npm run start
 
-# 5. In a second terminal, start the web frontend (port 3000)
+# 5. In a second terminal, start the web frontend (:3000)
 cd packages/web && npm run dev
 ```
 
-For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel webhooks (Slack, Discord, Telegram, Linear), also run `cd packages/agents && npm run start:webhooks` on port 4112.
+For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel webhooks, also run `cd packages/agents && npm run start:webhooks` on port `:4112`. For deterministic mock-mode dev (no real LLM / voice / MCP / A2A): `cd packages/agents && npm run dev:mock`.
 
-## Architecture
+---
+
+## 🏠 Run it your way
+
+Same agent, same connected apps — you just choose how Zapier auth resolves. `FOREMAN_MODE` (in `packages/agents/.env.local`) picks the mode:
+
+| | 🧑‍💻 **Dev** | 🌐 **Self-hosted** |
+|---|---|---|
+| **Value** | `dev` (default) | `self_hosted` |
+| **When** | Local dev on a single machine | Running Foreman for real users on your own infra |
+| **Auth** | One Zapier CLI login (`npx @zapier/zapier-sdk-cli login`) | Each user OAuths their own Zapier account through the UI |
+| **Needs** | Nothing extra | `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET` |
+
+Self-hosted is **not** a single-shared-account mode — every user still connects their own Zapier account. Foreman just runs on infrastructure **you** own instead of ours. A managed hosted version is coming soon.
+
+---
+
+## 🧱 Architecture
+
+A two-package npm-workspaces monorepo: a Mastra + Hono **agents server** and a Next.js **web** frontend, both on Postgres.
+
+```
+packages/
+├─ agents/                  Mastra + Hono agent server (:4111)
+│  ├─ src/mastra/
+│  │  ├─ agents/             Foreman · Discovery · Execution · History · Supervisor
+│  │  └─ tools/              connect_zapier · search_history · fork_conversation
+│  ├─ src/lib/
+│  │  ├─ zapier-sdk-tools    34 auto-generated tools from @zapier/zapier-sdk
+│  │  ├─ zapier/             PKCE OAuth connect flow + per-user SDK
+│  │  ├─ db/                 Supabase schema + service-role client
+│  │  ├─ processors/         context injector (in) + PII redactor (out)
+│  │  └─ rag/                action-history indexing + semantic search
+│  ├─ src/routes/            Hono: /conversations /proposals /workflows /voice …
+│  └─ src/{slack,discord,telegram,teams,…}/   channel webhooks (:4112)
+└─ web/                     Next.js 16 frontend (:3000)
+   └─ src/
+      ├─ app/                App Router — chat, /workflows, /auth
+      ├─ components/         chat-shell · chat-pane · approval-card
+      └─ lib/api-client      all agent-server calls
+
+supabase/migrations/         Postgres schema (users, conversations, proposals,
+                             runs, workflows, channel_identity, …)
+```
 
 ```
 ┌────────────────────────────────────────────────────────────┐
 │                      User entry points                     │
-│  Web ·  Slack · Discord · Telegram · Teams · WhatsApp ·    │
+│  Web · Slack · Discord · Telegram · Teams · WhatsApp ·     │
 │  iMessage · GitHub · Linear · Google Chat · MCP · A2A      │
 └────────────┬────────────────────────────┬──────────────────┘
-             │                            │
              ▼                            ▼
    packages/web (Next.js :3000)   packages/agents (:4111 + :4112)
-        Supabase auth, SSE              Mastra + Hono
-        chat UI, /workflows             5 agents (Foreman, Discovery,
-        page, voice mic                 Execution, History, Supervisor)
-                                        ┌─────────────────┐
-                                        │   Supabase PG   │ users, conversations,
-                                        │   + pgvector    │ proposals, runs, workflows,
-                                        └────────┬────────┘ Mastra threads + memory
-                                                 │
-                                                 ▼
-                                        ┌─────────────────┐
-                                        │  Zapier SDK     │ direct import of
-                                        │  (single-shot)  │ @zapier/zapier-sdk → 34 tools
-                                        └─────────────────┘
+     Supabase auth · SSE              Mastra + Hono
+     chat UI · /workflows             5 agents (Foreman, Discovery,
+     page · voice mic                 Execution, History, Supervisor)
+                                              │
+                                              ▼
+                                     ┌─────────────────┐  users, conversations,
+                                     │   Supabase PG   │  proposals, runs,
+                                     │   + pgvector    │  workflows, Mastra memory
+                                     └────────┬────────┘
+                                              ▼
+                                     ┌─────────────────┐  direct import of
+                                     │   Zapier SDK    │  @zapier/zapier-sdk
+                                     │  (single-shot)  │  → 34 tools
+                                     └─────────────────┘
 ```
 
-- **Agents server (`:4111`):** Mastra agents over Hono. Custom routes at `/chat`, `/conversations`, `/proposals`, `/workflows`, `/capabilities`, `/voice`, plus built-in `/api/agents`, `/a2a/foreman`, `/mcp/*`.
-- **Webhooks server (`:4112`):** separate process for Discord Gateway WebSocket and channel webhooks. Some channels (Discord) need both servers running.
-- **Web frontend (`:3000`):** Next.js 16 + React 19 + Tailwind 4 + shadcn/ui. Talks to the agents server over SSE for streaming.
-- **Storage:** `MastraCompositeStore` on Postgres (default domains) + DuckDB (observability domain — traces, scores, metrics).
-- **Channels:** Chat SDK adapters (`@chat-adapter/*`). Each platform user is mapped to a Foreman user via the `channel_identity` table.
+- **Agents server (`:4111`):** Mastra agents over Hono. Custom routes — `/chat`, `/conversations`, `/proposals`, `/workflows`, `/capabilities`, `/voice` — plus Mastra built-ins `/api/agents`, `/a2a/foreman`, `/mcp/*`.
+- **Webhooks server (`:4112`):** separate process for the Discord Gateway WebSocket and channel webhooks. Discord needs both servers running.
+- **Web frontend (`:3000`):** Next.js 16 + React 19 + Tailwind 4 + shadcn/ui, streaming over SSE.
+- **Storage:** `MastraCompositeStore` on Postgres + DuckDB for the observability domain (traces, scores, metrics).
 
-## Stack
+### Stack
 
 | Layer | Technology |
 |---|---|
@@ -100,7 +281,7 @@ For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel web
 | LLM | Claude (Anthropic) — Sonnet 4.6 default, Haiku 4.5 for fast steps |
 | Embeddings / STT | OpenAI `text-embedding-3-small`, Whisper via `@mastra/voice-openai` |
 | API server | [Hono](https://hono.dev) (mounted via Mastra) |
-| Database | Postgres + [pgvector](https://github.com/pgvector/pgvector); local via [Supabase CLI](https://supabase.com/docs/guides/cli), hosted via Supabase / Neon / RDS |
+| Database | Postgres + [pgvector](https://github.com/pgvector/pgvector) — local via [Supabase CLI](https://supabase.com/docs/guides/cli), hosted via Supabase / Neon / RDS |
 | DB clients | `supabase-js` (app tables), `@mastra/pg` (Mastra internals) |
 | Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) + `@supabase/ssr` |
 | Frontend | [Next.js](https://nextjs.org) 16, React 19, Tailwind 4, [shadcn/ui](https://ui.shadcn.com) |
@@ -109,75 +290,80 @@ For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel web
 | Linting | [Biome](https://biomejs.dev) |
 | Monorepo | npm workspaces |
 
-## Modes
+---
 
-`FOREMAN_MODE` in `packages/agents/.env.local` decides how Zapier auth resolves. There are really two modes from your perspective: **dev** (you, on your laptop) and **self-hosted** (you, running it for other users).
+## 🧪 Build & test
 
-| Mode | Value | When to use | Auth model |
-|---|---|---|---|
-| **Dev** | `dev` (default) | Local development on a single machine | Single Zapier CLI login (`npx @zapier/zapier-sdk-cli login`). No client credentials needed. |
-| **Self-hosted** | `self_hosted` | Running Foreman for real users on your own infra (VPS, cluster, etc.) | Each user OAuths their own Zapier account through the Foreman UI. Requires `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET`. |
-
-Self-hosted is **not** a single-shared-account mode. Each user still connects their own Zapier account — Foreman just runs on infrastructure you own instead of ours.
-
-## Channels
-
-| Channel | Adapter | Status |
-|---|---|---|
-| Web | Next.js frontend | Working |
-| Slack | `@chat-adapter/slack` | Working |
-| Telegram | `@chat-adapter/telegram` | Working |
-| Discord | `@chat-adapter/discord` | Working (needs both `:4111` and `:4112` running) |
-| Google Chat | `@chat-adapter/gchat` | Working |
-| GitHub | `@chat-adapter/github` | Working |
-| Linear | `@chat-adapter/linear` | Working |
-| Microsoft Teams | `@chat-adapter/teams` | In progress — pending M365 license |
-| WhatsApp | `@chat-adapter/whatsapp` | In progress |
-| iMessage | `chat-adapter-imessage` | In progress (requires macOS host) |
-| MCP | Mastra built-in | `GET /mcp/*` — Claude Code, ChatGPT, etc. |
-| A2A | Mastra built-in | `POST /a2a/foreman` — agent-to-agent |
-
-Per-channel webhook URLs and platform setup live in [`CLAUDE.md`](CLAUDE.md).
-
-## Deployment
-
-| Component | Target | Notes |
-|---|---|---|
-| Web | **Vercel** | Standard Next.js project. Configured via `vercel.json`. |
-| Agents server | **Coolify on Hostinger VPS** | Long-lived process under PM2, fronted by nginx + Certbot SSL. Streaming SSE and Discord Gateway need persistent connections. |
-| Agents server (alt) | **Vercel** | Viable with hosted Postgres. Build with `npm run build:vercel`. |
-| Webhooks server | **Coolify on Hostinger VPS** | Same VPS as agents; separate PM2 process on `:4112`. |
-
-Live URLs:
-
-- Web: https://foreman.otakusolutions.io
-- Agents: https://foreman-agents.otakusolutions.io
-
-## Testing
-
-Four tiers, plus end-to-end browser tests. Tier 1 is the default loop and runs without any external services.
+Four tiers plus end-to-end browser tests. **Tier 1 is the default loop and runs without any external services** — real provider keys are deliberately absent, so anything that leaks into a non-mocked path fails loudly.
 
 | Tier | Command | What it covers | Requires |
 |---|---|---|---|
-| Unit + API integration | `cd packages/agents && npm test` | Unit tests + mocked API routes via [AIMock](https://aimock.copilotkit.dev) | nothing |
-| Live Supabase | `cd packages/agents && npm run test:live` | Real DB CRUD round-trips and identity resolution; auto-skips if Supabase isn't running | `npx supabase start` |
-| Zapier SDK | `cd packages/agents && npm run test:sdk:read` / `test:sdk:write` | Live calls to your Zapier account; `:write` creates and deletes a real Zapier Table | `npx @zapier/zapier-sdk-cli login` |
-| Protocol | `cd packages/agents && npm test` (tier 1) with the dev server up | Auto-detects dev server and runs A2A + MCP + agent-card discovery | agents server running |
-| E2E (browser) | `cd packages/web && npx playwright test` | Web flows | web + agents servers running |
+| **Unit + API integration** | `cd packages/agents && npm test` | Unit tests + mocked API routes via [AIMock](https://aimock.copilotkit.dev) | nothing |
+| **Live Supabase** | `cd packages/agents && npm run test:live` | Real DB CRUD round-trips + identity resolution; auto-skips if Supabase is down | `npx supabase start` |
+| **Zapier SDK** | `… npm run test:sdk:read` / `test:sdk:write` | Live calls to your Zapier account; `:write` creates + deletes a real Zapier Table | `npx @zapier/zapier-sdk-cli login` |
+| **Protocol** | `… npm test` (tier 1) with the dev server up | Auto-detects the dev server, runs A2A + MCP + agent-card discovery | agents server running |
+| **E2E (browser)** | `cd packages/web && npx playwright test` | Web flows end-to-end | web + agents servers |
 
-For deterministic mock-mode dev (no real LLM/voice/MCP/A2A): `cd packages/agents && npm run dev:mock`.
+CI runs the mocked tiers, a `next build` for web, Biome lint, and a dependency-uniqueness check on every push and PR.
 
-Deeper developer docs (file inventory, route table, custom tools, processors, memory config, schema, prompt internals) live in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). The README is for orientation; CLAUDE.md is for working in the code.
+---
 
-## Links
+## ☁️ Deployment
 
-- [Mastra docs](https://mastra.ai/docs)
-- [Chat SDK docs](https://chat-sdk.dev)
-- [Zapier SDK docs](https://docs.zapier.com/sdk)
-- [Supabase docs](https://supabase.com/docs)
-- [shadcn/ui docs](https://ui.shadcn.com/docs)
-- Internal: [`CLAUDE.md`](CLAUDE.md), [`AGENTS.md`](AGENTS.md)
+| Component | Target | Notes |
+|---|---|---|
+| Web | **Vercel** | Standard Next.js project, configured via `vercel.json`. |
+| Agents server | **Coolify on Hostinger VPS** | Long-lived process under PM2, fronted by nginx + Certbot SSL. SSE streaming and the Discord Gateway need persistent connections. |
+| Agents server (alt) | **Vercel** | Viable with hosted Postgres — build with `npm run build:vercel`. |
+| Webhooks server | **Coolify on Hostinger VPS** | Same VPS as agents; separate PM2 process on `:4112`. |
 
-## License
+**Live:** [foreman.otakusolutions.io](https://foreman.otakusolutions.io) (web) · [foreman-agents.otakusolutions.io](https://foreman-agents.otakusolutions.io) (agents)
 
-MIT. Copyright (c) 2026 Otaku Solutions.
+---
+
+## 🗺️ Roadmap
+
+- 🧩 **Finish the in-progress channels** — Microsoft Teams (M365 license), WhatsApp, and iMessage (macOS host).
+- ☁️ **Managed hosted version** — sign in, connect Zapier, go — no infra to run.
+- 🪝 **Event-driven triggers** — evaluating Zapier's experimental trigger inboxes as a managed, dedup'd alternative to the cron-poll driver for "when X happens, do Y" automations.
+- 🛠️ **Workflows UI** — a page to save, run, and review multi-step automations and their run history.
+
+---
+
+## ❓ FAQ
+
+- **Do I need a Zapier account?** Yes — Foreman acts *through* Zapier. In dev mode that's a single CLI login; self-hosted, each user connects their own Zapier account via OAuth.
+- **Which apps can it use?** Anything on Zapier — 9,000+. Actions are generated from the Zapier SDK, so the catalog tracks Zapier's.
+- **Will it do something destructive without asking?** No. Reads run freely; every write/delete surfaces an approval card with the exact fields before it runs.
+- **Self-host or hosted?** Self-hosting is first-class today — the full stack, every channel, on your own infra. A managed hosted version is coming soon.
+- **What models does it use?** Claude Sonnet 4.6 for the primary agent and Haiku 4.5 for fast/cheap steps, via the swappable provider layer.
+- **Is my data sent anywhere?** Self-hosted, your conversations, action history, and connected-account tokens live in *your* Postgres (tokens encrypted at rest). LLM calls go to your configured provider.
+- **Does it run on Windows?** Yes — but use `npm run start`, not `npm run dev`: `mastra dev` hangs on Windows. See [`CLAUDE.md`](CLAUDE.md).
+- **Which channels work right now?** Web, Slack, Telegram, Discord, Google Chat, GitHub, and Linear. Teams, WhatsApp, and iMessage are in progress.
+
+---
+
+## 🤝 Contributing
+
+Foreman is built in the open against a real monorepo. The developer docs — file inventory, route table, custom tools, processors, memory config, schema, prompt internals — live in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). **The README is for orientation; `CLAUDE.md` is for working in the code.**
+
+Issue tracking runs on **bd (beads)** with Dolt-backed sync — `bd ready` to find work, `bd create` to file it. Do not add markdown TODO lists or external trackers.
+
+---
+
+## 🙏 Acknowledgments
+
+Foreman stands on the work of the teams whose tools it's built from:
+
+- **[Mastra](https://mastra.ai/)** — the agent framework: agents, memory, evals, observability.
+- **[Zapier](https://zapier.com/)** — the action layer; `@zapier/zapier-sdk` turns 9,000+ apps into tools.
+- **[Chat SDK](https://chat-sdk.dev/)** — the channel adapters that put one agent everywhere.
+- **[Supabase](https://supabase.com/)**, **[Hono](https://hono.dev/)**, **[Next.js](https://nextjs.org/)**, and **[Anthropic](https://www.anthropic.com/)** — for the database, server, frontend, and models.
+
+---
+
+## 📜 License
+
+**MIT.** Copyright © 2026 Otaku Solutions.
+
+Self-hostable today; a managed hosted version is coming soon. Questions: **tylan@otakusolutions.io**.
