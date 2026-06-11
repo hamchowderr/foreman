@@ -21,6 +21,8 @@
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
     "check:deps": "node scripts/check-dep-uniqueness.mjs",
+    "sdk:check": "node scripts/zapier-sdk-watch.mjs",
+    "sdk:check:quiet": "node scripts/zapier-sdk-watch.mjs --quiet",
     "audit:ci": "npm audit --audit-level=moderate",
     "postinstall": "patch-package && node scripts/check-dep-uniqueness.mjs"
   },
@@ -28,7 +30,7 @@
     "esbuild": ">=0.25.0",
     "zod": "4.4.3",
     "postcss": "^8.5.10",
-    "@mastra/core": "1.32.1"
+    "@mastra/core": "1.41.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
@@ -42,7 +44,7 @@
     "@types/react-dom": "^19",
     "@types/supertest": "^7.2.0",
     "@vitest/ui": "^4.1.4",
-    "@zapier/zapier-sdk-cli": "^0.44.0",
+    "@zapier/zapier-sdk-cli": "^0.54.3",
     "autoprefixer": "^10.5.0",
     "drizzle-kit": "^0.31.10",
     "jsdom": "^29.0.2",
