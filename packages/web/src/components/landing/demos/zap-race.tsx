@@ -853,7 +853,9 @@ function ZapNodeCard({
           transition={{ duration: 0.9, repeat: Infinity }}
         />
       )}
-      <span className="text-[9px] font-mono text-muted-foreground tabular-nums w-4 shrink-0">{node.n}.</span>
+      <span className="text-[9px] font-mono text-muted-foreground tabular-nums w-4 shrink-0">
+        {node.n}.
+      </span>
       <AppDot color={node.color} letter={node.letter} />
       <div className="flex-1 min-w-0 leading-tight">
         <div className={`font-medium truncate ${compact ? "text-[10px]" : "text-[11px]"}`}>

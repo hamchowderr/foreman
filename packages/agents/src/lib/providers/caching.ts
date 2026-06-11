@@ -86,8 +86,7 @@ export function toolsWithCacheControl<T extends Record<string, unknown>>(
   const lastTool = tools[lastKey];
   if (!lastTool || typeof lastTool !== "object") return tools;
   const existingOpts =
-    (lastTool as { providerOptions?: Record<string, unknown> }).providerOptions ??
-    {};
+    (lastTool as { providerOptions?: Record<string, unknown> }).providerOptions ?? {};
   return {
     ...tools,
     [lastKey]: {

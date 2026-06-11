@@ -227,7 +227,8 @@ function NewAgentDialog({
             </div>
             <div>
               <label htmlFor="new-agent-description" className="mb-1 block text-sm font-medium">
-                Description <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                Description{" "}
+                <span className="text-xs font-normal text-muted-foreground">(optional)</span>
               </label>
               <Textarea
                 id="new-agent-description"

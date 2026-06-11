@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Provider config is resolved at module load from process.env, so each test
@@ -84,8 +84,7 @@ describe("providers/models defaults", () => {
   });
 
   it("comma-separated per-agent value produces a ModelWithRetries fallback chain", async () => {
-    process.env.EXECUTION_MODEL =
-      "anthropic/claude-sonnet-4-6,openai/gpt-4o,google/gemini-2.5-pro";
+    process.env.EXECUTION_MODEL = "anthropic/claude-sonnet-4-6,openai/gpt-4o,google/gemini-2.5-pro";
     const { AGENT_MODELS, asList, primary } = await import("@/lib/providers");
     const spec = AGENT_MODELS.execution;
     expect(Array.isArray(spec)).toBe(true);

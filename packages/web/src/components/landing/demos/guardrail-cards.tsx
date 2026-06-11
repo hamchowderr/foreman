@@ -168,7 +168,9 @@ export function GuardrailCards() {
                 <active.icon className="h-3.5 w-3.5 text-accent" />
                 <span className="text-xs font-medium">{active.title}</span>
               </div>
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">live</span>
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                live
+              </span>
             </div>
             <div className="p-5 min-h-[260px] flex-1 flex items-center justify-center">
               <AnimatePresence mode="wait">

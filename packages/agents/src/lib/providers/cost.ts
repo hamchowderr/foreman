@@ -19,7 +19,7 @@
 
 import { metrics } from "@opentelemetry/api";
 import type { AgentName } from "./models";
-import { primary, AGENT_MODELS } from "./models";
+import { AGENT_MODELS, primary } from "./models";
 
 export interface ModelPricing {
   /** USD per 1M input tokens. */
@@ -130,12 +130,10 @@ let _costCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"
 function getCostCounter() {
   if (!otelEnabled) return undefined;
   if (_costCounter) return _costCounter;
-  _costCounter = metrics
-    .getMeter("foreman-agents")
-    .createCounter("foreman.llm.cost.usd", {
-      description: "USD cost of LLM calls attributed to a Foreman agent.",
-      unit: "USD",
-    });
+  _costCounter = metrics.getMeter("foreman-agents").createCounter("foreman.llm.cost.usd", {
+    description: "USD cost of LLM calls attributed to a Foreman agent.",
+    unit: "USD",
+  });
   return _costCounter;
 }
 
@@ -146,9 +144,7 @@ function getCostCounter() {
  * and records the OpenTelemetry counter when OTEL_ENABLED=true.
  */
 export function onFinishCostLogger(agent: AgentName) {
-  return (event: {
-    totalUsage?: UsageTokens;
-  }): void => {
+  return (event: { totalUsage?: UsageTokens }): void => {
     const model = primary(AGENT_MODELS[agent]);
     const usage = event?.totalUsage ?? { inputTokens: 0, outputTokens: 0 };
     const breakdown = calculateCost(model, usage);

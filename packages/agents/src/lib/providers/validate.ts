@@ -1,5 +1,5 @@
-import { AGENT_MODELS, asList, type AgentName } from "./models";
 import { AGENT_REQUIREMENTS, MODEL_CAPABILITIES } from "./capabilities";
+import { AGENT_MODELS, type AgentName, asList } from "./models";
 
 /**
  * Verify every configured agent model is known and supports the capabilities
@@ -12,7 +12,10 @@ import { AGENT_REQUIREMENTS, MODEL_CAPABILITIES } from "./capabilities";
 export function validateAgentCapabilities(): void {
   const errors: string[] = [];
 
-  for (const [agent, spec] of Object.entries(AGENT_MODELS) as [AgentName, typeof AGENT_MODELS[AgentName]][]) {
+  for (const [agent, spec] of Object.entries(AGENT_MODELS) as [
+    AgentName,
+    (typeof AGENT_MODELS)[AgentName],
+  ][]) {
     const required = AGENT_REQUIREMENTS[agent] ?? [];
     for (const model of asList(spec)) {
       const caps = MODEL_CAPABILITIES[model];
@@ -38,8 +41,7 @@ export function validateAgentCapabilities(): void {
 
   if (errors.length > 0) {
     throw new Error(
-      "Provider capability check failed:\n" +
-        errors.map((e) => "  - " + e).join("\n"),
+      `Provider capability check failed:\n${errors.map((e) => `  - ${e}`).join("\n")}`,
     );
   }
 }

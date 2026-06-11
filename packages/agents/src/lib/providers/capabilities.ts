@@ -10,17 +10,13 @@
  * but does not expose it as runtime data.
  */
 
-import type { AgentName } from "./models";
 import { agentWantsCaching } from "./caching";
+import type { AgentName } from "./models";
 
 export type Capability = "tools" | "streaming" | "prompt-caching";
 
 const base: Set<Capability> = new Set(["tools", "streaming"]);
-const baseWithCaching: Set<Capability> = new Set([
-  "tools",
-  "streaming",
-  "prompt-caching",
-]);
+const baseWithCaching: Set<Capability> = new Set(["tools", "streaming", "prompt-caching"]);
 
 /**
  * Models Foreman is tested against. Unknown models fail startup validation.
@@ -66,10 +62,13 @@ const CORE_REQUIREMENTS: Record<AgentName, Capability[]> = {
  */
 export const AGENT_REQUIREMENTS: Record<AgentName, Capability[]> = Object.keys(
   CORE_REQUIREMENTS,
-).reduce((acc, key) => {
-  const name = key as AgentName;
-  const reqs = [...CORE_REQUIREMENTS[name]];
-  if (agentWantsCaching(name)) reqs.push("prompt-caching");
-  acc[name] = reqs;
-  return acc;
-}, {} as Record<AgentName, Capability[]>);
+).reduce(
+  (acc, key) => {
+    const name = key as AgentName;
+    const reqs = [...CORE_REQUIREMENTS[name]];
+    if (agentWantsCaching(name)) reqs.push("prompt-caching");
+    acc[name] = reqs;
+    return acc;
+  },
+  {} as Record<AgentName, Capability[]>,
+);

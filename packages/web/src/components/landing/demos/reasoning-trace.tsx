@@ -215,7 +215,9 @@ export function ReasoningTrace() {
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
               <span className="text-xs font-mono text-muted-foreground">reasoning trace</span>
             </div>
-            <span className="text-[10px] font-mono text-muted-foreground tabular-nums">{totalElapsed}ms</span>
+            <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
+              {totalElapsed}ms
+            </span>
           </div>
 
           <div className="p-4 sm:p-5 flex-1 font-mono text-[11px] sm:text-xs space-y-2 min-h-[280px]">
@@ -258,7 +260,9 @@ export function ReasoningTrace() {
                   <span className="h-5 w-5 rounded-md bg-accent/15 text-accent inline-flex items-center justify-center">
                     <Check className="h-3 w-3" />
                   </span>
-                  <span className="text-[11px] sm:text-xs text-muted-foreground">{scene.finalLabel}</span>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground">
+                    {scene.finalLabel}
+                  </span>
                 </motion.div>
               )}
             </AnimatePresence>

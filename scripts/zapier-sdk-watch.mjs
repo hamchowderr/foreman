@@ -118,7 +118,7 @@ function installedVersion(pkg) {
   for (const m of manifests) {
     try {
       const pj = readJson(m);
-      const range = (pj.dependencies || {})[pkg] || (pj.devDependencies || {})[pkg];
+      const range = pj.dependencies?.[pkg] || pj.devDependencies?.[pkg];
       if (range) return { version: range.replace(/^[\^~]/, ""), source: "pinned" };
     } catch {
       // try next
@@ -146,7 +146,7 @@ async function fetchText(url, { accept, timeoutMs = 6000 } = {}) {
 async function fetchRegistry(pkg) {
   const doc = JSON.parse(await fetchText(registryUrl(pkg), { accept: "application/json" }));
   return {
-    latest: doc["dist-tags"] && doc["dist-tags"].latest,
+    latest: doc["dist-tags"]?.latest,
     times: doc.time || {},
     versions: Object.keys(doc.versions || {}).filter(isStable),
   };
@@ -284,7 +284,7 @@ async function main() {
   if (QUIET) {
     for (const r of results) {
       if (!r.behind || r.error) continue;
-      const prev = (state.packages || {})[r.pkg];
+      const prev = state.packages?.[r.pkg];
       if (prev && prev.notified === r.latest) {
         pkgState[r.pkg] = prev; // already pinged about this one
         continue;

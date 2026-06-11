@@ -83,6 +83,7 @@ export function WorkflowDetailActions({
             onChange={(e) => setName(e.target.value)}
             className="flex-1 rounded border px-3 py-1.5 text-sm"
             style={{ borderColor: "#FFD7B5" }}
+            // biome-ignore lint/a11y/noAutofocus: rename input is rendered on user action (edit click), not page load — focusing it immediately is intended UX
             autoFocus
           />
           <button

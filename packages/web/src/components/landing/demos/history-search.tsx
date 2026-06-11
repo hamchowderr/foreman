@@ -258,7 +258,9 @@ export function HistorySearch({
                           {(result.score * 100).toFixed(0)}%
                         </span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">{result.snippet}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {result.snippet}
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                         <span>{result.app}</span>
                         <span>·</span>
