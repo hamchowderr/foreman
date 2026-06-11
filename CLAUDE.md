@@ -82,6 +82,7 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
   - Studio: http://127.0.0.1:54423
   - `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres`
   - `supabase/config.toml` disables unused services (storage, auth, realtime, inbucket, analytics, edge_runtime) — they fail health checks on Windows and Foreman doesn't use them
+- **Generated types**: `agents/src/lib/db/database.types.ts` is codegen'd from the live local DB. Regenerate with `cd packages/agents && npm run db:types`; CI diffs it via `db:types:check` (the `db types fresh` job). Both run `supabase gen types --local --workdir ../..`. The **`--workdir ../..` is required**: the scripts run from `packages/agents` but `supabase/config.toml` is at the repo root, so plain `--local` can't find the stack and silently falls back to the cloud/token path (`"Access token not provided"`, empty output). Do **NOT** swap in `--db-url`: newer CLIs introspect via a `postgres-meta` container that can't reach the host's `127.0.0.1` in CI (works on Windows Docker, fails on Linux). Run `npx supabase start` first.
 - Tables: user, zapier_identity, conversation, action_proposal, action_run, workflow, workflow_step, workflow_run, capability_flag, channel_identity, api_key
 
 ### Key Lib Files
