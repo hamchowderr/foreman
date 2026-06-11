@@ -56,42 +56,56 @@ This is a real durable-execution engine (Temporal/Inngest-shaped): **`ctx.step` 
 memoized steps; `ctx.createCallback` = approval callbacks.** That maps directly onto
 Foreman's domain (multi-step automations with human approval).
 
-## Auth — sorted (2026-06-11)
+## Auth — RESOLVED by direct test (2026-06-11): durable is walled for ALL public-SDK auth
 
-The two SDK surfaces want **different auth**, confirmed empirically:
+Earlier in this spike I claimed durable was "usable in Foreman's per-user production
+context (PKCE userJwt)." **That was wrong — a direct test disproved it.**
 
-| Auth | Trigger inboxes / discovery | Durable |
+`packages/agents/scripts/durable-pkce-probe.ts` replicates Foreman's exact PKCE flow
+(`connect.ts`: public client `grwWZD…`, login ports, scope request) in one standalone
+script, mints a **real per-user JWT**, and calls `runDurable` with it. Result:
+
+```
+userJwt minted: len=3192, prefix="eyJhbG…", scope="external credentials offline_access"
+profile OK: admin@otakusolutions.io
+runDurable threw: None of the security schemes (userJwt) successfully authenticated this request.  (HTTP 403)
+```
+
+So a genuine, profile-validated PKCE user JWT — **the same token type Foreman mints in
+production** — **still 403s on durable** with the identical error client-credentials gets.
+
+| Auth path the public SDK can produce | runAction / discovery / trigger inboxes | Durable (`runDurable`) |
 |---|---|---|
-| Client-credentials (`ZAPIER_CLIENT_ID/SECRET`) | ✅ works | ❌ `"None of the security schemes (userJwt)…"` |
-| `userJwt` (per-user OAuth token) | ✅ | ✅ required |
+| Client-credentials (`ZAPIER_CLIENT_ID/SECRET`) | ✅ | ❌ 403 `"…(userJwt)…"` |
+| Public-PKCE user JWT (Foreman's `connect.ts` flow) | ✅ | ❌ 403 `"…(userJwt)…"` (**proven**) |
+| Legacy `~/.zapierrc` deployKey (32-char, not a JWT) | ❌ | ❌ |
 
-- The new `@zapier/zapier-sdk-cli` (0.54) login produces **client-credentials**, not a
-  `userJwt` — so the CLI route does **not** yield the token durable needs.
-- `~/.zapierrc`'s `deployKey` is a 32-char legacy platform-cli key, **not a JWT** — fails
-  as SDK creds (`"Failed to authenticate Bearer token"`). Red herring.
-- A `userJwt` comes from a **per-user OAuth flow**, which Foreman already implements
-  (PKCE `connect` flow, `lib/zapier/sdk.ts` → `createZapierSdk({ credentials: accessToken })`).
-  So durable is usable **in Foreman's per-user production context**; it just isn't testable
-  via the local CLI (minting a userJwt needs an interactive per-user login).
+**Root cause (the tell):** the probe *requested* `internal credentials offline_access`
+but Zapier *granted* `external credentials offline_access`. Durable's `userJwt` security
+scheme appears to require **`internal` scope**, which the **public** PKCE client is not
+permitted to obtain. Durable isn't gated on "get a userJwt" — it's gated on a privileged
+scope/audience **no publicly-available Zapier SDK client can mint.** This is a hard wall on
+Zapier's side, not a Foreman integration gap.
 
-**Sharpened question for Zapier:** for a *server* product authenticating with
-client-credentials, what's the supported path to invoke the per-user durable API — a
-token exchange (client-creds → user JWT), a service identity, or must we carry each
-user's PKCE token? (Trigger inboxes already accept client-creds; durable doesn't — is
-that intentional/permanent?)
+**Sharpened question for Zapier:** durable's `userJwt` scheme rejects both client-credentials
+and a public-PKCE user JWT (the latter downgraded to `external` scope). What grants a token
+that satisfies it — an `internal`-scoped client, a privileged/allow-listed OAuth client, a
+token exchange, or is durable simply not yet open to public SDK clients? Is the `internal`→
+`external` scope downgrade the intended gate?
 
-## Status — NOT blocked, two achievable prerequisites
+## Status — BLOCKED on Zapier (not a scope/effort question; literally inaccessible)
 
-1. **Auth:** `runDurable` needs a per-user `userJwt` (NOT the app client-credentials we
-   tested with locally). Foreman already mints these via its PKCE OAuth flow
-   (`lib/zapier/sdk.ts`). To test locally: `npx zapier-sdk login` yields a user token, then
-   `createZapierSdk()` (no creds) uses it.
-2. **Source files:** write a `defineDurable` workflow bundled against `@zapier/zapier-durable`.
+1. **Auth (hard blocker):** every token the public SDK can mint — client-creds *and*
+   per-user PKCE JWT — gets 403 on durable. Not solvable from Foreman's side today.
+2. **Source-file contract (also undocumented):** even with valid auth, the `source_files`
+   entry-point contract is absent from the SDK types, the README (`source_files: {}`), and
+   `docs.zapier.com` (zero durable refs); SDK `defineDurable` is an explicit "Phase-2 / not
+   callable yet" stub. Needs Zapier's private/forthcoming docs.
 
 ## Recommendation
 
-Durable execution is **usable and a strong architectural fit** — not a dead end. `foreman-8bh9`
-remains correctly prioritized (post-v1) only because of scope, not feasibility. Next concrete
-step: load a userJwt (`npx zapier-sdk login`), bundle a `defineDurable` hello-world, `runDurable`
-+ poll `getDurableRun` to terminal. This is genuinely worth revisiting vs `foreman-98j3`'s
-keep-own-engine lean — the SDK now offers hosted durable execution + callbacks we'd otherwise build.
+**Do not plan around durable for v1 — it is currently inaccessible, not merely out of scope.**
+This *strengthens* `foreman-98j3`'s keep-own-engine lean: it's not a build-vs-buy trade-off
+right now because the "buy" option can't be authenticated. Revisit only after Zapier answers
+the scope question above (track via `foreman-8bh9` / `foreman-d8qq`). Trigger inboxes are
+unaffected — they authenticate fine with client-credentials (see `trigger-inbox-spike.md`).
