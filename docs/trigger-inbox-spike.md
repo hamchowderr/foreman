@@ -64,13 +64,28 @@ hand-rolling idempotency keys.
 ✅ The experimental trigger-inbox surface is **real, reachable, and authenticated**
 on this account with no extra setup beyond the bump.
 
-## Full lifecycle run — PENDING (gated)
+## Full lifecycle run (live, 2026-06-11)
 
-The `--live-create` path (ensure → lease → ack/release → delete) **creates a real
-inbox on Zapier and leases real events**, so it's gated behind an explicit flag and
-awaiting a go-ahead. Once run, this section will record: ensure latency, whether a
-brand-new inbox back-fills recent events or only accrues new ones, real
-`lease_count`/`possible_duplicate_data` values, and ack vs release behavior.
+`npx tsx --env-file=.env.local scripts/trigger-inbox-spike.ts --live-create --action=issue_v2`
+
+| Step | Result |
+|---|---|
+| `findFirstConnection({app:'github'})` | **No GitHub connection on this account** |
+| `ensureTriggerInbox` | Created: `id=019eb7b1-…`, `status=initializing`, `subscription=GitHubCLIAPI@2.4.0/issue_v2`, **`conn=null`** |
+| `leaseTriggerInboxMessages` | `lease_id=null`, 0 messages, **`inbox_attributes.status=initialization_failure`** |
+| `deleteTriggerInbox` | Cleaned up OK |
+
+**Key operational learning:** `ensureTriggerInbox` is permissive — it creates the
+inbox even with **no connection bound**, but the inbox then transitions to
+`initialization_failure` because it can't subscribe to the app's events without a
+connection. So a trigger inbox is only useful once a real app connection exists.
+The full API mechanics (create → lease → delete) all returned correctly; the empty
+result is a **data**/connection gap, not an API failure.
+
+**To complete message-flow testing** (real `lease_count` / `possible_duplicate_data`
+/ ack vs release behavior), the account needs a **connected GitHub** (via Zapier or
+Foreman's `connect_zapier` flow), then open a GitHub issue and re-run `--live-create`.
+The driver is ready; only the connection is missing.
 
 ## Preliminary go/no-go
 
