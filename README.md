@@ -308,12 +308,23 @@ CI runs the mocked tiers, a `next build` for web, Biome lint, a dependency-uniqu
 
 ---
 
-## 🔭 Inspect & tune agents
+## 🔭 Inspect & tune the agents (Mastra Studio)
 
-Two ways to look inside Foreman's agents without leaving your machine:
+Foreman runs on [Mastra](https://mastra.ai), so you can open it in **Mastra Studio** — a browser dashboard for poking at the agents without going through the web app. Handy for tuning prompts or seeing exactly what an agent did on a given run.
 
-- **Mastra Studio** — `cd packages/agents && npm run dev` serves the agent server **and** [Mastra Studio](https://mastra.ai) at **http://localhost:4111**: chat with each agent directly, inspect per-run traces (agent / tool / LLM spans), browse memory + threads, and run the eval scorers. Needs the local Supabase up (`npx supabase start`) for memory and traces.
-- **The `/editor` page** — Foreman's own agent editor in the web app at **`localhost:3000/editor`**: list your agents, edit and version their system prompts, and pick which tools each one gets — no separate dashboard required.
+```bash
+npx supabase start                   # local Supabase — backs memory + traces
+cd packages/agents && npm run dev    # agent server + Studio → http://localhost:4111
+```
+
+What you get:
+
+- 💬 **Chat** with each agent directly — Foreman, Discovery, Execution, History, Supervisor (uses your `ANTHROPIC_API_KEY`)
+- ✏️ **Edit & version the system prompt** — change an agent's instructions live, save a draft, publish; or use Foreman's own agent editor at [`localhost:3000/editor`](http://localhost:3000/editor)
+- 🧠 **Memory & threads** — every conversation, persisted to your local Supabase
+- 🔭 **Traces** — per-run agent / tool / LLM spans, so you can see each step an agent took
+- 🗂️ **Tools** — browse the 34 Zapier SDK tools + the custom tools each agent loads
+- ✅ **Eval scorers** — score runs against the `foreman-baseline-v1` dataset (relaxed-trajectory match + an LLM judge) in the Scores view
 
 ---
 
