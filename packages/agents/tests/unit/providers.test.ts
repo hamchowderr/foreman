@@ -1,5 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+/**
+ * Provider config is resolved at module load from process.env, so each test
+ * mutates env and re-imports with a fresh module cache.
+ */
 const AGENT_ENV_KEYS = [
   "MODEL_DEFAULT",
   "MODEL_FAST",
@@ -75,11 +79,13 @@ describe("providers/models defaults", () => {
     process.env.DISCOVERY_MODEL = "google/gemini-2.5-flash";
     const { AGENT_MODELS } = await import("@/lib/providers");
     expect(AGENT_MODELS.discovery).toBe("google/gemini-2.5-flash");
+    // history still follows tier default
     expect(AGENT_MODELS.history).toBe("openai/gpt-4o-mini");
   });
 
   it("comma-separated per-agent value produces a ModelWithRetries fallback chain", async () => {
-    process.env.EXECUTION_MODEL = "anthropic/claude-sonnet-4-6,openai/gpt-4o,google/gemini-2.5-pro";
+    process.env.EXECUTION_MODEL =
+      "anthropic/claude-sonnet-4-6,openai/gpt-4o,google/gemini-2.5-pro";
     const { AGENT_MODELS, asList, primary } = await import("@/lib/providers");
     const spec = AGENT_MODELS.execution;
     expect(Array.isArray(spec)).toBe(true);
@@ -89,6 +95,7 @@ describe("providers/models defaults", () => {
       "google/gemini-2.5-pro",
     ]);
     expect(primary(spec)).toBe("anthropic/claude-sonnet-4-6");
+    // chain entries have the Mastra-compatible shape
     if (Array.isArray(spec)) {
       expect(spec[0]).toMatchObject({ model: "anthropic/claude-sonnet-4-6", maxRetries: 2 });
     }
@@ -147,7 +154,7 @@ describe("providers/validate", () => {
 });
 
 describe("providers/params", () => {
-  it("returns undefined for agents with no env params", async () => {
+  it("returns undefined for agents with no env params (Mastra/provider defaults apply)", async () => {
     const { modelSettingsFor } = await import("@/lib/providers");
     expect(modelSettingsFor("foreman")).toBeUndefined();
     expect(modelSettingsFor("discovery")).toBeUndefined();
@@ -171,7 +178,7 @@ describe("providers/params", () => {
     });
   });
 
-  it("ignores non-numeric values", async () => {
+  it("ignores non-numeric values (falls back to provider default)", async () => {
     process.env.FOREMAN_TEMPERATURE = "not-a-number";
     const { modelSettingsFor } = await import("@/lib/providers");
     expect(modelSettingsFor("foreman")).toBeUndefined();
@@ -188,12 +195,15 @@ describe("providers/params", () => {
     process.env.HISTORY_MAX_OUTPUT_TOKENS = "2048";
     process.env.HISTORY_TEMPERATURE = "0";
     const { modelSettingsFor } = await import("@/lib/providers");
-    expect(modelSettingsFor("history")).toEqual({ temperature: 0, maxOutputTokens: 2048 });
+    expect(modelSettingsFor("history")).toEqual({
+      temperature: 0,
+      maxOutputTokens: 2048,
+    });
   });
 });
 
-describe("providers/caching — systemPromptFor", () => {
-  it("returns plain string when caching is disabled", async () => {
+describe("providers/caching", () => {
+  it("returns plain string system prompt when caching is disabled", async () => {
     const { systemPromptFor } = await import("@/lib/providers");
     expect(systemPromptFor("foreman", "hello")).toBe("hello");
   });
@@ -204,11 +214,13 @@ describe("providers/caching — systemPromptFor", () => {
     expect(systemPromptFor("foreman", "hello")).toEqual({
       role: "system",
       content: "hello",
-      providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
     });
   });
 
-  it("accepts '1' and 'yes' as truthy", async () => {
+  it("accepts '1' and 'yes' as truthy values", async () => {
     process.env.DISCOVERY_PROMPT_CACHING = "1";
     process.env.EXECUTION_PROMPT_CACHING = "yes";
     const { AGENT_PROMPT_CACHING } = await import("@/lib/providers");
@@ -216,7 +228,7 @@ describe("providers/caching — systemPromptFor", () => {
     expect(AGENT_PROMPT_CACHING.execution).toBe(true);
   });
 
-  it("treats 'false', 'no', unset as false", async () => {
+  it("treats anything else as false (including 'false', 'no', unset)", async () => {
     process.env.FOREMAN_PROMPT_CACHING = "false";
     process.env.DISCOVERY_PROMPT_CACHING = "no";
     const { AGENT_PROMPT_CACHING } = await import("@/lib/providers");
@@ -232,7 +244,7 @@ describe("providers/caching — systemPromptFor", () => {
     expect(AGENT_REQUIREMENTS.discovery).not.toContain("prompt-caching");
   });
 
-  it("passes validation when caching is enabled on a supporting Anthropic model", async () => {
+  it("passes validation on Anthropic models that support caching", async () => {
     process.env.FOREMAN_PROMPT_CACHING = "true";
     const { validateAgentCapabilities } = await import("@/lib/providers");
     expect(() => validateAgentCapabilities()).not.toThrow();
@@ -260,25 +272,28 @@ describe("providers/caching — toolsWithCacheControl", () => {
     expect(result.tool_c).not.toHaveProperty("providerOptions");
   });
 
-  it("attaches cacheControl only to the last tool when enabled", async () => {
+  it("attaches cacheControl to the last tool when enabled", async () => {
     process.env.DISCOVERY_TOOL_CACHING = "true";
     const { toolsWithCacheControl } = await import("@/lib/providers");
     const result = toolsWithCacheControl("discovery", tools);
     expect(result.tool_a).not.toHaveProperty("providerOptions");
     expect(result.tool_b).not.toHaveProperty("providerOptions");
     expect(result.tool_c).toMatchObject({
-      providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+      description: "C",
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
     });
   });
 
   it("preserves existing providerOptions on the last tool", async () => {
     process.env.DISCOVERY_TOOL_CACHING = "true";
-    const withExisting = {
+    const toolsWithExisting = {
       tool_a: { description: "A" },
       tool_b: { description: "B", providerOptions: { openai: { foo: 1 } } },
     };
     const { toolsWithCacheControl } = await import("@/lib/providers");
-    const result = toolsWithCacheControl("discovery", withExisting);
+    const result = toolsWithCacheControl("discovery", toolsWithExisting);
     expect(result.tool_b).toMatchObject({
       providerOptions: {
         openai: { foo: 1 },
@@ -293,11 +308,13 @@ describe("providers/caching — toolsWithCacheControl", () => {
     expect(toolsWithCacheControl("discovery", {})).toEqual({});
   });
 
-  it("scopes per-agent — DISCOVERY does not leak into history", async () => {
+  it("scopes per-agent — DISCOVERY_TOOL_CACHING does not leak into history", async () => {
     process.env.DISCOVERY_TOOL_CACHING = "true";
     const { toolsWithCacheControl } = await import("@/lib/providers");
-    expect(toolsWithCacheControl("discovery", tools).tool_c).toHaveProperty("providerOptions");
-    expect(toolsWithCacheControl("history", tools).tool_c).not.toHaveProperty("providerOptions");
+    const discoveryResult = toolsWithCacheControl("discovery", tools);
+    const historyResult = toolsWithCacheControl("history", tools);
+    expect(discoveryResult.tool_c).toHaveProperty("providerOptions");
+    expect(historyResult.tool_c).not.toHaveProperty("providerOptions");
   });
 });
 
@@ -337,30 +354,34 @@ describe("providers/cost", () => {
     expect(result.pricingMissing).toBe(false);
   });
 
-  it("applies cached-input price and subtracts from fresh input", async () => {
+  it("applies the cached-input price to cachedInputTokens and subtracts from fresh input", async () => {
     const { calculateCost } = await import("@/lib/providers");
+    // Anthropic sonnet: fresh $3/M, cached $0.30/M, output $15/M.
+    // 1M total input of which 900k cached → 100k fresh input.
     const result = calculateCost("anthropic/claude-sonnet-4-6", {
       inputTokens: 1_000_000,
       cachedInputTokens: 900_000,
       outputTokens: 0,
     });
-    expect(result.inputCostUsd).toBeCloseTo(0.3, 6);
-    expect(result.cachedInputCostUsd).toBeCloseTo(0.27, 6);
+    expect(result.inputCostUsd).toBeCloseTo(0.3, 6); // 100k * 3/M
+    expect(result.cachedInputCostUsd).toBeCloseTo(0.27, 6); // 900k * 0.3/M
     expect(result.totalCostUsd).toBeCloseTo(0.57, 6);
   });
 
-  it("uses input price when no cached-input rate defined", async () => {
+  it("handles models without an explicit cached-input price by reusing input price", async () => {
     const { calculateCost } = await import("@/lib/providers");
     const result = calculateCost("openai/gpt-4o-mini", {
       inputTokens: 1_000_000,
       cachedInputTokens: 500_000,
       outputTokens: 0,
     });
+    // $0.15/M input, no cached rate → cached also $0.15/M.
     expect(result.inputCostUsd).toBeCloseTo(0.075, 6);
     expect(result.cachedInputCostUsd).toBeCloseTo(0.075, 6);
+    expect(result.totalCostUsd).toBeCloseTo(0.15, 6);
   });
 
-  it("flags unknown models and returns zero cost", async () => {
+  it("flags unknown models and returns zero cost (tokens still recorded)", async () => {
     const { calculateCost } = await import("@/lib/providers");
     const result = calculateCost("bogus/unknown-model", {
       inputTokens: 100,
@@ -369,9 +390,10 @@ describe("providers/cost", () => {
     expect(result.pricingMissing).toBe(true);
     expect(result.totalCostUsd).toBe(0);
     expect(result.inputTokens).toBe(100);
+    expect(result.outputTokens).toBe(200);
   });
 
-  it("handles undefined token counts as zero", async () => {
+  it("handles undefined token counts by treating them as zero", async () => {
     const { calculateCost } = await import("@/lib/providers");
     const result = calculateCost("openai/gpt-4o", {
       inputTokens: undefined,
@@ -385,9 +407,12 @@ describe("providers/cost", () => {
     const { onFinishCostLogger } = await import("@/lib/providers");
     const lines: string[] = [];
     const origLog = console.log;
-    console.log = (msg: string) => lines.push(String(msg));
+    console.log = (msg: string) => {
+      lines.push(String(msg));
+    };
     try {
-      onFinishCostLogger("discovery")({ totalUsage: { inputTokens: 1000, outputTokens: 500 } });
+      const logger = onFinishCostLogger("discovery");
+      logger({ totalUsage: { inputTokens: 1000, outputTokens: 500 } });
     } finally {
       console.log = origLog;
     }
@@ -397,7 +422,7 @@ describe("providers/cost", () => {
     expect(parsed.agent).toBe("discovery");
     expect(parsed.inputTokens).toBe(1000);
     expect(parsed.outputTokens).toBe(500);
-    expect(parsed.provider).toBe("anthropic");
+    expect(parsed.provider).toBe("anthropic"); // discovery default
     expect(parsed.totalCostUsd).toBeGreaterThan(0);
   });
 
@@ -406,9 +431,12 @@ describe("providers/cost", () => {
     const { onFinishCostLogger } = await import("@/lib/providers");
     const lines: string[] = [];
     const origLog = console.log;
-    console.log = (m: string) => lines.push(String(m));
+    console.log = (m: string) => {
+      lines.push(String(m));
+    };
     try {
-      onFinishCostLogger("discovery")({ totalUsage: { inputTokens: 1000, outputTokens: 500 } });
+      const logger = onFinishCostLogger("discovery");
+      logger({ totalUsage: { inputTokens: 1000, outputTokens: 500 } });
     } finally {
       console.log = origLog;
     }

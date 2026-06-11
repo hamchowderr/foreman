@@ -51,6 +51,54 @@ const envSchema = z.object({
   IMESSAGE_LOCAL: z.string().optional(),
   IMESSAGE_SERVER_URL: z.string().optional(),
   IMESSAGE_API_KEY: z.string().optional(),
+  // Model provider overrides (see src/lib/providers/). Any unset value falls
+  // back to the tier default, then to the hardcoded Anthropic default.
+  // Per-agent values accept a comma-separated fallback chain, e.g.
+  //   EXECUTION_MODEL=anthropic/claude-sonnet-4-6,openai/gpt-4o
+  MODEL_DEFAULT: z.string().optional(),
+  MODEL_FAST: z.string().optional(),
+  MODEL_HEAVY: z.string().optional(),
+  FOREMAN_MODEL: z.string().optional(),
+  DISCOVERY_MODEL: z.string().optional(),
+  EXECUTION_MODEL: z.string().optional(),
+  SUPERVISOR_MODEL: z.string().optional(),
+  HISTORY_MODEL: z.string().optional(),
+  // Per-agent generation parameters (see src/lib/providers/params.ts). All
+  // optional; unset values fall through to Mastra's and the provider's defaults.
+  // Name suffix matches AI SDK's CallSettings shape (maxOutputTokens, topP).
+  FOREMAN_TEMPERATURE: z.string().optional(),
+  FOREMAN_MAX_OUTPUT_TOKENS: z.string().optional(),
+  FOREMAN_TOP_P: z.string().optional(),
+  DISCOVERY_TEMPERATURE: z.string().optional(),
+  DISCOVERY_MAX_OUTPUT_TOKENS: z.string().optional(),
+  DISCOVERY_TOP_P: z.string().optional(),
+  EXECUTION_TEMPERATURE: z.string().optional(),
+  EXECUTION_MAX_OUTPUT_TOKENS: z.string().optional(),
+  EXECUTION_TOP_P: z.string().optional(),
+  SUPERVISOR_TEMPERATURE: z.string().optional(),
+  SUPERVISOR_MAX_OUTPUT_TOKENS: z.string().optional(),
+  SUPERVISOR_TOP_P: z.string().optional(),
+  HISTORY_TEMPERATURE: z.string().optional(),
+  HISTORY_MAX_OUTPUT_TOKENS: z.string().optional(),
+  HISTORY_TOP_P: z.string().optional(),
+  // Per-agent Anthropic prompt-caching opt-in (see src/lib/providers/caching.ts).
+  // Boolean strings: "true" / "1" / "yes" enable. Fails startup validation
+  // if enabled on an agent whose configured model doesn't support caching.
+  FOREMAN_PROMPT_CACHING: z.string().optional(),
+  DISCOVERY_PROMPT_CACHING: z.string().optional(),
+  EXECUTION_PROMPT_CACHING: z.string().optional(),
+  SUPERVISOR_PROMPT_CACHING: z.string().optional(),
+  HISTORY_PROMPT_CACHING: z.string().optional(),
+  // Per-agent Anthropic tool-schema caching opt-in. Independent of the
+  // system-prompt switch above; both gate on the `prompt-caching` capability.
+  // Attaches providerOptions.anthropic.cacheControl to the last tool in each
+  // agent's tool map, creating a single breakpoint that caches every earlier
+  // tool definition as one block (max 4 breakpoints per Anthropic request).
+  FOREMAN_TOOL_CACHING: z.string().optional(),
+  DISCOVERY_TOOL_CACHING: z.string().optional(),
+  EXECUTION_TOOL_CACHING: z.string().optional(),
+  SUPERVISOR_TOOL_CACHING: z.string().optional(),
+  HISTORY_TOOL_CACHING: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

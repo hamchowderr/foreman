@@ -11,7 +11,10 @@
  *   EXECUTION_MODEL=anthropic/claude-sonnet-4-6,openai/gpt-4o
  */
 
+/** Entry in a Mastra fallback array. Matches `ModelWithRetries` from `@mastra/core`. */
 export type ModelFallback = { model: string; maxRetries?: number };
+
+/** Either a single `provider/model` string or a Mastra-compatible fallback array. */
 export type ModelSpec = string | ModelFallback[];
 
 const TIER_DEFAULTS = {
@@ -30,21 +33,20 @@ function single(value: string | undefined, fallback: string): string {
 function chain(value: string | undefined, fallback: string): ModelSpec {
   const trimmed = value?.trim();
   if (!trimmed) return fallback;
-  const parts = trimmed
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const parts = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
   if (parts.length === 0) return fallback;
   if (parts.length === 1) return parts[0];
   return parts.map((model) => ({ model, maxRetries: FALLBACK_MAX_RETRIES }));
 }
 
+/** Tier-level defaults. Single strings only — use per-agent overrides for fallback chains. */
 export const MODELS = {
   default: single(process.env.MODEL_DEFAULT, TIER_DEFAULTS.default),
   fast: single(process.env.MODEL_FAST, TIER_DEFAULTS.fast),
   heavy: single(process.env.MODEL_HEAVY, TIER_DEFAULTS.heavy),
 } as const;
 
+/** Per-agent model — may be a single string or a fallback chain. */
 export const AGENT_MODELS = {
   foreman: chain(process.env.FOREMAN_MODEL, MODELS.default),
   discovery: chain(process.env.DISCOVERY_MODEL, MODELS.fast),
@@ -55,10 +57,12 @@ export const AGENT_MODELS = {
 
 export type AgentName = keyof typeof AGENT_MODELS;
 
+/** Primary model from a spec — use when a single string is required (e.g. scorers). */
 export function primary(spec: ModelSpec): string {
   return typeof spec === "string" ? spec : spec[0].model;
 }
 
+/** Normalize a spec into a list of model strings for iteration. */
 export function asList(spec: ModelSpec): string[] {
   return typeof spec === "string" ? [spec] : spec.map((e) => e.model);
 }
