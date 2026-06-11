@@ -92,4 +92,9 @@ jobs:
       - name: Start local Supabase
         run: npx supabase start
       - name: Verify generated types match migrations
+        # The latest supabase CLI checks for an access token *before* it will run
+        # local type-gen in CI; the value is never used (--local introspects the
+        # local DB). A placeholder satisfies the presence check.
+        env:
+          SUPABASE_ACCESS_TOKEN: sbp_0000000000000000000000000000000000000000
         run: cd packages/agents && npm run db:types:check
