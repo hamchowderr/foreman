@@ -122,6 +122,21 @@ case in `foreman-c63f`. (Live `lease_count`/`possible_duplicate_data` values rem
 unobserved — purely a Zapier-poll-timing artifact; the inbox is armed and will capture
 issue #16 on the next poll.)
 
+## Open questions for Zapier (to raise with their engineers)
+
+Parked here intentionally — to discuss with Zapier rather than reverse-engineer:
+1. **First-poll latency.** How long until a *fresh* polling-trigger inbox subscription
+   gets its first events? Empirically >7 min for GitHub `issue_v2`. Is there a way to
+   prime/force an initial poll, or an expected SLA?
+2. **Instant vs polling visibility.** `listTriggers` exposes no instant/hook flag (only
+   `action_type`). How do we identify which triggers are REST-hook/instant (fill the
+   inbox in real-time) vs polling? Instant triggers would make `watchTriggerInbox` SSE a
+   genuinely real-time path. (Candidate connected apps to test instant delivery later:
+   Slack, HubSpot, Airtable, Todoist.)
+3. **Back-fill semantics.** Does a new inbox capture events that already existed at
+   subscription time, or only new ones after? (Behaved like only-new in this spike.)
+4. **Stability / sunset** of the experimental trigger-inbox surface (also `foreman-13mw`).
+
 ## Preliminary go/no-go
 
 **Lean: GO for evaluating it as the substrate for Foreman's stubbed `poll` trigger
