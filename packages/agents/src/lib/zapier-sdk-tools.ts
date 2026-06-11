@@ -3,6 +3,7 @@ import {
   createZapierSdk,
   ZapierActionError,
   ZapierAppNotFoundError,
+  ZapierApprovalError,
   ZapierAuthenticationError,
   ZapierConfigurationError,
   ZapierError,
@@ -322,7 +323,7 @@ export function getDefaultZapierTools() {
  * Handle SDK errors using instanceof checks against the SDK's typed error classes.
  * Returns structured error objects so the agent can explain errors to users.
  */
-function handleSdkError(
+export function handleSdkError(
   err: unknown,
   methodName: string,
 ): {
@@ -418,6 +419,22 @@ function handleSdkError(
     return {
       error: `Configuration error for ${methodName}: ${(err as Error).message}`,
       code: "CONFIG_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Surface Zapier's own approval flow. In a server / non-TTY context, runAction
+  // defaults approvalMode to "throw", so an action awaiting human approval throws
+  // ZapierApprovalError carrying a URL the user must open to approve it on Zapier's
+  // side. Must precede the generic ZapierError catch-all (it extends ZapierError),
+  // or the approval URL is silently lost.
+  if (err instanceof ZapierApprovalError) {
+    const ae = err as ZapierApprovalError;
+    return {
+      error: ae.approvalUrl
+        ? `${methodName} needs your approval on Zapier before it can run. Open this link to approve, then try again: ${ae.approvalUrl}`
+        : `${methodName} needs approval on Zapier before it can run (status: ${ae.approvalStatus ?? "pending"}). No approval URL was returned — try again shortly.`,
+      code: "APPROVAL_REQUIRED",
       retryable: false,
     };
   }

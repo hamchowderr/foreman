@@ -2,13 +2,33 @@
  * Unit tests for zapier-sdk-tools.ts — tool generation logic.
  * No API calls. Verifies tools are generated with correct metadata.
  */
+import { ZapierApprovalError } from "@zapier/zapier-sdk";
 import { beforeAll, describe, expect, it } from "vitest";
-import { generateZapierTools } from "../../src/lib/zapier-sdk-tools";
+import { generateZapierTools, handleSdkError } from "../../src/lib/zapier-sdk-tools";
 
 let tools: Record<string, any>;
 
 beforeAll(() => {
   tools = generateZapierTools();
+});
+
+describe("handleSdkError — Zapier approval flow (foreman-elyi)", () => {
+  it("surfaces the approval URL from ZapierApprovalError", () => {
+    const url = "https://zapier.com/app/approve/abc123";
+    const result = handleSdkError(
+      new ZapierApprovalError("Approval required", { approvalUrl: url }),
+      "run-action",
+    );
+    expect(result.code).toBe("APPROVAL_REQUIRED");
+    expect(result.error).toContain(url);
+    expect(result.retryable).toBe(false);
+  });
+
+  it("falls back gracefully when no approval URL is present", () => {
+    const result = handleSdkError(new ZapierApprovalError("Approval required"), "run-action");
+    expect(result.code).toBe("APPROVAL_REQUIRED");
+    expect(result.error).not.toContain("undefined");
+  });
 });
 
 describe("Tool generation", () => {
