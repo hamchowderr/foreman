@@ -29,9 +29,45 @@ accept. This is the same split noted in `foreman-iyq6` (durable API is a differe
    code must conform to (`zapier_durable_version`) isn't in the SDK types — needs Zapier's
    durable-workflow programming-model docs before a real hello-world.
 
+## The source-file contract IS documented — `@zapier/zapier-durable`
+
+`runDurable`'s `source_files` are code written against **`@zapier/zapier-durable`**
+(published npm pkg, v0.5.4 — "Durable execution for the Zapier SDK"). Authoring model:
+
+```typescript
+import { defineDurable } from "@zapier/zapier-durable";
+import { z } from "zod";
+const wf = defineDurable({
+  name: "my-durable",
+  inputSchema: z.object({ userId: z.string() }),
+  run: async (ctx, input) => {
+    const data = await ctx.step("fetch", async () => {/* ... */});  // memoized, runs once even on replay
+    const [approval, url] = await ctx.createCallback({              // human-in-the-loop
+      name: "wait-for-approval", payloadSchema: z.object({ approved: z.boolean() }),
+    });
+    await ctx.step("notify", async () => notify(url));
+    return await approval;                                          // resumes when callback delivered
+  },
+});
+```
+Package exports: `.`, `./runner`, `./node`, `./testing`, `./cli`. Returns `{ done, result, error, executionId }`.
+
+This is a real durable-execution engine (Temporal/Inngest-shaped): **`ctx.step` = durable
+memoized steps; `ctx.createCallback` = approval callbacks.** That maps directly onto
+Foreman's domain (multi-step automations with human approval).
+
+## Corrected status — NOT blocked, two achievable prerequisites
+
+1. **Auth:** `runDurable` needs a per-user `userJwt` (NOT the app client-credentials we
+   tested with locally). Foreman already mints these via its PKCE OAuth flow
+   (`lib/zapier/sdk.ts`). To test locally: `npx zapier-sdk login` yields a user token, then
+   `createZapierSdk()` (no creds) uses it.
+2. **Source files:** write a `defineDurable` workflow bundled against `@zapier/zapier-durable`.
+
 ## Recommendation
 
-`foreman-8bh9` stays **post-v1 / deferred** (matches its existing priority). To unblock:
-(a) get a user JWT path, (b) get the durable source-file contract from Zapier. Until then,
-the home-grown engine remains the v1 substrate (`foreman-98j3` keep-own-engine), with the
-durable API tracked as a future hosted-execution option.
+Durable execution is **usable and a strong architectural fit** — not a dead end. `foreman-8bh9`
+remains correctly prioritized (post-v1) only because of scope, not feasibility. Next concrete
+step: load a userJwt (`npx zapier-sdk login`), bundle a `defineDurable` hello-world, `runDurable`
++ poll `getDurableRun` to terminal. This is genuinely worth revisiting vs `foreman-98j3`'s
+keep-own-engine lean — the SDK now offers hosted durable execution + callbacks we'd otherwise build.
