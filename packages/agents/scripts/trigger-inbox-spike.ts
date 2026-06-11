@@ -32,6 +32,7 @@ type Args = {
   json: boolean;
   inbox?: string; // operate on an existing inbox (phase 2) instead of creating one
   waitSeconds: number; // poll-for-ready + lease-retry budget
+  inputs?: Record<string, unknown>; // trigger inputs, e.g. {"repo":"owner/name"}
 };
 
 function parseArgs(argv: string[]): Args {
@@ -49,6 +50,7 @@ function parseArgs(argv: string[]): Args {
     json: has("json"),
     inbox: get("inbox"),
     waitSeconds: Number(get("wait") ?? 0),
+    inputs: get("inputs") ? JSON.parse(get("inputs") as string) : undefined,
   };
 }
 
@@ -169,14 +171,21 @@ async function main() {
     }
 
     hr("ensureTriggerInbox");
+    const inputHint = args.inputs
+      ? `-${Object.values(args.inputs)
+          .join("-")
+          .replace(/[^a-z0-9]+/gi, "-")}`
+      : "";
     const { data: inbox } = await (sdk as any).ensureTriggerInbox({
-      name: `foreman-spike-${args.app}-${pick.key}`,
+      name: `foreman-spike-${args.app}-${pick.key}${inputHint}`,
       app: args.app,
       action: pick.key,
       ...(connection ? { connection } : {}),
+      ...(args.inputs ? { inputs: args.inputs } : {}),
     });
     inboxId = inbox.id;
     log(`inbox id=${inbox.id} status=${inbox.status} conn=${inbox.subscription?.connection_id}`);
+    log(`inputs=${JSON.stringify(inbox.subscription?.inputs ?? {})}`);
   }
 
   // --- Poll until the inbox leaves "initializing" (up to --wait seconds) ---

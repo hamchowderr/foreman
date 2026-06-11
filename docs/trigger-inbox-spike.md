@@ -82,10 +82,45 @@ connection. So a trigger inbox is only useful once a real app connection exists.
 The full API mechanics (create → lease → delete) all returned correctly; the empty
 result is a **data**/connection gap, not an API failure.
 
-**To complete message-flow testing** (real `lease_count` / `possible_duplicate_data`
-/ ack vs release behavior), the account needs a **connected GitHub** (via Zapier or
-Foreman's `connect_zapier` flow), then open a GitHub issue and re-run `--live-create`.
-The driver is ready; only the connection is missing.
+### Connected run (2026-06-11, GitHub connection added)
+
+With a real GitHub connection bound:
+- `ensureTriggerInbox` → inbox transitions **`initializing → active`** (confirmed via `getTriggerInbox` polling).
+- Input scoping works: `inputs: {repo: "hamchowderr/foreman"}` is accepted and echoed in `subscription.inputs`.
+- `ensureTriggerInbox` keys on **`name`** — creating a second inbox with the same name but different inputs errors (`"...already exists with different subscription data"`). The driver now suffixes the name with an input hint.
+
+### Did messages arrive? Diagnostic (the important part)
+
+Created GitHub issues #15 and #16 (the latter *after* the scoped inbox was active),
+then leased repeatedly for ~7 min total — **0 messages**. Before concluding "latency,"
+we verified it's not a config/scope problem:
+
+| Check | Result |
+|---|---|
+| `getTriggerInbox` | `active`, `paused_reason: null`, subscription bound to `{repo: foreman}` + connection — **correct** |
+| `listTriggerInboxMessages` (raw queue) | **0** — queue genuinely empty |
+| **`runAction` `github/read/issue_v2{repo}`** (synchronous read) | **Returns #16 and #15 instantly** |
+
+**Verdict: not missing anything.** The connection/scope/repo access are fine (a direct
+read returns both issues immediately); the inbox is configured correctly. The queue is
+empty solely because **Zapier's background poller for the trigger-inbox subscription
+hasn't fired yet** — and the *first* poll of a fresh polling-trigger subscription is the
+slowest (often many minutes).
+
+### Architectural insight for `foreman-c63f` (real tradeoff)
+
+- A **synchronous read** (`runAction` read — which Foreman already uses) returns data
+  **instantly**, on demand.
+- A **trigger inbox** hands you a managed, dedup'd, push-style queue (`lease_count` /
+  `possible_duplicate_data` for free) — but with **Zapier-side poll latency** baked in,
+  not under our control.
+
+So for a *low-latency* poll trigger, a read-action-based poller (Foreman owns the cadence
++ dedup) may beat the trigger inbox; for *event-driven, dedup-sensitive* flows where some
+latency is acceptable, the trigger inbox removes the idempotency burden. Decide per use
+case in `foreman-c63f`. (Live `lease_count`/`possible_duplicate_data` values remain
+unobserved — purely a Zapier-poll-timing artifact; the inbox is armed and will capture
+issue #16 on the next poll.)
 
 ## Preliminary go/no-go
 
