@@ -32,6 +32,7 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
 - `READ_ONLY` set: 17 discovery tools
 - `DEPRECATED_METHODS` set: 5 excluded (request, listAuthentications, etc.)
 - `zapier-mcp.ts` — old MCP stdio approach, deprecated but still in tree
+- **Auth model** — which auth (client-creds vs per-user userJwt) works on which SDK surface, and why durable is internal-scope-walled: [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md)
 
 ### Custom Tools
 
