@@ -23,6 +23,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Fail fast if aimock.json's declared MCP tools / A2A agents drift away
+      # from their backing fixtures, or if a catch-all LLM fixture sneaks back
+      # in. Cheap, no services — run before the (slower) test suite.
+      - name: Verify AIMock fixture coverage
+        run: cd packages/agents && npm run verify:aimock
       # AIMock is started in-process by packages/agents/tests/aimock-setup.ts
       # (vitest globalSetup) — no separate action needed. Real Anthropic and
       # Zapier creds are deliberately absent so any leak into a non-mocked
