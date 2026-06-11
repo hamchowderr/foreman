@@ -56,7 +56,31 @@ This is a real durable-execution engine (Temporal/Inngest-shaped): **`ctx.step` 
 memoized steps; `ctx.createCallback` = approval callbacks.** That maps directly onto
 Foreman's domain (multi-step automations with human approval).
 
-## Corrected status — NOT blocked, two achievable prerequisites
+## Auth — sorted (2026-06-11)
+
+The two SDK surfaces want **different auth**, confirmed empirically:
+
+| Auth | Trigger inboxes / discovery | Durable |
+|---|---|---|
+| Client-credentials (`ZAPIER_CLIENT_ID/SECRET`) | ✅ works | ❌ `"None of the security schemes (userJwt)…"` |
+| `userJwt` (per-user OAuth token) | ✅ | ✅ required |
+
+- The new `@zapier/zapier-sdk-cli` (0.54) login produces **client-credentials**, not a
+  `userJwt` — so the CLI route does **not** yield the token durable needs.
+- `~/.zapierrc`'s `deployKey` is a 32-char legacy platform-cli key, **not a JWT** — fails
+  as SDK creds (`"Failed to authenticate Bearer token"`). Red herring.
+- A `userJwt` comes from a **per-user OAuth flow**, which Foreman already implements
+  (PKCE `connect` flow, `lib/zapier/sdk.ts` → `createZapierSdk({ credentials: accessToken })`).
+  So durable is usable **in Foreman's per-user production context**; it just isn't testable
+  via the local CLI (minting a userJwt needs an interactive per-user login).
+
+**Sharpened question for Zapier:** for a *server* product authenticating with
+client-credentials, what's the supported path to invoke the per-user durable API — a
+token exchange (client-creds → user JWT), a service identity, or must we carry each
+user's PKCE token? (Trigger inboxes already accept client-creds; durable doesn't — is
+that intentional/permanent?)
+
+## Status — NOT blocked, two achievable prerequisites
 
 1. **Auth:** `runDurable` needs a per-user `userJwt` (NOT the app client-credentials we
    tested with locally). Foreman already mints these via its PKCE OAuth flow
