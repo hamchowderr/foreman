@@ -187,9 +187,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 #    → copy the service_role + anon keys into packages/agents/.env.local
 npx supabase start
 
-# 4. Build + start the agents server (:4111)
-#    Use `npm run start`, NOT `npm run dev` — `mastra dev` hangs on Windows.
-cd packages/agents && npm run build && npm run start
+# 4. Start the agents server + Mastra Studio (:4111). `npm run dev` gives hot reload;
+#    use `npm run build && npm run start` for a production-style run.
+cd packages/agents && npm run dev
 
 # 5. In a second terminal, start the web frontend (:3000)
 cd packages/web && npm run dev
@@ -304,7 +304,16 @@ Four tiers plus end-to-end browser tests. **Tier 1 is the default loop and runs 
 | **Protocol** | `… npm test` (tier 1) with the dev server up | Auto-detects the dev server, runs A2A + MCP + agent-card discovery | agents server running |
 | **E2E (browser)** | `cd packages/web && npx playwright test` | Web flows end-to-end | web + agents servers |
 
-CI runs the mocked tiers, a `next build` for web, Biome lint, and a dependency-uniqueness check on every push and PR.
+CI runs the mocked tiers, a `next build` for web, Biome lint, a dependency-uniqueness check, and a generated-DB-types freshness check on every push and PR.
+
+---
+
+## 🔭 Inspect & tune agents
+
+Two ways to look inside Foreman's agents without leaving your machine:
+
+- **Mastra Studio** — `cd packages/agents && npm run dev` serves the agent server **and** [Mastra Studio](https://mastra.ai) at **http://localhost:4111**: chat with each agent directly, inspect per-run traces (agent / tool / LLM spans), browse memory + threads, and run the eval scorers. Needs the local Supabase up (`npx supabase start`) for memory and traces.
+- **The `/editor` page** — Foreman's own agent editor in the web app at **`localhost:3000/editor`**: list your agents, edit and version their system prompts, and pick which tools each one gets — no separate dashboard required.
 
 ---
 
@@ -338,7 +347,7 @@ CI runs the mocked tiers, a `next build` for web, Biome lint, and a dependency-u
 - **Self-host or hosted?** Self-hosting is first-class today — the full stack, every channel, on your own infra. A managed hosted version is coming soon.
 - **What models does it use?** Claude Sonnet 4.6 for the primary agent and Haiku 4.5 for fast/cheap steps, via the swappable provider layer.
 - **Is my data sent anywhere?** Self-hosted, your conversations, action history, and connected-account tokens live in *your* Postgres (tokens encrypted at rest). LLM calls go to your configured provider.
-- **Does it run on Windows?** Yes — but use `npm run start`, not `npm run dev`: `mastra dev` hangs on Windows. See [`CLAUDE.md`](CLAUDE.md).
+- **Does it run on Windows?** Yes — agents and web both run on Node 22, and `npm run dev` works for both (the agents server + Mastra Studio on `:4111`, the web app on `:3000`).
 - **Which channels work right now?** Web, Slack, Telegram, Discord, Google Chat, GitHub, and Linear. Teams, WhatsApp, and iMessage are in progress.
 
 ---
