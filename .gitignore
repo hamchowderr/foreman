@@ -62,3 +62,6 @@ next-env.d.ts
 
 # Dolt database files (added by bd init)
 .dolt/
+
+# Zapier SDK/CLI update watcher state (per-machine throttle + notify watermark)
+scripts/.zapier-sdk-watch.json

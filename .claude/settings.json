@@ -17,6 +17,10 @@
           {
             "command": "bd prime",
             "type": "command"
+          },
+          {
+            "command": "node scripts/zapier-sdk-watch.mjs --quiet",
+            "type": "command"
           }
         ],
         "matcher": ""
