@@ -30,9 +30,7 @@
     "esbuild": ">=0.25.0",
     "zod": "4.4.3",
     "postcss": "^8.5.10",
-    "@mastra/core": "1.42.0-alpha.3",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "@mastra/core": "1.42.0-alpha.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
