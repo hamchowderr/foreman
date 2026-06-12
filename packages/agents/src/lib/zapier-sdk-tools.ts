@@ -71,6 +71,33 @@ const READ_ONLY = new Set([
 ]);
 
 /**
+ * Opt read-only tools into Mastra background execution (foreman-7am4).
+ *
+ * Returns the `background` slice to spread into a tool's createTool() config:
+ * `{ background: { enabled: true } }` for a read-only tool when the feature flag
+ * is set, otherwise `{}`.
+ *
+ * Read tools are the safe target: they carry no approval/proposal flow, so
+ * routing them through the background-task manager can't disturb writes. We do
+ * NOT use the agent-level `backgroundTasks: { tools: 'all' }` — that resolves to
+ * `{ enabled: true }` for EVERY tool (incl. approval-required writes). Tool-level
+ * `background.enabled` makes *only* these tools eligible; everything else stays
+ * foreground with no agent-level config needed.
+ *
+ * Env-gated + OFF by default (`FOREMAN_BACKGROUND_TOOLS=1`): this changes live
+ * tool dispatch and is unverified on the @mastra alpha, so it ships inert until
+ * explicitly enabled for testing. Read at call time so tests can toggle it.
+ */
+export function toolBackgroundConfig(isReadOnly: boolean): {
+  background?: { enabled: true };
+} {
+  if (isReadOnly && process.env.FOREMAN_BACKGROUND_TOOLS === "1") {
+    return { background: { enabled: true } };
+  }
+  return {};
+}
+
+/**
  * SDK methods excluded from tool generation.
  *
  * Two reasons to exclude:
@@ -226,6 +253,7 @@ export function generateZapierTools(
         description,
         inputSchema: unwrapped as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
+        ...toolBackgroundConfig(isReadOnly),
         ...mcpAnnotations,
         execute: async (input) => {
           try {
