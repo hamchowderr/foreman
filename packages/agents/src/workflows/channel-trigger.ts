@@ -27,10 +27,12 @@ export interface ChannelMessage {
   /** Channel/room/DM target — used by `match.room`. */
   room?: string;
   /**
-   * Stable per-delivery key for idempotency (e.g. the platform message id).
-   * When omitted, a content hash is used. A retried webhook carries the same
-   * key, so the workflow fires once. Callers should pass a real message id when
-   * available to avoid coalescing legitimately-repeated identical messages.
+   * Stable per-delivery key for idempotency (the platform message id). Every
+   * channel bot passes `message.id` (the normalized Chat SDK `Message.id`), so
+   * a retried webhook carries the same key and the workflow fires once — while
+   * two legitimately-repeated identical messages keep distinct ids and both
+   * fire. When omitted, the provider falls back to a content hash (which would
+   * coalesce repeated identical text).
    */
   dedupeKey?: string;
 }
