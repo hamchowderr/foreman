@@ -4,6 +4,8 @@ import { getGoogleChatBot } from "./gchat/bot";
 import { getGitHubBot } from "./github/bot";
 import { getiMessageBot } from "./imessage/bot";
 import { getLinearBot } from "./linear/bot";
+import { getMastra } from "./mastra";
+import { channelTriggerProvider } from "./mastra/signals/channel-trigger-provider";
 import { getSlackBot } from "./slack/bot";
 import { getTeamsBot } from "./teams/bot";
 import { getTelegramBot } from "./telegram/bot";
@@ -232,6 +234,13 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(port, () => {
   console.log(`Webhook server running on port ${port}`);
+
+  // Build the foreman agent up front so the channel SignalProvider is connected
+  // before the first inbound message — otherwise matchAndFireChannelTriggers
+  // runs before any generateReply() has lazily built the agent, and the
+  // channel notify() is a no-op for trigger-only messages. (foreman notify-wiring)
+  getMastra();
+  console.log(`[webhook] channel provider connected: ${channelTriggerProvider.isConnected}`);
 
   // Initialize Slack bot — getSlackBot() handles init + rehydration internally
   if (process.env.SLACK_SIGNING_SECRET) {
