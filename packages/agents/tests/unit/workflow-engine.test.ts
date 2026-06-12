@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let stepsResult: { data: unknown[] | null; error: unknown } = { data: [], error: null };
 const updates: { table: string; payload: any }[] = [];
+const inserts: { table: string; payload: any }[] = [];
 
 function createChain(table: string) {
   const b: any = {};
@@ -23,6 +24,7 @@ function createChain(table: string) {
   const oi = b.insert;
   b.insert = vi.fn((p: any) => {
     b._verb = "insert";
+    inserts.push({ table, payload: p });
     return oi(p);
   });
   const ou = b.update;
@@ -57,15 +59,18 @@ const oneStep = [
 
 const statuses = () =>
   updates.filter((u) => u.table === "workflow_run").map((u) => u.payload.status);
+const lastRunUpdate = () => [...updates].reverse().find((u) => u.table === "workflow_run")?.payload;
+const runInsert = () => inserts.find((i) => i.table === "workflow_run")?.payload;
 
 describe("executeWorkflow run-state", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     stepsResult = { data: oneStep, error: null };
     updates.length = 0;
+    inserts.length = 0;
   });
 
-  it("marks the run failed when a step throws (no stuck 'running')", async () => {
+  it("marks the run failed with the error_message when a step throws", async () => {
     mockRunAction.mockRejectedValue(new Error("boom"));
     const { executeWorkflow } = await import("@/lib/workflows/engine");
 
@@ -73,6 +78,7 @@ describe("executeWorkflow run-state", () => {
     for await (const ev of executeWorkflow("wf-1", "user-1", {})) events.push(ev.type);
 
     expect(statuses()).toEqual(["failed"]); // exactly one terminal write, not stuck
+    expect(lastRunUpdate()?.error_message).toBe("boom");
     expect(events).toContain("error");
   });
 
@@ -86,7 +92,7 @@ describe("executeWorkflow run-state", () => {
     expect(statuses()).toEqual(["success"]);
   });
 
-  it("marks the run failed when the caller abandons the generator mid-stream", async () => {
+  it("marks the run failed (with a reason) when the caller abandons the generator", async () => {
     // runAction would hang, but the caller breaks before it's reached.
     mockRunAction.mockReturnValue(new Promise(() => {}));
     const { executeWorkflow } = await import("@/lib/workflows/engine");
@@ -96,5 +102,29 @@ describe("executeWorkflow run-state", () => {
     }
 
     expect(statuses()).toEqual(["failed"]); // finally rescued the orphaned run
+    expect(lastRunUpdate()?.error_message).toMatch(/did not complete/);
+  });
+
+  it("defaults fired_by='manual' with no trigger id", async () => {
+    mockRunAction.mockResolvedValue({ ok: true });
+    const { executeWorkflow } = await import("@/lib/workflows/engine");
+
+    for await (const ev of executeWorkflow("wf-1", "user-1", {})) void ev;
+
+    expect(runInsert()).toMatchObject({ fired_by: "manual", trigger_id: null });
+  });
+
+  it("records the trigger context on the run row when fired by a trigger", async () => {
+    mockRunAction.mockResolvedValue({ ok: true });
+    const { executeWorkflow } = await import("@/lib/workflows/engine");
+
+    for await (const ev of executeWorkflow("wf-1", "user-1", {}, undefined, {
+      firedBy: "cron",
+      triggerId: "trig-9",
+    })) {
+      void ev;
+    }
+
+    expect(runInsert()).toMatchObject({ fired_by: "cron", trigger_id: "trig-9" });
   });
 });

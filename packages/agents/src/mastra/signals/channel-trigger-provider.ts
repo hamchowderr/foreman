@@ -124,7 +124,10 @@ export class ChannelTriggerSignalProvider extends SignalProvider<"channel-trigge
         .eq("id", row.id);
 
       try {
-        for await (const ev of executeWorkflow(row.workflow_id, userId, {})) {
+        for await (const ev of executeWorkflow(row.workflow_id, userId, {}, undefined, {
+          firedBy: "channel",
+          triggerId: row.id,
+        })) {
           if (ev.type === "error") {
             console.warn(`[channel-trigger] ${row.id} workflow error: ${ev.message}`);
           }

@@ -195,7 +195,16 @@ export class ZapierPollSignalProvider extends SignalProvider<"zapier-poll"> {
     for (const rec of fresh.reverse()) {
       const key = recordKey(rec, cfg.dedupeKey);
       try {
-        for await (const ev of executeWorkflow(row.workflow_id, userId, recordToInputs(rec))) {
+        for await (const ev of executeWorkflow(
+          row.workflow_id,
+          userId,
+          recordToInputs(rec),
+          undefined,
+          {
+            firedBy: "poll",
+            triggerId: row.id,
+          },
+        )) {
           if (ev.type === "error") {
             console.warn(`[zapier-poll] ${row.id} workflow error: ${ev.message}`);
           } else if (ev.type === "param_request") {

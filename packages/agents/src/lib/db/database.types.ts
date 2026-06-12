@@ -3429,25 +3429,34 @@ export type Database = {
         Row: {
           completed_at: string | null;
           created_at: string;
+          error_message: string | null;
+          fired_by: string | null;
           id: string;
           inputs: string;
           status: string;
+          trigger_id: string | null;
           workflow_id: string;
         };
         Insert: {
           completed_at?: string | null;
           created_at: string;
+          error_message?: string | null;
+          fired_by?: string | null;
           id: string;
           inputs: string;
           status: string;
+          trigger_id?: string | null;
           workflow_id: string;
         };
         Update: {
           completed_at?: string | null;
           created_at?: string;
+          error_message?: string | null;
+          fired_by?: string | null;
           id?: string;
           inputs?: string;
           status?: string;
+          trigger_id?: string | null;
           workflow_id?: string;
         };
         Relationships: [

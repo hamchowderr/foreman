@@ -15,6 +15,16 @@ export interface WorkflowEvent {
   missing?: string[];
 }
 
+/** How a run started — recorded on workflow_run so trigger-fired runs carry
+ * context in run history. (foreman-2afc) */
+export type FiredBy = "manual" | "cron" | "channel" | "poll";
+
+export interface WorkflowTriggerContext {
+  firedBy: FiredBy;
+  /** The workflow_trigger row that fired this run (null for manual runs). */
+  triggerId?: string;
+}
+
 /**
  * Execute a saved workflow, yielding SSE-friendly events as each step runs.
  */
@@ -23,6 +33,7 @@ export async function* executeWorkflow(
   userId: string,
   inputs: Record<string, string>,
   _orgId?: string,
+  trigger: WorkflowTriggerContext = { firedBy: "manual" },
 ): AsyncGenerator<WorkflowEvent> {
   const supabase = getSupabase();
 
@@ -59,6 +70,8 @@ export async function* executeWorkflow(
     inputs: JSON.stringify(inputs),
     status: "running",
     created_at: now,
+    fired_by: trigger.firedBy,
+    trigger_id: trigger.triggerId ?? null,
   });
 
   // Own the run's terminal state in a try/finally so the row can never get
@@ -123,7 +136,11 @@ export async function* executeWorkflow(
 
         await supabase
           .from("workflow_run")
-          .update({ status: "failed", completed_at: new Date().toISOString() })
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            error_message: errorMsg,
+          })
           .eq("id", runId);
         settled = true;
 
@@ -145,7 +162,12 @@ export async function* executeWorkflow(
       try {
         await supabase
           .from("workflow_run")
-          .update({ status: "failed", completed_at: new Date().toISOString() })
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            error_message:
+              "run did not complete (generator abandoned or aborted before a terminal state)",
+          })
           .eq("id", runId);
       } catch (e) {
         console.error(`[engine] failed to mark abandoned run ${runId} failed:`, e);

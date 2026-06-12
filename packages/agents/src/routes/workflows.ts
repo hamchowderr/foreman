@@ -316,6 +316,9 @@ workflows.get("/:id/runs", async (c) => {
       status: r.status,
       created_at: r.created_at,
       completed_at: r.completed_at ?? null,
+      error_message: r.error_message ?? null,
+      fired_by: r.fired_by ?? null,
+      trigger_id: r.trigger_id ?? null,
     })),
   );
 });

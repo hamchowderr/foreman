@@ -199,7 +199,10 @@ async function runOne(workflowId: string, userId: string, triggerId: string) {
   // last_fired_at was already set by the atomic claim in tickCron, so the run is
   // dedup'd before we get here. We just execute and surface errors.
   try {
-    for await (const ev of executeWorkflow(workflowId, userId, {})) {
+    for await (const ev of executeWorkflow(workflowId, userId, {}, undefined, {
+      firedBy: "cron",
+      triggerId,
+    })) {
       if (ev.type === "error") {
         console.warn(`[cron-driver] ${triggerId} workflow error: ${ev.message}`);
       }
