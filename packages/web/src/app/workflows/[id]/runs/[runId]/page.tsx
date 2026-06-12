@@ -41,6 +41,8 @@ export default async function RunDetailPage({
         </h1>
         <p className="mt-1 text-xs" style={{ color: "#7A6A5C" }}>
           status: <span style={{ color: "#201515" }}>{run.status}</span>
+          {" · started by: "}
+          <span style={{ color: "#201515" }}>{run.fired_by ?? "manual"}</span>
           {duration != null ? (
             <>
               {" · duration: "}
@@ -48,6 +50,14 @@ export default async function RunDetailPage({
             </>
           ) : null}
         </p>
+        {run.status === "failed" && run.error_message ? (
+          <p
+            className="mt-2 rounded border px-3 py-2 text-xs"
+            style={{ borderColor: "#FAD2CE", backgroundColor: "#FFF6F5", color: "#A61B1B" }}
+          >
+            {run.error_message}
+          </p>
+        ) : null}
       </div>
 
       <section>

@@ -43,4 +43,19 @@ describe("Mastra foreman agent", () => {
     const agent = await createForemanAgent("file:./test-agent.db");
     expect(agent.model).toEqual(AGENT_MODELS.foreman);
   }, 30000);
+
+  it("hosts the trigger SignalProviders and connects them on construction", async () => {
+    const { createForemanAgent } = await import("@/mastra/agents/foreman");
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const { channelTriggerProvider } = await import("@/mastra/signals/channel-trigger-provider");
+    await createForemanAgent("file:./test-agent.db");
+    // The Agent constructor calls provider.connect(this) for each signals entry,
+    // proving the primitives are live in the agent (not merely defined).
+    expect(zapierPollProvider.isConnected).toBe(true);
+    expect(channelTriggerProvider.isConnected).toBe(true);
+    // Neither sets a pollInterval — the poll provider is driven by
+    // cron-driver-server, the channel provider is event-driven via webhooks.
+    expect(zapierPollProvider.pollInterval).toBeUndefined();
+    expect(channelTriggerProvider.pollInterval).toBeUndefined();
+  }, 30000);
 });

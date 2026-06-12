@@ -1,9 +1,9 @@
 /**
- * Channel-trigger matcher. Channel webhook handlers (slack/discord/telegram/etc.)
- * call `matchAndFireChannelTriggers` on every inbound message. If any
- * `workflow_trigger` row of type='channel' matches the channel + criteria,
- * the workflow is fired (in the background — the handler still replies
- * normally).
+ * Channel-trigger entrypoint. Channel webhook handlers (slack/discord/telegram/
+ * etc.) call `matchAndFireChannelTriggers` on every inbound message. The match +
+ * fire + dedup logic lives in the ChannelTriggerSignalProvider (a Mastra
+ * SignalProvider hosted on the foreman agent); this wrapper keeps the existing
+ * call-site signature stable and delegates to it.
  *
  * Match semantics:
  *   - `channel` field MUST equal the inbound channel name.
@@ -13,12 +13,11 @@
  *   - `match.from` (optional): regex on the sender id/handle.
  *   - `match.room` (optional): exact match on room/channel/DM target.
  *
- * All provided criteria must pass — empty match = matches every message
- * on that channel (rarely what you want, but supported).
+ * All provided criteria must pass — empty match = matches every message on that
+ * channel (rarely what you want, but supported).
  */
 
-import { getSupabase } from "@/lib/db";
-import { executeWorkflow } from "@/lib/workflows/engine";
+import { channelTriggerProvider } from "@/mastra/signals/channel-trigger-provider";
 
 export interface ChannelMessage {
   channel: "slack" | "discord" | "telegram" | "linear" | "github" | "gchat" | "teams" | "whatsapp";
@@ -27,72 +26,17 @@ export interface ChannelMessage {
   from: string;
   /** Channel/room/DM target — used by `match.room`. */
   room?: string;
-}
-
-interface ChannelTriggerRow {
-  id: string;
-  workflow_id: string;
-  config: string;
-}
-
-/** Strip leading `/` or `!` and trim — used for `match.command`. */
-function normalizeCommand(s: string): string {
-  return s.trim().replace(/^[/!]\s*/, "");
+  /**
+   * Stable per-delivery key for idempotency (the platform message id). Every
+   * channel bot passes `message.id` (the normalized Chat SDK `Message.id`), so
+   * a retried webhook carries the same key and the workflow fires once — while
+   * two legitimately-repeated identical messages keep distinct ids and both
+   * fire. When omitted, the provider falls back to a content hash (which would
+   * coalesce repeated identical text).
+   */
+  dedupeKey?: string;
 }
 
 export async function matchAndFireChannelTriggers(msg: ChannelMessage): Promise<number> {
-  const supabase = getSupabase();
-  const { data: rows, error } = await supabase
-    .from("workflow_trigger")
-    .select("id, workflow_id, config")
-    .eq("type", "channel")
-    .eq("enabled", true);
-  if (error) {
-    console.error(`[channel-trigger] fetch failed: ${error.message}`);
-    return 0;
-  }
-
-  let fired = 0;
-  for (const row of (rows ?? []) as unknown as ChannelTriggerRow[]) {
-    let cfg: { channel?: string; match?: { command?: string; from?: string; room?: string } };
-    try {
-      cfg = JSON.parse(row.config);
-    } catch {
-      continue;
-    }
-    if (cfg.channel !== msg.channel) continue;
-    const m = cfg.match ?? {};
-    if (m.command && normalizeCommand(msg.text) !== normalizeCommand(m.command)) continue;
-    if (m.from && !new RegExp(m.from).test(msg.from)) continue;
-    if (m.room && msg.room !== m.room) continue;
-
-    const { data: wf } = await supabase
-      .from("workflow")
-      .select("user_id")
-      .eq("id", row.workflow_id)
-      .maybeSingle();
-    if (!wf) continue;
-
-    void runOne(row.workflow_id, wf.user_id as string, row.id);
-    fired++;
-  }
-  return fired;
-}
-
-async function runOne(workflowId: string, userId: string, triggerId: string) {
-  const supabase = getSupabase();
-  const now = new Date().toISOString();
-  try {
-    await supabase
-      .from("workflow_trigger")
-      .update({ last_fired_at: now, updated_at: now })
-      .eq("id", triggerId);
-    for await (const ev of executeWorkflow(workflowId, userId, {})) {
-      if (ev.type === "error") {
-        console.warn(`[channel-trigger] ${triggerId} workflow error: ${ev.message}`);
-      }
-    }
-  } catch (err) {
-    console.error(`[channel-trigger] trigger ${triggerId} failed:`, err);
-  }
+  return channelTriggerProvider.handleMessage(msg);
 }

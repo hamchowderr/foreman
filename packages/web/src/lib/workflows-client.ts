@@ -37,9 +37,15 @@ export interface WorkflowRun {
   id: string;
   workflow_id: string;
   inputs: Record<string, string>;
-  status: "running" | "success" | "error";
+  status: "running" | "success" | "failed";
   created_at: string;
   completed_at: string | null;
+  /** How the run started: 'manual' | 'cron' | 'channel' | 'poll'. */
+  fired_by: string | null;
+  /** Failure reason when status is 'failed'. */
+  error_message: string | null;
+  /** The workflow_trigger that fired this run (null for manual runs). */
+  trigger_id: string | null;
 }
 
 export interface WorkflowTrigger {

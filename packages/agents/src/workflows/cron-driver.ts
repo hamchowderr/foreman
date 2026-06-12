@@ -160,12 +160,6 @@ export async function tickCron(now: Date = new Date()): Promise<{ fired: number 
     }
     if (!matches) continue;
 
-    // Already fired this minute? Skip.
-    if (row.last_fired_at) {
-      const last = minuteFloor(new Date(row.last_fired_at));
-      if (last.getTime() >= tickMinute.getTime()) continue;
-    }
-
     // Find the workflow's owner so executeWorkflow can run with the right userId.
     const { data: wf } = await supabase
       .from("workflow")
@@ -177,24 +171,38 @@ export async function tickCron(now: Date = new Date()): Promise<{ fired: number 
       continue;
     }
 
+    // Atomic same-minute claim: set last_fired_at=tickIso only if this trigger
+    // hasn't already fired this minute. The conditional UPDATE is the lock —
+    // two overlapping ticks (e.g. a process restart mid-minute, or briefly
+    // co-existing drivers) can't both claim the same minute, so the workflow
+    // fires exactly once even when last_fired_at hadn't yet been persisted.
+    const { data: claimed, error: claimErr } = await supabase
+      .from("workflow_trigger")
+      .update({ last_fired_at: tickIso, updated_at: tickIso })
+      .eq("id", row.id)
+      .or(`last_fired_at.is.null,last_fired_at.lt.${tickIso}`)
+      .select("id");
+    if (claimErr) {
+      console.warn(`[cron-driver] trigger ${row.id} claim failed: ${claimErr.message}`);
+      continue;
+    }
+    if (!claimed || claimed.length === 0) continue; // another tick already fired it
+
     // Fire and forget — we don't await full completion to keep the tick fast.
-    void runOne(row.workflow_id, wf.user_id as string, row.id, tickIso);
+    void runOne(row.workflow_id, wf.user_id as string, row.id);
     fired++;
   }
   return { fired };
 }
 
-async function runOne(workflowId: string, userId: string, triggerId: string, firedAtIso: string) {
-  const supabase = getSupabase();
+async function runOne(workflowId: string, userId: string, triggerId: string) {
+  // last_fired_at was already set by the atomic claim in tickCron, so the run is
+  // dedup'd before we get here. We just execute and surface errors.
   try {
-    // Mark fired BEFORE executing so a long-running workflow can't race a
-    // second tick. last_fired_at is a fingerprint, not a completion marker.
-    await supabase
-      .from("workflow_trigger")
-      .update({ last_fired_at: firedAtIso, updated_at: firedAtIso })
-      .eq("id", triggerId);
-
-    for await (const ev of executeWorkflow(workflowId, userId, {})) {
+    for await (const ev of executeWorkflow(workflowId, userId, {}, undefined, {
+      firedBy: "cron",
+      triggerId,
+    })) {
       if (ev.type === "error") {
         console.warn(`[cron-driver] ${triggerId} workflow error: ${ev.message}`);
       }

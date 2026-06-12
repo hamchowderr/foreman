@@ -63,6 +63,7 @@ export async function getLinearBot() {
         channel: "linear",
         text: message.text,
         from: message.author.userId,
+        dedupeKey: message.id,
         room: thread.channelId,
       });
       if (fired > 0) return;
@@ -89,6 +90,7 @@ export async function getLinearBot() {
         channel: "linear",
         text: message.text,
         from: message.author.userId,
+        dedupeKey: message.id,
         room: thread.id,
       });
       if (fired > 0) return;

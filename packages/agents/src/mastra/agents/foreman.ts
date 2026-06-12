@@ -17,6 +17,8 @@ import {
   toolsWithCacheControl,
 } from "../../lib/providers";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
+import { channelTriggerProvider } from "../signals/channel-trigger-provider";
+import { zapierPollProvider } from "../signals/zapier-poll-provider";
 import { attachTriggerTool } from "../tools/attach-trigger";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { deleteWorkflowTool } from "../tools/delete-workflow";
@@ -177,6 +179,12 @@ export function createForemanAgent(databaseUrl: string) {
       stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
+    // Triggers run as Mastra SignalProviders hosted on this agent (agent-hosted
+    // gives them notify() → events land in the user's thread). Neither sets a
+    // pollInterval: the poll provider is driven by cron-driver-server on a
+    // single tick (so it doesn't auto-poll in every process the agent is built
+    // in); the channel provider is event-driven via the webhook handlers.
+    signals: [zapierPollProvider, channelTriggerProvider],
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {

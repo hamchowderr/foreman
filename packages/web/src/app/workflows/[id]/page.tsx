@@ -109,6 +109,14 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
                     <span className="font-medium" style={{ color: "#201515" }}>
                       {new Date(r.created_at).toLocaleString()}
                     </span>
+                    <span className="ml-2 text-xs" style={{ color: "#7A6A5C" }}>
+                      · {r.fired_by ?? "manual"}
+                    </span>
+                    {r.status === "failed" && r.error_message ? (
+                      <span className="ml-2 truncate text-xs" style={{ color: "#A61B1B" }}>
+                        — {r.error_message}
+                      </span>
+                    ) : null}
                   </div>
                   <StatusBadge status={r.status} />
                 </Link>
@@ -138,7 +146,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
   const map: Record<WorkflowRun["status"], { bg: string; fg: string; label: string }> = {
     success: { bg: "#E6F4EA", fg: "#1B6633", label: "succeeded" },
-    error: { bg: "#FCE8E6", fg: "#A61B1B", label: "failed" },
+    failed: { bg: "#FCE8E6", fg: "#A61B1B", label: "failed" },
     running: { bg: "#FFF1E0", fg: "#7A4A1A", label: "running" },
   };
   const s = map[status] ?? map.running;

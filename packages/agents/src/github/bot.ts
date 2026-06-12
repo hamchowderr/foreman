@@ -65,6 +65,7 @@ export async function getGitHubBot() {
         channel: "github",
         text: message.text,
         from: message.author.userId,
+        dedupeKey: message.id,
         room: thread.channelId,
       });
       if (fired > 0) return;
@@ -91,6 +92,7 @@ export async function getGitHubBot() {
         channel: "github",
         text: message.text,
         from: message.author.userId,
+        dedupeKey: message.id,
         room: thread.id,
       });
       if (fired > 0) return;

@@ -33,23 +33,53 @@ const channelConfig = z.object({
     .describe("Match criteria for the incoming message."),
 });
 
+const pollConfig = z.object({
+  app: z.string().min(1).describe("Zapier app key, e.g. 'gmail' or 'google_sheets'."),
+  action: z
+    .string()
+    .min(1)
+    .describe("The read action key, e.g. 'new_email' or 'new_or_updated_spreadsheet_row'."),
+  connection: z
+    .string()
+    .optional()
+    .describe("Connection id/alias. Auto-discovered for the app if omitted."),
+  inputs: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("Inputs passed to the read action (e.g. { sheet: '...' })."),
+  dedupeKey: z
+    .string()
+    .min(1)
+    .describe(
+      "Field on each returned record that uniquely identifies it (e.g. 'id'). " +
+        "Records are assumed newest-first; new records are those above the last-seen value.",
+    ),
+  intervalMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(5)
+    .describe("How often to poll, in minutes (default 5)."),
+});
+
 export const attachTriggerTool = createTool({
   id: "attach_trigger",
   strict: true,
   description:
     "Bind a saved workflow to an event source so it fires automatically. " +
-    "Two trigger types are supported today: 'cron' for scheduled runs (e.g. " +
-    "every weekday at 9am) and 'channel' for chat-message matches (e.g. when " +
-    "you DM '!standup' on Slack). The 'poll' type is reserved for future use. " +
-    "Use after `save_workflow` and after the user confirms the schedule or " +
-    "match condition.",
+    "Three trigger types are supported: 'cron' for scheduled runs (e.g. every " +
+    "weekday at 9am), 'channel' for chat-message matches (e.g. when you DM " +
+    "'!standup' on Slack), and 'poll' to fire when a Zapier read action returns " +
+    "a new record (e.g. a new Gmail email or spreadsheet row). Use after " +
+    "`save_workflow` and after the user confirms the schedule, match, or poll " +
+    "source.",
   inputSchema: z.object({
     workflowId: z.string().describe("The workflow id (from list_workflows)."),
-    type: z
-      .enum(["cron", "channel"])
-      .describe("Trigger kind. 'poll' is not yet exposed via the agent."),
+    type: z.enum(["cron", "channel", "poll"]).describe("Trigger kind."),
     cron: cronConfig.optional().describe("Required when type='cron'."),
     channel: channelConfig.optional().describe("Required when type='channel'."),
+    poll: pollConfig.optional().describe("Required when type='poll'."),
     enabled: z
       .boolean()
       .optional()
@@ -58,7 +88,7 @@ export const attachTriggerTool = createTool({
   }),
   outputSchema: z.object({
     id: z.string(),
-    type: z.enum(["cron", "channel"]),
+    type: z.enum(["cron", "channel", "poll"]),
     enabled: z.boolean(),
   }),
   // Attaching a cron / channel trigger means a workflow may fire without
@@ -68,11 +98,11 @@ export const attachTriggerTool = createTool({
     const o = output as { id?: string; type?: string };
     console.log(`[tool:${toolName}] attached ${o.type} trigger ${o.id?.slice(0, 8)}`);
   },
-  execute: async ({ workflowId, type, cron, channel, enabled }, context) => {
+  execute: async ({ workflowId, type, cron, channel, poll, enabled }, context) => {
     const userId = context?.requestContext?.get("userId") as string | undefined;
     if (!userId) throw new Error("attach_trigger: no userId in request context");
 
-    const config = type === "cron" ? cron : channel;
+    const config = type === "cron" ? cron : type === "channel" ? channel : poll;
     if (!config) {
       throw new Error(`attach_trigger: type='${type}' requires the matching '${type}' field`);
     }
