@@ -8,17 +8,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type Result<T> = { data: T; error: { message: string } | null };
 let triggerListResult: Result<unknown[]> = { data: [], error: null };
 let workflowSelectResult: Result<unknown> = { data: null, error: null };
+// Result of the atomic same-minute claim (`update ... .select("id")`). A
+// non-empty array means the claim succeeded; empty means another tick already
+// fired this minute.
+let claimResult: Result<unknown[]> = { data: [{ id: "trig-1" }], error: null };
 const updates: any[] = [];
 
 function createChain(table: string) {
   const builder: any = {};
-  for (const m of ["select", "eq", "limit", "update"]) {
+  for (const m of ["select", "eq", "limit", "update", "or"]) {
     builder[m] = vi.fn().mockReturnValue(builder);
   }
   builder.maybeSingle = vi.fn().mockImplementation(() => Promise.resolve(workflowSelectResult));
   // biome-ignore lint/suspicious/noThenProperty: thenable mock
   builder.then = (resolve: any) => {
-    if (builder._verb === "update") return resolve({ data: null, error: null });
+    if (builder._verb === "update") return resolve(claimResult);
     if (table === "workflow_trigger") return resolve(triggerListResult);
     return resolve({ data: null, error: null });
   };
@@ -111,6 +115,7 @@ describe("tickCron", () => {
     vi.resetAllMocks();
     triggerListResult = { data: [], error: null };
     workflowSelectResult = { data: null, error: null };
+    claimResult = { data: [{ id: "trig-1" }], error: null };
     updates.length = 0;
     mockExecuteWorkflow.mockReset();
   });
@@ -139,7 +144,7 @@ describe("tickCron", () => {
     expect(updates.find((u) => u.table === "workflow_trigger")).toBeTruthy();
   });
 
-  it("skips a trigger that already fired this minute", async () => {
+  it("does not double-fire when the atomic claim is lost (same-minute restart)", async () => {
     triggerListResult = {
       data: [
         {
@@ -151,10 +156,16 @@ describe("tickCron", () => {
       ],
       error: null,
     };
+    workflowSelectResult = { data: { user_id: "user-1" }, error: null };
+    // The conditional UPDATE matches no row — another tick already claimed this
+    // minute. The driver must NOT fire.
+    claimResult = { data: [], error: null };
+    mockExecuteWorkflow.mockReturnValue(gen([{ type: "complete" }]));
 
     const { tickCron } = await import("@/workflows/cron-driver");
     const out = await tickCron(new Date("2026-05-10T12:00:30Z"));
     expect(out.fired).toBe(0);
+    expect(mockExecuteWorkflow).not.toHaveBeenCalled();
   });
 
   it("skips a non-matching schedule", async () => {
