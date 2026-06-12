@@ -1,5 +1,5 @@
+import { resolveAppSlug } from "@/lib/catalog/resolve";
 import { getSupabase } from "@/lib/db";
-import { normalizeAppKey } from "@/lib/zapier/normalize";
 import { extractParams } from "./params";
 
 /** Heuristic: values that look like they should become parameters. */
@@ -89,7 +89,7 @@ export async function saveWorkflowFromConversation(
     }
 
     const template = {
-      appKey: normalizeAppKey(p.app_key),
+      appKey: await resolveAppSlug(p.app_key),
       actionType: p.action_type,
       actionKey: p.action_key,
       humanLabel: p.human_label,

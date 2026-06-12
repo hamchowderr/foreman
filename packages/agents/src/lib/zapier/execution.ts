@@ -1,8 +1,8 @@
 import { checkCapability } from "../capabilities";
+import { resolveAppSlug } from "../catalog/resolve";
 import { runGuardrails } from "../guardrails";
 import { resolveConnection } from "./aliases";
 import { ZapierActionFailed, ZapierCapabilityDenied } from "./errors";
-import { normalizeAppKey } from "./normalize";
 import { getSdkForUser } from "./sdk";
 
 type ActionType =
@@ -42,7 +42,10 @@ export async function runAction(
   inputs: Record<string, unknown>,
   connection?: string,
 ) {
-  app = normalizeAppKey(app);
+  // Resolve to the canonical slug via the catalog (the source of truth). The SDK
+  // accepts both the raw app_key and the slug; only the old string-munged form
+  // ("GitHubCLIAPI" → "git-hub") broke. (foreman-c8fo)
+  app = await resolveAppSlug(app);
   const capability = ACTION_TYPE_CAPABILITY[actionType] ?? "execute";
   await requireCapability(userId, capability);
 
