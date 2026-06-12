@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "installCommand": "rm -rf node_modules packages/*/node_modules && npm ci",
+  "installCommand": "npm install",
   "buildCommand": "cd packages/web && npm run build",
   "outputDirectory": "packages/web/.next"
 }
