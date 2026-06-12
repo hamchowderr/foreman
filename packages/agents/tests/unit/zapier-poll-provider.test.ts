@@ -1,6 +1,8 @@
 /**
- * Unit tests for the poll driver — baseline, diff-by-dedupeKey, cursor advance,
- * and the interval gate. No network: runAction + executeWorkflow are mocked.
+ * Unit tests for the ZapierPollSignalProvider — baseline, diff-by-dedupeKey,
+ * cursor advance, the interval gate, and the notify() wiring (native dedupeKey
+ * into the owner's thread). No network: runAction + executeWorkflow are mocked,
+ * and notify() goes to a stub agent.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,7 +72,7 @@ const lastTriggerUpdate = () =>
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe("tickPoll", () => {
+describe("ZapierPollSignalProvider.runDuePolls", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     triggerListResult = { data: [], error: null };
@@ -83,8 +85,8 @@ describe("tickPoll", () => {
     triggerListResult = { data: [pollRow({ last_dedupe_key: null })], error: null };
     mockRunAction.mockResolvedValue({ data: [{ id: "3" }, { id: "2" }, { id: "1" }] });
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:00:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
 
     expect(out.polled).toBe(1);
     expect(out.fired).toBe(0);
@@ -94,15 +96,13 @@ describe("tickPoll", () => {
 
   it("fires once per new record above the cursor, oldest-first, then advances", async () => {
     triggerListResult = { data: [pollRow({ last_dedupe_key: "1" })], error: null };
-    // newest-first page; cursor is "1", so "3" and "2" are new
     mockRunAction.mockResolvedValue({ data: [{ id: "3" }, { id: "2" }, { id: "1" }] });
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:00:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
 
     expect(out.fired).toBe(2);
     expect(mockExecuteWorkflow).toHaveBeenCalledTimes(2);
-    // oldest-first: "2" fired before "3"
     expect(mockExecuteWorkflow.mock.calls[0][2]).toMatchObject({ id: "2" });
     expect(mockExecuteWorkflow.mock.calls[1][2]).toMatchObject({ id: "3" });
     expect(lastTriggerUpdate()?.last_dedupe_key).toBe("3");
@@ -112,8 +112,8 @@ describe("tickPoll", () => {
     triggerListResult = { data: [pollRow({ last_dedupe_key: "3" })], error: null };
     mockRunAction.mockResolvedValue({ data: [{ id: "3" }, { id: "2" }] });
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:00:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
 
     expect(out.fired).toBe(0);
     expect(mockExecuteWorkflow).not.toHaveBeenCalled();
@@ -126,9 +126,8 @@ describe("tickPoll", () => {
     };
     mockRunAction.mockResolvedValue({ data: [{ id: "9" }, { id: "1" }] });
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    // only 2 minutes later, intervalMinutes is 5 → not due
-    const out = await tickPoll(new Date("2026-05-10T12:02:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:02:00Z"));
 
     expect(out.polled).toBe(0);
     expect(mockRunAction).not.toHaveBeenCalled();
@@ -141,8 +140,8 @@ describe("tickPoll", () => {
     };
     mockRunAction.mockResolvedValue({ data: [{ id: "9" }, { id: "1" }] });
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:06:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:06:00Z"));
 
     expect(out.polled).toBe(1);
     expect(out.fired).toBe(1);
@@ -154,8 +153,8 @@ describe("tickPoll", () => {
       error: null,
     };
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:00:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
 
     expect(out.polled).toBe(0);
     expect(mockRunAction).not.toHaveBeenCalled();
@@ -165,8 +164,8 @@ describe("tickPoll", () => {
     triggerListResult = { data: [pollRow({ last_dedupe_key: "1" })], error: null };
     mockRunAction.mockResolvedValue({ __guardrail_confirmation_required: true });
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:00:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
 
     expect(out.fired).toBe(0);
     expect(mockExecuteWorkflow).not.toHaveBeenCalled();
@@ -176,10 +175,40 @@ describe("tickPoll", () => {
     triggerListResult = { data: [pollRow({ last_dedupe_key: "1" })], error: null };
     mockRunAction.mockResolvedValue([{ id: "2" }, { id: "1" }]);
 
-    const { tickPoll } = await import("@/workflows/poll-driver");
-    const out = await tickPoll(new Date("2026-05-10T12:00:00Z"));
+    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const out = await zapierPollProvider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
 
     expect(out.fired).toBe(1);
     expect(mockExecuteWorkflow.mock.calls[0][2]).toMatchObject({ id: "2" });
+  });
+
+  it("notify()s the owner's thread with a native dedupeKey for each new record", async () => {
+    triggerListResult = { data: [pollRow({ last_dedupe_key: "1" })], error: null };
+    mockRunAction.mockResolvedValue({ data: [{ id: "2" }, { id: "1" }] });
+
+    const { ZapierPollSignalProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const provider = new ZapierPollSignalProvider();
+    const sendNotificationSignal = vi.fn().mockResolvedValue(undefined);
+    // Hosting on an agent is what gives the provider notify() — stub that link.
+    provider.connect({ sendNotificationSignal } as any);
+
+    const out = await provider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
+
+    expect(out.fired).toBe(1);
+    expect(sendNotificationSignal).toHaveBeenCalledTimes(1);
+    const [notification, target] = sendNotificationSignal.mock.calls[0];
+    expect(notification).toMatchObject({ source: "zapier-poll", dedupeKey: "2" });
+    expect(target).toMatchObject({ threadId: "poll:trig-1", resourceId: "user-1" });
+  });
+
+  it("does not throw when no agent is connected (notify is best-effort)", async () => {
+    triggerListResult = { data: [pollRow({ last_dedupe_key: "1" })], error: null };
+    mockRunAction.mockResolvedValue({ data: [{ id: "2" }, { id: "1" }] });
+
+    const { ZapierPollSignalProvider } = await import("@/mastra/signals/zapier-poll-provider");
+    const provider = new ZapierPollSignalProvider(); // not connected
+    const out = await provider.runDuePolls(new Date("2026-05-10T12:00:00Z"));
+
+    expect(out.fired).toBe(1); // firing still succeeds without notify
   });
 });

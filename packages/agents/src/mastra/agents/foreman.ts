@@ -17,6 +17,7 @@ import {
   toolsWithCacheControl,
 } from "../../lib/providers";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
+import { zapierPollProvider } from "../signals/zapier-poll-provider";
 import { attachTriggerTool } from "../tools/attach-trigger";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { deleteWorkflowTool } from "../tools/delete-workflow";
@@ -177,6 +178,11 @@ export function createForemanAgent(databaseUrl: string) {
       stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
+    // Poll triggers run as a Mastra SignalProvider hosted on this agent. It has
+    // no pollInterval (so it doesn't auto-poll in every process the agent is
+    // built in) — cron-driver-server drives its runDuePolls() on a single tick.
+    // Being agent-hosted gives it notify(): poll hits land in the user's thread.
+    signals: [zapierPollProvider],
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {
