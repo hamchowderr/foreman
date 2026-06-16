@@ -2,7 +2,9 @@
 
 > How Foreman authenticates to `@zapier/zapier-sdk`, and — critically — **which
 > auth works on which SDK surface.** Some experimental surfaces require a scope no
-> public SDK client can obtain. Snapshot: 2026-06-11, `@zapier/zapier-sdk@0.69.3`.
+> public SDK client can obtain. Snapshot: 2026-06-11, `@zapier/zapier-sdk@0.69.3`;
+> durable wall re-confirmed 2026-06-16 on `0.70.4` across **all 18** durable/workflow
+> endpoints under both credential types (see [`zapier-durable-questions-for-engineers.md`](zapier-durable-questions-for-engineers.md)).
 
 ## The three credential types the SDK accepts
 
@@ -33,7 +35,7 @@ redirecting to one of a fixed set of localhost ports Zapier allow-lists for it.
 |---|---|---|---|
 | `runAction`, discovery, `apps.*`, tables | ✅ | ✅ | The everyday action layer — any user auth works |
 | Trigger inboxes (`/experimental`) | ✅ | ✅ | `ensureTriggerInbox` / `lease` / `ack` all accept client-creds |
-| **Durable** (`runDurable`, `publishWorkflowVersion`, … `/experimental`) | ❌ **403** | ❌ **403** | `"None of the security schemes (userJwt)…"` — see below |
+| **Durable / workflow** (all 18 endpoints, `/experimental`) | ❌ **403** | ❌ **403** | `"None of the security schemes (userJwt)…"` — 18/18 swept under both auth types (2026-06-16, `0.70.4`); see below |
 
 **Durable is walled for every token a public SDK client can produce.** Proven
 2026-06-11 by `packages/agents/scripts/durable-pkce-probe.ts`: it mints a *real*

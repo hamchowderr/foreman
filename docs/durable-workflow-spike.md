@@ -3,6 +3,13 @@
 > Quick probe of `@zapier/zapier-sdk/experimental`'s durable-workflow API
 > (`runDurable` / `publishWorkflowVersion`), unlocked by the 0.69.3 bump.
 > Snapshot: 2026-06-11, `@zapier/zapier-sdk@0.69.3`. Status: **blocked on auth (see below).**
+>
+> **Update 2026-06-16 (foreman-0yra):** re-confirmed on the latest SDK `0.70.4`, and
+> broadened from a single `runDurable` probe to a **full 18-endpoint sweep** of the durable/
+> workflow surface (`scripts/durable-endpoints-probe.ts`). **All 18 endpoints return the
+> `userJwt` 403 under BOTH client-credentials AND a real PKCE userJwt (18/18 each)** — the
+> "one probe" finding below now holds across the whole surface, empirically, on the current SDK.
+> The send-ready writeup for Zapier is [`zapier-durable-questions-for-engineers.md`](zapier-durable-questions-for-engineers.md).
 
 ## API shape (from 0.69.3 `.d.ts`)
 
