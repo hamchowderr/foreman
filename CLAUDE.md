@@ -143,6 +143,41 @@ Real provider keys are deliberately absent from CI. Anything that leaks into a n
 
 For requirements, full quick-start, env vars, ngrok, deployment, and the testing tier table — see [README.md](README.md). This file is for navigating the codebase; the README is for running it.
 
+## Gotchas (hard-won — read before debugging the agent server)
+
+- **Run the agents server through Infisical.** Secrets (incl. `ANTHROPIC_API_KEY`)
+  live in Infisical (`otaku-internal`/`dev`), **not** in `agents/.env.local`
+  (those keys are commented out). Start with:
+  `cd packages/agents && infisical run --projectId e56e0da5-6460-4bab-bdd6-2fd12ac5447b --env dev --recursive --silent -- npm run dev`.
+  Plain `npm run dev` → no Anthropic key → every chat 500s with `invalid x-api-key`.
+  Local infra (`DATABASE_URL`, local `SUPABASE_URL`) stays in `.env.local` and is
+  baked in by `mastra dev`, so Infisical's cloud values don't clobber it.
+- **Keep `@mastra/core`, `@mastra/deployer`, `@mastra/server` on the SAME version.**
+  Only core has a root override; deployer/server are transitive (the `mastra` CLI
+  pulls them via `^`) and float UP to the latest minor. When they drift ahead of
+  core, the server calls APIs core lacks — e.g. deployer `1.43.0` called
+  `mastra.getStudio()` while core was `1.42.0-alpha.3`, throwing in route-auth so
+  **every authed HTTP route 500'd while agents still worked in-process** (cost a
+  whole session). All three are pinned in root `overrides`; `scripts/check-dep-uniqueness.mjs`
+  now fails the install if they diverge. After changing a pin: `rm -rf node_modules package-lock.json && npm install`.
+- **Mastra swallows route errors.** Its default handler returns a bare
+  `{"error":"Internal Server Error"}` and logs the real error as `{}` (mangled
+  pino). `index.ts` wires `server.onError` to `console.error` the real stack — keep
+  it. When a route 500s with no detail, that log (server console, not the pino
+  line) is where the truth is.
+- **Don't set `strict: true` on `createTool`.** It forces Anthropic's
+  grammar-constrained tool mode, which rejects `additionalProperties: object`,
+  `propertyNames`, and caps aggregate optional params at 24. The custom tools used
+  to set it and broke Foreman entirely.
+- **`server.middleware` must not consume the request body.** A Web `Request` body
+  is a single-read stream and `.clone()` shares it. `customMiddleware` only
+  pre-routes paths the custom Hono app owns (prefix list in `index.ts`); everything
+  else falls straight through to Mastra with the body intact. Don't revert it to a
+  fetch-everything fall-through — that 500s `POST /chat/:agentId` before the handler.
+- **Inline images need an explicit `mediaType`.** The `/chat` route splits the data
+  URL and forwards `{ type: "image", image: <base64>, mediaType }`; without the
+  media type the AI SDK defaults to `image/jpeg` and Anthropic rejects PNGs.
+
 ## Versioning & Tagging
 
 Foreman uses **SemVer** (`MAJOR.MINOR.PATCH`) with **annotated** git tags at release points.
