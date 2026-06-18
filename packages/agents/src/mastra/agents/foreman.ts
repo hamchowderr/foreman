@@ -2,6 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import { ToolSearchProcessor } from "@mastra/core/processors";
 import { LocalFilesystem, LocalSandbox, Workspace } from "@mastra/core/workspace";
 import { createAnswerRelevancyScorer, createToxicityScorer } from "@mastra/evals/scorers/prebuilt";
+import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
 import { OpenAIVoice } from "@mastra/voice-openai";
@@ -208,7 +209,8 @@ export function createForemanAgent(databaseUrl: string) {
         id: "foreman-memory-vector",
         connectionString: databaseUrl,
       }),
-      embedder: "openai/text-embedding-3-small",
+      // Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed.
+      embedder: fastembed,
       options: {
         lastMessages: 20,
         generateTitle: {

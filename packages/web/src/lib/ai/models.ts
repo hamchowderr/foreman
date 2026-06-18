@@ -31,10 +31,13 @@ export const chatModels: ChatModel[] = [
 
 export const allowedModelIds = new Set(chatModels.map((m) => m.id));
 
+export const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
+  // Claude (Sonnet/Opus) is vision-capable, so the chat accepts image attachments.
+  foreman: { tools: true, vision: true, reasoning: true },
+};
+
 export async function getCapabilities(): Promise<Record<string, ModelCapabilities>> {
-  return {
-    foreman: { tools: true, vision: false, reasoning: true },
-  };
+  return MODEL_CAPABILITIES;
 }
 
 export function getActiveModels(): ChatModel[] {

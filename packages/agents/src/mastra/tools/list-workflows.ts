@@ -4,7 +4,6 @@ import { getSupabase } from "@/lib/db";
 
 export const listWorkflowsTool = createTool({
   id: "list_workflows",
-  strict: true,
   description:
     "List the user's saved workflows. Returns id, name, and parameters for each. " +
     "Use this when the user asks 'what workflows do I have?', 'show my saved automations', " +

@@ -65,7 +65,6 @@ const pollConfig = z.object({
 
 export const attachTriggerTool = createTool({
   id: "attach_trigger",
-  strict: true,
   description:
     "Bind a saved workflow to an event source so it fires automatically. " +
     "Three trigger types are supported: 'cron' for scheduled runs (e.g. every " +

@@ -4,7 +4,6 @@ import { saveWorkflowFromConversation } from "@/lib/workflows/save";
 
 export const saveWorkflowTool = createTool({
   id: "save_workflow",
-  strict: true,
   description:
     "Save the current conversation's executed actions as a re-runnable workflow. " +
     "Captures every action proposal that the user approved and ran, in order, " +

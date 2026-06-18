@@ -11,6 +11,13 @@ const NAV = [
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // Only the single most-specific matching nav item is active (longest matching
+  // href), so a sub-route like /settings/integrations/mcp doesn't also light up
+  // its parent /settings/integrations.
+  const activeHref =
+    NAV.map((n) => n.href)
+      .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
+      .sort((a, b) => b.length - a.length)[0] ?? null;
 
   return (
     <div className="min-h-svh flex flex-col" style={{ backgroundColor: "#FFFDF9" }}>
@@ -43,8 +50,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
         <aside className="w-52 shrink-0 px-4 py-8" style={{ borderRight: "1px solid #FFF3E6" }}>
           <nav className="flex flex-col gap-1">
             {NAV.map(({ label, href }) => {
-              const active =
-                pathname === href || (href !== "/settings" && pathname.startsWith(href));
+              const active = href === activeHref;
               return (
                 <Link
                   key={href}

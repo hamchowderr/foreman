@@ -5,7 +5,6 @@ import type { Database } from "@/lib/db/database.types";
 
 export const updateWorkflowTool = createTool({
   id: "update_workflow",
-  strict: true,
   description:
     "Update metadata on a saved workflow — rename it, or mark it as a public " +
     "template that can be cloned by other users. Step content (the ordered " +

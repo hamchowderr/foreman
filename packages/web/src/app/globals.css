@@ -97,24 +97,31 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
+  /* Surface tokens are blended a few percent toward the brand hue (--primary)
+     so the active color-theme preset reaches the whole UI — cards, inputs,
+     borders, hover/accent states — not just the sidebar nav + focus rings.
+     The mix is subtle on big surfaces (3-7%) and stronger on accent (20%) so
+     hovers clearly pick up the theme. Foreground/text tokens stay untinted for
+     contrast. Switching presets (or the default orange) now visibly recolors
+     the conversation area. See [data-theme-preset] blocks below for the hues. */
+  --color-background: color-mix(in oklab, var(--background), var(--primary) 3%);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
+  --color-card: color-mix(in oklab, var(--card), var(--primary) 5%);
   --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-popover: color-mix(in oklab, var(--popover), var(--primary) 5%);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
+  --color-secondary: color-mix(in oklab, var(--secondary), var(--primary) 7%);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
+  --color-muted: color-mix(in oklab, var(--muted), var(--primary) 7%);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
+  --color-accent: color-mix(in oklab, var(--accent), var(--primary) 20%);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
+  --color-border: color-mix(in oklab, var(--border), var(--primary) 10%);
+  --color-input: color-mix(in oklab, var(--input), var(--primary) 10%);
   --color-ring: var(--ring);
   --color-surface: var(--surface);
   --color-chart-1: var(--chart-1);
@@ -122,7 +129,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
+  --color-sidebar: color-mix(in oklab, var(--sidebar), var(--primary) 4%);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);

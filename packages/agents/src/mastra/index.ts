@@ -88,13 +88,48 @@ export function getMastra(): Mastra {
     historyAgent,
   });
 
+  // Prefixes owned by the custom Hono app (src/routes). Only these are routed
+  // through `customRoutes.fetch()`. Everything else (Mastra's own /chat,
+  // /api/*, /a2a/*, /mcp/*) falls straight through to `next()` WITHOUT touching
+  // the request body.
+  //
+  // Why this matters: a Web `Request` body is a single-read ReadableStream that
+  // a `.clone()` does NOT duplicate (clone shares the same underlying stream).
+  // The previous fall-through pattern — `customRoutes.fetch(c.req.raw)` on every
+  // request, then `next()` on 404 — consumed the POST body, so when Mastra
+  // dispatched a registered apiRoute (e.g. POST /chat/:agentId) its own
+  // `c.req.raw.clone().json()` read an already-exhausted stream and 500'd
+  // *before* the handler ran. Mastra's server.middleware contract is
+  // headers/context only — it must not read the body of requests it doesn't own.
+  const CUSTOM_ROUTE_PREFIXES = [
+    "/conversations",
+    "/proposals",
+    "/workflows",
+    "/stored",
+    "/zapier",
+    "/oauth",
+    "/webhooks",
+    "/capabilities",
+    "/guardrails",
+    "/voice",
+    "/api-keys",
+    "/channel-links",
+    "/telegram",
+    "/slack",
+    "/discord",
+  ];
   const customMiddleware: MiddlewareHandler = async (c, next) => {
-    const { default: customRoutes } = await import("../routes");
-    const response = await customRoutes.fetch(c.req.raw);
-    if (response.status !== 404) {
-      return response;
+    const p = c.req.path;
+    const owned = CUSTOM_ROUTE_PREFIXES.some(
+      (prefix) => p === prefix || p.startsWith(`${prefix}/`),
+    );
+    if (!owned) {
+      // Not a custom route — let Mastra handle it with the body intact.
+      await next();
+      return;
     }
-    await next();
+    const { default: customRoutes } = await import("../routes");
+    return customRoutes.fetch(c.req.raw);
   };
 
   // Observability is always on so the Mastra Studio Observability tab works.
@@ -177,6 +212,14 @@ export function getMastra(): Mastra {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
       middleware: [customMiddleware],
+      // Mastra's default custom-route error handler swallows the error silently
+      // (returns "Internal Server Error" with no log). This surfaces the real
+      // error to the server console so failures are debuggable; the client still
+      // gets a generic message (no stack leak).
+      onError: (err: any, c: any) => {
+        console.error("[server.onError]", err?.message, "\n", err?.stack?.slice(0, 1200));
+        return c.json({ error: "Internal Server Error" }, 500);
+      },
       apiRoutes: [
         registerApiRoute("/chat/:agentId", {
           method: "POST",
@@ -210,6 +253,40 @@ export function getMastra(): Mastra {
                   : typeof body.messages === "string"
                     ? body.messages
                     : "";
+
+              // Forward image attachments (AI SDK v6 `file` parts carrying data
+              // URLs) so the vision model can actually see them. Without this the
+              // handler would drop everything except text.
+              const partsList: any[] = Array.isArray(lastMsg?.parts) ? lastMsg.parts : [];
+              const imageParts = partsList.filter(
+                (p: any) =>
+                  p?.type === "file" &&
+                  typeof p.url === "string" &&
+                  String(p.mediaType ?? p.contentType ?? "").startsWith("image/"),
+              );
+              const userContent: any =
+                imageParts.length > 0
+                  ? [
+                      ...imageParts.map((p: any) => {
+                        // Split the data URL ourselves and pass raw base64 + the
+                        // media type from the URL prefix. Passing the whole data
+                        // URL let the AI SDK default the type to image/jpeg, which
+                        // Anthropic rejects ("specified image/jpeg but the image
+                        // appears to be image/png").
+                        const url = String(p.url);
+                        const m = url.match(/^data:([^;,]+)(?:;base64)?,(.*)$/s);
+                        const mediaType = (
+                          m?.[1] ||
+                          p.mediaType ||
+                          p.contentType ||
+                          "image/png"
+                        ).trim();
+                        const image = m ? m[2] : url;
+                        return { type: "image" as const, image, mediaType };
+                      }),
+                      ...(text ? [{ type: "text" as const, text }] : []),
+                    ]
+                  : text;
 
               const rid = body.resourceId || "";
               const incomingTid = body.threadId || body.id;
@@ -278,7 +355,7 @@ export function getMastra(): Mastra {
               ]);
 
               const result = await requestUserContext.run({ userId: rid }, () =>
-                agent.stream([{ role: "user" as const, content: text }], {
+                agent.stream([{ role: "user" as const, content: userContent }], {
                   stopWhen: stepCountIs(15),
                   memory: { thread: tid, resource: rid },
                   savePerStep: true,

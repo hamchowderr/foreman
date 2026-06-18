@@ -4,7 +4,6 @@ import { executeWorkflow } from "@/lib/workflows/engine";
 
 export const runWorkflowTool = createTool({
   id: "run_workflow",
-  strict: true,
   description:
     "Execute a previously saved workflow now. Drains the workflow's step generator " +
     "and returns a summary: runId, steps succeeded / failed, missing params if the " +

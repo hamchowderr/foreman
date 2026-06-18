@@ -4,7 +4,6 @@ import { getSupabase } from "@/lib/db";
 
 export const deleteWorkflowTool = createTool({
   id: "delete_workflow",
-  strict: true,
   description:
     "Permanently delete a saved workflow and all of its run history. " +
     "Cascades to workflow_step + workflow_run rows. This is irreversible. " +

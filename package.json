@@ -30,7 +30,9 @@
     "esbuild": ">=0.25.0",
     "zod": "4.3.6",
     "postcss": "^8.5.10",
-    "@mastra/core": "1.42.0-alpha.3"
+    "@mastra/core": "1.42.0-alpha.3",
+    "@mastra/deployer": "1.42.0-alpha.3",
+    "@mastra/server": "1.42.0-alpha.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",

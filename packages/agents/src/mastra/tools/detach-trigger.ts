@@ -4,7 +4,6 @@ import { getSupabase } from "@/lib/db";
 
 export const detachTriggerTool = createTool({
   id: "detach_trigger",
-  strict: true,
   description:
     "Remove a trigger from a workflow. The workflow itself is not deleted. " +
     "Use when the user says 'stop the schedule', 'unbind this from Slack', " +
