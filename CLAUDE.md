@@ -158,8 +158,11 @@ For requirements, full quick-start, env vars, ngrok, deployment, and the testing
   core, the server calls APIs core lacks — e.g. deployer `1.43.0` called
   `mastra.getStudio()` while core was `1.42.0-alpha.3`, throwing in route-auth so
   **every authed HTTP route 500'd while agents still worked in-process** (cost a
-  whole session). All three are pinned in root `overrides`; `scripts/check-dep-uniqueness.mjs`
-  now fails the install if they diverge. After changing a pin: `rm -rf node_modules package-lock.json && npm install`.
+  whole session). The **entire `@mastra/*` set** is pinned to exact versions in root
+  `overrides` for reproducibility (so unpinned transitive alphas can't float either),
+  and `scripts/check-dep-uniqueness.mjs` fails the install if core/deployer/server
+  diverge. To intentionally bump the Mastra alpha: update every `@mastra/*` pin in
+  `overrides` together, then `rm -rf node_modules package-lock.json && npm install`.
 - **Mastra swallows route errors.** Its default handler returns a bare
   `{"error":"Internal Server Error"}` and logs the real error as `{}` (mangled
   pino). `index.ts` wires `server.onError` to `console.error` the real stack — keep
