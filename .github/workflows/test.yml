@@ -92,7 +92,12 @@ jobs:
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned (not `latest`) so the action downloads a fixed release asset
+          # instead of making an unauthenticated GitHub API call to resolve the
+          # newest version — that call is rate-limited on shared runners and
+          # flaked this job ("Failed to resolve latest Supabase CLI release:
+          # rate limit exceeded", foreman-fjl3). Bump deliberately when needed.
+          version: 2.107.0
       - run: npm ci
       - name: Start local Supabase
         run: npx supabase start
