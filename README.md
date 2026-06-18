@@ -107,7 +107,7 @@ Every run is recorded (who, what, when, result) and searchable later — _"what 
                             ▼
             ┌──────────────────────────────────┐
             │          Foreman agent           │   Claude Sonnet 4.6
-            │   Mastra + ToolSearch over 34    │
+            │   Mastra + ToolSearch over 28    │
             │     live Zapier SDK tools        │
             └────────────────┬─────────────────┘
                              │ picks app + action, fills params
@@ -125,7 +125,7 @@ Every run is recorded (who, what, when, result) and searchable later — _"what 
               result + run history (Postgres + pgvector)
 ```
 
-A request lands from any channel, hits the **Foreman agent**, which loads only the Zapier tools that request needs (via a tool-search processor rather than stuffing all 34 into the prompt). Write actions become **proposals**; you approve them; the **Zapier SDK** runs them; the result and full run record persist to Postgres. Discovery, execution, and history are split into focused sub-agents so each step stays cheap and reliable.
+A request lands from any channel, hits the **Foreman agent**, which loads only the Zapier tools that request needs (via a tool-search processor rather than stuffing all 28 into the prompt). Write actions become **proposals**; you approve them; the **Zapier SDK** runs them; the result and full run record persist to Postgres. Discovery, execution, and history are split into focused sub-agents so each step stays cheap and reliable.
 
 ---
 
@@ -138,7 +138,7 @@ Foreman draws a hard line between **reading** and **changing the world**:
 - 🧾 **Every run is recorded** — app, action, inputs, result, who triggered it, when — and is semantically searchable afterward.
 - 🛡️ **Guardrails** apply rate limits and risk assessment; an output processor redacts PII before responses leave the agent.
 
-The set of write/delete tools that require approval is explicit (9 of them), separate from the 17 read-only discovery tools — so the boundary is defined in code, not guessed at runtime.
+The set of write/delete tools that require approval is explicit (9 of them), separate from the 16 read-only discovery tools — so the boundary is defined in code, not guessed at runtime.
 
 ---
 
@@ -195,7 +195,7 @@ cd packages/agents && npm run dev
 cd packages/web && npm run dev
 ```
 
-For the full env-var list see [`CLAUDE.md`](CLAUDE.md). For incoming channel webhooks, also run `cd packages/agents && npm run start:webhooks` on port `:4112`. For deterministic mock-mode dev (no real LLM / voice / MCP / A2A): `cd packages/agents && npm run dev:mock`.
+Copy `packages/agents/.env.example` → `.env.local` (and `packages/web/.env.example` for the frontend) — every variable is documented inline. For incoming channel webhooks, also run `cd packages/agents && npm run start:webhooks` on port `:4112`. For deterministic mock-mode dev (no real LLM / voice / MCP / A2A): `cd packages/agents && npm run dev:mock`.
 
 ---
 
@@ -212,6 +212,56 @@ Same agent, same connected apps — you just choose how Zapier auth resolves. `F
 
 Self-hosted is **not** a single-shared-account mode — every user still connects their own Zapier account. Foreman just runs on infrastructure **you** own instead of ours. A managed hosted version is coming soon.
 
+> Which credential type works on which SDK surface — and why durable execution is walled off — is documented in [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md). New to the SDK? See [Working with the Zapier SDK](#-working-with-the-zapier-sdk) below.
+
+---
+
+## 🔌 Working with the Zapier SDK
+
+Foreman's entire action layer is generated from [`@zapier/zapier-sdk`](https://docs.zapier.com/sdk) — every one of the 9,000+ apps becomes a tool, with parameter names read straight from Zapier's own schemas. If you're coming from the Zapier community and haven't driven the SDK directly, here's the whole picture.
+
+### Two packages
+
+| Package | What it is |
+|---|---|
+| [`@zapier/zapier-sdk`](https://www.npmjs.com/package/@zapier/zapier-sdk) | The library Foreman imports directly. Its registry is what becomes the 28 live tools — no MCP child process, no hand-wired integrations. |
+| [`@zapier/zapier-sdk-cli`](https://www.npmjs.com/package/@zapier/zapier-sdk-cli) | The companion CLI. Used to log in for local dev, and to poke at the SDK by hand while exploring what an app/action expects. |
+
+### Logging in — the four ways
+
+Foreman accepts any credential type the SDK does; you pick one with `FOREMAN_MODE` + env vars. What each is, and when to reach for it:
+
+| Method | How | Use it for |
+|---|---|---|
+| **CLI login** | `npx @zapier/zapier-sdk-cli login` → writes `~/.zapier-sdk/config.json` | The zero-config dev path. `FOREMAN_MODE=dev` falls back to it automatically. |
+| **Per-user OAuth (PKCE)** | Each user clicks _Connect Zapier_ in the UI | Self-hosted / multi-user — everyone connects _their own_ account. Needs `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET`. |
+| **Client credentials** | `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET` | App-level, server-to-server calls. |
+| **Token override** | `DEV_ZAPIER_OVERRIDE=<jwt>` | Drop in a pre-obtained token for local dev — skips login entirely. |
+
+> **Heads-up for SDK explorers:** not every surface accepts every credential. The everyday action layer (run actions, discovery, tables, trigger inboxes) works with any user auth — but Zapier's experimental **durable-workflow** endpoints require an `internal`-scoped token no public SDK client can mint, so they `403` under _every_ login method above. The full surface-by-surface breakdown (and why) is in [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md).
+
+### Staying current — `npm run sdk:check`
+
+The SDK ships fast, and real capabilities land in point releases (the durable-workflow and trigger-inbox APIs both arrived that way). To make "are we behind?" a fact instead of a surprise, the repo ships a watcher:
+
+```bash
+npm run sdk:check          # full report: installed vs latest, releases behind, changelog delta
+npm run sdk:check:quiet    # one-line notice, only when a newer version exists (session-start hook)
+```
+
+It tracks **both** packages, fetches the changelog delta since your installed version, and never fails a build if npm is unreachable. A session-start hook runs the quiet form so you're nudged when an upgrade lands — then bump deliberately, since point releases can change behavior.
+
+### Explore the SDK yourself
+
+You don't have to take our word for any of this. The repo vendors the SDK + CLI docs and ships an introspection tool so you can see the live surface for yourself:
+
+| Resource | What it gives you |
+|---|---|
+| [`docs/zapier-sdk/quickstart.md`](docs/zapier-sdk/quickstart.md) · [`using-the-cli.md`](docs/zapier-sdk/using-the-cli.md) | Hands-on: install, log in, run your first action from the CLI. |
+| [`docs/zapier-sdk/cli-reference.md`](docs/zapier-sdk/cli-reference.md) · [`sdk-reference.md`](docs/zapier-sdk/sdk-reference.md) | Full command + method reference for the CLI and SDK. |
+| [`docs/zapier-sdk-capability-map.md`](docs/zapier-sdk-capability-map.md) | The living ledger — every SDK surface, what Foreman uses, and what we deliberately don't build. |
+| `npx tsx packages/agents/scripts/sdk-surface-sweep.ts` | Dumps the entire live SDK surface — no creds, no network, pure introspection. The "prove it" tool. |
+
 ---
 
 ## 🧱 Architecture
@@ -225,7 +275,7 @@ packages/
 │  │  ├─ agents/             Foreman · Discovery · Execution · History · Supervisor
 │  │  └─ tools/              connect_zapier · search_history · fork_conversation
 │  ├─ src/lib/
-│  │  ├─ zapier-sdk-tools    34 auto-generated tools from @zapier/zapier-sdk
+│  │  ├─ zapier-sdk-tools    28 auto-generated tools from @zapier/zapier-sdk
 │  │  ├─ zapier/             PKCE OAuth connect flow + per-user SDK
 │  │  ├─ db/                 Supabase schema + service-role client
 │  │  ├─ processors/         context injector (in) + PII redactor (out)
@@ -262,7 +312,7 @@ supabase/migrations/         Postgres schema (users, conversations, proposals,
                                               ▼
                                      ┌─────────────────┐  direct import of
                                      │   Zapier SDK    │  @zapier/zapier-sdk
-                                     │  (single-shot)  │  → 34 tools
+                                     │  (single-shot)  │  → 28 tools
                                      └─────────────────┘
 ```
 
@@ -277,7 +327,7 @@ supabase/migrations/         Postgres schema (users, conversations, proposals,
 |---|---|
 | Agent framework | [Mastra](https://mastra.ai) — `@mastra/core`, `@mastra/memory`, `@mastra/evals`, `@mastra/duckdb`, `@mastra/observability` |
 | Chat channels | [Chat SDK](https://chat-sdk.dev) — `chat`, `@chat-adapter/*` |
-| Action layer | `@zapier/zapier-sdk` (direct import; 34 auto-generated tools) |
+| Action layer | `@zapier/zapier-sdk` (direct import; 28 auto-generated tools) |
 | LLM | Claude (Anthropic) — Sonnet 4.6 default, Haiku 4.5 for fast steps |
 | Embeddings / STT | OpenAI `text-embedding-3-small`, Whisper via `@mastra/voice-openai` |
 | API server | [Hono](https://hono.dev) (mounted via Mastra) |
@@ -306,6 +356,8 @@ Four tiers plus end-to-end browser tests. **Tier 1 is the default loop and runs 
 
 CI runs the mocked tiers, a `next build` for web, Biome lint, a dependency-uniqueness check, and a generated-DB-types freshness check on every push and PR.
 
+> Keeping the action layer current: `npm run sdk:check` reports whether `@zapier/zapier-sdk` / `@zapier/zapier-sdk-cli` are behind the latest release — see [Working with the Zapier SDK](#-working-with-the-zapier-sdk).
+
 ---
 
 ## 🔭 Inspect & tune the agents (Mastra Studio)
@@ -323,7 +375,7 @@ What you get:
 - ✏️ **Edit & version the system prompt** — change an agent's instructions live, save a draft, publish; or use Foreman's own agent editor at [`localhost:3000/editor`](http://localhost:3000/editor)
 - 🧠 **Memory & threads** — every conversation, persisted to your local Supabase
 - 🔭 **Traces** — per-run agent / tool / LLM spans, so you can see each step an agent took
-- 🗂️ **Tools** — browse the 34 Zapier SDK tools + the custom tools each agent loads
+- 🗂️ **Tools** — browse the 28 Zapier SDK tools + the custom tools each agent loads
 - ✅ **Eval scorers** — score runs against the `foreman-baseline-v1` dataset (relaxed-trajectory match + an LLM judge) in the Scores view
 
 ---

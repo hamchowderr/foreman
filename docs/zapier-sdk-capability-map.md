@@ -2,126 +2,216 @@
 
 > **Living ledger.** Foreman is a product built on `@zapier/zapier-sdk`. This file is the authoritative map of the SDK surface, what Foreman uses, and what we've deliberately decided *not* to build. Refresh it on every SDK bump.
 >
-> - **Refresh the version delta:** `npm run sdk:check` (watches both `@zapier/zapier-sdk` and `@zapier/zapier-sdk-cli`; also fires a quiet notice on session start via `scripts/zapier-sdk-watch.mjs`).
-> - **Snapshot date:** 2026-06-11 — verified against `@zapier/zapier-sdk@0.69.3`.
-> - **Tracking:** open decisions live in beads (see [Open decisions](#open-decisions)).
+> - **Snapshot date:** 2026-06-16 — **live-introspected** against `@zapier/zapier-sdk@0.70.4` (installed, nested under `packages/agents`).
+> - **How this snapshot was produced:** `npx tsx packages/agents/scripts/sdk-surface-sweep.ts` — imports the installed package and enumerates every entrypoint, `getRegistry()` variant, instance method, and named export. This is **not** changelog-reading; it is what the code on disk actually exposes. Re-run it on every bump (it's the "prove it" tool for the Zapier community showcase).
+> - **Version delta watcher:** `npm run sdk:check` (root) — watches `@zapier/zapier-sdk` + `@zapier/zapier-sdk-cli`, fires a quiet notice on session start via `scripts/zapier-sdk-watch.mjs`.
+> - **Tracking:** open decisions live in beads (see [Open decisions](#open-decisions)). Sweep tracked under **foreman-xb68**.
 
-## Version status (2026-06-11)
+## TL;DR — the whole surface in one breath
 
-| Package | Installed | Latest | Behind |
+`@zapier/zapier-sdk@0.70.4` is **four things behind one package**:
+
+1. **A typed API client** — `createZapierSdk()` → **37 stable methods** (apps/actions discovery, `runAction`, connections, tables/records, profile, raw `fetch`).
+2. **An experimental control plane** — `@zapier/zapier-sdk/experimental` → the same 37 **+ 36 more** (trigger inboxes, durable runs, durable workflows). 18 of those (the durable/workflow write+read endpoints) are **scope-walled** for any public-SDK token (see auth model).
+3. **An authoring framework** — `@zapier/zapier-sdk/define` → `defineDurable` / `defineTool` / `defineComponent` with durable `step`/`wait`/`createCallback` primitives. This is *code-mode durable workflows*: you author them locally, deploy/run via the (walled) experimental endpoints.
+4. **A composable plugin runtime** — 208 named exports on the main entrypoint: every method ships as a `*Plugin`, composable via `composePlugins`/`createPluginStack`; plus a resolver layer, a Zod schema library, a telemetry/event system, credential helpers, and a low-level HTTP client (`createZapierApi`).
+
+The action-type enum is still **read · read_bulk · write · run · search · search_or_write · search_and_write · filter** — **there is no "create a Zap" action type**. Persisted automation is the experimental durable API, which is walled. This is why Foreman owns its own workflow engine.
+
+## Live surface totals (2026-06-16, v0.70.4)
+
+| Entrypoint | `createZapierSdk()` instance methods | `getRegistry({package:"mcp"})` | Named exports |
 |---|---|---|---|
-| `@zapier/zapier-sdk` | **0.48.0** | 0.69.3 (2026-06-10) | 28 releases |
-| `@zapier/zapier-sdk-cli` | **0.44.0** | 0.54.3 (2026-06-10) | 33 releases |
+| `.` (main) | **39** (37 API + `getRegistry` + `addPlugin`) | **37** | **208** |
+| `./experimental` | **75** (37 + 36 experimental + meta) | **71** | **208** |
+| `./define` | n/a (authoring fns, not an SDK instance) | n/a | **5** |
+| `./apps` | n/a (generated-types anchor) | n/a | **1** (`App`) |
 
-Bump is tracked in **foreman-8ujc** — *not* a blind drop-in (behavior changes below).
+**Experimental-only methods (36)** = 18 trigger-inbox + 5 durable-run + 13 durable-workflow (full list below).
 
-## Surface totals
+### `getRegistry({ package })` is a curated view, not the whole SDK
 
-**69 public methods** = 35 stable (`@zapier/zapier-sdk`) + 34 experimental (`@zapier/zapier-sdk/experimental`, opt-in import path only).
+The registry exists so hosts (MCP servers, CLIs, AI tool layers) can advertise a *subset* of methods. The `package` arg changes the cut — **live counts at 0.70.4**:
 
-### Stable methods (35)
+| `package` | main | experimental | Notes |
+|---|---|---|---|
+| `undefined` (default) | 39 | 75 | includes the 2 app-proxy pseudo-entries |
+| `"mcp"` | **37** | 71 | **what Foreman uses** — drops the proxy entries (can't express a fluent proxy as one MCP tool) |
+| `"sdk"` | 34 | 70 | |
+| `"cli"` | 37 | 71 | |
+| `"all"` | 31 | 65 | |
+| `"ai"` | 31 | 65 | leanest curated set |
+
+Foreman's choice of `"mcp"` on the **main** entrypoint loses nothing real vs. the default (only the 2 proxy pseudo-entries `apps.{appKey}` / `apps.{appKey}.{actionType}.{actionKey}`, which Foreman deliberately doesn't use). If we ever want a tighter agent toolset, `"ai"` is a pre-curated 31. **Foreman never imports `./experimental`, so none of the 36 experimental methods are ever generated as tools today.**
+
+## The 37 stable methods (main `mcp` registry)
 
 | Domain | Methods |
 |---|---|
 | Apps / discovery | `listApps`, `getApp`, `listActions`, `getAction` |
-| Action input fields | `listActionInputFields`, `getActionInputFieldsSchema`, `listActionInputFieldChoices`, `listInputFields`*, `getInputFieldsSchema`, `listInputFieldChoices` |
+| Action input fields (canonical) | `listActionInputFields`, `getActionInputFieldsSchema`, `listActionInputFieldChoices` |
+| Action input fields (**deprecated aliases**) | `listInputFields`→`listActionInputFields`, `getInputFieldsSchema`→`getActionInputFieldsSchema`, `listInputFieldChoices`→`listActionInputFieldChoices` |
 | Run | `runAction` |
-| Connections / auth | `listConnections`, `getConnection`, `findFirstConnection`, `findUniqueConnection`, `listAuthentications`* |
-| HTTP / profile | `fetch`, `request`* (deprecated alias), `getProfile` |
-| Client credentials | `listClientCredentials`, `createClientCredentials`, `deleteClientCredentials` |
+| Connections | `listConnections`, `getConnection`, `findFirstConnection`, `findUniqueConnection` |
+| Connections (**deprecated aliases**) | `listAuthentications`→`listConnections`, `getAuthentication`→`getConnection`, `findFirstAuthentication`→`findFirstConnection`, `findUniqueAuthentication`→`findUniqueConnection` |
+| HTTP / profile | `fetch`, `request` (deprecated alias of `fetch`), `getProfile` |
+| Client credentials (Connect Builder) | `listClientCredentials`, `createClientCredentials`, `deleteClientCredentials` |
 | Tables | `listTables`, `getTable`, `createTable`, `deleteTable`, `listTableFields`, `createTableFields`, `deleteTableFields` |
 | Records | `listTableRecords`, `getTableRecord`, `createTableRecords`, `updateTableRecords`, `deleteTableRecords` |
 
-\* deprecated / legacy duplicate — Foreman excludes these (see usage map).
+### Deprecated → canonical alias map (verified from `dist/plugins/deprecated/`)
 
-Low-level API client (under the SDK): `get/post/put/patch/delete`, `poll`, `fetch`, `fetchStream` (SSE, 0.69). Plus internal utilities: FIFO concurrency semaphore (`maxConcurrentRequests`, default 200, since 0.52), error-classification (`isPermanentHttpError`), staged polling backoff.
+The SDK ships a `deprecated/` plugin folder that aliases old names onto canonical ones. **All 7 aliases are still live at 0.70.4** but are documented as deprecated:
 
-### Experimental methods (34) — `@zapier/zapier-sdk/experimental` only
+```
+listAuthentications      -> listConnections
+getAuthentication        -> getConnection
+findFirstAuthentication  -> findFirstConnection
+findUniqueAuthentication -> findUniqueConnection
+listInputFields          -> listActionInputFields
+listInputFieldChoices    -> listActionInputFieldChoices
+getInputFieldsSchema     -> getActionInputFieldsSchema
+```
 
-**Trigger Inboxes (18)** — app-event subscriptions:
-`listTriggers`, `listTriggerInputFields`, `getTriggerInputFieldsSchema`, `listTriggerInputFieldChoices`, `listTriggerInboxes`, `createTriggerInbox`, `getTriggerInbox`, `ensureTriggerInbox`, `updateTriggerInbox`, `deleteTriggerInbox`, `pauseTriggerInbox`, `resumeTriggerInbox`, `listTriggerInboxMessages`, `leaseTriggerInboxMessages`, `ackTriggerInboxMessages`, `releaseTriggerInboxMessages`, `drainTriggerInbox`, `watchTriggerInbox` (SSE, real-time as of 0.69).
+## The 36 experimental methods (`./experimental` only)
 
-**Durable Workflows (13)**:
-`listWorkflows`, `getWorkflow`, `createWorkflow`, `updateWorkflow`, `enableWorkflow`, `disableWorkflow`, `deleteWorkflow`, `publishWorkflowVersion`, `listWorkflowVersions`, `getWorkflowVersion`, `listWorkflowRuns`, `getWorkflowRun`, `triggerWorkflow`.
+**Trigger Inboxes (18)** — app-event subscriptions (client-creds OK):
+`listTriggers`, `listTriggerInputFields`, `getTriggerInputFieldsSchema`, `listTriggerInputFieldChoices`, `listTriggerInboxes`, `createTriggerInbox`, `getTriggerInbox`, `ensureTriggerInbox`, `updateTriggerInbox`, `deleteTriggerInbox`, `pauseTriggerInbox`, `resumeTriggerInbox`, `listTriggerInboxMessages`, `leaseTriggerInboxMessages`, `ackTriggerInboxMessages`, `releaseTriggerInboxMessages`, `drainTriggerInbox`, `watchTriggerInbox` (SSE, real-time since 0.69; retries transient drain failures since 0.70.0).
 
-**Durable Runs (5)**:
+**Durable Runs (5)** — ⛔ scope-walled:
 `runDurable`, `cancelDurableRun`, `listDurableRuns`, `getDurableRun`, `getTriggerRun`.
 
-> ✅ **Access confirmed (2026-06-11):** a live probe (latest SDK `/experimental`, client-credentials auth) returned `listTriggerInboxes -> []` and `listTriggers({app:'github'}) -> 23` — i.e. this account already has working trigger-inbox access; the 0.51 "closed beta" notice does **not** block us. Remaining open question (P3): long-term stability/sunset roadmap — ask Zapier. Tracked under **foreman-iyq6**.
+**Durable Workflows (13)** — ⛔ scope-walled:
+`listWorkflows`, `getWorkflow`, `createWorkflow`, `updateWorkflow`, `enableWorkflow`, `disableWorkflow`, `deleteWorkflow`, `publishWorkflowVersion`, `listWorkflowVersions`, `getWorkflowVersion`, `listWorkflowRuns`, `getWorkflowRun`, `triggerWorkflow`.
 
-### Action type enum (current)
+> ⛔ **The durable wall.** All 18 durable+workflow endpoints return **HTTP 403 "None of the security schemes (userJwt)…"** under **both** client-credentials **and** a real per-user PKCE JWT. 18/18 swept 2026-06-16 (`scripts/durable-endpoints-probe.ts`). Root cause: the public PKCE client is granted `external` scope but durable's `userJwt` scheme requires `internal`. This is a Zapier-side wall, not a Foreman gap. Trigger inboxes are **not** walled. Full write-up: [`zapier-auth-model.md`](zapier-auth-model.md) + [`zapier-durable-questions-for-engineers.md`](zapier-durable-questions-for-engineers.md).
 
-`read` · `read_bulk` · `search` · `search_and_write` · `search_or_write` · `write` · `filter` · `run`
+## `./define` — the durable-workflow authoring DSL (previously undocumented)
 
-(Unchanged from 0.48 — still no "create a Zap" type. Workflow persistence is the experimental durable API, not an action type.)
+`@zapier/zapier-sdk/define` exports **5 authoring functions**. This is the *code substrate* — you author durable workflows as TypeScript, which become the `source_files` that `publishWorkflowVersion` / `runDurable` deploy. The authoring side is **fully usable locally** (type-checks, no network); only the deploy/run endpoints are walled.
 
-## Foreman usage map
+| Export | What it defines |
+|---|---|
+| `defineDurable(config)` | A durable workflow. `run(ctx, input)` gets a **`DurableContext`** with durability primitives (below). Connectionless / single-connection / multi-connection variants. |
+| `defineTool(config)` | A reusable tool (`run(ctx, input)`), connection-bound or not, with `inputDependencies` (dynamic fields) + result processors (`options`/`schema`/`digest`). |
+| `defineComponent(config)` | A render-style component (`render(props)`), connection-bound. |
+| `optionsFrom(tool, binds?)` | Derive **dynamic dropdown options** from another tool's output (dependent fields). |
+| `schemaFrom(tool, binds?)` | Derive a **dynamic Zod schema** from another tool's output. |
 
-Source of truth: `packages/agents/src/lib/zapier-sdk-tools.ts`.
+**`DurableContext` primitives** (this is the Temporal/Inngest/Restate-class part):
 
-- **Surfaced as agent tools (20):** 9 `APPROVAL_REQUIRED` (runAction, fetch, create/deleteTable, create/update/deleteTableRecords, create/deleteTableFields) + 11 `READ_ONLY` discovery/introspection (listApps, getApp, listActions, getAction, listConnections, find*/getConnection, getInputFieldsSchema, listInputFieldChoices, tables/records read, getProfile).
-- **Explicitly excluded (8):** deprecated auth duplicates (`listAuthentications`, `find*/getAuthentication`), `request`, `listInputFields`, client-credentials management.
-- **Called directly at runtime:** `runAction` (execution.ts:86), `fetch` (execution.ts:116), `findFirstConnection` (execution.ts:73), `listApps`/`listActions` (seed.ts, connect-zapier.ts), `listConnections`/`listInputFieldChoices`/schema (discovery.ts), `getRegistry` (zapier-sdk-tools.ts:190).
-- **Entire experimental surface (34): unused** — a deliberate choice (experimental, Zapier-hosted, less control), now documented rather than a blind spot.
+```ts
+ctx.step(name, fn)            // durable, retryable step (maxAttempts, retryDelaySeconds, outputSchema)
+ctx.wait(name, seconds)      // durable sleep — survives restarts
+ctx.createCallback(name)     // human-in-the-loop: returns [Promise<payload>, callbackUrl] (timeoutSeconds, payloadSchema)
+ctx.zapier.fetch(url, opts)  // call connected apps from inside the workflow
+```
 
-### What we built that the SDK (now) overlaps — "what not to build"
+So Zapier's durable platform = **author with `/define`** → **deploy/execute with the experimental durable endpoints**. Foreman can author and type-check durable code today; it cannot deploy it via a public-SDK token until Zapier opens the `internal` scope.
 
-| Foreman home-grown | SDK equivalent (experimental) | Stance |
+## The 208-export surface (main entrypoint) — taxonomy
+
+Beyond the 37 methods, `import * as zapier from "@zapier/zapier-sdk"` exposes a full runtime. Grouped:
+
+- **Factory + plugin runtime (~40):** `createZapierSdk`, `createSdk`, `createZapierApi`, `createZapierSdkWithoutRegistry`, `addPlugin`, `definePlugin`, `composePlugins`, `createPluginStack`, `createCorePlugin`, `createOptionsPlugin`, and one `*Plugin` per method (`runActionPlugin`, `listAppsPlugin`, `apiPlugin`, `registryPlugin`, `manifestPlugin`, …). → **The SDK is composable/tree-shakeable**: build a minimal client with only the plugins you need.
+- **19 error/signal classes:** `ZapierError` + 15 typed subclasses (`ZapierActionError`, `ZapierApiError`, `ZapierAppNotFoundError`, `ZapierApprovalError`, `ZapierAuthenticationError`, `ZapierBundleError`, `ZapierConfigurationError`, `ZapierConflictError`, `ZapierNotFoundError`, `ZapierRateLimitError`, `ZapierRelayError`, `ZapierResourceNotFoundError`, `ZapierTimeoutError`, `ZapierUnknownError`, `ZapierValidationError`) + **3 control-flow signals** (`ZapierSignal`, `ZapierAbortDrainSignal`, `ZapierReleaseTriggerMessageSignal` — used by the trigger-inbox drain loop, *not* errors to surface).
+- **Resolver layer (~25 `*Resolver` objects):** `appKeyResolver`, `actionKeyResolver`, `connectionIdResolver`, `tableIdResolver`, `workflowIdResolver`, … — the alias/identifier resolution used by methods and the proxy.
+- **Zod schema library (~40 `*Schema` / `*PropertySchema`):** `CredentialsSchema`, `ConnectionsMapSchema`, `AppPropertySchema`, `RelayFetchSchema`, … — reusable for input validation.
+- **Credential helpers:** `resolveCredentials`, `resolveCredentialsFromEnv`, `resolveAuthToken`, `getTokenFromCliLogin`, `isCliLoginAvailable`, `injectCliLogin`, `isClientCredentials`, `isPkceCredentials`, `isCredentialsFunction`, `getBaseUrlFromCredentials`, `clearTokenCache`, `invalidateCachedToken`.
+- **Telemetry / event system:** `buildApplicationLifecycleEvent`, `buildErrorEvent`, `buildMethodCalledEvent`, `buildCapabilityMessage`, `createBaseEvent`, `generateEventId`, `eventEmissionPlugin`, `runWithTelemetryContext`, `cleanupEventListeners`. → the SDK emits structured telemetry you can hook.
+- **Platform / CI / runtime introspection:** `getCiPlatform`, `isCi`, `getOsInfo`, `getPlatformVersions`, `getCpuTime`, `getMemoryUsage`, `getTtyContext`, `getReleaseId`, `getCurrentTimestamp`.
+- **Approval-mode helpers:** `getZapierApprovalMode`, `getZapierDefaultApprovalMode`.
+- **Constants (~17):** `ZAPIER_BASE_URL`, `ZAPIER_MAX_CONCURRENT_REQUESTS`, `ZAPIER_MAX_NETWORK_RETRIES`, `ZAPIER_MAX_NETWORK_RETRY_DELAY_MS`, `DEFAULT_PAGE_SIZE`, `MAX_PAGE_LIMIT`, `MAX_CONCURRENCY_LIMIT`, `DEFAULT_ACTION_TIMEOUT_MS`, `DEFAULT_APPROVAL_TIMEOUT_MS`, `DEFAULT_MAX_APPROVAL_RETRIES`, `DEFAULT_CONFIG_PATH`, `CONTEXT_CACHE_TTL_MS`, `CONTEXT_CACHE_MAX_SIZE`.
+- **String/format utils:** `toSnakeCase`, `toTitleCase`, `formatErrorMessage`, `zapierAdaptError`, `isPermanentHttpError`, `logDeprecation`.
+
+**Low-level HTTP client** (`dist/api/`, under every method): `createZapierApi` → `get/post/put/patch/delete`, `poll` (staged backoff), `fetch`, `fetchStream` (SSE), `fetchJsonStream` (JSON-per-frame SSE, new in 0.70.0). FIFO concurrency semaphore (`maxConcurrentRequests`, default 200, since 0.52). Error classification via `isPermanentHttpError`.
+
+## Foreman usage map & categorization audit
+
+Source of truth: `packages/agents/src/lib/zapier-sdk-tools.ts`. Foreman imports the **main** entrypoint, reads `getRegistry({package:"mcp"})` (37 fns), drops `EXCLUDED_METHODS`, and generates a Mastra tool per remaining method.
+
+**Live tool count: Foreman generates 28 tools** (37 mcp methods − 9 excluded):
+
+| Bucket | Count | Methods |
 |---|---|---|
-| `workflow*` tables + `engine.ts` (frozen SDK-action tuples, re-run via `runAction`) | Durable Workflows + Runs | **Keep our engine** (control, conversation-linked, templates, non-experimental); track theirs |
-| stubbed `poll` trigger type | Trigger Inboxes | **Don't build the poll-driver from scratch — evaluate trigger inboxes first** |
+| `APPROVAL_REQUIRED` (`requireApproval:true`, `destructiveHint:true`) | 9 | `runAction`, `fetch`, `createTable`, `deleteTable`, `createTableRecords`, `updateTableRecords`, `deleteTableRecords`, `createTableFields`, `deleteTableFields` |
+| `READ_ONLY` (`readOnlyHint:true`) | 16 | `listApps`, `getApp`, `listActions`, `getAction`, `listConnections`, `findFirstConnection`, `findUniqueConnection`, `getConnection`, `getInputFieldsSchema`, `listInputFieldChoices`, `listTables`, `getTable`, `listTableFields`, `listTableRecords`, `getTableRecord`, `getProfile` |
+| **Auto-surfaced, NOT categorized** ⚠️ | 3 | `getActionInputFieldsSchema`, `listActionInputFields`, `listActionInputFieldChoices` |
+| `EXCLUDED_METHODS` (no tool) | 9 | `listAuthentications`, `findFirstAuthentication`, `findUniqueAuthentication`, `getAuthentication`, `request`, `listInputFields`, `createClientCredentials`, `deleteClientCredentials`, `listClientCredentials` |
+
+> 📌 **Correction:** the prior (0.69.3, doc-derived) snapshot claimed "20 surfaced tools (9 + 11)". The live count is **28** (9 + 16 read-only + 3 un-annotated). The old read-only count and the 3 auto-surfaced tools were both undercounted.
+
+### ⚠️ Finding F1 — input-field categorization is inverted (foreman-xb68 follow-up)
+
+The SDK's **canonical** input-field methods are `getActionInputFieldsSchema` / `listActionInputFields` / `listActionInputFieldChoices`; the `*InputField*` names are **deprecated aliases**. Foreman has it backwards:
+
+- It marks the **deprecated** `getInputFieldsSchema` + `listInputFieldChoices` as read-only tools.
+- It excludes only **1** of the 3 deprecated input-field aliases (`listInputFields`), keeping the other two.
+- It leaves the **3 canonical** methods uncategorized → they're auto-generated as tools but with `readOnlyHint:false` (wrong — they're reads) and as **duplicates** of the deprecated ones.
+
+Net: the agent sees **5 tools for 3 operations**, with the canonical ones mis-annotated. Correct end-state: canonical trio in `READ_ONLY`; all 7 deprecated aliases (4 auth + 3 input-field) in `EXCLUDED`.
+
+**Blast radius (why this is a tracked decision, not a drive-by edit):** the deprecated kebab names `get-input-fields-schema` / `list-input-field-choices` are pinned in the **eval dataset trajectories** (`scripts/datasets-label.ts`, `scripts/datasets-mini-experiment.ts`), the **live SDK test** (`tests/sdk/zapier-sdk.test.ts` execs them by name), and **web docs** (`packages/web/content/docs/core-concepts/tool-discovery.mdx`). Fixing the categorization requires re-labeling those in lockstep, or the live test + trajectory scorer break. Also a forward risk: if Zapier ever removes the deprecated aliases, those tests/labels break regardless.
+
+### Finding F2 — error-class coverage (12/19)
+
+`handleSdkError` (`zapier-sdk-tools.ts`) does `instanceof` against **12** classes. The other 7 exported classes: 4 real errors (`ZapierApiError`, `ZapierBundleError`, `ZapierConflictError`, `ZapierUnknownError`) fall through to the `instanceof ZapierError` catch-all (degrades fine, no crash); 3 are control-flow **signals**, not errors. Low priority; `ZapierConflictError` (409) is the only one that might warrant a specific message.
+
+### What we built that the SDK overlaps — "what not to build"
+
+| Foreman home-grown | SDK equivalent | Stance |
+|---|---|---|
+| `workflow*` tables + `engine.ts` (frozen action tuples, re-run via `runAction`) | Durable Workflows + Runs (`/experimental`) + `/define` authoring | **Keep our engine** — durable is scope-walled, experimental, Zapier-hosted; ours is conversation-linked + non-experimental. Track theirs. |
+| stubbed `poll` trigger type | Trigger Inboxes (`/experimental`, not walled) | **Evaluate trigger inboxes before building a poll-driver from scratch** (foreman-bdjp / foreman-ueep) |
 | `cron-driver.ts` minute-tick | `watchTriggerInbox` (SSE) / `triggerWorkflow` | Possible future real-time replacement |
-| manual rate-limit handling | `maxConcurrentRequests` option | Adopt on bump |
+| manual rate-limit handling | `maxConcurrentRequests` option (default 200) | Adopt — set on `createZapierSdk` |
+| (none) | `/define` durable DSL (`step`/`wait`/`createCallback`) | Not buildable for us until the durable scope opens; document as the target shape |
 
-## Changelog digest 0.48 → 0.69.3 (tagged)
+## Action-type enum (verified from `dist/types/properties.js`)
 
-- **0.69.3** [BUGFIX] restore connections/app_versions/trigger fields on `publishWorkflowVersion`.
-- **0.69.1** [BUGFIX] paginated results are now consume-once (don't `.items()` after iterating pages).
-- **0.69.0** [NEW] `watchTriggerInbox` → SSE (real-time); add `fetchStream` + `SseMessage`.
-- **0.67.0** [BEHAVIOR] extract `kitcore`; deprecate `createSdk().addPlugin()`; `normalizeError` no longer wraps Error subclasses; logs → stderr.
-- **0.66.0** [NEW] `triggerWorkflow`.
-- **0.65.0 / 0.64.0** [NEW] workflow runs + workflow versions (`publishWorkflowVersion`, etc.).
-- **0.61.0–0.63.0** [NEW] workflow write (`create/update/enable/disable/deleteWorkflow`) + durable runs (`runDurable`, `cancelDurableRun`).
-- **0.60.0 / 0.59.0** [NEW] workflow read; register durable backend paths.
-- **0.57.0** [NEW] `trash` option on `listTableRecords`/`listTableFields`.
-- **0.52.0** [NEW] configurable concurrency (`maxConcurrentRequests`, default 200, FIFO).
-- **0.51.0** [BEHAVIOR] SDK auth defaults to client credentials; **deprecation notice for experimental Triggers (closed beta)**.
-- **0.50.0** [BEHAVIOR] approval surface collapsed to `approvalMode: "disabled"|"poll"|"throw"`; removed `isInteractive`; renamed `"fail"`→`"throw"`; **no back-compat shim**.
-- **0.49.0** [NEW] experimental triggers (trigger inboxes).
+`read` · `read_bulk` · `write` · `run` · `search` · `search_or_write` · `search_and_write` · `filter`
 
-### Bump-verification checklist (foreman-2xdk → gates foreman-8ujc)
+Unchanged. **No "create a Zap" type** — automation persistence is the (walled) durable API, not an action type. This is the structural reason Foreman owns workflow persistence.
 
-**Behavior verification — DONE 2026-06-11 (foreman-2xdk). All 5 PASS** (static + 0.69.3 `.d.ts` inspection + a reverted trial install).
+## Changelog digest 0.69.3 → 0.70.4
 
-1. **`approvalMode` (0.50) ✅** — Foreman never sets `approvalMode`/`isInteractive`/`"fail"` (0 grep hits). On a server (non-TTY) the unset default is `"throw"` ⇒ `runAction` throws `ZapierApprovalError` on approval-gated responses. That class `extends ZapierError`, so `handleSdkError`'s catch-all (`zapier-sdk-tools.ts:426`) degrades gracefully — no crash. *Follow-up (non-blocking):* the approval URL carried on the error is not surfaced to the user (only `.message`/`.code`).
-2. **Client-credentials auth (0.51) ✅** — 0.69.3 `CredentialsSchema` still accepts a `string` token; PKCE schema present. Per-user path passes `credentials: accessToken` (string). Probe-confirmed (getProfile OK).
-3. **`normalizeError` (0.67) ✅** — Foreman relies on `instanceof`, never calls `normalizeError`. All 11 imported `Zapier*Error` classes exist in 0.69.3 as real `Error` subclasses; "no longer wraps Error subclasses" means typed errors reach the catch unwrapped ⇒ `instanceof` still works. Handler order correct (`ZapierResourceNotFoundError` before `ZapierNotFoundError`).
-4. **Pagination consume-once (0.69.1) ✅** — `listApps` response `{data, nextCursor}` unchanged 0.48→0.69.3. `seed.ts` walks cursors via `.data`/`.nextCursor`; **zero `.items()` calls** in `packages/`. Auto-paginate path uses `maxItems` (materialized). Immune to the consume-once footgun.
-5. **zod single-version ✅ (with a caveat)** — SDK 0.69.3 declares `zod` as a **regular dependency pinned to `4.3.6` exact** (peerDeps empty). The root override `zod: 4.4.3` *does* collapse it to a single version — **but only on a full clean reinstall** (`rm -rf node_modules package-lock.json && npm install`). An *incremental* `npm install` after the bump leaves a stale `zod@4.3.6` nested under `packages/agents/node_modules/zod` and `check:deps` FAILS. See install-mechanics below.
+- **0.70.4** response-field parity for experimental code-substrate plugins: `updateWorkflow`/`getWorkflow`/`listWorkflows` restore `is_private`, `created_by_user_id`, `triggers` (live claim status); `publishWorkflowVersion`/`getWorkflowVersion`/`listWorkflowVersions` restore `trigger`, `connections`, `app_versions`; `runDurable` input accepts `notifications` (webhook subscribers for run lifecycle). New `shared-schemas.ts`.
+- **0.70.3** TTY + agent-caller context in SDK telemetry; `get-durable-run` accepts null `last_error`.
+- **0.70.2** `listActions` no longer hardcodes `public_only:"true"` (private/unlisted apps the caller can access now appear) — COSUB-562.
+- **0.70.1** reinstate `Schema.parse()` on workflow/durable response handlers; open RunStatus/ExecutionStatus/OperationType/OperationStatus enums for forward-compat; restore `DeleteWorkflowResponseSchema`; wire `outputSchema` on `cancelDurableRun`/`deleteWorkflow`.
+- **0.70.0** `watchTriggerInbox` retries transient drain failures (5xx/429/network) with bounded backoff; new `ApiClient.fetchJsonStream` + `JsonSseMessage`.
 
-### Install mechanics for the bump (foreman-8ujc) — discovered in the 2xdk trial
+(Earlier 0.48→0.69.3 digest preserved in git history of this file; auth/behavior notes that still matter are folded into the auth model + sections above.)
 
-Bumping `@zapier/zapier-sdk` to `^0.69.3` is **not** a drop-in `npm install`. Two traps:
+## Reproduce / verify
 
-- **zod dup → needs a clean reinstall.** Incremental install fails `check:deps` (two zod: 4.4.3 + 4.3.6). Full `rm -rf node_modules package-lock.json && npm install` resolves to single `zod@4.4.3`.
-- **A clean reinstall drifts `@mastra/*`.** Nuking the lockfile re-resolves the `^`-ranged Mastra packages: `@mastra/memory ^1.17.5→1.20.2`, `@mastra/pg ^1.10.0→1.12.1`, which then expect `@mastra/core` exports (`modelSupportsAttachments`, `FavoritesStorage`) that the pinned `@mastra/core@1.32.1` (override) lacks ⇒ **5 mocked tests fail** (`foreman.ts`, `rag/index.ts` import errors) — unrelated to Zapier. The committed lockfile pins a compatible constellation; a naive nuke loses it.
+```bash
+# Full live surface dump (no creds, no network — pure introspection):
+cd packages/agents && npx tsx scripts/sdk-surface-sweep.ts
 
-**Recommended recipe for 8ujc:** before the clean reinstall, pin `@mastra/memory`/`@mastra/pg` (and any drift-prone Mastra pkg) to the lockfile's current versions — exact pins or an `overrides` entry — so the zod-collapsing clean install doesn't drift Mastra. Then: `check:deps` + `mastra build` + `npm test` + `test:sdk` green. (Heads-up: `@zapier/zapier-sdk-cli` still transitively pulls `@zapier/zapier-sdk@0.48.x`, hoisted to root `node_modules` — harmless, tooling-only, not imported by the runtime which resolves 0.69.3 from `packages/agents`.)
+# Durable wall re-confirm (needs ZAPIER_CLIENT_ID/SECRET; add --pkce for a user JWT):
+cd packages/agents && npx tsx scripts/durable-endpoints-probe.ts
+
+# Version delta watcher (root):
+npm run sdk:check
+```
 
 ## Test / Zapier-feedback candidates
 
-- Trigger-inbox closed-beta vs go-forward status (the gating unknown).
+- Trigger-inbox closed-beta vs go-forward status (the gating unknown — foreman-13mw).
 - `watchTriggerInbox` SSE reliability + lease/ack/drain semantics.
-- `publishWorkflowVersion` field-drop class of bugs (they fixed one in 0.69.3 — we're a useful signal).
-- Server-shape passthrough on durable endpoints (types can drift from responses).
+- `publishWorkflowVersion` field-drop class of bugs (they fixed two: 0.69.3, 0.70.4 — we're a useful signal).
+- When does the `internal` durable scope open to public SDK clients? (foreman-8bh9 / foreman-13mw).
+- `/define` DSL stability + whether `runDurable` will ever accept an `external`-scope token.
 
 ## Open decisions
 
 Tracked in beads (refresh with `bd show <id>`):
 
-- **foreman-8ujc** — execute the SDK bump (with the verification checklist above).
-- **foreman-iyq6** — evaluate the experimental durable-workflow + trigger-inbox APIs vs Foreman's own engine.
-- **foreman-v8k1** — workflow tools epic (mostly already built; needs reconciliation + `/workflows` UI).
-- **foreman-x944** — SDK/CLI update watcher (done).
+- **foreman-xb68** — this live-introspection sweep; spawned F1 (input-field categorization) + F2 (error coverage) follow-ups.
+- **foreman-iyq6 / foreman-98j3** — keep home-grown workflow engine for v1; durable API is post-v1.
+- **foreman-v8k1** — workflow tools epic (built; needs `/workflows` UI — foreman-ezsm).
+- **foreman-bdjp / foreman-ueep** — trigger-inbox poll-driver spike + live-verify.
+- **foreman-13mw** — confirm long-term stability/sunset of experimental Triggers with Zapier.
 
-_Regenerate the version section and re-audit the experimental surface whenever `npm run sdk:check` reports a new release._
+_Regenerate this file from `sdk-surface-sweep.ts` whenever `npm run sdk:check` reports a new release._

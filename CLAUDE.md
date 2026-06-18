@@ -143,6 +143,16 @@ Real provider keys are deliberately absent from CI. Anything that leaks into a n
 
 For requirements, full quick-start, env vars, ngrok, deployment, and the testing tier table — see [README.md](README.md). This file is for navigating the codebase; the README is for running it.
 
+## Versioning & Tagging
+
+Foreman uses **SemVer** (`MAJOR.MINOR.PATCH`) with **annotated** git tags at release points.
+
+- **Tag releases on `main` only** — never on `feature/`/`fix/`/`chore/` branches or arbitrary commits. A tag is a permanent name on one commit; cut one at deploy-worthy milestones, not every push.
+- **Cut a release:** bump `package.json` `version` → commit `chore(release): vX.Y.Z` → `git tag -a vX.Y.Z -m "..."` on that commit (annotated, not lightweight — annotated stores author/date/notes; releases and `git describe` need it).
+- **Push tags explicitly:** `git push origin main --follow-tags` (a plain `git push` does NOT send tags — the usual gotcha). Optional: `gh release create vX.Y.Z --generate-notes` for a GitHub Release.
+- **Pre-1.0 (`0.x`):** bump MINOR for features *or* breaking changes, PATCH for fixes; no stability promise until `v1.0.0`.
+- Keep `package.json` `version` and the tag **in lockstep**. Current: `0.1.0`, **no tags yet** — first baseline tag (`v0.1.0`) pending.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 
 ## Beads Issue Tracker
