@@ -1,0 +1,30 @@
+# Normalize line endings across platforms.
+# Without this, Windows checkouts (core.autocrlf=true) leave the working tree in
+# CRLF while Git stores LF, producing hundreds of phantom "modified" files and
+# blocking clean fast-forwards. Force LF everywhere — in the repo and on checkout.
+* text=auto eol=lf
+
+# Shell scripts must stay LF regardless of platform.
+*.sh text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# Windows-only scripts keep CRLF (none today, but future-proof).
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: never normalize or diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.gz binary
