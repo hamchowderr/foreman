@@ -44,9 +44,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 tooltip="Foreman"
               >
                 <Link href="/" onClick={() => setOpenMobile(false)}>
-                  <span className="inline-flex size-6 items-center justify-center rounded-md bg-accent text-[11px] font-bold text-accent-foreground">
-                    F
-                  </span>
+                  {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+                  <img alt="Zapier" className="size-5" height={20} src="/zapier.svg" width={20} />
                 </Link>
               </SidebarMenuButton>
               <Tooltip>
