@@ -63,7 +63,7 @@ function PureModelSelectorCompact({
           <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
-      <ModelSelectorContent>
+      <ModelSelectorContent className="w-[320px] p-1.5">
         <ModelSelectorInput placeholder="Search models..." />
         <ModelSelectorList>
           {(() => {
@@ -118,6 +118,7 @@ function PureModelSelectorCompact({
 
             return sortedKeys.map((key) => (
               <ModelSelectorGroup
+                className="[&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1"
                 heading={key === "_available" ? "Available" : (providerNames[key] ?? key)}
                 key={key}
               >
@@ -126,9 +127,10 @@ function PureModelSelectorCompact({
                   return (
                     <ModelSelectorItem
                       className={cn(
-                        "flex w-full",
-                        model.id === selectedModel.id &&
-                          "border-b border-dashed border-foreground/50",
+                        "flex w-full items-center gap-2.5 rounded-lg border border-border/50 px-2.5 py-2",
+                        model.id === selectedModel.id
+                          ? "border-accent/50 bg-accent/60"
+                          : "bg-card/40",
                         !curated && "opacity-40 cursor-default",
                       )}
                       key={model.id}
@@ -147,9 +149,16 @@ function PureModelSelectorCompact({
                       }}
                       value={model.id}
                     >
-                      <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
-                      <div className="ml-auto flex items-center gap-2 text-foreground/70">
+                      <ModelSelectorLogo className="shrink-0" provider={logoProvider} />
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <ModelSelectorName className="font-medium">{model.name}</ModelSelectorName>
+                        {model.description && (
+                          <span className="truncate text-[11px] leading-tight text-muted-foreground">
+                            {model.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="ml-auto flex shrink-0 items-center gap-1.5 text-foreground/60">
                         {capabilities?.[model.id]?.tools && <WrenchIcon className="size-3.5" />}
                         {capabilities?.[model.id]?.vision && <EyeIcon className="size-3.5" />}
                         {capabilities?.[model.id]?.reasoning && <BrainIcon className="size-3.5" />}
