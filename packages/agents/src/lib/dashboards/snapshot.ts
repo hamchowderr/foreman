@@ -65,6 +65,18 @@ export async function getLatestSnapshot(userId: string, appKey: string): Promise
   return data ? rowToSnapshot(data) : null;
 }
 
+/** A specific snapshot by id, scoped to the owner. Null if not found. */
+export async function getSnapshotById(userId: string, id: string): Promise<Snapshot | null> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("app_data_snapshot")
+    .select("id, app_key, source_config, records, row_count, refreshed_at")
+    .eq("user_id", userId)
+    .eq("id", id)
+    .maybeSingle();
+  return data ? rowToSnapshot(data) : null;
+}
+
 /** Historical snapshots (newest first) for trend charts; optionally only since a timestamp. */
 export async function getSnapshotHistory(
   userId: string,

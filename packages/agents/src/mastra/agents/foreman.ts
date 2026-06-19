@@ -21,6 +21,7 @@ import { channelTriggerProvider } from "../signals/channel-trigger-provider";
 import { zapierPollProvider } from "../signals/zapier-poll-provider";
 import { attachTriggerTool } from "../tools/attach-trigger";
 import { connectZapierTool } from "../tools/connect-zapier";
+import { createDashboardTool } from "../tools/create-dashboard";
 import { deleteWorkflowTool } from "../tools/delete-workflow";
 import { detachTriggerTool } from "../tools/detach-trigger";
 import { forkConversationTool } from "../tools/fork-conversation";
@@ -103,6 +104,7 @@ function buildForemanTools() {
     search_history: searchHistoryTool,
     fork_conversation: forkConversationTool,
     connect_zapier: connectZapierTool,
+    create_dashboard: createDashboardTool,
     save_workflow: saveWorkflowTool,
     list_workflows: listWorkflowsTool,
     get_workflow: getWorkflowTool,

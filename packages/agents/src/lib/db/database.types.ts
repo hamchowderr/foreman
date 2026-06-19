@@ -251,6 +251,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      artifact: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: string;
+          snapshot_id: string | null;
+          source_config: string | null;
+          spec: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+          version: number;
+          visibility: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          created_at: string;
+          id: string;
+          kind?: string;
+          snapshot_id?: string | null;
+          source_config?: string | null;
+          spec: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+          version?: number;
+          visibility?: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          snapshot_id?: string | null;
+          source_config?: string | null;
+          spec?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+          visibility?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [];
+      };
       billing_customers: {
         Row: {
           billing_email: string | null;

@@ -67,6 +67,29 @@ async function request<T>(path: string, accessToken: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface DashboardArtifact {
+  id: string;
+  kind: string;
+  title: string;
+  spec: DashboardSpec;
+  records: SnapshotRecord[];
+  rowCount: number;
+  updatedAt: string;
+}
+
+/** A stored dashboard artifact (spec + records) by id, or null on 404. */
+export async function getArtifact(id: string, token: string): Promise<DashboardArtifact | null> {
+  try {
+    return await request<DashboardArtifact>(
+      `/dashboards/artifacts/${encodeURIComponent(id)}`,
+      token,
+    );
+  } catch (e) {
+    if ((e as Error).message.includes("→ 404")) return null;
+    throw e;
+  }
+}
+
 /** Latest snapshot for an app, or null on 404 (no data pulled yet). */
 export async function getLatestSnapshot(appKey: string, token: string): Promise<Snapshot | null> {
   try {

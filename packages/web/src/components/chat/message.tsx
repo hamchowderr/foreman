@@ -7,6 +7,7 @@ import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
+import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
@@ -247,6 +248,57 @@ const PurePreviewMessage = ({
         >
           <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
         </MessageContent>
+      );
+    }
+
+    if (type === "tool-create_dashboard") {
+      const { toolCallId, state } = part;
+
+      if (state === "output-available" && part.output && !("error" in part.output)) {
+        const out = part.output as {
+          title: string;
+          url: string;
+          rowCount: number;
+          spec: Parameters<typeof DashboardRenderer>[0]["spec"];
+          records: Parameters<typeof DashboardRenderer>[0]["data"];
+        };
+        return (
+          <div className="w-full max-w-full" key={toolCallId}>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-foreground">{out.title}</span>
+              <a
+                className="shrink-0 text-xs font-medium hover:underline"
+                href={out.url}
+                rel="noreferrer"
+                style={{ color: "#FF4F00" }}
+                target="_blank"
+              >
+                Open full →
+              </a>
+            </div>
+            <DashboardRenderer data={out.records} spec={out.spec} />
+          </div>
+        );
+      }
+
+      if (state === "output-error" || (part.output && "error" in part.output)) {
+        return (
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 text-sm dark:bg-red-950/50"
+            key={toolCallId}
+          >
+            Couldn't build dashboard:{" "}
+            {String(
+              part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <div className="text-muted-foreground text-sm" key={toolCallId}>
+          Building dashboard…
+        </div>
       );
     }
 

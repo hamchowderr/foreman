@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { getArtifactWithData } from "@/lib/dashboards/artifact";
 import { getLatestSnapshot, getSnapshotHistory } from "@/lib/dashboards/snapshot";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
@@ -23,6 +24,21 @@ import type { AppEnv } from "./types";
 const dashboards = new Hono<AppEnv>();
 
 dashboards.use("/*", authMiddleware);
+
+// GET /dashboards/artifacts/:id — a stored dashboard artifact (spec + the
+// records it renders), scoped to the caller. Powers the /dashboards/[id] page.
+dashboards.get("/artifacts/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid artifact id" }, 400);
+  }
+  const artifact = await getArtifactWithData(userId, id);
+  if (!artifact) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(artifact);
+});
 
 dashboards.get("/snapshots/:appKey", async (c) => {
   const userId = c.get("userId");
