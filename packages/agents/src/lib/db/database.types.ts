@@ -194,6 +194,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      app_data_snapshot: {
+        Row: {
+          app_key: string;
+          created_at: string;
+          id: string;
+          records: string;
+          refreshed_at: string;
+          row_count: number;
+          source_config: string;
+          trigger_id: string | null;
+          user_id: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          app_key: string;
+          created_at: string;
+          id: string;
+          records: string;
+          refreshed_at: string;
+          row_count?: number;
+          source_config: string;
+          trigger_id?: string | null;
+          user_id: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          app_key?: string;
+          created_at?: string;
+          id?: string;
+          records?: string;
+          refreshed_at?: string;
+          row_count?: number;
+          source_config?: string;
+          trigger_id?: string | null;
+          user_id?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [];
+      };
       app_settings: {
         Row: {
           id: boolean;
@@ -1408,6 +1447,7 @@ export type Database = {
         Row: {
           agentId: string;
           agents: Json | null;
+          browser: Json | null;
           changedFields: Json | null;
           changeMessage: string | null;
           createdAt: string;
@@ -1427,6 +1467,7 @@ export type Database = {
           scorers: Json | null;
           skills: Json | null;
           skillsFormat: string | null;
+          toolProviders: Json | null;
           tools: Json | null;
           versionNumber: number;
           workflows: Json | null;
@@ -1435,6 +1476,7 @@ export type Database = {
         Insert: {
           agentId: string;
           agents?: Json | null;
+          browser?: Json | null;
           changedFields?: Json | null;
           changeMessage?: string | null;
           createdAt: string;
@@ -1454,6 +1496,7 @@ export type Database = {
           scorers?: Json | null;
           skills?: Json | null;
           skillsFormat?: string | null;
+          toolProviders?: Json | null;
           tools?: Json | null;
           versionNumber: number;
           workflows?: Json | null;
@@ -1462,6 +1505,7 @@ export type Database = {
         Update: {
           agentId?: string;
           agents?: Json | null;
+          browser?: Json | null;
           changedFields?: Json | null;
           changeMessage?: string | null;
           createdAt?: string;
@@ -1481,6 +1525,7 @@ export type Database = {
           scorers?: Json | null;
           skills?: Json | null;
           skillsFormat?: string | null;
+          toolProviders?: Json | null;
           tools?: Json | null;
           versionNumber?: number;
           workflows?: Json | null;
@@ -1494,33 +1539,39 @@ export type Database = {
           authorId: string | null;
           createdAt: string;
           createdAtZ: string | null;
+          favoriteCount: number | null;
           id: string;
           metadata: Json | null;
           status: string;
           updatedAt: string;
           updatedAtZ: string | null;
+          visibility: string | null;
         };
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
           createdAt: string;
           createdAtZ?: string | null;
+          favoriteCount?: number | null;
           id: string;
           metadata?: Json | null;
           status: string;
           updatedAt: string;
           updatedAtZ?: string | null;
+          visibility?: string | null;
         };
         Update: {
           activeVersionId?: string | null;
           authorId?: string | null;
           createdAt?: string;
           createdAtZ?: string | null;
+          favoriteCount?: number | null;
           id?: string;
           metadata?: Json | null;
           status?: string;
           updatedAt?: string;
           updatedAtZ?: string | null;
+          visibility?: string | null;
         };
         Relationships: [];
       };
@@ -1689,6 +1740,9 @@ export type Database = {
           startedAt: string | null;
           startedAtZ: string | null;
           status: string;
+          suspend_payload: Json | null;
+          suspendedAt: string | null;
+          suspendedAtZ: string | null;
           thread_id: string | null;
           timeout_ms: number;
           tool_call_id: string;
@@ -1711,6 +1765,9 @@ export type Database = {
           startedAt?: string | null;
           startedAtZ?: string | null;
           status: string;
+          suspend_payload?: Json | null;
+          suspendedAt?: string | null;
+          suspendedAtZ?: string | null;
           thread_id?: string | null;
           timeout_ms: number;
           tool_call_id: string;
@@ -1733,6 +1790,9 @@ export type Database = {
           startedAt?: string | null;
           startedAtZ?: string | null;
           status?: string;
+          suspend_payload?: Json | null;
+          suspendedAt?: string | null;
+          suspendedAtZ?: string | null;
           thread_id?: string | null;
           timeout_ms?: number;
           tool_call_id?: string;
@@ -2079,6 +2139,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      mastra_favorites: {
+        Row: {
+          createdAt: string;
+          createdAtZ: string | null;
+          entityId: string;
+          entityType: string;
+          userId: string;
+        };
+        Insert: {
+          createdAt: string;
+          createdAtZ?: string | null;
+          entityId: string;
+          entityType: string;
+          userId: string;
+        };
+        Update: {
+          createdAt?: string;
+          createdAtZ?: string | null;
+          entityId?: string;
+          entityType?: string;
+          userId?: string;
+        };
+        Relationships: [];
+      };
       mastra_mcp_client_versions: {
         Row: {
           changedFields: Json | null;
@@ -2283,6 +2367,138 @@ export type Database = {
           role?: string;
           thread_id?: string;
           type?: string;
+        };
+        Relationships: [];
+      };
+      mastra_notifications: {
+        Row: {
+          agentId: string | null;
+          archivedAt: string | null;
+          archivedAtZ: string | null;
+          attributes: Json | null;
+          coalescedCount: number;
+          coalesceKey: string | null;
+          createdAt: string;
+          createdAtZ: string | null;
+          dedupeKey: string | null;
+          deliverAt: string | null;
+          deliverAtZ: string | null;
+          deliveredAt: string | null;
+          deliveredAtZ: string | null;
+          deliveredSignalId: string | null;
+          deliveryAttempts: number;
+          deliveryReason: string | null;
+          discardedAt: string | null;
+          discardedAtZ: string | null;
+          dismissedAt: string | null;
+          dismissedAtZ: string | null;
+          id: string;
+          kind: string;
+          lastDeliveryAttemptAt: string | null;
+          lastDeliveryAttemptAtZ: string | null;
+          lastDeliveryError: string | null;
+          metadata: Json | null;
+          payload: Json | null;
+          priority: string;
+          resourceId: string | null;
+          seenAt: string | null;
+          seenAtZ: string | null;
+          source: string;
+          sourceId: string | null;
+          status: string;
+          summary: string;
+          summaryAt: string | null;
+          summaryAtZ: string | null;
+          summarySignalId: string | null;
+          threadId: string;
+          updatedAt: string;
+          updatedAtZ: string | null;
+        };
+        Insert: {
+          agentId?: string | null;
+          archivedAt?: string | null;
+          archivedAtZ?: string | null;
+          attributes?: Json | null;
+          coalescedCount: number;
+          coalesceKey?: string | null;
+          createdAt: string;
+          createdAtZ?: string | null;
+          dedupeKey?: string | null;
+          deliverAt?: string | null;
+          deliverAtZ?: string | null;
+          deliveredAt?: string | null;
+          deliveredAtZ?: string | null;
+          deliveredSignalId?: string | null;
+          deliveryAttempts: number;
+          deliveryReason?: string | null;
+          discardedAt?: string | null;
+          discardedAtZ?: string | null;
+          dismissedAt?: string | null;
+          dismissedAtZ?: string | null;
+          id: string;
+          kind: string;
+          lastDeliveryAttemptAt?: string | null;
+          lastDeliveryAttemptAtZ?: string | null;
+          lastDeliveryError?: string | null;
+          metadata?: Json | null;
+          payload?: Json | null;
+          priority: string;
+          resourceId?: string | null;
+          seenAt?: string | null;
+          seenAtZ?: string | null;
+          source: string;
+          sourceId?: string | null;
+          status: string;
+          summary: string;
+          summaryAt?: string | null;
+          summaryAtZ?: string | null;
+          summarySignalId?: string | null;
+          threadId: string;
+          updatedAt: string;
+          updatedAtZ?: string | null;
+        };
+        Update: {
+          agentId?: string | null;
+          archivedAt?: string | null;
+          archivedAtZ?: string | null;
+          attributes?: Json | null;
+          coalescedCount?: number;
+          coalesceKey?: string | null;
+          createdAt?: string;
+          createdAtZ?: string | null;
+          dedupeKey?: string | null;
+          deliverAt?: string | null;
+          deliverAtZ?: string | null;
+          deliveredAt?: string | null;
+          deliveredAtZ?: string | null;
+          deliveredSignalId?: string | null;
+          deliveryAttempts?: number;
+          deliveryReason?: string | null;
+          discardedAt?: string | null;
+          discardedAtZ?: string | null;
+          dismissedAt?: string | null;
+          dismissedAtZ?: string | null;
+          id?: string;
+          kind?: string;
+          lastDeliveryAttemptAt?: string | null;
+          lastDeliveryAttemptAtZ?: string | null;
+          lastDeliveryError?: string | null;
+          metadata?: Json | null;
+          payload?: Json | null;
+          priority?: string;
+          resourceId?: string | null;
+          seenAt?: string | null;
+          seenAtZ?: string | null;
+          source?: string;
+          sourceId?: string | null;
+          status?: string;
+          summary?: string;
+          summaryAt?: string | null;
+          summaryAtZ?: string | null;
+          summarySignalId?: string | null;
+          threadId?: string;
+          updatedAt?: string;
+          updatedAtZ?: string | null;
         };
         Relationships: [];
       };
@@ -2841,6 +3057,7 @@ export type Database = {
           createdAt: string;
           createdAtZ: string | null;
           description: string;
+          files: Json | null;
           id: string;
           instructions: string;
           license: string | null;
@@ -2861,6 +3078,7 @@ export type Database = {
           createdAt: string;
           createdAtZ?: string | null;
           description: string;
+          files?: Json | null;
           id: string;
           instructions: string;
           license?: string | null;
@@ -2881,6 +3099,7 @@ export type Database = {
           createdAt?: string;
           createdAtZ?: string | null;
           description?: string;
+          files?: Json | null;
           id?: string;
           instructions?: string;
           license?: string | null;
@@ -2901,30 +3120,36 @@ export type Database = {
           authorId: string | null;
           createdAt: string;
           createdAtZ: string | null;
+          favoriteCount: number | null;
           id: string;
           status: string;
           updatedAt: string;
           updatedAtZ: string | null;
+          visibility: string | null;
         };
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
           createdAt: string;
           createdAtZ?: string | null;
+          favoriteCount?: number | null;
           id: string;
           status: string;
           updatedAt: string;
           updatedAtZ?: string | null;
+          visibility?: string | null;
         };
         Update: {
           activeVersionId?: string | null;
           authorId?: string | null;
           createdAt?: string;
           createdAtZ?: string | null;
+          favoriteCount?: number | null;
           id?: string;
           status?: string;
           updatedAt?: string;
           updatedAtZ?: string | null;
+          visibility?: string | null;
         };
         Relationships: [];
       };
@@ -2956,6 +3181,45 @@ export type Database = {
           metadata?: Json | null;
           resourceId?: string;
           title?: string;
+          updatedAt?: string;
+          updatedAtZ?: string | null;
+        };
+        Relationships: [];
+      };
+      mastra_tool_provider_connections: {
+        Row: {
+          authorId: string;
+          connectionId: string;
+          createdAt: string;
+          createdAtZ: string | null;
+          label: string | null;
+          providerId: string;
+          scope: string;
+          toolkit: string;
+          updatedAt: string;
+          updatedAtZ: string | null;
+        };
+        Insert: {
+          authorId: string;
+          connectionId: string;
+          createdAt: string;
+          createdAtZ?: string | null;
+          label?: string | null;
+          providerId: string;
+          scope: string;
+          toolkit: string;
+          updatedAt: string;
+          updatedAtZ?: string | null;
+        };
+        Update: {
+          authorId?: string;
+          connectionId?: string;
+          createdAt?: string;
+          createdAtZ?: string | null;
+          label?: string | null;
+          providerId?: string;
+          scope?: string;
+          toolkit?: string;
           updatedAt?: string;
           updatedAtZ?: string | null;
         };
@@ -3087,6 +3351,27 @@ export type Database = {
           status?: string;
           updatedAt?: string;
           updatedAtZ?: string | null;
+        };
+        Relationships: [];
+      };
+      memory_messages_384: {
+        Row: {
+          embedding: string | null;
+          id: number;
+          metadata: Json | null;
+          vector_id: string;
+        };
+        Insert: {
+          embedding?: string | null;
+          id?: number;
+          metadata?: Json | null;
+          vector_id: string;
+        };
+        Update: {
+          embedding?: string | null;
+          id?: number;
+          metadata?: Json | null;
+          vector_id?: string;
         };
         Relationships: [];
       };
