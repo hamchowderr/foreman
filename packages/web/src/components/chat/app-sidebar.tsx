@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  LayoutDashboardIcon,
   MessageSquareIcon,
   PanelLeftIcon,
   PenSquareIcon,
@@ -103,6 +104,20 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <SidebarMenuButton
                     asChild
                     className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    tooltip="Dashboards"
+                  >
+                    <Link href="/dashboards" onClick={() => setOpenMobile(false)}>
+                      <LayoutDashboardIcon className="size-4" />
+                      <span className="text-[13px]">Dashboards</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {user && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     tooltip="Settings"
                   >
                     <Link href="/settings/integrations" onClick={() => setOpenMobile(false)}>
@@ -117,7 +132,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarGroup>
         <SidebarHistory user={user} />
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
+      <SidebarFooter className="border-t border-sidebar-border pt-2 pb-5">
         {user && <SidebarUserNav user={user} />}
       </SidebarFooter>
       <SidebarRail />
