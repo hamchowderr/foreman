@@ -220,6 +220,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
             messages: [{ role: "user", content: text }],
             threadId: request.id,
             resourceId: uid,
+            model: currentModelIdRef.current,
           },
         };
       },

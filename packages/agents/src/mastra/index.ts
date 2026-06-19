@@ -105,6 +105,7 @@ export function getMastra(): Mastra {
     "/conversations",
     "/proposals",
     "/workflows",
+    "/dashboards",
     "/stored",
     "/zapier",
     "/oauth",
@@ -354,12 +355,30 @@ export function getMastra(): Mastra {
                 ["userId", rid],
               ]);
 
+              // Per-request model override (the composer's model selector sends
+              // `model`). Allowlisted to Foreman-supported Anthropic models so a
+              // bad/cross-provider value can't break prompt/tool cache-control or
+              // route to an unknown model. Falls back to the agent's default.
+              const ALLOWED_CHAT_MODELS = new Set([
+                "anthropic/claude-sonnet-4-6",
+                "anthropic/claude-opus-4-6",
+                "anthropic/claude-haiku-4-5-20251001",
+              ]);
+              const requestedModel =
+                typeof body.model === "string" && ALLOWED_CHAT_MODELS.has(body.model)
+                  ? body.model
+                  : undefined;
+              if (body.model && !requestedModel) {
+                console.warn(`[chat] ignoring unsupported model "${body.model}"`);
+              }
+
               const result = await requestUserContext.run({ userId: rid }, () =>
                 agent.stream([{ role: "user" as const, content: userContent }], {
                   stopWhen: stepCountIs(15),
                   memory: { thread: tid, resource: rid },
                   savePerStep: true,
                   requestContext: rctx,
+                  ...(requestedModel ? { model: requestedModel } : {}),
                 }),
               );
 

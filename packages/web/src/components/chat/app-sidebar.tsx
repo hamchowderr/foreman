@@ -2,7 +2,6 @@
 
 import {
   LayoutDashboardIcon,
-  MessageSquareIcon,
   PanelLeftIcon,
   PenSquareIcon,
   Settings2Icon,
@@ -42,10 +41,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <SidebarMenuButton
                 asChild
                 className="size-8 !px-0 items-center justify-center group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                tooltip="Chatbot"
+                tooltip="Foreman"
               >
                 <Link href="/" onClick={() => setOpenMobile(false)}>
-                  <MessageSquareIcon className="size-4 text-sidebar-foreground/50" />
+                  <span className="inline-flex size-6 items-center justify-center rounded-md bg-accent text-[11px] font-bold text-accent-foreground">
+                    F
+                  </span>
                 </Link>
               </SidebarMenuButton>
               <Tooltip>

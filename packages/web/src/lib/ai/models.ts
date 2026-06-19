@@ -3,7 +3,7 @@
  * The actual model is selected by the agent server — this is for display/selection UI only.
  */
 
-export const DEFAULT_CHAT_MODEL = "foreman";
+export const DEFAULT_CHAT_MODEL = "anthropic/claude-sonnet-4-6";
 
 export type ModelCapabilities = {
   tools: boolean;
@@ -20,23 +20,37 @@ export type ChatModel = {
   reasoningEffort?: string;
 };
 
-// NOTE: `id` stays "foreman" — it's the agent identifier the server routes on.
-// `name`/`provider` are display-only (the composer's model selector). Foreman
-// runs on Claude Sonnet 4.6 server-side, so we surface that honestly.
+// `id` is the actual `provider/model` string the agent server routes on (it is
+// sent in the chat request body and validated server-side against an allowlist).
+// All three are Anthropic so Foreman's prompt/tool cache-control stays valid.
 export const chatModels: ChatModel[] = [
   {
-    id: "foreman",
+    id: "anthropic/claude-sonnet-4-6",
     name: "Claude Sonnet 4.6",
     provider: "anthropic",
-    description: "Foreman runs on Anthropic's Claude Sonnet 4.6",
+    description: "Balanced — Foreman's default",
+  },
+  {
+    id: "anthropic/claude-opus-4-6",
+    name: "Claude Opus 4.6",
+    provider: "anthropic",
+    description: "Most capable — deeper reasoning, slower",
+  },
+  {
+    id: "anthropic/claude-haiku-4-5-20251001",
+    name: "Claude Haiku 4.5",
+    provider: "anthropic",
+    description: "Fastest — lighter tasks",
   },
 ];
 
 export const allowedModelIds = new Set(chatModels.map((m) => m.id));
 
 export const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
-  // Claude (Sonnet/Opus) is vision-capable, so the chat accepts image attachments.
-  foreman: { tools: true, vision: true, reasoning: true },
+  // All Claude 4.x models are tool- + vision-capable, so the chat accepts image attachments.
+  "anthropic/claude-sonnet-4-6": { tools: true, vision: true, reasoning: true },
+  "anthropic/claude-opus-4-6": { tools: true, vision: true, reasoning: true },
+  "anthropic/claude-haiku-4-5-20251001": { tools: true, vision: true, reasoning: true },
 };
 
 export async function getCapabilities(): Promise<Record<string, ModelCapabilities>> {

@@ -23,9 +23,14 @@ function getSR(): (new () => AnyRecognition) | undefined {
 
 export function MicButton({ onTranscript, disabled }: MicButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
+  // Feature detection depends on `window`, which differs between SSR and the
+  // client. Gate on a post-mount flag so the server and the first client render
+  // agree (both render nothing) — otherwise the toolbar's button order mismatches
+  // and React throws a hydration error.
+  const [mounted, setMounted] = useState(false);
   const recognitionRef = useRef<AnyRecognition>(null);
 
-  const isSupported = !!getSR();
+  const isSupported = mounted && !!getSR();
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop();
@@ -66,6 +71,7 @@ export function MicButton({ onTranscript, disabled }: MicButtonProps) {
   }, [onTranscript]);
 
   useEffect(() => {
+    setMounted(true);
     return () => {
       recognitionRef.current?.stop();
     };
