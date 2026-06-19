@@ -72,73 +72,75 @@ export function ChatShell() {
             isArtifactVisible ? "w-[40%]" : "w-full",
           )}
         >
-          <ChatHeader
-            chatId={chatId}
-            isReadonly={isReadonly}
-            selectedVisibilityType={visibilityType}
-          />
-
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:border-l md:border-sidebar-border">
-            <Messages
-              addToolApprovalResponse={addToolApprovalResponse}
+          <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background md:m-3">
+            <ChatHeader
               chatId={chatId}
-              isArtifactVisible={isArtifactVisible}
-              isLoading={isLoading}
               isReadonly={isReadonly}
-              messages={messages}
-              onEditMessage={(msg) => {
-                const text = msg.parts
-                  ?.filter((p) => p.type === "text")
-                  .map((p) => p.text)
-                  .join("");
-                setInput(text ?? "");
-                setEditingMessage(msg);
-              }}
-              regenerate={regenerate}
-              selectedModelId={currentModelId}
-              setMessages={setMessages}
-              status={status}
-              votes={votes}
+              selectedVisibilityType={visibilityType}
             />
 
-            <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
-              {!isReadonly && (
-                <MultimodalInput
-                  attachments={attachments}
-                  chatId={chatId}
-                  editingMessage={editingMessage}
-                  input={input}
-                  isLoading={isLoading}
-                  messages={messages}
-                  onCancelEdit={() => {
-                    setEditingMessage(null);
-                    setInput("");
-                  }}
-                  onModelChange={setCurrentModelId}
-                  selectedModelId={currentModelId}
-                  selectedVisibilityType={visibilityType}
-                  sendMessage={
-                    editingMessage
-                      ? async () => {
-                          const msg = editingMessage;
-                          setEditingMessage(null);
-                          await submitEditedMessage({
-                            message: msg,
-                            text: input,
-                            setMessages,
-                            regenerate,
-                          });
-                          setInput("");
-                        }
-                      : sendMessage
-                  }
-                  setAttachments={setAttachments}
-                  setInput={setInput}
-                  setMessages={setMessages}
-                  status={status}
-                  stop={stop}
-                />
-              )}
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+              <Messages
+                addToolApprovalResponse={addToolApprovalResponse}
+                chatId={chatId}
+                isArtifactVisible={isArtifactVisible}
+                isLoading={isLoading}
+                isReadonly={isReadonly}
+                messages={messages}
+                onEditMessage={(msg) => {
+                  const text = msg.parts
+                    ?.filter((p) => p.type === "text")
+                    .map((p) => p.text)
+                    .join("");
+                  setInput(text ?? "");
+                  setEditingMessage(msg);
+                }}
+                regenerate={regenerate}
+                selectedModelId={currentModelId}
+                setMessages={setMessages}
+                status={status}
+                votes={votes}
+              />
+
+              <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+                {!isReadonly && (
+                  <MultimodalInput
+                    attachments={attachments}
+                    chatId={chatId}
+                    editingMessage={editingMessage}
+                    input={input}
+                    isLoading={isLoading}
+                    messages={messages}
+                    onCancelEdit={() => {
+                      setEditingMessage(null);
+                      setInput("");
+                    }}
+                    onModelChange={setCurrentModelId}
+                    selectedModelId={currentModelId}
+                    selectedVisibilityType={visibilityType}
+                    sendMessage={
+                      editingMessage
+                        ? async () => {
+                            const msg = editingMessage;
+                            setEditingMessage(null);
+                            await submitEditedMessage({
+                              message: msg,
+                              text: input,
+                              setMessages,
+                              regenerate,
+                            });
+                            setInput("");
+                          }
+                        : sendMessage
+                    }
+                    setAttachments={setAttachments}
+                    setInput={setInput}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
