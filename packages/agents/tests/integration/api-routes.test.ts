@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Module mocks (must be before imports) ───
 
@@ -388,6 +388,90 @@ describe("API route integration tests", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toEqual([]);
+    });
+  });
+
+  // ── Dashboards (snapshot reads) ───────────────────────────────────────
+
+  describe("GET /dashboards/snapshots/:appKey", () => {
+    const snapshotRow = {
+      id: "snap-1",
+      app_key: "hubspot",
+      source_config: JSON.stringify({ app: "hubspot" }),
+      records: JSON.stringify([{ id: "1", name: "Acme" }]),
+      row_count: 1,
+      refreshed_at: "2026-06-19T12:00:00.000Z",
+    };
+
+    // The auth middleware calls from("user") (ensureUserExists) before the
+    // handler runs, so we can't use mockReturnValueOnce — it'd be consumed by
+    // auth. Target the snapshot table by name instead, and restore the default
+    // builder after each test so nothing leaks.
+    function withSnapshotData(data: any) {
+      mockSupabase.from.mockImplementation((t: string) =>
+        t === "app_data_snapshot" ? createQueryBuilder(data) : createQueryBuilder(),
+      );
+    }
+    afterEach(() => {
+      mockSupabase.from.mockImplementation(() => createQueryBuilder());
+    });
+
+    it("returns 401 without auth", async () => {
+      const res = await app.request("/dashboards/snapshots/hubspot");
+      expect(res.status).toBe(401);
+    });
+
+    it("returns the latest snapshot with auth", async () => {
+      withSnapshotData(snapshotRow);
+      const res = await app.request("/dashboards/snapshots/hubspot", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toMatchObject({
+        id: "snap-1",
+        appKey: "hubspot",
+        rowCount: 1,
+        records: [{ id: "1", name: "Acme" }],
+        sourceConfig: { app: "hubspot" },
+      });
+    });
+
+    it("returns 404 when the user has no snapshot for the app", async () => {
+      // default mock builder resolves to data: null → getLatestSnapshot → null
+      const res = await app.request("/dashboards/snapshots/hubspot", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it("returns the history series with ?history=true", async () => {
+      withSnapshotData([snapshotRow, snapshotRow]);
+      const res = await app.request("/dashboards/snapshots/hubspot?history=true", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toMatchObject({ appKey: "hubspot", count: 2 });
+      expect(Array.isArray(body.snapshots)).toBe(true);
+    });
+
+    it("returns 400 for an invalid since timestamp", async () => {
+      const res = await app.request("/dashboards/snapshots/hubspot?history=true&since=notadate", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("since");
+    });
+
+    it("returns 400 for a non-numeric limit", async () => {
+      const res = await app.request("/dashboards/snapshots/hubspot?history=true&limit=abc", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("limit");
     });
   });
 
