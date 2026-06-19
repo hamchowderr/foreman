@@ -20,12 +20,15 @@ export type ChatModel = {
   reasoningEffort?: string;
 };
 
+// NOTE: `id` stays "foreman" — it's the agent identifier the server routes on.
+// `name`/`provider` are display-only (the composer's model selector). Foreman
+// runs on Claude Sonnet 4.6 server-side, so we surface that honestly.
 export const chatModels: ChatModel[] = [
   {
     id: "foreman",
-    name: "Foreman",
+    name: "Claude Sonnet 4.6",
     provider: "anthropic",
-    description: "AI assistant powered by Claude",
+    description: "Foreman runs on Anthropic's Claude Sonnet 4.6",
   },
 ];
 

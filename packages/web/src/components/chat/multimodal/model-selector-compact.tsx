@@ -47,7 +47,9 @@ function PureModelSelectorCompact({
     activeModels.find((m: ChatModel) => m.id === selectedModelId) ??
     activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
     activeModels[0];
-  const [provider] = selectedModel.id.split("/");
+  // Logo is keyed by the real provider (e.g. "anthropic" → models.dev/logos/anthropic.svg),
+  // NOT the model id ("foreman", which 404s and caused a hydration mismatch).
+  const provider = selectedModel.provider;
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
@@ -120,7 +122,7 @@ function PureModelSelectorCompact({
                 key={key}
               >
                 {grouped[key].map(({ model, curated }) => {
-                  const logoProvider = model.id.split("/")[0];
+                  const logoProvider = model.provider;
                   return (
                     <ModelSelectorItem
                       className={cn(
