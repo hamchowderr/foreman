@@ -16,6 +16,7 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { sanitizeToolSchemas } from "../../lib/tool-schema-sanitizer";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import { channelTriggerProvider } from "../signals/channel-trigger-provider";
 import { zapierPollProvider } from "../signals/zapier-poll-provider";
@@ -99,21 +100,23 @@ function buildForemanTools() {
   for (const name of CORE_TOOL_NAMES) {
     if (sdkTools[name]) coreTools[name] = sdkTools[name];
   }
-  _foremanToolsCache = toolsWithCacheControl("foreman", {
-    search_history: searchHistoryTool,
-    fork_conversation: forkConversationTool,
-    connect_zapier: connectZapierTool,
-    save_workflow: saveWorkflowTool,
-    list_workflows: listWorkflowsTool,
-    get_workflow: getWorkflowTool,
-    run_workflow: runWorkflowTool,
-    update_workflow: updateWorkflowTool,
-    delete_workflow: deleteWorkflowTool,
-    attach_trigger: attachTriggerTool,
-    list_workflow_triggers: listWorkflowTriggersTool,
-    detach_trigger: detachTriggerTool,
-    ...coreTools,
-  });
+  _foremanToolsCache = sanitizeToolSchemas(
+    toolsWithCacheControl("foreman", {
+      search_history: searchHistoryTool,
+      fork_conversation: forkConversationTool,
+      connect_zapier: connectZapierTool,
+      save_workflow: saveWorkflowTool,
+      list_workflows: listWorkflowsTool,
+      get_workflow: getWorkflowTool,
+      run_workflow: runWorkflowTool,
+      update_workflow: updateWorkflowTool,
+      delete_workflow: deleteWorkflowTool,
+      attach_trigger: attachTriggerTool,
+      list_workflow_triggers: listWorkflowTriggersTool,
+      detach_trigger: detachTriggerTool,
+      ...coreTools,
+    }),
+  );
   return _foremanToolsCache;
 }
 
