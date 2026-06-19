@@ -1,12 +1,13 @@
-import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
+import { fastembed } from "@mastra/fastembed";
 import { PgVector } from "@mastra/pg";
 import { MDocument } from "@mastra/rag";
 import { embedMany } from "ai";
 import { getEnv } from "@/lib/env";
 
 const INDEX_NAME = "action_history";
-const EMBEDDING_MODEL = "openai/text-embedding-3-small";
-const EMBEDDING_DIMENSION = 1536;
+// Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed,
+// matching the agent-memory embedder so local dev is fully self-contained.
+const EMBEDDING_DIMENSION = 384;
 
 let _vector: PgVector | undefined;
 
@@ -21,7 +22,7 @@ function getVector(): PgVector {
 }
 
 function getEmbedder() {
-  return new ModelRouterEmbeddingModel(EMBEDDING_MODEL);
+  return fastembed;
 }
 
 export async function ensureIndex(): Promise<void> {
