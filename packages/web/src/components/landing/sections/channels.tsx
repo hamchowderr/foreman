@@ -55,7 +55,7 @@ export function Channels() {
           </Reveal>
 
           <Reveal delay={0.1} className="flex">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 auto-rows-fr w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 auto-rows-fr w-full">
               {CHANNELS.map((c) => (
                 <TiltedSpotlight
                   key={c.name}

@@ -120,7 +120,7 @@ export function SidebarUserNav({ user }: { user: SessionUser }) {
                     onSelect={() => handleSelectPreset(p.value)}
                   >
                     <span
-                      className="size-3 shrink-0 rounded-full ring-1 ring-border/60"
+                      className="size-3.5 shrink-0 rounded-full ring-1 ring-black/15 dark:ring-white/25"
                       style={{ background: p.swatch }}
                     />
                     <span className="flex-1 truncate">{p.name}</span>
