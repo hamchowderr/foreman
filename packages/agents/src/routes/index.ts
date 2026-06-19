@@ -8,6 +8,7 @@ import apiKeys from "./api-keys";
 import capabilities from "./capabilities";
 import channelLinks from "./channel-links";
 import conversations from "./conversations";
+import dashboards from "./dashboards";
 import guardrails from "./guardrails";
 import proposals from "./proposals";
 import storedAgents from "./stored-agents";
@@ -39,6 +40,7 @@ app.use(
 app.route("/conversations", conversations);
 app.route("/proposals", proposals);
 app.route("/workflows", workflows);
+app.route("/dashboards", dashboards);
 app.route("/stored/agents", storedAgents);
 app.route("/zapier", zapierConnect);
 app.get("/oauth", handleOAuthCallback);
