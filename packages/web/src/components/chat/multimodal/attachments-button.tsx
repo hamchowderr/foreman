@@ -2,8 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { memo } from "react";
-import useSWR from "swr";
-import type { ModelCapabilities } from "@/lib/ai/models";
+import { MODEL_CAPABILITIES } from "@/lib/ai/models";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "../../ui/button";
@@ -18,15 +17,9 @@ function PureAttachmentsButton({
   status: UseChatHelpers<ChatMessage>["status"];
   selectedModelId: string;
 }) {
-  const { data: modelsResponse } = useSWR(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false, dedupingInterval: 3_600_000 },
-  );
-
-  const caps: Record<string, ModelCapabilities> | undefined =
-    modelsResponse?.capabilities ?? modelsResponse;
-  const hasVision = caps?.[selectedModelId]?.vision ?? false;
+  // Capabilities are static frontend config (models.ts) — read them directly
+  // instead of fetching a non-existent /api/models endpoint.
+  const hasVision = MODEL_CAPABILITIES[selectedModelId]?.vision ?? false;
 
   return (
     <Button

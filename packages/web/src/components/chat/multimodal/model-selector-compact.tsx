@@ -2,7 +2,6 @@
 
 import { BrainIcon, EyeIcon, LockIcon, WrenchIcon } from "lucide-react";
 import { memo, useState } from "react";
-import useSWR from "swr";
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -18,7 +17,7 @@ import {
   type ChatModel,
   chatModels,
   DEFAULT_CHAT_MODEL,
-  type ModelCapabilities,
+  MODEL_CAPABILITIES,
 } from "@/lib/ai/models";
 import { cn } from "@/lib/utils";
 import { Button } from "../../ui/button";
@@ -37,16 +36,12 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: modelsData } = useSWR(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false, dedupingInterval: 3_600_000 },
-  );
 
-  const capabilities: Record<string, ModelCapabilities> | undefined =
-    modelsData?.capabilities ?? modelsData;
-  const dynamicModels: ChatModel[] | undefined = modelsData?.models;
-  const activeModels = dynamicModels ?? chatModels;
+  // Capabilities + model list are static frontend config (models.ts); there is
+  // no /api/models endpoint, so read them directly.
+  const capabilities = MODEL_CAPABILITIES;
+  const dynamicModels: ChatModel[] | undefined = undefined;
+  const activeModels = chatModels;
 
   const selectedModel =
     activeModels.find((m: ChatModel) => m.id === selectedModelId) ??

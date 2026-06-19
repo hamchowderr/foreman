@@ -5,7 +5,6 @@ import { searchActionHistory } from "@/lib/rag";
 
 export const searchHistoryTool = createTool({
   id: "search_history",
-  strict: true,
   // Opt this read into Mastra background execution when FOREMAN_BACKGROUND_TOOLS=1.
   // Simple schema (3 fields) → safe for Studio introspection, unlike the Zapier
   // SDK tools whose schemas hang `mastra dev` when background is enabled.

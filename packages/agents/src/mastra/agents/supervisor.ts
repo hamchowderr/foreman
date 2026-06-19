@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
 import { contextInjector, piiRedactor } from "../../lib/processors";
@@ -65,7 +66,8 @@ export function createSupervisorAgent({
         id: "supervisor-memory-vector",
         connectionString: databaseUrl,
       }),
-      embedder: "openai/text-embedding-3-small",
+      // Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed.
+      embedder: fastembed,
       options: {
         lastMessages: 20,
         workingMemory: { enabled: true },

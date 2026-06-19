@@ -31,8 +31,8 @@ export function ToolDiscoverySection() {
             <ul className="mt-6 space-y-2.5 text-sm">
               {BULLETS.map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
-                  <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-                    <Check className="h-3 w-3 text-accent" />
+                  <div className="h-5 w-5 rounded-full bg-accent flex items-center justify-center shrink-0">
+                    <Check className="h-3 w-3 text-accent-foreground" />
                   </div>
                   <span>{line}</span>
                 </li>

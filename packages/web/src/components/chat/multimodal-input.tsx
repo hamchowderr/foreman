@@ -320,12 +320,12 @@ function PureMultimodalInput({
             <PromptInputSubmit
               className={cn(
                 "h-7 w-7 rounded-xl transition-all duration-200",
-                input.trim()
-                  ? "bg-foreground text-background hover:opacity-85 active:scale-95"
+                input.trim() || attachments.length > 0
+                  ? "bg-primary text-primary-foreground hover:opacity-85 active:scale-95"
                   : "bg-muted text-muted-foreground/25 cursor-not-allowed",
               )}
               data-testid="send-button"
-              disabled={!input.trim() || uploadQueue.length > 0}
+              disabled={(!input.trim() && attachments.length === 0) || uploadQueue.length > 0}
               status={status}
               variant="secondary"
             >

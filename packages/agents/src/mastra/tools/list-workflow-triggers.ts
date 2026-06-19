@@ -4,7 +4,6 @@ import { getSupabase } from "@/lib/db";
 
 export const listWorkflowTriggersTool = createTool({
   id: "list_workflow_triggers",
-  strict: true,
   description:
     "List the triggers bound to a saved workflow. Use before detaching, " +
     "or when the user asks 'is this scheduled?', 'what fires this?', or " +

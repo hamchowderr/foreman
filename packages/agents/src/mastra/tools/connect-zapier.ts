@@ -37,7 +37,6 @@ function pickExactApp<T extends { slug?: string; key?: string; title?: string }>
 
 export const connectZapierTool = createTool({
   id: "connect_zapier",
-  strict: true,
   description:
     "Generate a URL the user can click to connect an app on Zapier. " +
     "If appSlug is provided (e.g. 'gmail', 'slack', 'notion'), returns the " +

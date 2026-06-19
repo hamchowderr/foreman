@@ -238,10 +238,10 @@ const PurePreviewMessage = ({
       return (
         <MessageContent
           className={cn(
-            "text-[15px] leading-[1.5] text-foreground",
+            "text-[15px] leading-[1.5]",
             isUserMsg
-              ? "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-lg bg-secondary px-4 py-2.5"
-              : "w-full max-w-full overflow-hidden break-words",
+              ? "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-lg bg-primary px-4 py-2.5 text-primary-foreground"
+              : "w-full max-w-full overflow-hidden break-words text-foreground",
           )}
           data-testid="message-content"
           key={key}

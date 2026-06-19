@@ -21,7 +21,7 @@ export function SiteNav() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground text-xs font-bold">
             F
@@ -77,7 +77,7 @@ export function SiteNav() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-background px-6 py-4 space-y-3 animate-fade-in">
+        <div className="md:hidden border-t border-border bg-background px-4 sm:px-6 py-4 space-y-3 animate-fade-in">
           <a
             href="#features"
             className="block text-sm text-muted-foreground hover:text-foreground"

@@ -4,7 +4,6 @@ import { getSupabase } from "@/lib/db";
 
 export const getWorkflowTool = createTool({
   id: "get_workflow",
-  strict: true,
   description:
     "Fetch a single saved workflow with its ordered steps. Use this when the user " +
     "asks to inspect, edit, or run a specific workflow — call list_workflows first " +

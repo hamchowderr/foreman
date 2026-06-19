@@ -79,15 +79,24 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     identity = data;
   }
 
-  // Fall back to user's personal connection
+  // Fall back to user's personal connection. Retry briefly: immediately after the
+  // OAuth callback writes zapier_identity (e.g. the very first request from the
+  // onboarding "test" step), the row can momentarily lag, which would otherwise
+  // look like "not connected". An existing row resolves on the first attempt, so
+  // there's no added latency once a user is connected.
   if (!identity) {
-    const { data } = await supabase
-      .from("zapier_identity")
-      .select("*")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
-    identity = data;
+    for (let attempt = 0; attempt < 3 && !identity; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      const { data } = await supabase
+        .from("zapier_identity")
+        .select("*")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+      identity = data;
+    }
   }
 
   if (!identity) {

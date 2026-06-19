@@ -24,6 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { SessionUser as User } from "@/lib/auth";
+import { createClient } from "@/lib/client";
 import type { Chat } from "@/lib/db/schema";
 import { fetcher } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
@@ -123,30 +124,46 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     ? paginatedChatHistories.every((page) => page.chats.length === 0)
     : false;
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const chatToDelete = deleteId;
+    if (!chatToDelete) return;
     const isCurrentChat = pathname === `/chat/${chatToDelete}`;
 
     setShowDeleteDialog(false);
 
-    if (isCurrentChat) {
-      router.replace("/");
-    }
-
-    mutate((chatHistories) => {
-      if (chatHistories) {
-        return chatHistories.map((chatHistory) => ({
+    // Optimistically remove it from the list and suppress revalidation until the
+    // real delete confirms — otherwise the next /api/history refetch brings it
+    // back before the DELETE lands.
+    mutate(
+      (chatHistories) =>
+        chatHistories?.map((chatHistory) => ({
           ...chatHistory,
           chats: chatHistory.chats.filter((chat) => chat.id !== chatToDelete),
-        }));
-      }
-    });
+        })),
+      { revalidate: false },
+    );
 
-    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatToDelete}`, {
-      method: "DELETE",
-    });
-
-    toast.success("Chat deleted");
+    try {
+      // Hit the agents server directly (with auth), exactly like Rename does.
+      // The old `/api/chat?id=` route does not exist (404), so deletes never
+      // persisted and reappeared on revalidation.
+      const {
+        data: { session },
+      } = await createClient().auth.getSession();
+      const token = session?.access_token ?? null;
+      const agentUrl = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+      const res = await fetch(`${agentUrl}/conversations/${chatToDelete}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`delete failed (${res.status})`);
+      toast.success("Chat deleted");
+      // Stay inside the chat app (new chat) instead of the marketing homepage.
+      if (isCurrentChat) router.replace("/chat");
+    } catch {
+      toast.error("Failed to delete chat");
+      mutate(); // revalidate to restore the true list
+    }
   };
 
   if (!user) {

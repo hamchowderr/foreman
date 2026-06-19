@@ -113,7 +113,7 @@ export function DevConsolePanel() {
   }
 
   return (
-    <div className="fixed bottom-0 right-0 z-[9999] flex h-[350px] w-[600px] flex-col overflow-hidden rounded-tl-lg border border-border/50 bg-background/95 shadow-2xl backdrop-blur-lg">
+    <div className="fixed bottom-0 right-0 z-[9999] flex h-[350px] w-[min(100%,600px)] flex-col overflow-hidden rounded-tl-lg border border-border/50 bg-background/95 shadow-2xl backdrop-blur-lg">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-3 py-1.5">
         <div className="flex items-center gap-2">

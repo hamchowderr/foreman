@@ -166,7 +166,7 @@ export function ToolDiscovery() {
 
       {/* Tool chips */}
       <div className="p-4 sm:p-5 border-t border-border bg-background/50">
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
           {ALL_TOOLS.map((tool) => {
             const matched = prompt.matches.includes(tool);
             const visible = phase !== "typing" && matched;
@@ -174,7 +174,7 @@ export function ToolDiscovery() {
               <motion.div
                 key={tool}
                 animate={{
-                  opacity: phase === "typing" ? 0.45 : visible ? 1 : 0.35,
+                  opacity: phase === "typing" ? 0.65 : visible ? 1 : 0.6,
                   scale: visible && phase === "loaded" ? 1 : 0.96,
                 }}
                 transition={{
@@ -184,7 +184,7 @@ export function ToolDiscovery() {
                 className={`relative rounded-md px-2 py-1.5 text-[10px] sm:text-[11px] font-mono border truncate cursor-default transition-colors hover:border-accent/40 hover:text-accent ${
                   visible
                     ? "bg-accent/10 border-accent/30 text-accent font-medium"
-                    : "bg-background border-border/60 text-foreground/50"
+                    : "bg-background border-border text-foreground/70"
                 }`}
               >
                 {tool}
