@@ -31,6 +31,7 @@
  */
 
 import { SignalProvider } from "@mastra/core/signals";
+import { saveSnapshot } from "@/lib/dashboards/snapshot";
 import { getSupabase } from "@/lib/db";
 import { executeWorkflow } from "@/lib/workflows/engine";
 import { runAction } from "@/lib/zapier/execution";
@@ -48,6 +49,9 @@ interface PollConfig {
   dedupeKey: string;
   /** How often to poll, in minutes. Defaults to 5. */
   intervalMinutes?: number;
+  /** When true, persist the FULL record set as an append-only app_data_snapshot
+   * each cycle (powers dashboards), independent of per-record workflow firing. */
+  snapshot?: boolean;
 }
 
 interface PollTriggerRow {
@@ -174,6 +178,29 @@ export class ZapierPollSignalProvider extends SignalProvider<"zapier-poll"> {
     }
 
     const records = extractRecords(result);
+
+    // Dashboards: persist the full current record set as an append-only snapshot
+    // every cycle (history for trend charts), independent of the dedup/fire path
+    // below. Additive + best-effort — a snapshot failure must never block firing.
+    if (cfg.snapshot) {
+      try {
+        await saveSnapshot({
+          userId,
+          appKey: cfg.app,
+          sourceConfig: {
+            app: cfg.app,
+            action: cfg.action,
+            connection: cfg.connection,
+            inputs: cfg.inputs,
+          },
+          records,
+          triggerId: row.id,
+        });
+      } catch (err) {
+        console.error(`[zapier-poll] ${row.id} snapshot save failed:`, err);
+      }
+    }
+
     const cursorKey = row.last_dedupe_key ?? null;
     const newestKey = records.length ? recordKey(records[0], cfg.dedupeKey) : cursorKey;
 
