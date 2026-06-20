@@ -16,7 +16,7 @@ import { SiteNav } from "@/components/landing/site-nav";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+    <div className="landing-brand-lock min-h-screen flex flex-col bg-background overflow-x-hidden">
       <SiteNav />
       <main className="flex-1 min-w-0">
         <Hero />

@@ -154,6 +154,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The marketing landing locks its brand tokens to the Foreman orange regardless
+   of the in-app theme preset. Presets repurpose --accent as a light neutral and
+   move the brand hue to --primary, which washed out the landing's accent-based
+   brand elements (CTA, badges, highlighted headings) for signed-in users. */
+.landing-brand-lock {
+  --primary: #ff4a00;
+  --primary-foreground: #ffffff;
+  --accent: #ff4a00;
+  --accent-foreground: #ffffff;
+  --ring: #ff4a00;
+}
+.dark .landing-brand-lock {
+  --primary: #ff5a1a;
+  --accent: #ff5a1a;
+  --ring: #ff5a1a;
+}
+
 /* Animations */
 @keyframes fade-in-up {
   from {
