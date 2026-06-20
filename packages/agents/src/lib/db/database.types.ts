@@ -865,6 +865,7 @@ export type Database = {
       };
       conversation: {
         Row: {
+          archived_at: string | null;
           created_at: string;
           id: string;
           mastra_thread_id: string | null;
@@ -874,6 +875,7 @@ export type Database = {
           workspace_id: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           created_at: string;
           id: string;
           mastra_thread_id?: string | null;
@@ -883,6 +885,7 @@ export type Database = {
           workspace_id?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           created_at?: string;
           id?: string;
           mastra_thread_id?: string | null;
@@ -3396,6 +3399,27 @@ export type Database = {
           status?: string;
           updatedAt?: string;
           updatedAtZ?: string | null;
+        };
+        Relationships: [];
+      };
+      memory_messages: {
+        Row: {
+          embedding: string | null;
+          id: number;
+          metadata: Json | null;
+          vector_id: string;
+        };
+        Insert: {
+          embedding?: string | null;
+          id?: number;
+          metadata?: Json | null;
+          vector_id: string;
+        };
+        Update: {
+          embedding?: string | null;
+          id?: number;
+          metadata?: Json | null;
+          vector_id?: string;
         };
         Relationships: [];
       };

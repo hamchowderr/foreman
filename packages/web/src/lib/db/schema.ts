@@ -9,6 +9,8 @@ export type Chat = {
   title: string;
   userId: string;
   visibility: "public" | "private";
+  /** Set when the conversation is archived (non-destructive hide); null when active. */
+  archivedAt?: string | null;
 };
 
 export type DBMessage = {

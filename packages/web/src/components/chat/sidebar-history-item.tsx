@@ -1,3 +1,4 @@
+import { ArchiveIcon, ArchiveRestoreIcon } from "lucide-react";
 import Link from "next/link";
 import { memo, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
@@ -32,13 +33,16 @@ const PureChatItem = ({
   chat,
   isActive,
   onDelete,
+  onArchiveToggle,
   setOpenMobile,
 }: {
   chat: Chat;
   isActive: boolean;
   onDelete: (chatId: string) => void;
+  onArchiveToggle?: (chatId: string, nextArchived: boolean) => void;
   setOpenMobile: (open: boolean) => void;
 }) => {
+  const isArchived = chat.archivedAt != null;
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId: chat.id,
     initialVisibilityType: chat.visibility,
@@ -168,6 +172,16 @@ const PureChatItem = ({
             </DropdownMenuPortal>
           </DropdownMenuSub>
 
+          {onArchiveToggle && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={() => onArchiveToggle(chat.id, !isArchived)}
+            >
+              {isArchived ? <ArchiveRestoreIcon size={14} /> : <ArchiveIcon size={14} />}
+              <span>{isArchived ? "Unarchive" : "Archive"}</span>
+            </DropdownMenuItem>
+          )}
+
           <DropdownMenuItem onSelect={() => onDelete(chat.id)} variant="destructive">
             <TrashIcon />
             <span>Delete</span>
@@ -181,5 +195,6 @@ const PureChatItem = ({
 export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
   if (prevProps.isActive !== nextProps.isActive) return false;
   if (prevProps.chat.title !== nextProps.chat.title) return false;
+  if (prevProps.chat.archivedAt !== nextProps.chat.archivedAt) return false;
   return true;
 });

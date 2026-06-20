@@ -2,9 +2,11 @@
 
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
+import { ArchiveIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import {
   AlertDialog,
@@ -116,6 +118,72 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Archived conversations are loaded lazily (only when the section is expanded)
+  // from the same /api/history endpoint with ?archived=true.
+  const {
+    data: archivedData,
+    isLoading: archivedLoading,
+    mutate: mutateArchived,
+  } = useSWR<ChatHistory>(
+    showArchived && user
+      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?archived=true&limit=100`
+      : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  const archivedChats = archivedData?.chats ?? [];
+
+  const handleArchiveToggle = async (chatId: string, nextArchived: boolean) => {
+    // Optimistically remove it from whichever list it currently sits in.
+    if (nextArchived) {
+      mutate(
+        (pages) =>
+          pages?.map((page) => ({
+            ...page,
+            chats: page.chats.filter((chat) => chat.id !== chatId),
+          })),
+        { revalidate: false },
+      );
+    } else {
+      mutateArchived(
+        (data) => (data ? { ...data, chats: data.chats.filter((c) => c.id !== chatId) } : data),
+        { revalidate: false },
+      );
+    }
+
+    try {
+      const {
+        data: { session },
+      } = await createClient().auth.getSession();
+      const token = session?.access_token ?? null;
+      const agentUrl = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
+      const res = await fetch(`${agentUrl}/conversations/${chatId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ archived: nextArchived }),
+      });
+      if (!res.ok) throw new Error(`archive failed (${res.status})`);
+
+      if (nextArchived) {
+        toast.success("Chat archived", {
+          action: { label: "Undo", onClick: () => handleArchiveToggle(chatId, false) },
+        });
+        mutateArchived(); // pull it into the archived list
+      } else {
+        toast.success("Chat restored");
+        mutate(); // pull it back into the active list
+      }
+    } catch {
+      toast.error(nextArchived ? "Failed to archive chat" : "Failed to restore chat");
+      mutate();
+      mutateArchived();
+    }
+  };
 
   const hasReachedEnd = paginatedChatHistories
     ? paginatedChatHistories.some((page) => page.hasMore === false)
@@ -159,6 +227,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       });
       if (!res.ok) throw new Error(`delete failed (${res.status})`);
       toast.success("Chat deleted");
+      mutateArchived(); // in case the deleted chat was an archived one
       // Stay inside the chat app (new chat) instead of the marketing homepage.
       if (isCurrentChat) router.replace("/chat");
     } catch {
@@ -205,21 +274,6 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
-  if (hasEmptyChatHistory) {
-    return (
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-          History
-        </SidebarGroupLabel>
-        <SidebarGroupContent>
-          <div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-[13px] text-sidebar-foreground/60">
-            Your conversations will appear here once you start chatting!
-          </div>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    );
-  }
-
   return (
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -227,6 +281,11 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
           History
         </SidebarGroupLabel>
         <SidebarGroupContent>
+          {hasEmptyChatHistory && (
+            <div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-[13px] text-sidebar-foreground/60">
+              Your conversations will appear here once you start chatting!
+            </div>
+          )}
           <SidebarMenu>
             {paginatedChatHistories &&
               (() => {
@@ -248,6 +307,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
+                            onArchiveToggle={handleArchiveToggle}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
@@ -268,6 +328,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
+                            onArchiveToggle={handleArchiveToggle}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
@@ -288,6 +349,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
+                            onArchiveToggle={handleArchiveToggle}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
@@ -308,6 +370,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
+                            onArchiveToggle={handleArchiveToggle}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
@@ -328,6 +391,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
+                            onArchiveToggle={handleArchiveToggle}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
@@ -357,6 +421,47 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
               </div>
               <div className="text-[11px]">Loading...</div>
             </div>
+          )}
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {/* Archived — collapsed by default, loaded on demand. Always reachable so a
+          user whose chats are all archived can still find and restore them. */}
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroupContent>
+          <button
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
+            onClick={() => setShowArchived((v) => !v)}
+            type="button"
+          >
+            <ArchiveIcon size={13} />
+            <span>{showArchived ? "Hide archived" : "Archived"}</span>
+          </button>
+
+          {showArchived && (
+            <SidebarMenu className="mt-1">
+              {archivedLoading ? (
+                <div className="px-2 py-1.5 text-[12px] text-sidebar-foreground/50">Loading…</div>
+              ) : archivedChats.length === 0 ? (
+                <div className="px-2 py-1.5 text-[12px] text-sidebar-foreground/50">
+                  No archived chats
+                </div>
+              ) : (
+                archivedChats.map((chat) => (
+                  <ChatItem
+                    chat={chat}
+                    isActive={chat.id === id}
+                    key={chat.id}
+                    onArchiveToggle={handleArchiveToggle}
+                    onDelete={(chatId) => {
+                      setDeleteId(chatId);
+                      setShowDeleteDialog(true);
+                    }}
+                    setOpenMobile={setOpenMobile}
+                  />
+                ))
+              )}
+            </SidebarMenu>
           )}
         </SidebarGroupContent>
       </SidebarGroup>

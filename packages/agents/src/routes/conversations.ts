@@ -52,16 +52,17 @@ conversations.post("/", async (c) => {
   return c.json({ id, mastra_thread_id: id, title: null, created_at: now }, 201);
 });
 
-// GET / — list conversations
+// GET / — list conversations. `?archived=true` returns only archived ones;
+// otherwise archived conversations are excluded from the default history.
 conversations.get("/", async (c) => {
   const userId = c.get("userId");
   const supabase = getSupabase();
+  const onlyArchived = c.req.query("archived") === "true";
 
-  const { data: rows } = await supabase
-    .from("conversation")
-    .select("*")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+  let query = supabase.from("conversation").select("*").eq("user_id", userId);
+  query = onlyArchived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+
+  const { data: rows } = await query.order("updated_at", { ascending: false });
 
   return c.json(
     (rows ?? []).map((conv: any) => ({
@@ -70,6 +71,7 @@ conversations.get("/", async (c) => {
       title: conv.title,
       created_at: conv.created_at,
       updated_at: conv.updated_at,
+      archived_at: conv.archived_at ?? null,
     })),
   );
 });
@@ -125,7 +127,7 @@ conversations.get("/:id", async (c) => {
   });
 });
 
-// PATCH /:id — update conversation title
+// PATCH /:id — update a conversation's title and/or archived state.
 conversations.patch("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
@@ -148,15 +150,32 @@ conversations.patch("/:id", async (c) => {
     return c.json({ error: "Invalid JSON" }, 400);
   }
 
-  const title = typeof body.title === "string" ? body.title.trim().slice(0, 80) : undefined;
-  if (!title) return c.json({ error: "title is required" }, 400);
+  const update: { title?: string; archived_at?: string | null; updated_at: string } = {
+    updated_at: new Date().toISOString(),
+  };
 
-  await supabase
-    .from("conversation")
-    .update({ title, updated_at: new Date().toISOString() })
-    .eq("id", id);
+  if (typeof body.title === "string") {
+    const title = body.title.trim().slice(0, 80);
+    if (!title) return c.json({ error: "title cannot be empty" }, 400);
+    update.title = title;
+  }
 
-  return c.json({ id, title });
+  // `archived: true` archives (sets the timestamp); `false` restores it.
+  if (typeof body.archived === "boolean") {
+    update.archived_at = body.archived ? new Date().toISOString() : null;
+  }
+
+  if (update.title === undefined && update.archived_at === undefined) {
+    return c.json({ error: "title or archived is required" }, 400);
+  }
+
+  await supabase.from("conversation").update(update).eq("id", id);
+
+  return c.json({
+    id,
+    ...(update.title !== undefined ? { title: update.title } : {}),
+    ...(typeof body.archived === "boolean" ? { archived: body.archived } : {}),
+  });
 });
 
 // DELETE /:id — delete conversation

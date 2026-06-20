@@ -13,9 +13,12 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const limit = searchParams.get("limit") || "20";
+  const archived = searchParams.get("archived") === "true";
 
   try {
-    const res = await fetch(`${AGENT_SERVER_URL}/conversations?limit=${limit}`, {
+    const qs = new URLSearchParams({ limit });
+    if (archived) qs.set("archived", "true");
+    const res = await fetch(`${AGENT_SERVER_URL}/conversations?${qs.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -24,12 +27,13 @@ export async function GET(request: Request) {
 
     const conversations = Array.isArray(data) ? data : data.conversations || [];
     const chats = conversations.map(
-      (conv: { id: string; title?: string; created_at?: string }) => ({
+      (conv: { id: string; title?: string; created_at?: string; archived_at?: string | null }) => ({
         id: conv.id,
         title: conv.title || "New conversation",
         createdAt: conv.created_at ? new Date(conv.created_at) : new Date(),
         userId: "",
         visibility: "private" as const,
+        archivedAt: conv.archived_at ?? null,
       }),
     );
 
