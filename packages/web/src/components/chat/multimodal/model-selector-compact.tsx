@@ -40,7 +40,6 @@ function PureModelSelectorCompact({
   // Capabilities + model list are static frontend config (models.ts); there is
   // no /api/models endpoint, so read them directly.
   const capabilities = MODEL_CAPABILITIES;
-  const dynamicModels: ChatModel[] | undefined = undefined;
   const activeModels = chatModels;
 
   const selectedModel =
@@ -68,9 +67,7 @@ function PureModelSelectorCompact({
         <ModelSelectorList>
           {(() => {
             const curatedIds = new Set(chatModels.map((m) => m.id));
-            const allModels = dynamicModels
-              ? [...chatModels, ...dynamicModels.filter((m) => !curatedIds.has(m.id))]
-              : chatModels;
+            const allModels = chatModels;
 
             const grouped: Record<string, { model: ChatModel; curated: boolean }[]> = {};
             for (const model of allModels) {
