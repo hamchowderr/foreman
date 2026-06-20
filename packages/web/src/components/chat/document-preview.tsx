@@ -3,6 +3,7 @@
 import equal from "fast-deep-equal";
 import { type MouseEvent, memo, useCallback, useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useArtifact } from "@/hooks/use-artifact";
 import type { Document } from "@/lib/db/schema";
 import { cn, fetcher } from "@/lib/utils";
@@ -65,8 +66,8 @@ export function DocumentPreview({ isReadonly: _isReadonly, result, args }: Docum
         ) : (
           <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
             <div className="flex flex-row items-center gap-2.5">
-              <div className="size-3.5 animate-pulse rounded bg-muted-foreground/15" />
-              <div className="h-3.5 w-24 animate-pulse rounded bg-muted-foreground/15" />
+              <Skeleton className="size-3.5 rounded bg-muted-foreground/15" />
+              <Skeleton className="h-3.5 w-24 rounded bg-muted-foreground/15" />
             </div>
             <div className="w-8" />
           </div>
@@ -112,14 +113,14 @@ const LoadingSkeleton = ({ artifactKind }: { artifactKind: ArtifactKind }) => (
   <div className="w-full max-w-[450px]">
     <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
       <div className="flex flex-row items-center gap-2.5">
-        <div className="size-3.5 animate-pulse rounded bg-muted-foreground/15" />
-        <div className="h-3.5 w-24 animate-pulse rounded bg-muted-foreground/15" />
+        <Skeleton className="size-3.5 rounded bg-muted-foreground/15" />
+        <Skeleton className="h-3.5 w-24 rounded bg-muted-foreground/15" />
       </div>
       <div className="w-8" />
     </div>
     {artifactKind === "image" ? (
       <div className="overflow-hidden rounded-b-2xl border border-t-0 border-border/50 bg-muted">
-        <div className="h-[257px] w-full animate-pulse bg-muted-foreground/10" />
+        <Skeleton className="h-[257px] w-full rounded-none bg-muted-foreground/10" />
       </div>
     ) : (
       <div className="h-[257px] overflow-hidden rounded-b-2xl border border-t-0 border-border/50 bg-muted p-6">

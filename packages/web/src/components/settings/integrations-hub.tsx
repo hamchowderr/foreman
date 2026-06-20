@@ -11,6 +11,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { BRAND_COLORS } from "@/components/icons/brands";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   connectedChannels: string[];
@@ -113,22 +114,8 @@ export function IntegrationsHub({ connectedChannels }: Props) {
                     <span className="text-sm font-semibold" style={{ color: "#201515" }}>
                       {ch.label}
                     </span>
-                    {connected && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{ backgroundColor: "#d1fae5", color: "#065f46" }}
-                      >
-                        Connected
-                      </span>
-                    )}
-                    {!ch.available && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
-                      >
-                        Coming soon
-                      </span>
-                    )}
+                    {connected && <Badge variant="secondary">Connected</Badge>}
+                    {!ch.available && <Badge variant="outline">Coming soon</Badge>}
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: "#888" }}>
                     {ch.description}

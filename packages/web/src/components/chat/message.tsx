@@ -8,6 +8,8 @@ import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
 import { DashboardRenderer } from "../dashboard/dashboard-renderer";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Button } from "../ui/button";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
@@ -52,8 +54,7 @@ const ApprovalButtons = ({
     <span className="flex-1 text-[12px] text-muted-foreground">
       This action needs your approval before it runs.
     </span>
-    <button
-      className="rounded-md px-3 py-1 text-[13px] text-destructive transition-colors hover:bg-destructive/10"
+    <Button
       onClick={() => {
         addToolApprovalResponse({
           id: approvalId,
@@ -61,29 +62,33 @@ const ApprovalButtons = ({
           reason: "User denied this action",
         });
       }}
+      size="sm"
       type="button"
+      variant="destructive"
     >
       Decline
-    </button>
-    <button
-      className="rounded-md px-3 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-muted"
+    </Button>
+    <Button
       onClick={() => {
         addAlwaysAllowedTool(toolName);
         addToolApprovalResponse({ id: approvalId, approved: true });
       }}
+      size="sm"
       type="button"
+      variant="ghost"
     >
       Always Allow
-    </button>
-    <button
-      className="rounded-md bg-primary px-3 py-1 text-[13px] text-primary-foreground transition-colors hover:bg-primary/80"
+    </Button>
+    <Button
       onClick={() => {
         addToolApprovalResponse({ id: approvalId, approved: true });
       }}
+      size="sm"
       type="button"
+      variant="default"
     >
       Approve
-    </button>
+    </Button>
   </div>
 );
 
@@ -283,15 +288,14 @@ const PurePreviewMessage = ({
 
       if (state === "output-error" || (part.output && "error" in part.output)) {
         return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 text-sm dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Couldn't build dashboard:{" "}
-            {String(
-              part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
-            )}
-          </div>
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Couldn't build dashboard:{" "}
+              {String(
+                part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
+              )}
+            </AlertDescription>
+          </Alert>
         );
       }
 
@@ -373,12 +377,11 @@ const PurePreviewMessage = ({
 
       if (part.output && "error" in part.output) {
         return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Error creating document: {String(part.output.error)}
-          </div>
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Error creating document: {String(part.output.error)}
+            </AlertDescription>
+          </Alert>
         );
       }
 
@@ -390,12 +393,11 @@ const PurePreviewMessage = ({
 
       if (part.output && "error" in part.output) {
         return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Error updating document: {String(part.output.error)}
-          </div>
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Error updating document: {String(part.output.error)}
+            </AlertDescription>
+          </Alert>
         );
       }
 

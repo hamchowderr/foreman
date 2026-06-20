@@ -9,6 +9,7 @@ import { useSWRConfig } from "swr";
 import { useArtifact } from "@/hooks/use-artifact";
 import type { Document } from "@/lib/db/schema";
 import { cn, getDocumentTimestampByIndex } from "@/lib/utils";
+import { Button } from "../ui/button";
 import { LoaderIcon } from "./icons";
 
 type VersionFooterProps = {
@@ -48,43 +49,43 @@ export const VersionFooter = ({
     >
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
-          <button
-            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+          <Button
             disabled={isFirst}
             onClick={() => handleVersionChange("prev")}
+            size="icon-sm"
             type="button"
+            variant="ghost"
           >
             <ChevronLeftIcon className="size-4" />
-          </button>
+          </Button>
           <span className="min-w-[4rem] text-center text-xs tabular-nums text-muted-foreground">
             {currentVersionIndex + 1} of {documents.length}
           </span>
-          <button
-            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+          <Button
             disabled={isLast}
             onClick={() => handleVersionChange("next")}
+            size="icon-sm"
             type="button"
+            variant="ghost"
           >
             <ChevronRightIcon className="size-4" />
-          </button>
+          </Button>
         </div>
 
-        <button
-          className={cn(
-            "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            mode === "diff" && "bg-muted text-foreground",
-          )}
+        <Button
+          className={cn(mode === "diff" && "bg-muted text-foreground")}
           onClick={() => setMode(mode === "diff" ? "edit" : "diff")}
+          size="icon-sm"
           title="Show changes"
           type="button"
+          variant="ghost"
         >
           <DiffIcon className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-row gap-2">
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-sm font-medium text-background transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+        <Button
           disabled={isMutating}
           onClick={async () => {
             setIsMutating(true);
@@ -119,6 +120,7 @@ export const VersionFooter = ({
             }
           }}
           type="button"
+          variant="default"
         >
           Restore
           {isMutating && (
@@ -126,17 +128,17 @@ export const VersionFooter = ({
               <LoaderIcon size={14} />
             </div>
           )}
-        </button>
-        <button
-          className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-all duration-150 hover:bg-muted active:scale-[0.98]"
+        </Button>
+        <Button
           onClick={() => {
             setMode("edit");
             handleVersionChange("latest");
           }}
           type="button"
+          variant="outline"
         >
           Latest
-        </button>
+        </Button>
       </div>
     </motion.div>
   );

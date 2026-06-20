@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { SessionUser as User } from "@/lib/auth";
 import { createClient } from "@/lib/client";
 import type { Chat } from "@/lib/db/schema";
@@ -188,8 +189,8 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
           <div className="flex flex-col gap-0.5 px-1">
             {[44, 32, 28, 64, 52].map((item) => (
               <div className="flex h-8 items-center gap-2 rounded-lg px-2" key={item}>
-                <div
-                  className="h-3 max-w-(--skeleton-width) flex-1 animate-pulse rounded-md bg-sidebar-foreground/[0.06]"
+                <Skeleton
+                  className="h-3 max-w-(--skeleton-width) flex-1 rounded-md bg-sidebar-foreground/[0.06]"
                   style={
                     {
                       "--skeleton-width": `${item}%`,

@@ -26,6 +26,7 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "../ai-elements/prompt-input";
+import { Button } from "../ui/button";
 import { AttachmentsButton } from "./multimodal/attachments-button";
 import { AttachmentsPreview } from "./multimodal/attachments-preview";
 import { useFileUpload } from "./multimodal/file-upload";
@@ -187,16 +188,18 @@ function PureMultimodalInput({
       {editingMessage && onCancelEdit && (
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
           <span>Editing message</span>
-          <button
-            className="rounded px-1.5 py-0.5 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
+          <Button
+            className="text-[12px] text-muted-foreground/50 hover:text-foreground"
             onMouseDown={(e) => {
               e.preventDefault();
               onCancelEdit();
             }}
+            size="sm"
             type="button"
+            variant="ghost"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       )}
 

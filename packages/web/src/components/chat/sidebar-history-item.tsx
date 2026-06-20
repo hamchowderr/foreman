@@ -15,6 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { Input } from "../ui/input";
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 import {
   CheckCircleFillIcon,
@@ -79,8 +80,9 @@ const PureChatItem = ({
   if (isRenaming) {
     return (
       <SidebarMenuItem>
-        <input
-          className="h-8 w-full rounded-none border-b border-dashed border-sidebar-foreground/50 bg-transparent px-2 text-[13px] text-sidebar-foreground outline-none"
+        <Input
+          aria-label="Rename chat"
+          className="h-8 rounded-none border-0 border-b border-dashed border-sidebar-foreground/50 bg-transparent px-2 text-[13px] text-sidebar-foreground focus-visible:border-sidebar-foreground/50 focus-visible:ring-0"
           onBlur={handleRename}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {

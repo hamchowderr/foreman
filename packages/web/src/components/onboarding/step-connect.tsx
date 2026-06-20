@@ -2,6 +2,8 @@
 
 import { AlertCircle, ArrowRight, CheckCircle, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/client";
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
@@ -119,34 +121,31 @@ export function StepConnect({ uses, zapierJustConnected, onNext }: Props) {
           </div>
 
           {error && (
-            <div
-              className="flex items-center gap-2 text-sm rounded-lg px-3 py-2"
-              style={{ backgroundColor: "#3A2020", color: "#FF8080" }}
-            >
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          <button
+          <Button
             type="button"
             onClick={handleConnect}
             disabled={connecting}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition-all"
+            className="w-full rounded-xl py-3 text-sm font-semibold text-white"
             style={{ backgroundColor: connecting ? "#CC3F00" : "#FF4F00" }}
           >
             <Zap className="h-4 w-4" />
             {connecting ? "Redirecting to Zapier…" : "Connect Zapier"}
-          </button>
+          </Button>
         </div>
       )}
 
       <div className="flex justify-end pt-2">
-        <button
+        <Button
           type="button"
           onClick={onNext}
           disabled={!connected}
-          className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all"
+          className="rounded-lg px-6 py-2.5 text-sm font-semibold text-white"
           style={{
             backgroundColor: connected ? "#FF4F00" : "#FFBF6E",
             cursor: connected ? "pointer" : "not-allowed",
@@ -154,7 +153,7 @@ export function StepConnect({ uses, zapierJustConnected, onNext }: Props) {
         >
           Continue
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );

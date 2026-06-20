@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
+import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/client";
 import { type StoredAgent, storedAgentsApi } from "@/lib/stored-agents-client";
 import { cn } from "@/lib/utils";
@@ -60,10 +61,14 @@ function AgentBadge({ agent }: { agent: StoredAgent }) {
   if (!latest) return null;
   if (latest.is_draft) {
     return (
-      <span className="ml-2 shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+      <Badge variant="outline" className="ml-2">
         draft
-      </span>
+      </Badge>
     );
   }
-  return <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">v{latest.version}</span>;
+  return (
+    <Badge variant="outline" className="ml-2">
+      v{latest.version}
+    </Badge>
+  );
 }

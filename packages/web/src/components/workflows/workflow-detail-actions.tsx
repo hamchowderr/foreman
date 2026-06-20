@@ -2,6 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function WorkflowDetailActions({
   workflowId,
@@ -64,7 +78,6 @@ export function WorkflowDetailActions({
   }
 
   async function remove() {
-    if (!confirm("Delete this workflow? This cannot be undone.")) return;
     setErr(null);
     const res = await fetch(`/api/workflows/${workflowId}`, { method: "DELETE" });
     if (!res.ok) {
@@ -78,68 +91,60 @@ export function WorkflowDetailActions({
     <div className="space-y-3">
       {editing ? (
         <div className="flex items-center gap-2">
-          <input
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 rounded border px-3 py-1.5 text-sm"
-            style={{ borderColor: "#FFD7B5" }}
-            // biome-ignore lint/a11y/noAutofocus: rename input is rendered on user action (edit click), not page load — focusing it immediately is intended UX
+            className="flex-1"
             autoFocus
           />
-          <button
-            type="button"
-            onClick={rename}
-            disabled={pending}
-            className="rounded px-3 py-1.5 text-sm font-medium text-white"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
+          <Button type="button" onClick={rename} disabled={pending} size="sm">
             Save
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setName(currentName);
               setEditing(false);
             }}
-            className="rounded px-3 py-1.5 text-sm font-medium"
-            style={{ color: "#7A6A5C" }}
           >
             Cancel
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={runNow}
-            disabled={running}
-            className="rounded px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
+          <Button type="button" onClick={runNow} disabled={running}>
             {running ? "Running…" : "Run now"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded border px-4 py-1.5 text-sm font-medium"
-            style={{ borderColor: "#FFD7B5", color: "#201515" }}
-          >
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
             Rename
-          </button>
-          <button
-            type="button"
-            onClick={remove}
-            className="rounded border px-4 py-1.5 text-sm font-medium"
-            style={{ borderColor: "#FFD7B5", color: "#A61B1B" }}
-          >
-            Delete
-          </button>
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive">
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this workflow?</AlertDialogTitle>
+                <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={remove}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
       {err ? (
-        <div className="text-xs" style={{ color: "#A61B1B" }}>
-          {err}
-        </div>
+        <Alert variant="destructive" className="px-3 py-2">
+          <AlertDescription className="text-xs">{err}</AlertDescription>
+        </Alert>
       ) : null}
     </div>
   );

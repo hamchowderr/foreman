@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { BrandHeader } from "@/components/brand-header";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
 import { getArtifact } from "@/lib/dashboards-client";
 import { createClient } from "@/lib/server";
@@ -20,29 +21,14 @@ export default async function DashboardArtifactPage({
   if (!artifact) notFound();
 
   return (
-    <div className="min-h-svh" style={{ backgroundColor: "#FFFDF9" }}>
-      <header
-        className="flex items-center gap-4 px-6 py-4 sm:px-8"
-        style={{ borderBottom: "1px solid #FFF3E6" }}
-      >
-        <Link className="flex items-center gap-2.5" href="/chat">
-          <span
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold text-white"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
-            F
-          </span>
-          <span className="text-sm font-semibold tracking-tight" style={{ color: "#201515" }}>
-            Foreman
-          </span>
-        </Link>
-        <span className="text-sm" style={{ color: "#FFBF6E" }}>
-          /
-        </span>
-        <Link className="text-sm hover:underline" href="/dashboards" style={{ color: "#7A6A5C" }}>
-          Dashboards
-        </Link>
-      </header>
+    <div className="min-h-svh bg-background">
+      <BrandHeader
+        label={
+          <Link className="text-sm text-muted-foreground hover:underline" href="/dashboards">
+            Dashboards
+          </Link>
+        }
+      />
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
         <div className="mb-6">

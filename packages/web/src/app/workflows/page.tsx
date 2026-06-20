@@ -1,5 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { createClient } from "@/lib/server";
 import { listWorkflows, type WorkflowSummary } from "@/lib/workflows-client";
 
@@ -32,12 +41,10 @@ export default async function WorkflowsListPage() {
       </header>
 
       {loadError ? (
-        <div
-          className="rounded-md border px-4 py-3 text-sm"
-          style={{ borderColor: "#FFD7B5", backgroundColor: "#FFF5EB", color: "#7A4A1A" }}
-        >
-          Couldn't load workflows: {loadError}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Couldn't load workflows</AlertTitle>
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
       ) : workflows.length === 0 ? (
         <EmptyState />
       ) : (
@@ -72,25 +79,20 @@ export default async function WorkflowsListPage() {
 
 function EmptyState() {
   return (
-    <div
-      className="rounded-lg border px-8 py-12 text-center"
-      style={{ borderColor: "#FFF3E6", backgroundColor: "#FFF" }}
-    >
-      <div className="text-base font-medium" style={{ color: "#201515" }}>
-        No workflows saved yet
-      </div>
-      <p className="mt-2 text-sm max-w-md mx-auto" style={{ color: "#7A6A5C" }}>
-        After Foreman runs a multi-step or recurring task in chat, you'll be offered to save it.
-        Saved workflows show up here.
-      </p>
-      <Link
-        href="/chat"
-        className="mt-4 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white"
-        style={{ backgroundColor: "#FF4F00" }}
-      >
-        Go to chat
-      </Link>
-    </div>
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyTitle>No workflows saved yet</EmptyTitle>
+        <EmptyDescription>
+          After Foreman runs a multi-step or recurring task in chat, you'll be offered to save it.
+          Saved workflows show up here.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button asChild>
+          <Link href="/chat">Go to chat</Link>
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 }
 

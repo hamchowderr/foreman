@@ -2,6 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import type { WorkflowTrigger } from "@/lib/workflows-client";
 
 export function TriggerControls({
@@ -36,7 +50,6 @@ export function TriggerControls({
   }
 
   async function detach() {
-    if (!confirm("Detach this trigger? The workflow won't be deleted.")) return;
     setBusy(true);
     setErr(null);
     const res = await fetch(`/api/workflows/${workflowId}/triggers/${trigger.id}`, {
@@ -52,33 +65,35 @@ export function TriggerControls({
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={toggle}
+      <Switch
+        checked={enabled}
+        onCheckedChange={toggle}
         disabled={busy || pending}
-        className="rounded border px-3 py-1 text-xs font-medium"
-        style={{
-          borderColor: "#FFD7B5",
-          backgroundColor: enabled ? "#FF4F00" : "#FFF",
-          color: enabled ? "#FFF" : "#201515",
-        }}
-        aria-pressed={enabled}
-      >
-        {enabled ? "Enabled" : "Disabled"}
-      </button>
-      <button
-        type="button"
-        onClick={detach}
-        disabled={busy || pending}
-        className="rounded border px-3 py-1 text-xs font-medium"
-        style={{ borderColor: "#FFD7B5", color: "#A61B1B" }}
-      >
-        Detach
-      </button>
+        aria-label={enabled ? "Enabled" : "Disabled"}
+      />
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant="destructive" size="sm" disabled={busy || pending}>
+            Detach
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Detach this trigger?</AlertDialogTitle>
+            <AlertDialogDescription>The workflow won't be deleted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={detach}>
+              Detach
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {err ? (
-        <span className="text-xs" style={{ color: "#A61B1B" }}>
-          {err}
-        </span>
+        <Alert variant="destructive" className="w-auto px-3 py-1.5">
+          <AlertDescription className="text-xs">{err}</AlertDescription>
+        </Alert>
       ) : null}
     </div>
   );

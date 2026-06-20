@@ -1,6 +1,7 @@
 "use client";
 
 import { RotateCcwIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { StoredAgentVersion } from "@/lib/stored-agents-client";
 import { cn } from "@/lib/utils";
 
@@ -49,17 +50,11 @@ export function VersionHistoryPanel({
                   <div className="flex items-center gap-1.5">
                     <span className="font-mono text-xs font-semibold">v{v.version}</span>
                     {v.is_draft ? (
-                      <span className="rounded-sm bg-muted/20 px-1 py-0.5 text-[10px] text-muted-foreground">
-                        draft
-                      </span>
+                      <Badge variant="outline">draft</Badge>
                     ) : isCurrent ? (
-                      <span className="rounded-sm bg-accent/10 px-1 py-0.5 text-[10px] text-accent">
-                        published
-                      </span>
+                      <Badge variant="accent">published</Badge>
                     ) : (
-                      <span className="rounded-sm bg-muted/10 px-1 py-0.5 text-[10px] text-muted-foreground">
-                        archived
-                      </span>
+                      <Badge variant="outline">archived</Badge>
                     )}
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-muted-foreground">

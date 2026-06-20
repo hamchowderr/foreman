@@ -137,6 +137,7 @@ export function GuardrailCards() {
               >
                 <button
                   type="button"
+                  aria-pressed={selected}
                   onClick={() => setActiveId(g.id)}
                   className={`w-full h-full text-left rounded-xl border p-4 transition-all duration-200 ${
                     selected

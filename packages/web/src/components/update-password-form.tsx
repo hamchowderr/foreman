@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/client";
 import { cn } from "@/lib/utils";
 
@@ -43,8 +44,8 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
         <CardContent>
           <form onSubmit={handleForgotPassword}>
             <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="password">New password</Label>
+              <Field>
+                <FieldLabel htmlFor="password">New password</FieldLabel>
                 <Input
                   id="password"
                   type="password"
@@ -53,8 +54,12 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              </Field>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Saving..." : "Save new password"}
               </Button>

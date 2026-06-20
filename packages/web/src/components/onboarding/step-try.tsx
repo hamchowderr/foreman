@@ -5,6 +5,8 @@ import { DefaultChatTransport } from "ai";
 import { ArrowRight, ChevronDown, ChevronRight, Search, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MessageResponse } from "@/components/ai-elements/message";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { createClient } from "@/lib/client";
 import { sanitizeText } from "@/lib/utils";
 
@@ -42,55 +44,59 @@ function ToolCallBubble({ part }: { part: any }) {
   const hasOutput = part.state === "output-available" || part.output != null;
 
   return (
-    <button
-      type="button"
-      onClick={() => setExpanded((e) => !e)}
-      className="w-full text-left rounded-lg px-3 py-2 transition-colors text-sm"
+    <Collapsible
+      open={expanded}
+      onOpenChange={setExpanded}
+      className="rounded-lg px-3 py-2 text-sm"
       style={{
         backgroundColor: "#FFF3E6",
         border: "1px solid #FFBF6E",
       }}
     >
-      <div className="flex items-center gap-2">
-        <Icon className="h-3 w-3 shrink-0" style={{ color: "#FF4F00" }} />
-        <span className="flex-1 font-medium text-xs" style={{ color: "#FF4F00" }}>
-          {toolName}
-        </span>
-        {hasOutput && (
-          <span className="text-[10px]" style={{ color: "#4A7C2F" }}>
-            ✓
+      <CollapsibleTrigger className="w-full text-left transition-colors">
+        <div className="flex items-center gap-2">
+          <Icon className="h-3 w-3 shrink-0" style={{ color: "#FF4F00" }} />
+          <span className="flex-1 font-medium text-xs" style={{ color: "#FF4F00" }}>
+            {toolName}
           </span>
-        )}
-        {expanded ? (
-          <ChevronDown className="h-3 w-3" style={{ color: "#FFBF6E" }} />
-        ) : (
-          <ChevronRight className="h-3 w-3" style={{ color: "#FFBF6E" }} />
-        )}
-      </div>
-      {expanded && part.input && (
-        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid #FFBF6E" }}>
-          {Object.entries(part.input as Record<string, unknown>).map(([k, v]) => (
-            <div key={k} className="flex gap-2 text-[10px]">
-              <span style={{ color: "#FFBF6E" }}>{k}:</span>
-              <span className="font-medium" style={{ color: "#201515" }}>
-                {String(v)}
-              </span>
-            </div>
-          ))}
-          {hasOutput && part.output && (
-            <div
-              className="mt-1.5 pt-1.5 text-[10px]"
-              style={{ borderTop: "1px solid #FFBF6E", color: "#4A7C2F" }}
-            >
-              →{" "}
-              {typeof part.output === "string"
-                ? part.output
-                : JSON.stringify(part.output).slice(0, 120)}
-            </div>
+          {hasOutput && (
+            <span className="text-[10px]" style={{ color: "#4A7C2F" }}>
+              ✓
+            </span>
+          )}
+          {expanded ? (
+            <ChevronDown className="h-3 w-3" style={{ color: "#FFBF6E" }} />
+          ) : (
+            <ChevronRight className="h-3 w-3" style={{ color: "#FFBF6E" }} />
           )}
         </div>
+      </CollapsibleTrigger>
+      {part.input && (
+        <CollapsibleContent>
+          <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid #FFBF6E" }}>
+            {Object.entries(part.input as Record<string, unknown>).map(([k, v]) => (
+              <div key={k} className="flex gap-2 text-[10px]">
+                <span style={{ color: "#FFBF6E" }}>{k}:</span>
+                <span className="font-medium" style={{ color: "#201515" }}>
+                  {String(v)}
+                </span>
+              </div>
+            ))}
+            {hasOutput && part.output && (
+              <div
+                className="mt-1.5 pt-1.5 text-[10px]"
+                style={{ borderTop: "1px solid #FFBF6E", color: "#4A7C2F" }}
+              >
+                →{" "}
+                {typeof part.output === "string"
+                  ? part.output
+                  : JSON.stringify(part.output).slice(0, 120)}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
       )}
-    </button>
+    </Collapsible>
   );
 }
 
@@ -244,11 +250,11 @@ export function StepTry({ uses, onNext }: Props) {
               <p className="text-xs text-center" style={{ color: "#FFBF6E" }}>
                 Press the button below to see Foreman in action
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={handleStart}
                 disabled={!userId}
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium transition-all"
+                className="gap-2 rounded-xl px-4 py-2.5 text-xs font-medium"
                 style={{
                   backgroundColor: "#FFF3E6",
                   border: "1px solid #FFBF6E",
@@ -259,7 +265,7 @@ export function StepTry({ uses, onNext }: Props) {
               >
                 <span>{prompt}</span>
                 <ArrowRight className="h-3 w-3 shrink-0" style={{ color: "#FF4F00" }} />
-              </button>
+              </Button>
             </div>
           )}
 

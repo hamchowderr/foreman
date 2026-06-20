@@ -1,6 +1,7 @@
 import { memo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { artifactDefinitions, type UIArtifact } from "./artifact";
 import type { ArtifactActionContext } from "./create-artifact";
@@ -57,10 +58,9 @@ function PureArtifactActions({
         return (
           <Tooltip key={action.description}>
             <TooltipTrigger asChild>
-              <button
+              <Button
                 className={cn(
-                  "flex items-center justify-center rounded-full p-3 text-muted-foreground transition-all duration-150",
-                  "hover:text-foreground",
+                  "rounded-full p-3 text-muted-foreground",
                   "active:scale-95",
                   "disabled:pointer-events-none disabled:opacity-30",
                   {
@@ -80,9 +80,10 @@ function PureArtifactActions({
                   }
                 }}
                 type="button"
+                variant="ghost"
               >
                 {action.icon}
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
               {action.description}

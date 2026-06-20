@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 import { TriggerControls } from "@/components/workflows/trigger-controls";
 import { WorkflowDetailActions } from "@/components/workflows/workflow-detail-actions";
 import { createClient } from "@/lib/server";
@@ -144,20 +145,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
-  const map: Record<WorkflowRun["status"], { bg: string; fg: string; label: string }> = {
-    success: { bg: "#E6F4EA", fg: "#1B6633", label: "succeeded" },
-    failed: { bg: "#FCE8E6", fg: "#A61B1B", label: "failed" },
-    running: { bg: "#FFF1E0", fg: "#7A4A1A", label: "running" },
+  const map: Record<
+    WorkflowRun["status"],
+    { variant: "default" | "destructive" | "secondary"; label: string }
+  > = {
+    success: { variant: "default", label: "succeeded" },
+    failed: { variant: "destructive", label: "failed" },
+    running: { variant: "secondary", label: "running" },
   };
   const s = map[status] ?? map.running;
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: s.bg, color: s.fg }}
-    >
-      {s.label}
-    </span>
-  );
+  return <Badge variant={s.variant}>{s.label}</Badge>;
 }
 
 function TriggerRow({ workflowId, trigger }: { workflowId: string; trigger: WorkflowTrigger }) {

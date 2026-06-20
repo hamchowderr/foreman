@@ -15,6 +15,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/client";
@@ -100,18 +108,24 @@ export function AgentListView() {
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-xl border border-dashed border-border p-12 text-center">
-      <BotIcon className="mx-auto mb-3 size-8 text-muted-foreground" />
-      <h2 className="text-base font-medium">No agents yet</h2>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-        Create your first agent to define instructions, pick tools, and publish versions you can
-        reference elsewhere.
-      </p>
-      <Button variant="accent" onClick={onCreate} className="mt-4 gap-2">
-        <PlusIcon className="size-4" />
-        New agent
-      </Button>
-    </div>
+    <Empty className="border border-border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <BotIcon />
+        </EmptyMedia>
+        <EmptyTitle>No agents yet</EmptyTitle>
+        <EmptyDescription>
+          Create your first agent to define instructions, pick tools, and publish versions you can
+          reference elsewhere.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button variant="accent" onClick={onCreate} className="gap-2">
+          <PlusIcon className="size-4" />
+          New agent
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 }
 

@@ -202,6 +202,7 @@ export function FiveThingsReplay() {
             <button
               key={s.id}
               type="button"
+              aria-pressed={selected}
               onClick={() => setActiveId(s.id)}
               className={`w-full text-left px-4 py-3.5 flex items-start gap-3 border-b border-border last:border-b-0 transition-colors min-h-[44px] ${
                 selected ? "bg-accent/5" : "hover:bg-background"

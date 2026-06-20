@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BrandHeader } from "@/components/brand-header";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { defaultSpecFromRecords, getLatestSnapshot } from "@/lib/dashboards-client";
 import { createClient } from "@/lib/server";
 
@@ -31,29 +40,10 @@ export default async function DashboardsPage({
   const spec = snapshot ? defaultSpecFromRecords(appKey, snapshot.records) : null;
 
   return (
-    <div className="min-h-svh" style={{ backgroundColor: "#FFFDF9" }}>
-      <header
-        className="flex items-center gap-4 px-6 py-4 sm:px-8"
-        style={{ borderBottom: "1px solid #FFF3E6" }}
-      >
-        <Link href="/chat" className="flex items-center gap-2.5">
-          <span
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold text-white"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
-            F
-          </span>
-          <span className="text-sm font-semibold tracking-tight" style={{ color: "#201515" }}>
-            Foreman
-          </span>
-        </Link>
-        <span className="text-sm" style={{ color: "#FFBF6E" }}>
-          /
-        </span>
-        <span className="text-sm font-medium" style={{ color: "#201515" }}>
-          Dashboards
-        </span>
-      </header>
+    <div className="min-h-svh bg-background">
+      <BrandHeader
+        label={<span className="text-sm font-medium text-foreground">Dashboards</span>}
+      />
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
         <div className="mb-6">
@@ -68,12 +58,9 @@ export default async function DashboardsPage({
         </div>
 
         {snapshotErr ? (
-          <div
-            className="rounded-md border px-4 py-3 text-sm"
-            style={{ borderColor: "#FFD7B5", backgroundColor: "#FFF5EB", color: "#7A4A1A" }}
-          >
-            Couldn't load dashboard: {snapshotErr}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>Couldn't load dashboard: {snapshotErr}</AlertDescription>
+          </Alert>
         ) : spec && snapshot ? (
           <DashboardRenderer spec={spec} data={snapshot.records} />
         ) : (
@@ -86,24 +73,22 @@ export default async function DashboardsPage({
 
 function EmptyState({ appKey }: { appKey: string }) {
   return (
-    <div
-      className="rounded-lg border px-8 py-12 text-center"
-      style={{ borderColor: "#FFF3E6", backgroundColor: "#FFF" }}
-    >
-      <div className="text-base font-medium" style={{ color: "#201515" }}>
-        No data for "{appKey}" yet
-      </div>
-      <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: "#7A6A5C" }}>
-        Once a poll trigger pulls records from this app, a snapshot is stored and this dashboard
-        fills in automatically. Pass <code>?app=&lt;appKey&gt;</code> to view a different source.
-      </p>
-      <Link
-        href="/chat"
-        className="mt-4 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white"
-        style={{ backgroundColor: "#FF4F00" }}
-      >
-        Go to chat
-      </Link>
-    </div>
+    <Empty className="border bg-card">
+      <EmptyHeader>
+        <EmptyTitle>No data for "{appKey}" yet</EmptyTitle>
+        <EmptyDescription>
+          Once a poll trigger pulls records from this app, a snapshot is stored and this dashboard
+          fills in automatically. Pass <code>?app=&lt;appKey&gt;</code> to view a different source.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Link
+          href="/chat"
+          className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
+        >
+          Go to chat
+        </Link>
+      </EmptyContent>
+    </Empty>
   );
 }

@@ -47,6 +47,7 @@ export function StepWelcome({ selected, onSelect, onNext }: Props) {
               type="button"
               key={uc.id}
               onClick={() => toggle(uc.id)}
+              aria-pressed={isSelected}
               className="flex flex-col items-center gap-2.5 rounded-xl px-4 py-5 text-left transition-all duration-150"
               style={{
                 backgroundColor: isSelected ? "#FFF3E6" : "#FFFFFF",
