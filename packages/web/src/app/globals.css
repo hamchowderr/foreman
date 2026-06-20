@@ -129,7 +129,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-sidebar: color-mix(in oklab, var(--sidebar), var(--primary) 7%);
+  /* Sidebar shares the page surface (not the standalone --sidebar slab) so it
+     blends into the canvas in every preset/mode and the chat card is the one
+     floating element. Mirrors --color-background's formula exactly. */
+  --color-sidebar: color-mix(in oklab, var(--background), var(--primary) 4%);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
