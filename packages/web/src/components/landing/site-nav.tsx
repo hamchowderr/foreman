@@ -23,9 +23,14 @@ export function SiteNav() {
     <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground text-xs font-bold">
-            F
-          </span>
+          {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+          <img
+            alt="Foreman"
+            className="h-6 w-6 object-contain"
+            height={24}
+            src="/zapier.svg"
+            width={24}
+          />
           <span className="text-[15px]">Foreman</span>
           <span className="hidden sm:inline text-[10px] font-medium text-accent border border-accent/30 rounded-full px-2 py-0.5 ml-0.5 uppercase tracking-wider">
             Alpha

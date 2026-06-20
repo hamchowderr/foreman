@@ -45,9 +45,14 @@ export function SiteFooter() {
           {/* Brand column */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground text-[11px] font-bold">
-                F
-              </span>
+              {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+              <img
+                alt="Foreman"
+                className="h-6 w-6 object-contain"
+                height={24}
+                src="/zapier.svg"
+                width={24}
+              />
               <span className="font-semibold text-foreground">Foreman</span>
             </div>
             <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-[220px]">
