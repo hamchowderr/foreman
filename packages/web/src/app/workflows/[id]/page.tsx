@@ -106,15 +106,21 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
                   href={`/workflows/${detail.workflow.id}/runs/${r.id}`}
                   className="flex items-center justify-between px-4 py-3 hover:bg-black/[0.02]"
                 >
-                  <div className="min-w-0 text-sm">
-                    <span className="font-medium" style={{ color: "#201515" }}>
+                  <div className="flex min-w-0 items-center gap-1.5 text-sm">
+                    <span className="shrink-0 font-medium" style={{ color: "#201515" }}>
                       {new Date(r.created_at).toLocaleString()}
                     </span>
-                    <span className="ml-2 text-xs" style={{ color: "#7A6A5C" }}>
+                    <span className="shrink-0 text-xs" style={{ color: "#7A6A5C" }}>
                       · {r.fired_by ?? "manual"}
                     </span>
                     {r.status === "failed" && r.error_message ? (
-                      <span className="ml-2 truncate text-xs" style={{ color: "#A61B1B" }}>
+                      // flex-1 + min-w-0 lets truncate actually ellipsize in the
+                      // leftover space; an inline `truncate` span never clips and
+                      // a long error overflows the row (esp. on mobile).
+                      <span
+                        className="min-w-0 flex-1 truncate text-xs"
+                        style={{ color: "#A61B1B" }}
+                      >
                         — {r.error_message}
                       </span>
                     ) : null}

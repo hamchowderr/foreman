@@ -52,7 +52,7 @@ export default async function RunDetailPage({
         </p>
         {run.status === "failed" && run.error_message ? (
           <p
-            className="mt-2 rounded border px-3 py-2 text-xs"
+            className="mt-2 break-words rounded border px-3 py-2 text-xs"
             style={{ borderColor: "#FAD2CE", backgroundColor: "#FFF6F5", color: "#A61B1B" }}
           >
             {run.error_message}
