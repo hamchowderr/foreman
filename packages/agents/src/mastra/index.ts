@@ -185,6 +185,17 @@ export function getMastra(): Mastra {
     );
   }
 
+  // Attach token usage to the final assistant message so the web composer's
+  // context-usage gauge can read it client-side via `message.metadata.usage`.
+  // (toAISdkStream's messageMetadata hook — runs per UI-stream part.)
+  const usageMessageMetadata = ({ part }: { part: any }) => {
+    if (part?.type === "finish") {
+      const usage = part.totalUsage ?? part.usage;
+      if (usage) return { usage };
+    }
+    return undefined;
+  };
+
   _mastra = new Mastra({
     agents: {
       foreman: foremanAgent,
@@ -239,7 +250,9 @@ export function getMastra(): Mastra {
                   : await agent.declineToolCall({ runId: body.approveRunId });
 
                 return createUIMessageStreamResponse({
-                  stream: fixApprovalStream(toAISdkStream(result, { from: "agent" })),
+                  stream: fixApprovalStream(
+                    toAISdkStream(result, { from: "agent", messageMetadata: usageMessageMetadata }),
+                  ),
                 });
               }
 
@@ -383,7 +396,9 @@ export function getMastra(): Mastra {
               );
 
               return createUIMessageStreamResponse({
-                stream: fixApprovalStream(toAISdkStream(result, { from: "agent" })),
+                stream: fixApprovalStream(
+                  toAISdkStream(result, { from: "agent", messageMetadata: usageMessageMetadata }),
+                ),
               });
             } catch (err: any) {
               console.error("[chat] Error:", err?.message, err?.stack?.slice(0, 500));

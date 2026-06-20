@@ -17,6 +17,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+import { getContextWindow } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +28,7 @@ import {
   PromptInputTools,
 } from "../ai-elements/prompt-input";
 import { Button } from "../ui/button";
+import { ContextUsage, type TokenUsage } from "./context-usage";
 import { AttachmentsButton } from "./multimodal/attachments-button";
 import { AttachmentsPreview } from "./multimodal/attachments-preview";
 import { useFileUpload } from "./multimodal/file-upload";
@@ -183,6 +185,18 @@ function PureMultimodalInput({
     chatId,
   ]);
 
+  // Most recent assistant turn's token usage (attached server-side as message
+  // metadata); drives the composer's context-usage gauge.
+  const latestUsage: TokenUsage | null = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i] as { role?: string; metadata?: { usage?: TokenUsage } };
+      if (m.role === "assistant" && m.metadata?.usage) {
+        return m.metadata.usage;
+      }
+    }
+    return null;
+  })();
+
   return (
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {editingMessage && onCancelEdit && (
@@ -315,6 +329,7 @@ function PureMultimodalInput({
               onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
             />
             <ModelSelectorCompact onModelChange={onModelChange} selectedModelId={selectedModelId} />
+            <ContextUsage maxTokens={getContextWindow(selectedModelId)} usage={latestUsage} />
           </PromptInputTools>
 
           {status === "submitted" ? (
