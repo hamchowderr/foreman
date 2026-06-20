@@ -39,7 +39,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               >
                 <Link href="/" onClick={() => setOpenMobile(false)}>
                   {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
-                  <img alt="Zapier" className="size-5" height={20} src="/zapier.svg" width={20} />
+                  <img
+                    alt="Zapier"
+                    className="size-5 object-contain group-data-[collapsible=icon]:size-4"
+                    height={20}
+                    src="/zapier.svg"
+                    width={20}
+                  />
                 </Link>
               </SidebarMenuButton>
               <Tooltip>
