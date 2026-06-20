@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { label: "Profile", href: "/settings/profile" },
   { label: "Integrations", href: "/settings/integrations" },
   { label: "API Keys", href: "/settings/integrations/mcp" },
 ];
