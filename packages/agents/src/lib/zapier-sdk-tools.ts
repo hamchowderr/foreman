@@ -118,6 +118,79 @@ const PAGINATED_METHODS = new Set([
 const DEFAULT_MAX_ITEMS = 100;
 
 /**
+ * Stringified-open-object coercion (the nested-in-array gap).
+ *
+ * A few Zapier tools take an "open bag" param — dynamic keys, `additionalProperties`
+ * — *nested inside an array*: table-record `data`, table-field `options`/`config`.
+ * Models (weak ones reliably, strong ones sometimes) emit such a bag as a JSON
+ * *string*. Mastra's built-in coercion (`coerceStringifiedJsonValues`) only fixes
+ * TOP-LEVEL bags, not ones nested in an array, so these fail validation before the
+ * tool runs.
+ *
+ * We override just these tools' input schemas — rebuilt in *our* zod so the
+ * field-level coercion actually runs during Mastra's `~standard` validation. (A
+ * `z.preprocess` wrapper around the SDK's own schema gets bypassed because it
+ * crosses zod copies.) The model-facing JSON schema is unchanged: the bag still
+ * advertises as an `object`; we just also accept and parse the stringified form.
+ */
+const jsonObjectParam = (desc: string) =>
+  z.preprocess((v: unknown) => {
+    if (typeof v === "string") {
+      try {
+        return JSON.parse(v);
+      } catch {
+        return v; // leave as-is; validation surfaces the real problem
+      }
+    }
+    return v;
+  }, z.record(z.string(), z.any()).describe(desc));
+
+const SCHEMA_OVERRIDES: Record<string, z.ZodTypeAny> = {
+  createTableRecords: z.object({
+    table: z.string().describe("The unique identifier of the table"),
+    records: z
+      .array(
+        z.object({
+          data: jsonObjectParam("Field values for the record, keyed by field name or id"),
+        }),
+      )
+      .min(1)
+      .describe("Records to create (max 100)"),
+    keyMode: z
+      .enum(["names", "ids"])
+      .optional()
+      .describe('How to interpret field keys: "names" (default, human-readable) or "ids"'),
+  }),
+  updateTableRecords: z.object({
+    table: z.string().describe("The unique identifier of the table"),
+    records: z
+      .array(
+        z.object({
+          id: z.string().describe("The record id to update"),
+          data: jsonObjectParam("Updated field values, keyed by field name or id"),
+        }),
+      )
+      .min(1)
+      .describe("Records to update"),
+    keyMode: z.enum(["names", "ids"]).optional(),
+  }),
+  createTableFields: z.object({
+    table: z.string().describe("The unique identifier of the table"),
+    fields: z
+      .array(
+        z.object({
+          name: z.string().describe("Field (column) name"),
+          type: z.string().describe("Field type, e.g. string, number, date, email, bool"),
+          options: jsonObjectParam("Optional field options (type-specific)").optional(),
+          config: jsonObjectParam("Optional field config (type-specific)").optional(),
+        }),
+      )
+      .min(1)
+      .describe("Fields (columns) to create"),
+  }),
+};
+
+/**
  * Resolve SDK credentials based on environment.
  * - Explicit credentials passed in: use as-is (per-user token from PKCE flow).
  * - Dev mode + no credentials: SDK auto-uses CLI login (~/.zapier-sdk/config.json).
@@ -224,7 +297,7 @@ export function generateZapierTools(
       tools[toolName] = createTool({
         id: toolName,
         description,
-        inputSchema: unwrapped as unknown as z.ZodObject<any>,
+        inputSchema: (SCHEMA_OVERRIDES[fn.name] ?? unwrapped) as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
         execute: async (input) => {
