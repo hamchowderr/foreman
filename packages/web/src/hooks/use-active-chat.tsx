@@ -43,6 +43,7 @@ type ActiveChatContextValue = {
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   visibilityType: VisibilityType;
+  chatTitle: string | null;
   isReadonly: boolean;
   isLoading: boolean;
   votes: Vote[] | undefined;
@@ -114,6 +115,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const initialMessages: ChatMessage[] = isNewChat ? [] : (chatData?.messages ?? []);
   const visibility: VisibilityType = isNewChat ? "private" : (chatData?.visibility ?? "private");
+  const chatTitle: string | null = isNewChat ? null : (chatData?.title ?? null);
 
   const {
     messages,
@@ -405,6 +407,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       input,
       setInput,
       visibilityType: visibility,
+      chatTitle,
       isReadonly,
       isLoading: !isNewChat && isLoading,
       votes,
@@ -424,6 +427,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       addToolApprovalResponse,
       input,
       visibility,
+      chatTitle,
       isReadonly,
       isNewChat,
       isLoading,

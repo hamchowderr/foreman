@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       messages: data.messages || [],
       visibility: data.conversation?.visibility || "private",
+      title: data.conversation?.title ?? null,
       isReadonly: false,
     });
   } catch {

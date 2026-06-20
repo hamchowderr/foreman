@@ -8,10 +8,12 @@ import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
 
 function PureChatHeader({
   chatId,
+  title,
   selectedVisibilityType,
   isReadonly,
 }: {
   chatId: string;
+  title: string | null;
   selectedVisibilityType: VisibilityType;
   isReadonly: boolean;
 }) {
@@ -27,6 +29,10 @@ function PureChatHeader({
         <PanelLeftIcon className="size-4" />
       </Button>
 
+      <h1 className="min-w-0 flex-1 truncate font-medium text-foreground/80 text-sm">
+        {title || "New chat"}
+      </h1>
+
       {!isReadonly && (
         <VisibilitySelector chatId={chatId} selectedVisibilityType={selectedVisibilityType} />
       )}
@@ -37,6 +43,7 @@ function PureChatHeader({
 export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
   return (
     prevProps.chatId === nextProps.chatId &&
+    prevProps.title === nextProps.title &&
     prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
     prevProps.isReadonly === nextProps.isReadonly
   );

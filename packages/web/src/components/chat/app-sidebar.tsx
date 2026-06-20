@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  LayoutDashboardIcon,
-  PanelLeftIcon,
-  PenSquareIcon,
-  Settings2Icon,
-  WorkflowIcon,
-} from "lucide-react";
+import { LayoutDashboardIcon, PanelLeftIcon, PenSquareIcon, WorkflowIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SidebarHistory } from "@/components/chat/sidebar-history";
@@ -69,12 +63,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup className="pt-1">
+        <SidebarGroup className="pt-2">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  className="h-8 rounded-lg text-[13px] font-medium text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   onClick={() => {
                     setOpenMobile(false);
                     router.push("/");
@@ -82,14 +76,14 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   tooltip="New Chat"
                 >
                   <PenSquareIcon className="size-4" />
-                  <span className="font-medium">New chat</span>
+                  <span>New chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {user && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     tooltip="Workflows"
                   >
                     <Link href="/workflows" onClick={() => setOpenMobile(false)}>
@@ -103,26 +97,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     tooltip="Dashboards"
                   >
                     <Link href="/dashboards" onClick={() => setOpenMobile(false)}>
                       <LayoutDashboardIcon className="size-4" />
                       <span className="text-[13px]">Dashboards</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {user && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                    tooltip="Settings"
-                  >
-                    <Link href="/settings/integrations" onClick={() => setOpenMobile(false)}>
-                      <Settings2Icon className="size-4" />
-                      <span className="text-[13px]">Settings</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

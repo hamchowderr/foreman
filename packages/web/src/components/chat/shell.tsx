@@ -35,6 +35,7 @@ export function ChatShell() {
     input,
     setInput,
     visibilityType,
+    chatTitle,
     isReadonly,
     isLoading,
     votes,
@@ -72,11 +73,12 @@ export function ChatShell() {
             isArtifactVisible ? "w-[40%]" : "w-full",
           )}
         >
-          <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background md:m-3">
+          <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background shadow-sm md:m-3">
             <ChatHeader
               chatId={chatId}
               isReadonly={isReadonly}
               selectedVisibilityType={visibilityType}
+              title={chatTitle}
             />
 
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

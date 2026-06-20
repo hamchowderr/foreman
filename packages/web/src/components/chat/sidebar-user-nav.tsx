@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronUp, LogOut, Moon, Palette, Sun } from "lucide-react";
+import { Check, ChevronUp, LogOut, Moon, Palette, Settings2, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -92,6 +92,14 @@ export function SidebarUserNav({ user }: { user: SessionUser }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer gap-2 text-[13px]"
+              data-testid="user-nav-item-settings"
+              onSelect={() => router.push("/settings/integrations")}
+            >
+              <Settings2 className="size-4 text-muted-foreground" />
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer gap-2 text-[13px]"
               data-testid="user-nav-item-theme"
