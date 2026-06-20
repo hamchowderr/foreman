@@ -31,12 +31,14 @@ export function OnboardingFlow({ initialStep, initialUses, zapierJustConnected }
         style={{ borderBottom: "1px solid #FFF3E6" }}
       >
         <div className="flex items-center gap-2.5">
-          <span
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-white text-sm font-bold"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
-            F
-          </span>
+          {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+          <img
+            alt="Foreman"
+            className="h-7 w-7 object-contain"
+            height={28}
+            src="/zapier.svg"
+            width={28}
+          />
           <span className="text-sm font-semibold tracking-tight" style={{ color: "#201515" }}>
             Foreman
           </span>
