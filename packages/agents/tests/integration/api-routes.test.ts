@@ -475,6 +475,54 @@ describe("API route integration tests", () => {
     });
   });
 
+  // ── Dashboards: public sharing (Phase 3) ──────────────────────────────
+
+  describe("dashboards public sharing", () => {
+    const VALID_SPEC = {
+      title: "Leads",
+      blocks: [{ type: "kpi", label: "Total", agg: "count" }],
+    };
+    const shareRow = { artifact_id: "art-1", user_id: "owner-1", expires_at: null };
+    const artifactRow = {
+      id: "art-1",
+      kind: "dashboard",
+      title: "Leads",
+      spec: JSON.stringify(VALID_SPEC),
+      snapshot_id: null, // no snapshot → records default to []
+      updated_at: "2026-06-20T00:00:00.000Z",
+    };
+
+    // Resolve from() per-table so getSharedArtifact reads the share row then the
+    // artifact row. Default (unset tables) → null builder.
+    function withTables(map: Record<string, any>) {
+      mockSupabase.from.mockImplementation((t: string) => createQueryBuilder(map[t] ?? null));
+    }
+    afterEach(() => {
+      mockSupabase.from.mockImplementation(() => createQueryBuilder());
+    });
+
+    it("GET /dashboards/public/:token returns 200 WITHOUT auth (token is the grant)", async () => {
+      withTables({ dashboard_share: shareRow, artifact: artifactRow });
+      // Deliberately NO Authorization header — the public carve-out must allow it.
+      const res = await app.request("/dashboards/public/sometoken");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toMatchObject({ id: "art-1", title: "Leads", records: [] });
+      expect(body.spec.title).toBe("Leads");
+    });
+
+    it("GET /dashboards/public/:token returns 404 for an unknown token", async () => {
+      // default builder → dashboard_share lookup is null → getSharedArtifact null
+      const res = await app.request("/dashboards/public/nope");
+      expect(res.status).toBe(404);
+    });
+
+    it("POST /dashboards/artifacts/:id/share still requires auth (401)", async () => {
+      const res = await app.request("/dashboards/artifacts/art-1/share", { method: "POST" });
+      expect(res.status).toBe(401);
+    });
+  });
+
   // ── Voice ─────────────────────────────────────────────────────────────
 
   describe("POST /voice/transcribe", () => {

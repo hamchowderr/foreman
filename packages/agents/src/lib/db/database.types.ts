@@ -911,6 +911,33 @@ export type Database = {
           },
         ];
       };
+      dashboard_share: {
+        Row: {
+          artifact_id: string;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          share_token: string;
+          user_id: string;
+        };
+        Insert: {
+          artifact_id: string;
+          created_at: string;
+          expires_at?: string | null;
+          id: string;
+          share_token: string;
+          user_id: string;
+        };
+        Update: {
+          artifact_id?: string;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          share_token?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       marketing_author_profiles: {
         Row: {
           avatar_url: string | null;

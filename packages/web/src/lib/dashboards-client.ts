@@ -90,6 +90,24 @@ export async function getArtifact(id: string, token: string): Promise<DashboardA
   }
 }
 
+/**
+ * A publicly shared dashboard by share token, or null on 404 / expired token.
+ * No auth — hits the agent server's public endpoint directly (the token is the
+ * capability). Dynamic (no-store) so the share reflects the latest snapshot.
+ */
+export async function getPublicDashboard(shareToken: string): Promise<DashboardArtifact | null> {
+  const res = await fetch(`${AGENT_URL}/dashboards/public/${encodeURIComponent(shareToken)}`, {
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`GET /dashboards/public → ${res.status}: ${body}`);
+  }
+  return (await res.json()) as DashboardArtifact;
+}
+
 /** Latest snapshot for an app, or null on 404 (no data pulled yet). */
 export async function getLatestSnapshot(appKey: string, token: string): Promise<Snapshot | null> {
   try {
