@@ -11,6 +11,26 @@ const conversations = new Hono<AppEnv>();
 // All routes require auth
 conversations.use("/*", authMiddleware);
 
+// Mastra's generateTitle sometimes wraps the title in markdown (`# ...`,
+// `**...**`), prefixes it with a "Title:" label, or returns a whole sentence.
+// Normalize to a clean, short display title; return null for blank input so the
+// UI falls back to its "New conversation" placeholder.
+function cleanTitle(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let t = raw.split("\n")[0].trim();
+  t = t
+    .replace(/^#+\s*/, "") // markdown heading
+    .replace(/^>\s*/, "") // blockquote
+    .replace(/^\*+\s*/, "")
+    .replace(/\*+$/, "") // bold markers
+    .replace(/^title:\s*/i, "") // "Title:" label
+    .replace(/^["'“”]+|["'“”]+$/g, "") // wrapping quotes
+    .replace(/\*\*/g, "")
+    .trim();
+  if (!t) return null;
+  return t.length > 60 ? `${t.slice(0, 57).trimEnd()}…` : t;
+}
+
 // POST / — create conversation
 conversations.post("/", async (c) => {
   const userId = c.get("userId");
@@ -64,11 +84,20 @@ conversations.get("/", async (c) => {
 
   const { data: rows } = await query.order("updated_at", { ascending: false });
 
+  // Surface Mastra's auto-generated thread title in the sidebar when the user
+  // hasn't set an explicit one. Batch all of the user's thread titles in a
+  // single query (resourceId = userId) rather than one lookup per conversation.
+  const { data: threads } = await supabase
+    .from("mastra_threads")
+    .select("id, title")
+    .eq("resourceId", userId);
+  const threadTitle = new Map<string, string>((threads ?? []).map((t: any) => [t.id, t.title]));
+
   return c.json(
     (rows ?? []).map((conv: any) => ({
       id: conv.id,
       mastra_thread_id: conv.mastra_thread_id,
-      title: conv.title,
+      title: (conv.title?.trim() || cleanTitle(threadTitle.get(conv.mastra_thread_id))) ?? null,
       created_at: conv.created_at,
       updated_at: conv.updated_at,
       archived_at: conv.archived_at ?? null,
@@ -197,12 +226,13 @@ conversations.get("/:id", async (c) => {
     messages = toAISdkV5Messages(recalled.messages);
   }
 
-  // Sync title from Memory thread
-  let title = conv.title;
-  if (conv.mastra_thread_id && memory) {
+  // Prefer the user's explicit title (rename); otherwise fall back to Mastra's
+  // generated thread title, cleaned. Mirrors the list endpoint's precedence.
+  let title: string | null = conv.title?.trim() || null;
+  if (!title && conv.mastra_thread_id && memory) {
     try {
       const thread = await memory.getThreadById({ threadId: conv.mastra_thread_id });
-      if (thread?.title) title = thread.title;
+      title = cleanTitle(thread?.title);
     } catch {}
   }
 

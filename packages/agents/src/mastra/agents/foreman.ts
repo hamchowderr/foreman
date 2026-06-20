@@ -220,7 +220,10 @@ export function createForemanAgent(databaseUrl: string) {
         lastMessages: 20,
         generateTitle: {
           model: MODELS.fast,
-          instructions: "Generate a concise 3-6 word title for this conversation.",
+          instructions:
+            "Generate a concise 3-6 word title summarizing the user's request in this conversation. " +
+            "Output ONLY the plain title text — no markdown, no surrounding quotes, no 'Title:' label, " +
+            "and no trailing punctuation. Do not answer or react to the conversation; just title it.",
         },
         workingMemory: { enabled: true },
         semanticRecall: {
