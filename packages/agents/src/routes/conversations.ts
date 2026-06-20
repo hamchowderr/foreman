@@ -76,6 +76,97 @@ conversations.get("/", async (c) => {
   );
 });
 
+// Pull a short, human-readable excerpt out of a stored message around the match.
+// Stored content is JSON text (`{ parts: [...], content: "..." }`); fall back to
+// the raw string if it doesn't parse.
+function searchSnippet(content: string, q: string): string | null {
+  let text = content;
+  try {
+    const parsed = JSON.parse(content);
+    if (typeof parsed?.content === "string") text = parsed.content;
+    else if (Array.isArray(parsed?.parts)) {
+      text = parsed.parts
+        .filter((p: any) => p?.type === "text" && typeof p.text === "string")
+        .map((p: any) => p.text)
+        .join(" ");
+    }
+  } catch {}
+  text = text.trim();
+  if (!text) return null;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return text.slice(0, 100);
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(text.length, idx + q.length + 60);
+  return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
+}
+
+// GET /search?q= — search the user's conversations by title and message content.
+// One pass: title matches + content matches (scoped to the user via resourceId),
+// merged and de-duped by conversation, newest first.
+conversations.get("/search", async (c) => {
+  const userId = c.get("userId");
+  const q = (c.req.query("q") ?? "").trim();
+  if (q.length < 2) return c.json({ results: [] });
+
+  const supabase = getSupabase();
+  // Escape LIKE wildcards so a literal % or _ in the query isn't treated as one.
+  const like = `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+
+  const { data: byTitle } = await supabase
+    .from("conversation")
+    .select("id, mastra_thread_id, title, created_at, updated_at, archived_at")
+    .eq("user_id", userId)
+    .ilike("title", like);
+
+  const { data: msgHits } = await supabase
+    .from("mastra_messages")
+    .select("thread_id, content")
+    .eq("resourceId", userId)
+    .ilike("content", like)
+    .limit(200);
+
+  // First matching message per thread → snippet.
+  const snippetByThread = new Map<string, string | null>();
+  for (const m of msgHits ?? []) {
+    if (!snippetByThread.has(m.thread_id)) {
+      snippetByThread.set(m.thread_id, searchSnippet(m.content, q));
+    }
+  }
+
+  let byContent: any[] = [];
+  if (snippetByThread.size > 0) {
+    const { data } = await supabase
+      .from("conversation")
+      .select("id, mastra_thread_id, title, created_at, updated_at, archived_at")
+      .eq("user_id", userId)
+      .in("mastra_thread_id", [...snippetByThread.keys()]);
+    byContent = data ?? [];
+  }
+
+  const merged = new Map<string, any>();
+  for (const conv of byTitle ?? []) merged.set(conv.id, { ...conv, snippet: null });
+  for (const conv of byContent) {
+    const snippet = snippetByThread.get(conv.mastra_thread_id) ?? null;
+    const existing = merged.get(conv.id);
+    if (existing) existing.snippet ??= snippet;
+    else merged.set(conv.id, { ...conv, snippet });
+  }
+
+  const results = [...merged.values()]
+    .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))
+    .slice(0, 30)
+    .map((conv) => ({
+      id: conv.id,
+      title: conv.title,
+      created_at: conv.created_at,
+      updated_at: conv.updated_at,
+      archived_at: conv.archived_at ?? null,
+      snippet: conv.snippet,
+    }));
+
+  return c.json({ results });
+});
+
 // GET /:id — get conversation with messages
 conversations.get("/:id", async (c) => {
   const userId = c.get("userId");
