@@ -98,11 +98,22 @@ const USE_DEMOS: Record<string, Demo> = {
 
 const DEFAULT_DEMO: Demo = USE_DEMOS.leads;
 
+// Nudge the model to batch the inserts. Without this, weaker models (haiku) split
+// the three rows into one create-table-records call each — all succeed, but it's
+// slower and reads as three approvals' worth of work. The records array already
+// takes multiple rows, so one call is correct.
+const SINGLE_CALL_HINT =
+  " Add all the rows in a single create-table-records call — the records array takes multiple rows at once.";
+
+function withHint(demo: Demo): Demo {
+  return { ...demo, prompt: demo.prompt + SINGLE_CALL_HINT };
+}
+
 function getDemo(uses: string[]): Demo {
   for (const u of uses) {
-    if (USE_DEMOS[u]) return USE_DEMOS[u];
+    if (USE_DEMOS[u]) return withHint(USE_DEMOS[u]);
   }
-  return DEFAULT_DEMO;
+  return withHint(DEFAULT_DEMO);
 }
 
 const HIDDEN_TOOLS = new Set(["updateWorkingMemory", "recall"]);
