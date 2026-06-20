@@ -48,7 +48,75 @@ export async function saveSnapshot(input: SaveSnapshotInput): Promise<string> {
     created_at: now,
   });
   if (error) throw new Error(`saveSnapshot failed: ${error.message}`);
+
+  // Bound the append-only table after each append — best-effort, so a prune
+  // hiccup never fails a refresh.
+  try {
+    await pruneSnapshots(input.userId, input.appKey);
+  } catch (e) {
+    console.error("[saveSnapshot] prune failed (non-fatal):", (e as Error).message);
+  }
+
   return id;
+}
+
+/** How many snapshots to keep per (user, app_key). Count-based, not time-based:
+ * a time window (e.g. 90d) doesn't bound growth for frequent polls, whereas a
+ * hard count does. Set generously so the history endpoint (limit ≤ 500) still
+ * has data for trend charts. */
+const DEFAULT_KEEP_LAST = 200;
+/** Cap deletions per call so a one-time backfill drains over several refreshes
+ * instead of building a giant `.in(...)` URL that PostgREST would reject. */
+const MAX_PRUNE_BATCH = 200;
+
+/**
+ * Retention: keep the newest `keepLast` snapshots per (user, app_key) and delete
+ * older ones. NEVER deletes a snapshot a dashboard artifact is pinned to —
+ * `getArtifactWithData` resolves records by `snapshot_id`, so pruning a
+ * referenced row would blank that dashboard. Returns the number deleted.
+ */
+export async function pruneSnapshots(
+  userId: string,
+  appKey: string,
+  opts: { keepLast?: number } = {},
+): Promise<number> {
+  const keepLast = opts.keepLast ?? DEFAULT_KEEP_LAST;
+  const supabase = getSupabase();
+
+  // Newest-first ids only (cheap; covered by the (user_id, app_key, refreshed_at)
+  // index). Fast path: nothing beyond the window.
+  const { data: rows } = await supabase
+    .from("app_data_snapshot")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("app_key", appKey)
+    .order("refreshed_at", { ascending: false });
+  if (!rows || rows.length <= keepLast) return 0;
+
+  // Everything past the newest `keepLast` is a candidate; drain oldest-first in
+  // bounded batches.
+  const candidates = rows
+    .slice(keepLast)
+    .map((r) => r.id)
+    .slice(-MAX_PRUNE_BATCH);
+
+  // Exclude snapshots a dashboard artifact still references.
+  const { data: referenced } = await supabase
+    .from("artifact")
+    .select("snapshot_id")
+    .eq("user_id", userId)
+    .in("snapshot_id", candidates);
+  const pinned = new Set((referenced ?? []).map((r) => r.snapshot_id as string));
+  const toDelete = candidates.filter((id) => !pinned.has(id));
+  if (toDelete.length === 0) return 0;
+
+  const { error } = await supabase
+    .from("app_data_snapshot")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", toDelete);
+  if (error) throw new Error(`pruneSnapshots failed: ${error.message}`);
+  return toDelete.length;
 }
 
 /** Latest snapshot for a user's app source, or null if none exists yet. */
