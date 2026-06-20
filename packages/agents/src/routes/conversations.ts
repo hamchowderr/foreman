@@ -154,7 +154,7 @@ conversations.get("/search", async (c) => {
     .ilike("content", like)
     .limit(200);
 
-  // First matching message per thread → snippet.
+  // First matching message per thread → content snippet.
   const snippetByThread = new Map<string, string | null>();
   for (const m of msgHits ?? []) {
     if (!snippetByThread.has(m.thread_id)) {
@@ -162,19 +162,34 @@ conversations.get("/search", async (c) => {
     }
   }
 
-  let byContent: any[] = [];
-  if (snippetByThread.size > 0) {
+  // The sidebar shows Mastra's generated thread title, so search must cover it
+  // too (not just conversation.title + message content). Load the user's thread
+  // titles once — used both to match and to display the right title on results.
+  const { data: threads } = await supabase
+    .from("mastra_threads")
+    .select("id, title")
+    .eq("resourceId", userId);
+  const threadTitle = new Map<string, string>((threads ?? []).map((t: any) => [t.id, t.title]));
+  const qLower = q.toLowerCase();
+  const titleThreadIds = (threads ?? [])
+    .filter((t: any) => typeof t.title === "string" && t.title.toLowerCase().includes(qLower))
+    .map((t: any) => t.id);
+
+  // Threads matched by content or by generated title → their conversations.
+  const matchedThreadIds = new Set<string>([...snippetByThread.keys(), ...titleThreadIds]);
+  let byThread: any[] = [];
+  if (matchedThreadIds.size > 0) {
     const { data } = await supabase
       .from("conversation")
       .select("id, mastra_thread_id, title, created_at, updated_at, archived_at")
       .eq("user_id", userId)
-      .in("mastra_thread_id", [...snippetByThread.keys()]);
-    byContent = data ?? [];
+      .in("mastra_thread_id", [...matchedThreadIds]);
+    byThread = data ?? [];
   }
 
   const merged = new Map<string, any>();
   for (const conv of byTitle ?? []) merged.set(conv.id, { ...conv, snippet: null });
-  for (const conv of byContent) {
+  for (const conv of byThread) {
     const snippet = snippetByThread.get(conv.mastra_thread_id) ?? null;
     const existing = merged.get(conv.id);
     if (existing) existing.snippet ??= snippet;
@@ -186,7 +201,7 @@ conversations.get("/search", async (c) => {
     .slice(0, 30)
     .map((conv) => ({
       id: conv.id,
-      title: conv.title,
+      title: (conv.title?.trim() || cleanTitle(threadTitle.get(conv.mastra_thread_id))) ?? null,
       created_at: conv.created_at,
       updated_at: conv.updated_at,
       archived_at: conv.archived_at ?? null,
