@@ -45,13 +45,13 @@ interface RawGroundTruth {
 
 const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
   "one-shot-action": (_req) => ({
-    expected_behavior: `Single-app action. Foreman should run the 5-phase action_flow: find-unique-connection → list-actions(actionType: "write" or "search") → get-input-fields-schema (first pass) → list-input-field-choices for selectors → get-input-fields-schema (second pass) → confirm using the structured template ("I'll run **<action>** on **<app>** using the **<account>** connection with: …Confirm?") → run-action on user confirmation. Should NOT proceed with the write before confirming. Read/search actions skip confirmation.`,
+    expected_behavior: `Single-app action. Foreman should run the 5-phase action_flow: find-unique-connection → list-actions(actionType: "write" or "search") → get-action-input-fields-schema (first pass) → list-action-input-field-choices for selectors → get-action-input-fields-schema (second pass) → confirm using the structured template ("I'll run **<action>** on **<app>** using the **<account>** connection with: …Confirm?") → run-action on user confirmation. Should NOT proceed with the write before confirming. Read/search actions skip confirmation.`,
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]", "create-table"],
@@ -62,9 +62,9 @@ const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]"],
@@ -75,9 +75,9 @@ const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]"],
@@ -88,9 +88,9 @@ const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]"],
@@ -107,7 +107,7 @@ const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: [],

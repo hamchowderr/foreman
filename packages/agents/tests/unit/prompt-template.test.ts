@@ -16,8 +16,8 @@ describe("buildSystemPrompt", () => {
     // New MCP tool names
     expect(result).toContain("list-connections");
     expect(result).toContain("list-actions");
-    expect(result).toContain("get-input-fields-schema");
-    expect(result).toContain("list-input-field-choices");
+    expect(result).toContain("get-action-input-fields-schema");
+    expect(result).toContain("list-action-input-field-choices");
     expect(result).toContain("run-action");
     expect(result).toContain("list-apps");
     // ToolSearchProcessor meta-tools

@@ -60,8 +60,9 @@ const READ_ONLY = new Set([
   "findFirstConnection",
   "findUniqueConnection",
   "getConnection",
-  "getInputFieldsSchema",
-  "listInputFieldChoices",
+  "getActionInputFieldsSchema",
+  "listActionInputFields",
+  "listActionInputFieldChoices",
   "listTables",
   "getTable",
   "listTableFields",
@@ -86,8 +87,11 @@ const EXCLUDED_METHODS = new Set([
   "findUniqueAuthentication",
   "getAuthentication",
   "request",
-  // Legacy duplicate of getInputFieldsSchema
+  // Deprecated input-field aliases — canonical surfaced instead:
+  // getActionInputFieldsSchema / listActionInputFields / listActionInputFieldChoices
   "listInputFields",
+  "getInputFieldsSchema",
+  "listInputFieldChoices",
   // Connect Builder OAuth client credentials — Foreman doesn't expose this
   "createClientCredentials",
   "deleteClientCredentials",
@@ -110,7 +114,7 @@ const PAGINATED_METHODS = new Set([
   "listTables",
   "listTableRecords",
   "listTableFields",
-  "listInputFieldChoices",
+  "listActionInputFieldChoices",
   "runAction", // search/read actions return paginated results
 ]);
 

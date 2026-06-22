@@ -47,8 +47,10 @@ describe("Tool generation", () => {
       "find-first-authentication",
       "find-unique-authentication",
       "get-authentication",
-      // Legacy duplicate of get-input-fields-schema
+      // Deprecated input-field aliases — canonical trio surfaced instead
       "list-input-fields",
+      "get-input-fields-schema",
+      "list-input-field-choices",
       // Connect Builder OAuth client credentials — not exposed
       "create-client-credentials",
       "delete-client-credentials",
@@ -86,8 +88,9 @@ describe("Tool generation", () => {
       "get-action",
       "list-connections",
       "find-first-connection",
-      "get-input-fields-schema",
-      "list-input-field-choices",
+      "get-action-input-fields-schema",
+      "list-action-input-fields",
+      "list-action-input-field-choices",
       "list-tables",
       "get-table",
       "list-table-fields",

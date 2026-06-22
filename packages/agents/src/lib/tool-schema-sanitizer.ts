@@ -13,8 +13,8 @@ import { z } from "zod";
  * In other words: EVERY `type:"object"` node in a tool's input schema must have
  * `additionalProperties: false`. That is trivially satisfiable for fixed-shape
  * objects — but several Foreman tools have genuinely DYNAMIC inputs typed as
- * open maps (`z.record`): run-action(inputs), get-input-fields-schema(inputs),
- * list-input-field-choices(inputs), create/update-table-records(records[].data),
+ * open maps (`z.record`): run-action(inputs), get-action-input-fields-schema(inputs),
+ * list-action-input-field-choices(inputs), create/update-table-records(records[].data),
  * create-table-fields(fields[].options/config), run_workflow(inputs),
  * attach_trigger(poll.inputs). The model MUST be free to put arbitrary per-app
  * keys there, so `additionalProperties:false` (which forbids all keys) would

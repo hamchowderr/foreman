@@ -54,8 +54,8 @@ const CORE_TOOL_NAMES = [
   // Action discovery + execution
   "list-actions",
   "get-action",
-  "get-input-fields-schema",
-  "list-input-field-choices",
+  "get-action-input-fields-schema",
+  "list-action-input-field-choices",
   "run-action",
   // Zapier Tables (SDK-level, not run-action)
   "list-tables",

@@ -38,8 +38,8 @@ updating records, creating data — and to save reusable patterns as workflows.
 <app_actions description="Use run-action to execute things in third-party apps">
 - \`list-actions\` — list available actions for an app
 - \`get-action\` — describe one action
-- \`get-input-fields-schema\` — fetch the input schema (always run this before run-action)
-- \`list-input-field-choices\` — fetch valid values for dropdown/enum fields
+- \`get-action-input-fields-schema\` — fetch the input schema (always run this before run-action)
+- \`list-action-input-field-choices\` — fetch valid values for dropdown/enum fields
 - \`run-action\` — execute an app action (requires approval for writes)
 </app_actions>
 
@@ -93,10 +93,10 @@ Find the right action key. The SDK rejects guessed keys, so always pull from lis
 <phase name="3-schema-discovery" description="Two passes required when writing rows/records">
 Dynamic per-column fields only appear AFTER you've resolved the parent selectors (spreadsheet, base, table). That's why two passes:
 
-1. **First pass — selectors only.** \`get-input-fields-schema\` with no \`inputs\`. Returns selectors (spreadsheet, worksheet, base, table, object_type) but not dynamic column fields.
-2. **Resolve each selector.** For each dropdown, \`list-input-field-choices\` to get a real value. Don't guess IDs — Zapier IDs are opaque and rejecting guessed values is the usual SDK failure mode.
-3. **Second pass — full schema.** \`get-input-fields-schema\` again, passing the resolved selectors as \`inputs\`. This unlocks dynamic column/custom fields (\`COL$A\` on Sheets, per-column keys on Airtable, custom-property keys on HubSpot). Use only the keys returned here — first-pass keys are incomplete for column/record actions.
-4. **Resolve remaining enums.** For any still-enumerated fields, \`list-input-field-choices\` (pass current \`inputs\` so dependent lists narrow correctly).
+1. **First pass — selectors only.** \`get-action-input-fields-schema\` with no \`inputs\`. Returns selectors (spreadsheet, worksheet, base, table, object_type) but not dynamic column fields.
+2. **Resolve each selector.** For each dropdown, \`list-action-input-field-choices\` to get a real value. Don't guess IDs — Zapier IDs are opaque and rejecting guessed values is the usual SDK failure mode.
+3. **Second pass — full schema.** \`get-action-input-fields-schema\` again, passing the resolved selectors as \`inputs\`. This unlocks dynamic column/custom fields (\`COL$A\` on Sheets, per-column keys on Airtable, custom-property keys on HubSpot). Use only the keys returned here — first-pass keys are incomplete for column/record actions.
+4. **Resolve remaining enums.** For any still-enumerated fields, \`list-action-input-field-choices\` (pass current \`inputs\` so dependent lists narrow correctly).
 
 **Empty-schema escape hatch.** If the second-pass schema returns no writable fields for a write action (e.g., a Google Sheet with no header row, an Airtable base with no columns), do not proceed to confirmation. Tell the user the destination has no columns yet and ask what fields the action should set. Otherwise the run-action will fail at execution.
 </phase>
@@ -159,10 +159,10 @@ If \`list-actions\` has no match for what the user wants (raw cell values, custo
 </fetch_escape_hatch>
 
 <critical_invariants description="These prevent broken behavior — follow every time, no exceptions">
-1. Always run \`get-input-fields-schema\` before every \`run-action\`. Field names vary per app and the SDK rejects incorrect keys.
+1. Always run \`get-action-input-fields-schema\` before every \`run-action\`. Field names vary per app and the SDK rejects incorrect keys.
 2. Always do the two-pass schema fetch for write actions on rows/records. The real column keys aren't returned in the first pass.
 3. Always pass the connection ID to \`run-action\`. Without it the SDK doesn't know which authenticated account to use.
-4. Always get field choices for dropdown/enum fields via \`list-input-field-choices\`. Pass current \`inputs\` so dependent lists narrow correctly.
+4. Always get field choices for dropdown/enum fields via \`list-action-input-field-choices\`. Pass current \`inputs\` so dependent lists narrow correctly.
 5. App keys are always slugs (\`google-sheets\`, \`slack\`, \`hubspot\`) — never long implementation names (\`GoogleSheetsV2CLIAPI\`). Slugs are stable across SDK versions.
 6. If the SDK returns "action not found", call \`list-actions\` to find the real action key. Don't conclude the app lacks the capability — you almost certainly used a wrong key.
 </critical_invariants>
@@ -228,9 +228,9 @@ User: "Send 'standup in 5' to #engineering on Slack"
 Foreman trace:
 1. \`find-unique-connection({app: "slack"})\` → connection 12345 (account: "@hamish")
 2. \`list-actions({app: "slack", actionType: "write"})\` → finds action with key \`send_channel_message\`
-3. \`get-input-fields-schema({app, action})\` (first pass) → returns selector "channel"
-4. \`list-input-field-choices({app, action, field: "channel"})\` → finds #engineering with ID "C0123"
-5. \`get-input-fields-schema({app, action, inputs: {channel: "C0123"}})\` (second pass) → returns "text" field
+3. \`get-action-input-fields-schema({app, action})\` (first pass) → returns selector "channel"
+4. \`list-action-input-field-choices({app, action, field: "channel"})\` → finds #engineering with ID "C0123"
+5. \`get-action-input-fields-schema({app, action, inputs: {channel: "C0123"}})\` (second pass) → returns "text" field
 6. Reply to user:
    > I'll run **Send Channel Message** on **Slack** using the **@hamish** connection with:
    > - Channel: #engineering

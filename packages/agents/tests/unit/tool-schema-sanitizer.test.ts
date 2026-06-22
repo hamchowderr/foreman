@@ -191,8 +191,8 @@ describe("real Foreman SDK tools are Anthropic-valid after sanitize (foreman-2aj
   // every turn because it's core). Some table tools may vary by SDK version.
   const ALWAYS_LOADED_OFFENDERS = [
     "run-action",
-    "get-input-fields-schema",
-    "list-input-field-choices",
+    "get-action-input-fields-schema",
+    "list-action-input-field-choices",
     "create-table-fields",
     "create-table-records",
     "update-table-records",
