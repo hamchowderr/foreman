@@ -2,7 +2,7 @@
 
 **From:** Foreman team (admin@otakusolutions.io)
 **Re:** `@zapier/zapier-sdk/experimental` durable-workflow API (`runDurable` / `publishWorkflowVersion`)
-**Date of findings:** 2026-06-11 (SDK `0.69.3`); re-confirmed 2026-06-16 on the latest SDK `0.70.4`
+**Date of findings:** 2026-06-11 (SDK `0.69.3`); re-confirmed 2026-06-16 on `0.70.4`, and again 2026-06-22 on the current `0.76.0` — both credential types, identical 403; `defineDurable` still a "not callable — Phase 2" stub on 0.76.0
 **Status:** Blocked — durable is unreachable with every credential a public SDK client can mint.
 
 ---
@@ -24,13 +24,13 @@ A complete, self-contained reproduction script is included at the end — it nee
 
 | Package | Version |
 |---|---|
-| `@zapier/zapier-sdk` | `0.70.4` (latest; originally found on `0.69.3`, reproduced identically on `0.70.4`) |
+| `@zapier/zapier-sdk` | `0.76.0` (current latest; found on `0.69.3`, reproduced identically on `0.70.4` and `0.76.0`) |
 | `@zapier/zapier-sdk-cli` | `0.54.3` |
 | `@zapier/zapier-durable` | referenced from npm at `0.5.4` (not installed as a repo dep) |
 | `zod` | `4.4.3` |
 | Node | 22 |
 
-We reviewed the full `0.70.0`–`0.70.4` changelog: every durable-touching change is response-schema / field-parity / streaming work — **no auth, scope, or security-scheme changes** — consistent with the 403 being a server-side OAuth wall rather than an SDK artifact. We then re-ran the reproduction (below) on `0.70.4` and got the identical 403.
+We reviewed the full `0.70.0`–`0.70.4` changelog: every durable-touching change is response-schema / field-parity / streaming work — **no auth, scope, or security-scheme changes** — consistent with the 403 being a server-side OAuth wall rather than an SDK artifact. We then re-ran the reproduction (below) on `0.70.4` and got the identical 403. We re-ran it again on the current `0.76.0` (2026-06-22): 18/18 endpoints walled under client-credentials, and a freshly-minted PKCE user JWT still 403s with scope downgraded `internal`→`external` — unchanged. (The `0.71`–`0.76` changes are connection-creation, telemetry headers, camelCase param aliases, and workflow field-parity — none touch durable's auth or scope.)
 
 OAuth client used (the SDK's **public** PKCE client — the same one `zapier-sdk login` uses):
 `grwWZD5hUWGvb4V8ODBuOtXer3h0DBEZ2HR8aay6`, redirecting to one of the localhost ports Zapier allow-lists for it: `49505, 50575, 52804, 55981, 61010, 63851`.

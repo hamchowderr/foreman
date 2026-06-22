@@ -3,7 +3,7 @@
 > How Foreman authenticates to `@zapier/zapier-sdk`, and — critically — **which
 > auth works on which SDK surface.** Some experimental surfaces require a scope no
 > public SDK client can obtain. Snapshot: 2026-06-11, `@zapier/zapier-sdk@0.69.3`;
-> durable wall re-confirmed 2026-06-16 on `0.70.4` across **all 18** durable/workflow
+> durable wall re-confirmed 2026-06-16 on `0.70.4` and again 2026-06-22 on the current `0.76.0` across **all 18** durable/workflow
 > endpoints under both credential types (see [`zapier-durable-questions-for-engineers.md`](zapier-durable-questions-for-engineers.md)).
 
 ## The three credential types the SDK accepts

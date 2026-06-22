@@ -141,7 +141,9 @@ Source of truth: `packages/agents/src/lib/zapier-sdk-tools.ts`. Foreman imports 
 
 > 📌 **Correction:** the prior (0.69.3, doc-derived) snapshot claimed "20 surfaced tools (9 + 11)". The live count is **28** (9 + 16 read-only + 3 un-annotated). The old read-only count and the 3 auto-surfaced tools were both undercounted.
 
-### ⚠️ Finding F1 — input-field categorization is inverted (foreman-xb68 follow-up)
+### ✅ Finding F1 — input-field categorization inverted — RESOLVED 2026-06-22 (foreman-f1ef)
+
+> **Resolved 2026-06-22 (foreman-f1ef, branch `fix/zapier-deprecated-aliases`):** canonical trio → `READ_ONLY`; all 3 deprecated input-field aliases → `EXCLUDED`; `discovery.ts` production calls migrated to canonical SDK methods. The lockstep was **wider than first scoped** — landed across 16 files including `prompt-template.ts`, both agent instruction files, `tool-catalog.ts`, `tool-schema-sanitizer.ts`, 2 more unit tests, and 2 web landing demos. 323 unit tests pass, biome clean. (Live SDK tier updated but not executed — needs creds.) Original analysis preserved below.
 
 The SDK's **canonical** input-field methods are `getActionInputFieldsSchema` / `listActionInputFields` / `listActionInputFieldChoices`; the `*InputField*` names are **deprecated aliases**. Foreman has it backwards:
 
