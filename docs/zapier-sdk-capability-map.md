@@ -2,49 +2,49 @@
 
 > **Living ledger.** Foreman is a product built on `@zapier/zapier-sdk`. This file is the authoritative map of the SDK surface, what Foreman uses, and what we've deliberately decided *not* to build. Refresh it on every SDK bump.
 >
-> - **Snapshot date:** 2026-06-16 — **live-introspected** against `@zapier/zapier-sdk@0.70.4` (installed, nested under `packages/agents`).
+> - **Snapshot date:** 2026-06-25 — **live-introspected** against `@zapier/zapier-sdk@0.79.0` (installed; hoisted to the workspace-root `node_modules`, deduped — no longer nested under `packages/agents`).
 > - **How this snapshot was produced:** `npx tsx packages/agents/scripts/sdk-surface-sweep.ts` — imports the installed package and enumerates every entrypoint, `getRegistry()` variant, instance method, and named export. This is **not** changelog-reading; it is what the code on disk actually exposes. Re-run it on every bump (it's the "prove it" tool for the Zapier community showcase).
 > - **Version delta watcher:** `npm run sdk:check` (root) — watches `@zapier/zapier-sdk` + `@zapier/zapier-sdk-cli`, fires a quiet notice on session start via `scripts/zapier-sdk-watch.mjs`.
-> - **Tracking:** open decisions live in beads (see [Open decisions](#open-decisions)). Sweep tracked under **foreman-xb68**.
+> - **Tracking:** open decisions live in beads (see [Open decisions](#open-decisions)). Sweep tracked under **foreman-xb68**; the 0.70.4 → 0.79.0 bump under **foreman-9t9g**.
 
 ## TL;DR — the whole surface in one breath
 
-`@zapier/zapier-sdk@0.70.4` is **four things behind one package**:
+`@zapier/zapier-sdk@0.79.0` is **four things behind one package**:
 
-1. **A typed API client** — `createZapierSdk()` → **37 stable methods** (apps/actions discovery, `runAction`, connections, tables/records, profile, raw `fetch`).
-2. **An experimental control plane** — `@zapier/zapier-sdk/experimental` → the same 37 **+ 36 more** (trigger inboxes, durable runs, durable workflows). 18 of those (the durable/workflow write+read endpoints) are **scope-walled** for any public-SDK token (see auth model).
+1. **A typed API client** — `createZapierSdk()` → **40 stable methods** in the `mcp` cut (apps/actions discovery, `runAction`, connections — incl. the in-flow `createConnection` / `getConnectionStartUrl` / `waitForNewConnection` trio added in 0.71 —, tables/records, profile, raw `fetch`).
+2. **An experimental control plane** — `@zapier/zapier-sdk/experimental` → the same 40 **+ 36 more** (trigger inboxes, durable runs, durable workflows). 18 of those (the durable/workflow write+read endpoints) are **scope-walled** for any public-SDK token (see auth model).
 3. **An authoring framework** — `@zapier/zapier-sdk/define` → `defineDurable` / `defineTool` / `defineComponent` with durable `step`/`wait`/`createCallback` primitives. This is *code-mode durable workflows*: you author them locally, deploy/run via the (walled) experimental endpoints.
-4. **A composable plugin runtime** — 208 named exports on the main entrypoint: every method ships as a `*Plugin`, composable via `composePlugins`/`createPluginStack`; plus a resolver layer, a Zod schema library, a telemetry/event system, credential helpers, and a low-level HTTP client (`createZapierApi`).
+4. **A composable plugin runtime** — 223 named exports on the main entrypoint: every method ships as a `*Plugin`, composable via `composePlugins`/`createPluginStack`; plus a resolver layer, a Zod schema library, a telemetry/event system (now incl. the `DEPRECATION_NOTICE_EVENT` / `api:deprecation_notice` event added in 0.79), credential helpers, and a low-level HTTP client (`createZapierApi`).
 
 The action-type enum is still **read · read_bulk · write · run · search · search_or_write · search_and_write · filter** — **there is no "create a Zap" action type**. Persisted automation is the experimental durable API, which is walled. This is why Foreman owns its own workflow engine.
 
-## Live surface totals (2026-06-16, v0.70.4)
+## Live surface totals (2026-06-25, v0.79.0)
 
 | Entrypoint | `createZapierSdk()` instance methods | `getRegistry({package:"mcp"})` | Named exports |
 |---|---|---|---|
-| `.` (main) | **39** (37 API + `getRegistry` + `addPlugin`) | **37** | **208** |
-| `./experimental` | **75** (37 + 36 experimental + meta) | **71** | **208** |
+| `.` (main) | **42** (40 API + `getRegistry` + `addPlugin`) | **40** | **223** |
+| `./experimental` | **78** (40 + 36 experimental + meta) | **74** | **223** |
 | `./define` | n/a (authoring fns, not an SDK instance) | n/a | **5** |
 | `./apps` | n/a (generated-types anchor) | n/a | **1** (`App`) |
 
-**Experimental-only methods (36)** = 18 trigger-inbox + 5 durable-run + 13 durable-workflow (full list below).
+**Delta from 0.70.4:** main + experimental each gained the **3 in-flow connection methods** (`createConnection`, `getConnectionStartUrl`, `waitForNewConnection`, new in 0.71) → mcp cut 37 → 40; named exports 208 → 223. **Experimental-only methods (36)** = 18 trigger-inbox + 5 durable-run + 13 durable-workflow (full list below) — unchanged.
 
 ### `getRegistry({ package })` is a curated view, not the whole SDK
 
-The registry exists so hosts (MCP servers, CLIs, AI tool layers) can advertise a *subset* of methods. The `package` arg changes the cut — **live counts at 0.70.4**:
+The registry exists so hosts (MCP servers, CLIs, AI tool layers) can advertise a *subset* of methods. The `package` arg changes the cut — **live counts at 0.79.0**:
 
 | `package` | main | experimental | Notes |
 |---|---|---|---|
-| `undefined` (default) | 39 | 75 | includes the 2 app-proxy pseudo-entries |
-| `"mcp"` | **37** | 71 | **what Foreman uses** — drops the proxy entries (can't express a fluent proxy as one MCP tool) |
-| `"sdk"` | 34 | 70 | |
-| `"cli"` | 37 | 71 | |
-| `"all"` | 31 | 65 | |
-| `"ai"` | 31 | 65 | leanest curated set |
+| `undefined` (default) | 42 | 78 | includes the 2 app-proxy pseudo-entries |
+| `"mcp"` | **40** | 74 | **what Foreman uses** — drops the proxy entries (can't express a fluent proxy as one MCP tool) |
+| `"sdk"` | 37 | 73 | |
+| `"cli"` | 40 | 74 | |
+| `"all"` | 34 | 68 | |
+| `"ai"` | 34 | 68 | leanest curated set |
 
-Foreman's choice of `"mcp"` on the **main** entrypoint loses nothing real vs. the default (only the 2 proxy pseudo-entries `apps.{appKey}` / `apps.{appKey}.{actionType}.{actionKey}`, which Foreman deliberately doesn't use). If we ever want a tighter agent toolset, `"ai"` is a pre-curated 31. **Foreman never imports `./experimental`, so none of the 36 experimental methods are ever generated as tools today.**
+Foreman's choice of `"mcp"` on the **main** entrypoint loses nothing real vs. the default (only the 2 proxy pseudo-entries `apps.{appKey}` / `apps.{appKey}.{actionType}.{actionKey}`, which Foreman deliberately doesn't use). If we ever want a tighter agent toolset, `"ai"` is a pre-curated 34. **Foreman never imports `./experimental`, so none of the 36 experimental methods are ever generated as tools today.**
 
-## The 37 stable methods (main `mcp` registry)
+## The 40 stable methods (main `mcp` registry)
 
 | Domain | Methods |
 |---|---|
@@ -54,6 +54,7 @@ Foreman's choice of `"mcp"` on the **main** entrypoint loses nothing real vs. th
 | Run | `runAction` |
 | Connections | `listConnections`, `getConnection`, `findFirstConnection`, `findUniqueConnection` |
 | Connections (**deprecated aliases**) | `listAuthentications`→`listConnections`, `getAuthentication`→`getConnection`, `findFirstAuthentication`→`findFirstConnection`, `findUniqueAuthentication`→`findUniqueConnection` |
+| Connections (**in-flow, new in 0.71**) | `createConnection`, `getConnectionStartUrl`, `waitForNewConnection` — ⛔ **`EXCLUDED` in Foreman** (`createConnection`/`waitForNewConnection` block up to 5 min; connection UX is owned by `connect_zapier` + `/zapier/*` OAuth route; deliberate adoption tracked in foreman-mcwn) |
 | HTTP / profile | `fetch`, `request` (deprecated alias of `fetch`), `getProfile` |
 | Client credentials (Connect Builder) | `listClientCredentials`, `createClientCredentials`, `deleteClientCredentials` |
 | Tables | `listTables`, `getTable`, `createTable`, `deleteTable`, `listTableFields`, `createTableFields`, `deleteTableFields` |
@@ -128,18 +129,17 @@ Beyond the 37 methods, `import * as zapier from "@zapier/zapier-sdk"` exposes a 
 
 ## Foreman usage map & categorization audit
 
-Source of truth: `packages/agents/src/lib/zapier-sdk-tools.ts`. Foreman imports the **main** entrypoint, reads `getRegistry({package:"mcp"})` (37 fns), drops `EXCLUDED_METHODS`, and generates a Mastra tool per remaining method.
+Source of truth: `packages/agents/src/lib/zapier-sdk-tools.ts`. Foreman imports the **main** entrypoint, reads `getRegistry({package:"mcp"})` (40 fns at 0.79.0), drops `EXCLUDED_METHODS`, and generates a Mastra tool per remaining method.
 
-**Live tool count: Foreman generates 28 tools** (37 mcp methods − 9 excluded):
+**Live tool count: Foreman generates 26 tools** (40 mcp methods − 14 excluded), with **0 uncategorized**:
 
 | Bucket | Count | Methods |
 |---|---|---|
 | `APPROVAL_REQUIRED` (`requireApproval:true`, `destructiveHint:true`) | 9 | `runAction`, `fetch`, `createTable`, `deleteTable`, `createTableRecords`, `updateTableRecords`, `deleteTableRecords`, `createTableFields`, `deleteTableFields` |
-| `READ_ONLY` (`readOnlyHint:true`) | 16 | `listApps`, `getApp`, `listActions`, `getAction`, `listConnections`, `findFirstConnection`, `findUniqueConnection`, `getConnection`, `getInputFieldsSchema`, `listInputFieldChoices`, `listTables`, `getTable`, `listTableFields`, `listTableRecords`, `getTableRecord`, `getProfile` |
-| **Auto-surfaced, NOT categorized** ⚠️ | 3 | `getActionInputFieldsSchema`, `listActionInputFields`, `listActionInputFieldChoices` |
-| `EXCLUDED_METHODS` (no tool) | 9 | `listAuthentications`, `findFirstAuthentication`, `findUniqueAuthentication`, `getAuthentication`, `request`, `listInputFields`, `createClientCredentials`, `deleteClientCredentials`, `listClientCredentials` |
+| `READ_ONLY` (`readOnlyHint:true`) | 17 | `listApps`, `getApp`, `listActions`, `getAction`, `listConnections`, `findFirstConnection`, `findUniqueConnection`, `getConnection`, `getActionInputFieldsSchema`, `listActionInputFields`, `listActionInputFieldChoices`, `listTables`, `getTable`, `listTableFields`, `listTableRecords`, `getTableRecord`, `getProfile` |
+| `EXCLUDED_METHODS` (no tool) | 14 | `listAuthentications`, `findFirstAuthentication`, `findUniqueAuthentication`, `getAuthentication`, `request`, `listInputFields`, `getInputFieldsSchema`, `listInputFieldChoices`, `createClientCredentials`, `deleteClientCredentials`, `listClientCredentials`, `createConnection`, `getConnectionStartUrl`, `waitForNewConnection` |
 
-> 📌 **Correction:** the prior (0.69.3, doc-derived) snapshot claimed "20 surfaced tools (9 + 11)". The live count is **28** (9 + 16 read-only + 3 un-annotated). The old read-only count and the 3 auto-surfaced tools were both undercounted.
+> 📌 **History:** the 0.70.4 (pre-F1) snapshot showed **28 tools** (9 approval + 16 read-only + 3 uncategorized) with 9 excluded. Two changes since: **F1** (foreman-f1ef) moved the canonical input-field trio into `READ_ONLY` and the 3 deprecated aliases into `EXCLUDED` (→ 26 tools, 0 uncategorized); the **0.79.0 bump** (foreman-9t9g) added the 3 in-flow connection methods to the mcp registry and Foreman `EXCLUDED` all three (tool count stays **26**, excluded 11 → 14).
 
 ### ✅ Finding F1 — input-field categorization inverted — RESOLVED 2026-06-22 (foreman-f1ef)
 
@@ -175,15 +175,26 @@ Net: the agent sees **5 tools for 3 operations**, with the canonical ones mis-an
 
 Unchanged. **No "create a Zap" type** — automation persistence is the (walled) durable API, not an action type. This is the structural reason Foreman owns workflow persistence.
 
-## Changelog digest 0.69.3 → 0.70.4
+## Changelog digest 0.70.4 → 0.79.0
 
-- **0.70.4** response-field parity for experimental code-substrate plugins: `updateWorkflow`/`getWorkflow`/`listWorkflows` restore `is_private`, `created_by_user_id`, `triggers` (live claim status); `publishWorkflowVersion`/`getWorkflowVersion`/`listWorkflowVersions` restore `trigger`, `connections`, `app_versions`; `runDurable` input accepts `notifications` (webhook subscribers for run lifecycle). New `shared-schemas.ts`.
-- **0.70.3** TTY + agent-caller context in SDK telemetry; `get-durable-run` accepts null `last_error`.
-- **0.70.2** `listActions` no longer hardcodes `public_only:"true"` (private/unlisted apps the caller can access now appear) — COSUB-562.
-- **0.70.1** reinstate `Schema.parse()` on workflow/durable response handlers; open RunStatus/ExecutionStatus/OperationType/OperationStatus enums for forward-compat; restore `DeleteWorkflowResponseSchema`; wire `outputSchema` on `cancelDurableRun`/`deleteWorkflow`.
-- **0.70.0** `watchTriggerInbox` retries transient drain failures (5xx/429/network) with bounded backoff; new `ApiClient.fetchJsonStream` + `JsonSseMessage`.
+**Main-surface (affects Foreman directly):**
+- **0.79.0** trusted-deprecation machinery: SDK sniffs `zapier-sdk-deprecation-*` response headers (never on relay), warns once per notice id per process (no opt-out), and emits an `api:deprecation_notice` event (`DEPRECATION_NOTICE_EVENT` export). CLI renders a boxed stderr warning; the MCP server attaches notices to every tool result so agents relay them. **Candidate: subscribe in Foreman and surface to users.**
+- **0.78.0** kitcore plugin-model refactor (compat-bridged, behavior unchanged). Removed the deprecated `sdk.addPlugin(...)` **chain** method + no-arg `createSdk()` doorway; main now re-exports the plugin-authoring helpers (`createSdk`, `defineMethod`/`definePlugin`/`declareMethod`, `selectExports`, `addPlugin`). Foreman uses none of the removed APIs.
+- **0.77.2 / 0.77.1** published-type-declaration packaging fix (stray `import("kitcore")` leak); `@zapier/policy-context` dep slimmed.
+- **0.71.0** **`createConnection` / `getConnectionStartUrl` / `waitForNewConnection`** — connect an app from code end-to-end (mint URL → open/print → poll for the new connection). Now in the main mcp registry → auto-surfaced unless excluded (Foreman `EXCLUDED` all 3; see usage map + foreman-mcwn). Also: private-beta streaming auto-mode approval review.
 
-(Earlier 0.48→0.69.3 digest preserved in git history of this file; auth/behavior notes that still matter are folded into the auth model + sections above.)
+**Experimental/durable surface (scope-walled for Foreman — tracked, not used):**
+- **0.77.0** `triggerWorkflow` now authenticates as the account; **return shape changed** to `{ id, workflow_id, created_at }` (was `{ workflow, status, body }`).
+- **0.75.0** `listWorkflowRuns` no longer returns `output` on list items — fetch via `getWorkflowRun`.
+- **0.74.1** trigger claim-failure reason + workflow `disabled_reason` on experimental `get`/`listWorkflows`.
+- **0.73.1** camelCased input params on `runDurable`/`publishWorkflowVersion` (`sourceFiles`, `zapierDurableVersion`, `appVersions`, nested fields); snake_case kept as **deprecated aliases**.
+- **0.72.0** `listWorkflows` now paginates (`pageSize`/`cursor`; >100 rejected).
+- **0.71.1** `createWorkflow`'s `is_private` input renamed to `private` (`is_private` kept as deprecated alias; wire field unchanged).
+- **0.76.0** `./define` durable `CallbackResult<T>` typing — awaiting a `timeoutSeconds` callback resolves `{ status: "delivered"|"expired", … }`; `CallbackOptionsWithTimeout` exported.
+
+**Telemetry headers:** **0.76.2** `zapier-sdk-agent`, **0.74.0** `zapier-sdk-package-operation`, **0.73.0** standard `zapier-sdk-version`/`zapier-service`/etc. headers (legacy `x-zapier-*` still sent).
+
+(0.70.4 → 0.70.0 and 0.48 → 0.69.3 digests preserved in git history of this file; auth/behavior notes that still matter are folded into the auth model + sections above.)
 
 ## Reproduce / verify
 

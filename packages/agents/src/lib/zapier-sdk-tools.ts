@@ -96,6 +96,19 @@ const EXCLUDED_METHODS = new Set([
   "createClientCredentials",
   "deleteClientCredentials",
   "listClientCredentials",
+  // In-flow connection helpers (added to the main mcp registry in SDK 0.71).
+  // Excluded from auto-generation for two reasons:
+  //   1. `createConnection` / `waitForNewConnection` BLOCK up to 5 minutes
+  //      waiting for the user to finish connecting — wrong for Mastra's
+  //      synchronous tool loop (would stall a request/stream).
+  //   2. Foreman already owns the connection UX via the `connect_zapier`
+  //      custom tool + the `/zapier/*` OAuth callback route; exposing these
+  //      would give the agent competing, overlapping ways to connect an app.
+  // Deliberate adoption of `createConnection` (as a proper async/background
+  // custom tool) is tracked in foreman-mcwn.
+  "createConnection",
+  "getConnectionStartUrl",
+  "waitForNewConnection",
 ]);
 
 /** Convert camelCase to kebab-case (matching MCP server convention). */
