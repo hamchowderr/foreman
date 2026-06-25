@@ -14,7 +14,6 @@ import proposals from "./proposals";
 import storedAgents from "./stored-agents";
 import voice from "./voice";
 import webhooks from "./webhooks";
-import workflows from "./workflows";
 import zapierConnect, { handleOAuthCallback } from "./zapier-connect";
 
 /**
@@ -39,7 +38,6 @@ app.use(
 );
 app.route("/conversations", conversations);
 app.route("/proposals", proposals);
-app.route("/workflows", workflows);
 app.route("/dashboards", dashboards);
 app.route("/stored/agents", storedAgents);
 app.route("/zapier", zapierConnect);

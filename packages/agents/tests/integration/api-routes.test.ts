@@ -22,7 +22,7 @@ vi.mock("@/discord/webhook", () => ({
   handleDiscordWebhook: vi.fn((c: any) => c.json({ ok: true })),
 }));
 
-// Mock stream utilities used by conversations/workflows
+// Mock stream utilities used by conversations
 vi.mock("@/lib/stream/transformer", () => ({
   createChunkTransformer: vi.fn(),
 }));
@@ -369,25 +369,6 @@ describe("API route integration tests", () => {
       expect(res.status).toBe(400);
       const body = await res.json();
       expect(body.error).toContain("enabled");
-    });
-  });
-
-  // ── Workflows ─────────────────────────────────────────────────────────
-
-  describe("GET /workflows", () => {
-    it("returns 401 without auth", async () => {
-      const res = await app.request("/workflows");
-      expect(res.status).toBe(401);
-    });
-
-    it("returns empty array for a user with no workflows", async () => {
-      // mockDb.select already returns empty rows by default
-      const res = await app.request("/workflows", {
-        headers: { Authorization: AUTH_HEADER },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toEqual([]);
     });
   });
 

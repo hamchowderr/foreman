@@ -5,7 +5,6 @@ import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
-import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ github: ReturnType<typeof createGitHubAdapter> }> | undefined;
 let _githubAdapter: ReturnType<typeof createGitHubAdapter> | undefined;
@@ -61,14 +60,6 @@ export async function getGitHubBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     try {
-      const fired = await matchAndFireChannelTriggers({
-        channel: "github",
-        text: message.text,
-        from: message.author.userId,
-        dedupeKey: message.id,
-        room: thread.channelId,
-      });
-      if (fired > 0) return;
       console.log("[github] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
       const reply = await generateReply(
@@ -88,14 +79,6 @@ export async function getGitHubBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     try {
-      const fired = await matchAndFireChannelTriggers({
-        channel: "github",
-        text: message.text,
-        from: message.author.userId,
-        dedupeKey: message.id,
-        room: thread.id,
-      });
-      if (fired > 0) return;
       console.log("[github] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});

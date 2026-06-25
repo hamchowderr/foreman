@@ -5,8 +5,8 @@
 -- and can render time-series/trend charts. The latest snapshot for a source is
 -- `ORDER BY refreshed_at DESC LIMIT 1`. A retention/prune policy is a follow-up.
 --
--- Populated by the poll-trigger refresh (src/mastra/signals/zapier-poll-provider.ts)
--- and read by the /dashboards data endpoints. Service_role access only, like the
+-- Populated via saveSnapshot (lib/dashboards/snapshot.ts) and read by the
+-- /dashboards data endpoints. Service_role access only, like the
 -- other Foreman core tables. user_id is TEXT (Better Auth IDs), matching
 -- conversation/workflow; JSON payloads are stored as text and parsed in app code.
 

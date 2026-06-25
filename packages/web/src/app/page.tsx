@@ -11,7 +11,6 @@ import { ReasoningTrace } from "@/components/landing/sections/reasoning-trace";
 import { SiteFooter } from "@/components/landing/sections/site-footer";
 import { ToolDiscoverySection } from "@/components/landing/sections/tool-discovery-section";
 import { WhyNotZap } from "@/components/landing/sections/why-not-zap";
-import { Workflows } from "@/components/landing/sections/workflows";
 import { SiteNav } from "@/components/landing/site-nav";
 
 export default function LandingPage() {
@@ -28,7 +27,6 @@ export default function LandingPage() {
         <Guardrails />
         <HistorySection />
         <PiiSection />
-        <Workflows />
         <Hosting />
         <FiveThings />
         <ClosingCta />

@@ -5,7 +5,6 @@ import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
-import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ linear: ReturnType<typeof createLinearAdapter> }> | undefined;
 let _linearAdapter: ReturnType<typeof createLinearAdapter> | undefined;
@@ -59,14 +58,6 @@ export async function getLinearBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     try {
-      const fired = await matchAndFireChannelTriggers({
-        channel: "linear",
-        text: message.text,
-        from: message.author.userId,
-        dedupeKey: message.id,
-        room: thread.channelId,
-      });
-      if (fired > 0) return;
       console.log("[linear] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
       const reply = await generateReply(
@@ -86,14 +77,6 @@ export async function getLinearBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     try {
-      const fired = await matchAndFireChannelTriggers({
-        channel: "linear",
-        text: message.text,
-        from: message.author.userId,
-        dedupeKey: message.id,
-        room: thread.id,
-      });
-      if (fired > 0) return;
       console.log("[linear] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});

@@ -15,8 +15,7 @@ import { z } from "zod";
  * objects — but several Foreman tools have genuinely DYNAMIC inputs typed as
  * open maps (`z.record`): run-action(inputs), get-action-input-fields-schema(inputs),
  * list-action-input-field-choices(inputs), create/update-table-records(records[].data),
- * create-table-fields(fields[].options/config), run_workflow(inputs),
- * attach_trigger(poll.inputs). The model MUST be free to put arbitrary per-app
+ * create-table-fields(fields[].options/config). The model MUST be free to put arbitrary per-app
  * keys there, so `additionalProperties:false` (which forbids all keys) would
  * break them — yet Anthropic accepts no open-object form at all.
  *

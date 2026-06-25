@@ -11,7 +11,7 @@ export interface SaveSnapshotInput {
   sourceConfig: unknown;
   /** the pulled records */
   records: SnapshotRecord[];
-  /** the workflow_trigger that produced this snapshot, if any */
+  /** the trigger that produced this snapshot, if any */
   triggerId?: string | null;
 }
 

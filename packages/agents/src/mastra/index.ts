@@ -104,7 +104,6 @@ export function getMastra(): Mastra {
   const CUSTOM_ROUTE_PREFIXES = [
     "/conversations",
     "/proposals",
-    "/workflows",
     "/dashboards",
     "/stored",
     "/zapier",

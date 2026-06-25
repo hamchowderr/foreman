@@ -10,7 +10,6 @@
     "build:cloudflare": "DEPLOY_TARGET=cloudflare mastra build",
     "start": "node --env-file=.env.local .mastra/output/index.mjs 2>&1 | tee server.log",
     "start:webhooks": "npx tsx --env-file=.env.local src/webhook-server.ts",
-    "start:cron": "npx tsx --env-file=.env.local src/cron-driver-server.ts",
     "dev:mock": "npx @copilotkit/aimock --config aimock.json --port 4010",
     "dev:telegram": "npx tsx --env-file=.env.local src/telegram/start-polling.ts",
     "db:types": "npx supabase gen types typescript --local --workdir ../.. --schema public | npx biome format --stdin-file-path=database.types.ts > src/lib/db/database.types.ts",

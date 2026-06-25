@@ -19,21 +19,10 @@ import {
 } from "../../lib/providers";
 import { sanitizeToolSchemas } from "../../lib/tool-schema-sanitizer";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
-import { channelTriggerProvider } from "../signals/channel-trigger-provider";
-import { zapierPollProvider } from "../signals/zapier-poll-provider";
-import { attachTriggerTool } from "../tools/attach-trigger";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { createDashboardTool } from "../tools/create-dashboard";
-import { deleteWorkflowTool } from "../tools/delete-workflow";
-import { detachTriggerTool } from "../tools/detach-trigger";
 import { forkConversationTool } from "../tools/fork-conversation";
-import { getWorkflowTool } from "../tools/get-workflow";
-import { listWorkflowTriggersTool } from "../tools/list-workflow-triggers";
-import { listWorkflowsTool } from "../tools/list-workflows";
-import { runWorkflowTool } from "../tools/run-workflow";
-import { saveWorkflowTool } from "../tools/save-workflow";
 import { searchHistoryTool } from "../tools/search-history";
-import { updateWorkflowTool } from "../tools/update-workflow";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -108,15 +97,6 @@ function buildForemanTools() {
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
       create_dashboard: createDashboardTool,
-      save_workflow: saveWorkflowTool,
-      list_workflows: listWorkflowsTool,
-      get_workflow: getWorkflowTool,
-      run_workflow: runWorkflowTool,
-      update_workflow: updateWorkflowTool,
-      delete_workflow: deleteWorkflowTool,
-      attach_trigger: attachTriggerTool,
-      list_workflow_triggers: listWorkflowTriggersTool,
-      detach_trigger: detachTriggerTool,
       ...coreTools,
     }),
   );
@@ -185,12 +165,6 @@ export function createForemanAgent(databaseUrl: string) {
       stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
-    // Triggers run as Mastra SignalProviders hosted on this agent (agent-hosted
-    // gives them notify() → events land in the user's thread). Neither sets a
-    // pollInterval: the poll provider is driven by cron-driver-server on a
-    // single tick (so it doesn't auto-poll in every process the agent is built
-    // in); the channel provider is event-driven via the webhook handlers.
-    signals: [zapierPollProvider, channelTriggerProvider],
     voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
     scorers: {
       relevancy: {

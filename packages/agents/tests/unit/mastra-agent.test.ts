@@ -29,12 +29,7 @@ describe("Mastra foreman agent", () => {
     expect(toolNames).toContain("search_history");
     expect(toolNames).toContain("fork_conversation");
     expect(toolNames).toContain("connect_zapier");
-    expect(toolNames).toContain("save_workflow");
-    expect(toolNames).toContain("list_workflows");
-    expect(toolNames).toContain("get_workflow");
-    expect(toolNames).toContain("run_workflow");
-    expect(toolNames).toContain("update_workflow");
-    expect(toolNames).toContain("delete_workflow");
+    expect(toolNames).toContain("create_dashboard");
   }, 30000);
 
   it("foreman agent uses AGENT_MODELS.foreman as its model", async () => {
@@ -42,20 +37,5 @@ describe("Mastra foreman agent", () => {
     const { AGENT_MODELS } = await import("@/lib/providers");
     const agent = await createForemanAgent("file:./test-agent.db");
     expect(agent.model).toEqual(AGENT_MODELS.foreman);
-  }, 30000);
-
-  it("hosts the trigger SignalProviders and connects them on construction", async () => {
-    const { createForemanAgent } = await import("@/mastra/agents/foreman");
-    const { zapierPollProvider } = await import("@/mastra/signals/zapier-poll-provider");
-    const { channelTriggerProvider } = await import("@/mastra/signals/channel-trigger-provider");
-    await createForemanAgent("file:./test-agent.db");
-    // The Agent constructor calls provider.connect(this) for each signals entry,
-    // proving the primitives are live in the agent (not merely defined).
-    expect(zapierPollProvider.isConnected).toBe(true);
-    expect(channelTriggerProvider.isConnected).toBe(true);
-    // Neither sets a pollInterval — the poll provider is driven by
-    // cron-driver-server, the channel provider is event-driven via webhooks.
-    expect(zapierPollProvider.pollInterval).toBeUndefined();
-    expect(channelTriggerProvider.pollInterval).toBeUndefined();
   }, 30000);
 });

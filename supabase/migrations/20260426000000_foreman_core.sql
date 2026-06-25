@@ -140,49 +140,6 @@ ALTER TABLE public.conversation OWNER TO postgres;
 ALTER TABLE public.conversation ADD CONSTRAINT conversation_pkey PRIMARY KEY (id);
 
 
--- Workflows: saved automation sequences
-CREATE TABLE IF NOT EXISTS public.workflow (
-    id text NOT NULL,
-    user_id text NOT NULL,
-    name text NOT NULL,
-    source_conversation_id text,
-    parameters text NOT NULL,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    is_template boolean DEFAULT false NOT NULL,
-    cloned_from text
-);
-
-ALTER TABLE public.workflow OWNER TO postgres;
-ALTER TABLE public.workflow ADD CONSTRAINT workflow_pkey PRIMARY KEY (id);
-
-
--- Workflow runs: execution instances of a workflow
-CREATE TABLE IF NOT EXISTS public.workflow_run (
-    id text NOT NULL,
-    workflow_id text NOT NULL,
-    inputs text NOT NULL,
-    status text NOT NULL,
-    created_at timestamp with time zone NOT NULL,
-    completed_at timestamp with time zone
-);
-
-ALTER TABLE public.workflow_run OWNER TO postgres;
-ALTER TABLE public.workflow_run ADD CONSTRAINT workflow_run_pkey PRIMARY KEY (id);
-
-
--- Workflow steps: ordered action templates within a workflow
-CREATE TABLE IF NOT EXISTS public.workflow_step (
-    id text NOT NULL,
-    workflow_id text NOT NULL,
-    "order" integer NOT NULL,
-    proposal_template text NOT NULL
-);
-
-ALTER TABLE public.workflow_step OWNER TO postgres;
-ALTER TABLE public.workflow_step ADD CONSTRAINT workflow_step_pkey PRIMARY KEY (id);
-
-
 -- Zapier identities: OAuth tokens per user
 CREATE TABLE IF NOT EXISTS public.zapier_identity (
     id text NOT NULL,
@@ -229,22 +186,6 @@ ALTER TABLE public.connection_alias
 ALTER TABLE public.conversation
     ADD CONSTRAINT conversation_user_id_user_id_fk
     FOREIGN KEY (user_id) REFERENCES public."user"(id);
-
-ALTER TABLE public.workflow
-    ADD CONSTRAINT workflow_user_id_user_id_fk
-    FOREIGN KEY (user_id) REFERENCES public."user"(id);
-
-ALTER TABLE public.workflow
-    ADD CONSTRAINT workflow_source_conversation_id_conversation_id_fk
-    FOREIGN KEY (source_conversation_id) REFERENCES public.conversation(id);
-
-ALTER TABLE public.workflow_run
-    ADD CONSTRAINT workflow_run_workflow_id_workflow_id_fk
-    FOREIGN KEY (workflow_id) REFERENCES public.workflow(id);
-
-ALTER TABLE public.workflow_step
-    ADD CONSTRAINT workflow_step_workflow_id_workflow_id_fk
-    FOREIGN KEY (workflow_id) REFERENCES public.workflow(id);
 
 ALTER TABLE public.zapier_identity
     ADD CONSTRAINT zapier_identity_user_id_user_id_fk

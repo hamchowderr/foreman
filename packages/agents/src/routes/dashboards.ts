@@ -10,8 +10,8 @@ import type { AppEnv } from "./types";
  * Dashboard data routes (Phase 1: snapshot reads).
  *
  * Snapshots are append-only rows pulled from a user's connected app
- * (see src/mastra/signals/zapier-poll-provider.ts + lib/dashboards/snapshot.ts),
- * keyed by (user_id, app_key). Phase 1 exposes them by app_key because the
+ * (written via saveSnapshot in lib/dashboards/snapshot.ts), keyed by
+ * (user_id, app_key). Phase 1 exposes them by app_key because the
  * `dashboard` table doesn't exist yet (Phase 2). We deliberately namespace under
  * `/snapshots/:appKey` so the future `/dashboards/:id` routes won't collide.
  *
