@@ -132,7 +132,6 @@ export type Database = {
           name: string;
           scopes: string;
           user_id: string;
-          workspace_id: string | null;
         };
         Insert: {
           created_at: string;
@@ -142,7 +141,6 @@ export type Database = {
           name: string;
           scopes: string;
           user_id: string;
-          workspace_id?: string | null;
         };
         Update: {
           created_at?: string;
@@ -152,7 +150,6 @@ export type Database = {
           name?: string;
           scopes?: string;
           user_id?: string;
-          workspace_id?: string | null;
         };
         Relationships: [
           {
@@ -160,13 +157,6 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "user";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "api_key_workspace_id_fkey";
-            columns: ["workspace_id"];
-            isOneToOne: false;
-            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
@@ -745,19 +735,16 @@ export type Database = {
           capability: string;
           enabled: boolean;
           user_id: string;
-          workspace_id: string | null;
         };
         Insert: {
           capability: string;
           enabled?: boolean;
           user_id: string;
-          workspace_id?: string | null;
         };
         Update: {
           capability?: string;
           enabled?: boolean;
           user_id?: string;
-          workspace_id?: string | null;
         };
         Relationships: [
           {
@@ -765,13 +752,6 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "user";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "capability_flag_workspace_id_fkey";
-            columns: ["workspace_id"];
-            isOneToOne: false;
-            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
@@ -830,7 +810,6 @@ export type Database = {
           id: string;
           used_at: string | null;
           user_id: string;
-          workspace_id: string | null;
         };
         Insert: {
           channel: string;
@@ -840,7 +819,6 @@ export type Database = {
           id: string;
           used_at?: string | null;
           user_id: string;
-          workspace_id?: string | null;
         };
         Update: {
           channel?: string;
@@ -850,17 +828,8 @@ export type Database = {
           id?: string;
           used_at?: string | null;
           user_id?: string;
-          workspace_id?: string | null;
         };
-        Relationships: [
-          {
-            foreignKeyName: "channel_link_code_workspace_id_fkey";
-            columns: ["workspace_id"];
-            isOneToOne: false;
-            referencedRelation: "workspaces";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       connection_alias: {
         Row: {
@@ -869,7 +838,6 @@ export type Database = {
           connection_id: number;
           created_at: string;
           user_id: string;
-          workspace_id: string | null;
         };
         Insert: {
           alias: string;
@@ -877,7 +845,6 @@ export type Database = {
           connection_id: number;
           created_at: string;
           user_id: string;
-          workspace_id?: string | null;
         };
         Update: {
           alias?: string;
@@ -885,7 +852,6 @@ export type Database = {
           connection_id?: number;
           created_at?: string;
           user_id?: string;
-          workspace_id?: string | null;
         };
         Relationships: [
           {
@@ -893,13 +859,6 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "user";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "connection_alias_workspace_id_fkey";
-            columns: ["workspace_id"];
-            isOneToOne: false;
-            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
