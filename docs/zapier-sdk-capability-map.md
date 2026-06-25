@@ -196,6 +196,14 @@ Unchanged. **No "create a Zap" type** — automation persistence is the (walled)
 
 (0.70.4 → 0.70.0 and 0.48 → 0.69.3 digests preserved in git history of this file; auth/behavior notes that still matter are folded into the auth model + sections above.)
 
+## Live validation (2026-06-25, v0.79.0, foreman-9t9g)
+
+Ran the live SDK test tier against the real Zapier API (client-credentials via Infisical):
+
+- **Read + error-handling:** 16 passed / 1 skipped (the skip needs a real user connection — client-creds has none). All discovery/read round-trips (`list-connections`, `list-apps`, `list-actions`, read `run-action`, `get-app`, `get-action`, input-field schemas) work on 0.79.0.
+- **Write cycle:** `create-table → create-table-fields → list-table-fields → create-table-records → list-table-records → delete-table` — green, but surfaced a **response-shape change**: ⚠️ **`list-table-fields` / `list-table-records` now return the paginated envelope `{ items: [...], count }`** on 0.79.0 (the SDK test previously assumed a bare array / `.data`; assertions updated to accept `items` ?? `data` ?? raw). Foreman's generated tools pass the raw response to the LLM, so this is **not** a production break — but any future code reading those lists should expect `.items`.
+- **New capability verified — `getConnectionStartUrl({ app })`** (0.71, non-blocking): returns `{ data: { url, expiresAt, startedAt, app } }` — a short-lived (5-min) signed `zapier.com/sdk/connect?…&sig=…` URL, minted under client-creds. Confirms **foreman-mcwn** is viable: Foreman can mint connect URLs via the SDK as an alternative/supplement to the `/zapier/*` OAuth route. (`createConnection`/`waitForNewConnection` remain excluded — they block on the user finishing.)
+
 ## Reproduce / verify
 
 ```bash

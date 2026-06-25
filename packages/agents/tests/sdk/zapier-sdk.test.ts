@@ -491,7 +491,9 @@ describe("SDK Write Tests", () => {
     // 3. List fields to verify
     const listFields = await exec("list-table-fields", { table: createdTableId });
     assertNotValidationError(listFields, "list-table-fields");
-    const fields = listFields?.data ?? listFields;
+    // SDK 0.79.0 returns the paginated envelope `{ items, count }`; older
+    // shapes used `.data` or a bare array — accept all three.
+    const fields = listFields?.items ?? listFields?.data ?? listFields;
     expect(Array.isArray(fields)).toBe(true);
     console.log(`  Table has ${fields.length} field(s)`);
 
@@ -511,7 +513,8 @@ describe("SDK Write Tests", () => {
     // 5. List records to verify
     const listRecords = await exec("list-table-records", { table: createdTableId });
     assertNotValidationError(listRecords, "list-table-records");
-    const records = listRecords?.data ?? listRecords;
+    // SDK 0.79.0 paginated envelope `{ items, count }` (see list-table-fields above).
+    const records = listRecords?.items ?? listRecords?.data ?? listRecords;
     expect(Array.isArray(records)).toBe(true);
     expect(records.length).toBeGreaterThanOrEqual(3);
     console.log(`  Found ${records.length} record(s)`);
