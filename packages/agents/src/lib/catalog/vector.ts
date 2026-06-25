@@ -29,12 +29,21 @@ export async function ensureCatalogIndex(): Promise<void> {
   const vector = getVector();
   try {
     const indexes = await vector.listIndexes();
-    if (!indexes.includes(INDEX_NAME)) {
-      await vector.createIndex({
-        indexName: INDEX_NAME,
-        dimension: EMBEDDING_DIMENSION,
-      });
+    if (indexes.includes(INDEX_NAME)) {
+      // Dimension guard (foreman-hcim): an index built before the 1536->384
+      // embedder switch silently rejects 384-d upserts. Drop a wrong-dimension
+      // index so it recreates; the catalog must then be re-seeded (catalog:seed).
+      const stats = await vector.describeIndex({ indexName: INDEX_NAME }).catch(() => undefined);
+      if (!stats || stats.dimension === EMBEDDING_DIMENSION) return;
+      console.warn(
+        `[catalog] ${INDEX_NAME} index is ${stats.dimension}-d but embedder is ${EMBEDDING_DIMENSION}-d — dropping & recreating (re-seed required).`,
+      );
+      await vector.deleteIndex({ indexName: INDEX_NAME });
     }
+    await vector.createIndex({
+      indexName: INDEX_NAME,
+      dimension: EMBEDDING_DIMENSION,
+    });
   } catch {
     // Index creation may fail if tables already exist in a different format.
     // The upsert call will create the index implicitly if needed.

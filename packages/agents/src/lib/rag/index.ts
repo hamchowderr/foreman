@@ -28,12 +28,23 @@ function getEmbedder() {
 export async function ensureIndex(): Promise<void> {
   const vector = getVector();
   const indexes = await vector.listIndexes();
-  if (!indexes.includes(INDEX_NAME)) {
-    await vector.createIndex({
-      indexName: INDEX_NAME,
-      dimension: EMBEDDING_DIMENSION,
-    });
+  if (indexes.includes(INDEX_NAME)) {
+    // Dimension guard (foreman-hcim): an index built before the 1536->384
+    // embedder switch silently rejects 384-d upserts. If an existing index is
+    // at the wrong dimension, drop it so it recreates at EMBEDDING_DIMENSION;
+    // action_history re-indexes as new runs are recorded. If the dimension is
+    // correct (or can't be read) leave it untouched.
+    const stats = await vector.describeIndex({ indexName: INDEX_NAME }).catch(() => undefined);
+    if (!stats || stats.dimension === EMBEDDING_DIMENSION) return;
+    console.warn(
+      `[rag] ${INDEX_NAME} index is ${stats.dimension}-d but embedder is ${EMBEDDING_DIMENSION}-d — dropping & recreating (history re-indexes over time).`,
+    );
+    await vector.deleteIndex({ indexName: INDEX_NAME });
   }
+  await vector.createIndex({
+    indexName: INDEX_NAME,
+    dimension: EMBEDDING_DIMENSION,
+  });
 }
 
 /**
