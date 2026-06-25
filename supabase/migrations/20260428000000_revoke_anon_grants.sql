@@ -1,6 +1,5 @@
 -- Revoke anon SELECT from all non-public tables
--- marketing_* tables remain readable by anon (public blog, changelog, feedback)
--- All other tables should require authentication
+-- All tables require authentication (the NextBase marketing/feedback CMS was removed)
 
 REVOKE SELECT ON TABLE public.account_delete_tokens FROM anon;
 REVOKE SELECT ON TABLE public.action_proposal FROM anon;
