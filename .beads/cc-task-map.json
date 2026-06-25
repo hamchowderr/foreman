@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "bd_id": "foreman-4jbc",
+      "cc_task_id": null,
+      "title": "Sidebar reads as out-of-place grey/black slab with hard divider",
+      "created_at": "2026-06-20T19:26:24.249Z",
+      "updated_at": "2026-06-20T19:26:24.249Z"
+    },
+    {
+      "bd_id": "foreman-qhbp",
+      "cc_task_id": null,
+      "title": "Migrations cleanup + identity/tenancy unification onto NextBase model",
+      "created_at": "2026-06-25T19:14:53.805Z",
+      "updated_at": "2026-06-25T19:14:53.805Z"
+    }
+  ]
+}
