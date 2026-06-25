@@ -16,6 +16,7 @@ import {
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
 import { requestUserContext } from "./request-user-context";
+import { onZapierSdkEvent } from "./zapier/deprecation";
 import { getSdkForUser } from "./zapier/sdk";
 
 /**
@@ -215,7 +216,7 @@ const SCHEMA_OVERRIDES: Record<string, z.ZodTypeAny> = {
  */
 function resolveCredentials(
   explicit?: string | (() => Promise<string>),
-): Parameters<typeof createZapierSdk>[0]["credentials"] {
+): NonNullable<Parameters<typeof createZapierSdk>[0]>["credentials"] {
   if (explicit) return explicit;
   const isDev = process.env.FOREMAN_MODE === "dev";
   if (!isDev) {
@@ -276,6 +277,7 @@ export function generateZapierTools(
     maxNetworkRetries: 3,
     maxNetworkRetryDelayMs: 30000,
     canDeleteTables: true,
+    onEvent: onZapierSdkEvent,
   });
 
   const registry = sdk.getRegistry({ package: "mcp" });

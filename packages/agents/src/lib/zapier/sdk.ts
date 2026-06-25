@@ -3,6 +3,7 @@ import { decryptToken, encryptToken } from "../crypto";
 import { getSupabase } from "../db";
 import { getEnv } from "../env";
 import { loadUserConnectionsMap } from "./aliases";
+import { onZapierSdkEvent } from "./deprecation";
 import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
 
 // Must match the client ID used during the PKCE OAuth flow in connect.ts.
@@ -53,6 +54,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   if (env.DEV_ZAPIER_OVERRIDE) {
     return createZapierSdk({
       credentials: env.DEV_ZAPIER_OVERRIDE,
+      onEvent: onZapierSdkEvent,
     });
   }
 
@@ -103,7 +105,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json).
     // production and self_hosted both require a real per-user OAuth connection.
     if (env.FOREMAN_MODE === "dev") {
-      return createZapierSdk();
+      return createZapierSdk({ onEvent: onZapierSdkEvent });
     }
     throw new ZapierNotConnected(userId);
   }
@@ -146,6 +148,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   const sdk = createZapierSdk({
     credentials: accessToken,
     ...(hasConnections ? { manifest: { connections: connectionsMap } } : {}),
+    onEvent: onZapierSdkEvent,
   });
 
   // Cache for 5 minutes or until token expires, whichever is sooner
