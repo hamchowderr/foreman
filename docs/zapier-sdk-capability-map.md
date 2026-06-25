@@ -12,7 +12,7 @@
 `@zapier/zapier-sdk@0.79.0` is **four things behind one package**:
 
 1. **A typed API client** — `createZapierSdk()` → **40 stable methods** in the `mcp` cut (apps/actions discovery, `runAction`, connections — incl. the in-flow `createConnection` / `getConnectionStartUrl` / `waitForNewConnection` trio added in 0.71 —, tables/records, profile, raw `fetch`).
-2. **An experimental control plane** — `@zapier/zapier-sdk/experimental` → the same 40 **+ 36 more** (trigger inboxes, durable runs, durable workflows). 18 of those (the durable/workflow write+read endpoints) are **scope-walled** for any public-SDK token (see auth model).
+2. **An experimental control plane** — `@zapier/zapier-sdk/experimental` → the same 40 **+ 36 more** (trigger inboxes, durable runs, durable workflows). 18 of those are blocked for any public-SDK token: as of 0.79.0, **14 are scope-walled** (`userJwt`/`internal`) and **4 (the durable-run family) now authenticate but are early-access-gated** (see the durable wall note).
 3. **An authoring framework** — `@zapier/zapier-sdk/define` → `defineDurable` / `defineTool` / `defineComponent` with durable `step`/`wait`/`createCallback` primitives. This is *code-mode durable workflows*: you author them locally, deploy/run via the (walled) experimental endpoints.
 4. **A composable plugin runtime** — 223 named exports on the main entrypoint: every method ships as a `*Plugin`, composable via `composePlugins`/`createPluginStack`; plus a resolver layer, a Zod schema library, a telemetry/event system (now incl. the `DEPRECATION_NOTICE_EVENT` / `api:deprecation_notice` event added in 0.79), credential helpers, and a low-level HTTP client (`createZapierApi`).
 
@@ -79,13 +79,13 @@ getInputFieldsSchema     -> getActionInputFieldsSchema
 **Trigger Inboxes (18)** — app-event subscriptions (client-creds OK):
 `listTriggers`, `listTriggerInputFields`, `getTriggerInputFieldsSchema`, `listTriggerInputFieldChoices`, `listTriggerInboxes`, `createTriggerInbox`, `getTriggerInbox`, `ensureTriggerInbox`, `updateTriggerInbox`, `deleteTriggerInbox`, `pauseTriggerInbox`, `resumeTriggerInbox`, `listTriggerInboxMessages`, `leaseTriggerInboxMessages`, `ackTriggerInboxMessages`, `releaseTriggerInboxMessages`, `drainTriggerInbox`, `watchTriggerInbox` (SSE, real-time since 0.69; retries transient drain failures since 0.70.0).
 
-**Durable Runs (5)** — ⛔ scope-walled:
-`runDurable`, `cancelDurableRun`, `listDurableRuns`, `getDurableRun`, `getTriggerRun`.
+**Durable Runs (5)** — split as of 0.79.0 (see wall note):
+`runDurable`, `cancelDurableRun`, `listDurableRuns`, `getDurableRun` — 🟡 **auth now passes** (client-creds), gated by an **early-access allowlist**; `getTriggerRun` — ⛔ still userJwt-walled.
 
 **Durable Workflows (13)** — ⛔ scope-walled:
 `listWorkflows`, `getWorkflow`, `createWorkflow`, `updateWorkflow`, `enableWorkflow`, `disableWorkflow`, `deleteWorkflow`, `publishWorkflowVersion`, `listWorkflowVersions`, `getWorkflowVersion`, `listWorkflowRuns`, `getWorkflowRun`, `triggerWorkflow`.
 
-> ⛔ **The durable wall.** All 18 durable+workflow endpoints return **HTTP 403 "None of the security schemes (userJwt)…"** under **both** client-credentials **and** a real per-user PKCE JWT. 18/18 swept 2026-06-16 (`scripts/durable-endpoints-probe.ts`). Root cause: the public PKCE client is granted `external` scope but durable's `userJwt` scheme requires `internal`. This is a Zapier-side wall, not a Foreman gap. Trigger inboxes are **not** walled. Full write-up: [`zapier-auth-model.md`](zapier-auth-model.md) + [`zapier-durable-questions-for-engineers.md`](zapier-durable-questions-for-engineers.md).
+> ⛔ **The durable wall — the wall moved (re-swept 2026-06-25, v0.79.0, client-creds, `scripts/durable-endpoints-probe.ts`).** Previously **18/18** returned `403 "None of the security schemes (userJwt)…"` (2026-06-16, v0.70.4). Now **14/18 stay userJwt-walled** (all 13 durable *workflow* endpoints + `getTriggerRun`) — the public PKCE/client-creds token has `external` scope but the `userJwt` scheme requires `internal`. But **4/18 now authenticate**: the durable *run-execution* family (`runDurable`, `cancelDurableRun`, `listDurableRuns`, `getDurableRun`) returns `403 "This feature is in early access and is available only to select users…"` — i.e. the auth scheme is satisfied; the remaining block is a **feature allowlist**, not a scope wall. Net: **durable workflows are still unusable end-to-end** (you can't define/publish a workflow), but the run family is now an early-access request away rather than scope-walled. Trigger inboxes remain unwalled. Whether the shift is an SDK or a Zapier-server change is undetermined; the observable state on 0.79.0 is as above. Full write-up: [`zapier-auth-model.md`](zapier-auth-model.md) + [`zapier-durable-questions-for-engineers.md`](zapier-durable-questions-for-engineers.md).
 
 ## `./define` — the durable-workflow authoring DSL (previously undocumented)
 
