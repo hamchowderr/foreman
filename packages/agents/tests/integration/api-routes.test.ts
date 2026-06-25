@@ -115,8 +115,16 @@ function createQueryBuilder(data: any = null) {
   return builder;
 }
 
+// Authed requests resolve an active workspace from public.user.default_workspace_id
+// (lib/identity resolveActiveWorkspace). Default the principal row so the
+// workspace-scoped routes (dashboards, stored agents) have a workspace in tests.
+function defaultFrom(table: string) {
+  if (table === "user") return createQueryBuilder({ default_workspace_id: "test-ws-1" });
+  return createQueryBuilder();
+}
+
 const mockSupabase = {
-  from: vi.fn(() => createQueryBuilder()),
+  from: vi.fn(defaultFrom),
   auth: {
     getUser: vi.fn().mockImplementation((token: string) => {
       try {
@@ -390,11 +398,11 @@ describe("API route integration tests", () => {
     // builder after each test so nothing leaks.
     function withSnapshotData(data: any) {
       mockSupabase.from.mockImplementation((t: string) =>
-        t === "app_data_snapshot" ? createQueryBuilder(data) : createQueryBuilder(),
+        t === "app_data_snapshot" ? createQueryBuilder(data) : defaultFrom(t),
       );
     }
     afterEach(() => {
-      mockSupabase.from.mockImplementation(() => createQueryBuilder());
+      mockSupabase.from.mockImplementation(defaultFrom);
     });
 
     it("returns 401 without auth", async () => {
@@ -463,7 +471,7 @@ describe("API route integration tests", () => {
       title: "Leads",
       blocks: [{ type: "kpi", label: "Total", agg: "count" }],
     };
-    const shareRow = { artifact_id: "art-1", user_id: "owner-1", expires_at: null };
+    const shareRow = { artifact_id: "art-1", workspace_id: "test-ws-1", expires_at: null };
     const artifactRow = {
       id: "art-1",
       kind: "dashboard",
@@ -476,10 +484,12 @@ describe("API route integration tests", () => {
     // Resolve from() per-table so getSharedArtifact reads the share row then the
     // artifact row. Default (unset tables) → null builder.
     function withTables(map: Record<string, any>) {
-      mockSupabase.from.mockImplementation((t: string) => createQueryBuilder(map[t] ?? null));
+      mockSupabase.from.mockImplementation((t: string) =>
+        map[t] !== undefined ? createQueryBuilder(map[t]) : defaultFrom(t),
+      );
     }
     afterEach(() => {
-      mockSupabase.from.mockImplementation(() => createQueryBuilder());
+      mockSupabase.from.mockImplementation(defaultFrom);
     });
 
     it("GET /dashboards/public/:token returns 200 WITHOUT auth (token is the grant)", async () => {

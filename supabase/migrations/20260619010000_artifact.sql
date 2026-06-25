@@ -14,7 +14,7 @@
 CREATE TABLE IF NOT EXISTS public.artifact (
     id text NOT NULL,
     user_id text NOT NULL,
-    workspace_id text,
+    workspace_id uuid,
     kind text NOT NULL DEFAULT 'dashboard',
     title text NOT NULL,
     spec text NOT NULL,
@@ -28,10 +28,14 @@ CREATE TABLE IF NOT EXISTS public.artifact (
 
 ALTER TABLE public.artifact OWNER TO postgres;
 ALTER TABLE public.artifact ADD CONSTRAINT artifact_pkey PRIMARY KEY (id);
+-- Dashboards are a SHARED workspace resource (user_id is creator attribution).
+ALTER TABLE public.artifact
+    ADD CONSTRAINT artifact_workspace_id_fk
+    FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE SET NULL;
 
--- List/most-recent reads are scoped by (user_id, kind) ordered by updated_at.
-CREATE INDEX IF NOT EXISTS artifact_user_kind_updated_idx
-    ON public.artifact(user_id, kind, updated_at DESC);
+-- List/most-recent reads are scoped by (workspace_id, kind) ordered by updated_at.
+CREATE INDEX IF NOT EXISTS artifact_workspace_kind_updated_idx
+    ON public.artifact(workspace_id, kind, updated_at DESC);
 
 -- Service_role access only — match the other Foreman core tables (RLS not used).
 REVOKE SELECT ON TABLE public.artifact FROM anon;

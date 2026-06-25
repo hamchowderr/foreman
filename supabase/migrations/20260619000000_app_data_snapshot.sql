@@ -13,7 +13,7 @@
 CREATE TABLE IF NOT EXISTS public.app_data_snapshot (
     id text NOT NULL,
     user_id text NOT NULL,
-    workspace_id text,
+    workspace_id uuid,
     app_key text NOT NULL,
     source_config text NOT NULL,
     records text NOT NULL,
@@ -26,10 +26,14 @@ CREATE TABLE IF NOT EXISTS public.app_data_snapshot (
 ALTER TABLE public.app_data_snapshot OWNER TO postgres;
 ALTER TABLE public.app_data_snapshot
     ADD CONSTRAINT app_data_snapshot_pkey PRIMARY KEY (id);
+-- Snapshots back SHARED workspace dashboards (user_id records who pulled them).
+ALTER TABLE public.app_data_snapshot
+    ADD CONSTRAINT app_data_snapshot_workspace_id_fk
+    FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE SET NULL;
 
--- Latest + history reads are scoped by (user_id, app_key) ordered by refreshed_at.
-CREATE INDEX IF NOT EXISTS app_data_snapshot_user_app_refreshed_idx
-    ON public.app_data_snapshot(user_id, app_key, refreshed_at DESC);
+-- Latest + history + prune reads are scoped by (workspace_id, app_key) ordered by refreshed_at.
+CREATE INDEX IF NOT EXISTS app_data_snapshot_workspace_app_refreshed_idx
+    ON public.app_data_snapshot(workspace_id, app_key, refreshed_at DESC);
 
 -- Service_role access only — match the other Foreman core tables (RLS not used here).
 REVOKE SELECT ON TABLE public.app_data_snapshot FROM anon;

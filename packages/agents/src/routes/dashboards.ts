@@ -53,12 +53,12 @@ dashboards.get("/public/:shareToken", async (c) => {
 // GET /dashboards/artifacts/:id — a stored dashboard artifact (spec + the
 // records it renders), scoped to the caller. Powers the /dashboards/[id] page.
 dashboards.get("/artifacts/:id", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) {
     return c.json({ error: "Invalid artifact id" }, 400);
   }
-  const artifact = await getArtifactWithData(userId, id);
+  const artifact = await getArtifactWithData(workspaceId, id);
   if (!artifact) {
     return c.json({ error: "Not found" }, 404);
   }
@@ -70,6 +70,7 @@ dashboards.get("/artifacts/:id", async (c) => {
 // auto-expires. Returns the token + the relative public path the web app serves.
 dashboards.post("/artifacts/:id/share", async (c) => {
   const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) {
     return c.json({ error: "Invalid artifact id" }, 400);
@@ -85,7 +86,7 @@ dashboards.post("/artifacts/:id/share", async (c) => {
     expiresInDays = n;
   }
 
-  const share = await createShare(userId, id, { expiresInDays });
+  const share = await createShare(workspaceId, userId, id, { expiresInDays });
   if (!share) {
     return c.json({ error: "Not found" }, 404);
   }
@@ -94,12 +95,12 @@ dashboards.post("/artifacts/:id/share", async (c) => {
 
 // DELETE /dashboards/shares/:shareToken — revoke a share, owner-scoped.
 dashboards.delete("/shares/:shareToken", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const token = validateParam(c.req.param("shareToken"), "shareToken");
   if (!token) {
     return c.json({ error: "Invalid share token" }, 400);
   }
-  const revoked = await revokeShare(userId, token);
+  const revoked = await revokeShare(workspaceId, token);
   if (!revoked) {
     return c.json({ error: "Not found" }, 404);
   }
@@ -107,7 +108,7 @@ dashboards.delete("/shares/:shareToken", async (c) => {
 });
 
 dashboards.get("/snapshots/:appKey", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const appKey = validateParam(c.req.param("appKey"), "appKey");
   if (!appKey) {
     return c.json({ error: "Invalid appKey" }, 400);
@@ -116,7 +117,7 @@ dashboards.get("/snapshots/:appKey", async (c) => {
   const history = c.req.query("history") === "true";
 
   if (!history) {
-    const snapshot = await getLatestSnapshot(userId, appKey);
+    const snapshot = await getLatestSnapshot(workspaceId, appKey);
     if (!snapshot) {
       return c.json({ error: "No snapshot found for this app" }, 404);
     }
@@ -139,7 +140,7 @@ dashboards.get("/snapshots/:appKey", async (c) => {
     limit = Math.min(n, 500);
   }
 
-  const series = await getSnapshotHistory(userId, appKey, { since, limit });
+  const series = await getSnapshotHistory(workspaceId, appKey, { since, limit });
   return c.json({ appKey, count: series.length, snapshots: series });
 });
 

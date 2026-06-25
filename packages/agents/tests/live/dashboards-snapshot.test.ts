@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getLatestSnapshot, getSnapshotHistory, saveSnapshot } from "@/lib/dashboards/snapshot";
 import { getSupabase } from "@/lib/db";
@@ -34,6 +35,7 @@ async function supabaseIsReachable(): Promise<boolean> {
 describe("dashboards snapshot — live Supabase round-trip", () => {
   let reachable = false;
   const testUserId = `live-test-dash-${Date.now()}`;
+  const testWorkspaceId = randomUUID();
   const appKey = "hubspot";
 
   beforeAll(async () => {
@@ -43,13 +45,25 @@ describe("dashboards snapshot — live Supabase round-trip", () => {
         `\n⚠  Supabase not reachable at ${SUPABASE_URL}. Skipping live snapshot tests.\n` +
           `   Start it with: npx supabase start\n`,
       );
+      return;
     }
+    // Snapshots are workspace-scoped (FK to workspaces); create a real workspace
+    // to hang them on so the FK + the workspace-scoped reads have a match.
+    await getSupabase()
+      .from("workspaces")
+      .insert({
+        id: testWorkspaceId,
+        slug: `live-test-dash-${Date.now()}`,
+        name: "Live Test Dashboards",
+        membership_type: "solo",
+      });
   });
 
   afterAll(async () => {
     if (!reachable) return;
-    // Cleanup: remove every row this test wrote.
+    // Cleanup: remove every row this test wrote, then the workspace.
     await getSupabase().from("app_data_snapshot").delete().eq("user_id", testUserId);
+    await getSupabase().from("workspaces").delete().eq("id", testWorkspaceId);
   });
 
   it("saves a snapshot and reads it back with JSON payloads intact", async ({ skip }) => {
@@ -63,6 +77,7 @@ describe("dashboards snapshot — live Supabase round-trip", () => {
 
     const id = await saveSnapshot({
       userId: testUserId,
+      workspaceId: testWorkspaceId,
       appKey,
       sourceConfig,
       records,
@@ -70,7 +85,7 @@ describe("dashboards snapshot — live Supabase round-trip", () => {
     });
     expect(id).toBeTruthy();
 
-    const latest = await getLatestSnapshot(testUserId, appKey);
+    const latest = await getLatestSnapshot(testWorkspaceId, appKey);
     expect(latest).not.toBeNull();
     expect(latest?.id).toBe(id);
     expect(latest?.appKey).toBe(appKey);
@@ -93,30 +108,31 @@ describe("dashboards snapshot — live Supabase round-trip", () => {
 
     const id2 = await saveSnapshot({
       userId: testUserId,
+      workspaceId: testWorkspaceId,
       appKey,
       sourceConfig: { app: appKey, action: "new_contact" },
       records: [{ id: "3", name: "Initech" }],
     });
 
     // Latest is now the second snapshot (append-only, not an upsert).
-    const latest = await getLatestSnapshot(testUserId, appKey);
+    const latest = await getLatestSnapshot(testWorkspaceId, appKey);
     expect(latest?.id).toBe(id2);
     expect(latest?.rowCount).toBe(1);
 
     // Full history has both rows, newest first.
-    const all = await getSnapshotHistory(testUserId, appKey);
+    const all = await getSnapshotHistory(testWorkspaceId, appKey);
     expect(all.length).toBeGreaterThanOrEqual(2);
     expect(all[0].id).toBe(id2);
 
     // since filter returns only the newer snapshot.
-    const recent = await getSnapshotHistory(testUserId, appKey, { since: between });
+    const recent = await getSnapshotHistory(testWorkspaceId, appKey, { since: between });
     expect(recent.map((s) => s.id)).toContain(id2);
     expect(recent.map((s) => s.id)).not.toContain(all[all.length - 1].id);
   });
 
   it("returns null for an app the user has no snapshots for", async ({ skip }) => {
     if (!reachable) skip();
-    expect(await getLatestSnapshot(testUserId, "no-such-app")).toBeNull();
-    expect(await getSnapshotHistory(testUserId, "no-such-app")).toEqual([]);
+    expect(await getLatestSnapshot(testWorkspaceId, "no-such-app")).toBeNull();
+    expect(await getSnapshotHistory(testWorkspaceId, "no-such-app")).toEqual([]);
   });
 });

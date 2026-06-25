@@ -58,7 +58,7 @@ describe("createShare", () => {
     resultsByTable.artifact = { single: { id: "art-1" } };
     const { createShare } = await import("@/lib/dashboards/share");
 
-    const result = await createShare("user-1", "art-1");
+    const result = await createShare("ws-1", "user-1", "art-1");
 
     expect(result).not.toBeNull();
     expect(typeof result?.token).toBe("string");
@@ -68,6 +68,7 @@ describe("createShare", () => {
     const shareInsert = inserts.find((i) => i.table === "dashboard_share");
     expect(shareInsert).toBeTruthy();
     expect(shareInsert?.payload.artifact_id).toBe("art-1");
+    expect(shareInsert?.payload.workspace_id).toBe("ws-1");
     expect(shareInsert?.payload.user_id).toBe("user-1");
     expect(shareInsert?.payload.share_token).toBe(result?.token);
     expect(shareInsert?.payload.expires_at).toBeNull();
@@ -77,7 +78,7 @@ describe("createShare", () => {
     resultsByTable.artifact = { single: null }; // ownership check fails
     const { createShare } = await import("@/lib/dashboards/share");
 
-    const result = await createShare("user-1", "someone-elses");
+    const result = await createShare("ws-1", "user-1", "someone-elses");
 
     expect(result).toBeNull();
     expect(inserts.find((i) => i.table === "dashboard_share")).toBeUndefined();
@@ -87,7 +88,7 @@ describe("createShare", () => {
     resultsByTable.artifact = { single: { id: "art-1" } };
     const { createShare } = await import("@/lib/dashboards/share");
 
-    const result = await createShare("user-1", "art-1", { expiresInDays: 7 });
+    const result = await createShare("ws-1", "user-1", "art-1", { expiresInDays: 7 });
 
     expect(result?.expiresAt).toBeTruthy();
     expect(Date.parse(result?.expiresAt as string)).toBeGreaterThan(Date.now());
@@ -101,7 +102,7 @@ describe("createShare", () => {
 describe("getSharedArtifact", () => {
   it("resolves a valid token to the owner's artifact data", async () => {
     resultsByTable.dashboard_share = {
-      single: { artifact_id: "art-1", user_id: "owner-1", expires_at: null },
+      single: { artifact_id: "art-1", workspace_id: "ws-1", expires_at: null },
     };
     resultsByTable.artifact = {
       single: {
@@ -122,11 +123,11 @@ describe("getSharedArtifact", () => {
     expect(artifact?.title).toBe("Leads");
     expect(artifact?.spec.title).toBe("Leads");
     expect(artifact?.records).toEqual([]);
-    // The artifact read is scoped to the OWNER carried by the share row.
+    // The artifact read is scoped to the WORKSPACE carried by the share row.
     const artifactEq = calls
       .filter((c) => c.table === "artifact" && c.method === "eq")
       .map((c) => c.args);
-    expect(artifactEq).toEqual(expect.arrayContaining([["user_id", "owner-1"]]));
+    expect(artifactEq).toEqual(expect.arrayContaining([["workspace_id", "ws-1"]]));
   });
 
   it("returns null for an unknown token", async () => {
@@ -153,17 +154,17 @@ describe("getSharedArtifact", () => {
 // ─── revokeShare ──────────────────────────────────────────────────────────────
 
 describe("revokeShare", () => {
-  it("returns true when a row was deleted (owner-scoped)", async () => {
+  it("returns true when a row was deleted (workspace-scoped)", async () => {
     resultsByTable.dashboard_share = { list: [{ id: "share-1" }] };
     const { revokeShare } = await import("@/lib/dashboards/share");
 
-    expect(await revokeShare("user-1", "tok-1")).toBe(true);
+    expect(await revokeShare("ws-1", "tok-1")).toBe(true);
     const eqArgs = calls
       .filter((c) => c.table === "dashboard_share" && c.method === "eq")
       .map((c) => c.args);
     expect(eqArgs).toEqual(
       expect.arrayContaining([
-        ["user_id", "user-1"],
+        ["workspace_id", "ws-1"],
         ["share_token", "tok-1"],
       ]),
     );
@@ -172,6 +173,6 @@ describe("revokeShare", () => {
   it("returns false when no row matched", async () => {
     resultsByTable.dashboard_share = { list: [] };
     const { revokeShare } = await import("@/lib/dashboards/share");
-    expect(await revokeShare("user-1", "tok-x")).toBe(false);
+    expect(await revokeShare("ws-1", "tok-x")).toBe(false);
   });
 });

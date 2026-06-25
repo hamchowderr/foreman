@@ -56,19 +56,21 @@ export async function saveArtifact(input: SaveArtifactInput): Promise<string> {
 }
 
 /**
- * Load an artifact with the records it renders, scoped to the owner. Returns null
- * if the artifact doesn't exist (or isn't theirs). The spec is re-validated on
- * read so a corrupt/legacy row can't reach the renderer.
+ * Load an artifact with the records it renders, scoped to the workspace (a SHARED
+ * resource — any workspace member can view it). Returns null if the artifact
+ * doesn't exist in this workspace. The spec is re-validated on read so a
+ * corrupt/legacy row can't reach the renderer.
  */
 export async function getArtifactWithData(
-  userId: string,
+  workspaceId: string | undefined,
   id: string,
 ): Promise<ArtifactWithData | null> {
+  if (!workspaceId) return null;
   const supabase = getSupabase();
   const { data } = await supabase
     .from("artifact")
     .select("id, kind, title, spec, snapshot_id, updated_at")
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .eq("id", id)
     .maybeSingle();
   if (!data) return null;
@@ -82,7 +84,7 @@ export async function getArtifactWithData(
 
   let records: SnapshotRecord[] = [];
   if (data.snapshot_id) {
-    const snap = await getSnapshotById(userId, data.snapshot_id);
+    const snap = await getSnapshotById(workspaceId, data.snapshot_id);
     if (snap) records = snap.records;
   }
 

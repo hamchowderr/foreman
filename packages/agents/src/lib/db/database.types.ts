@@ -231,7 +231,15 @@ export type Database = {
           user_id?: string;
           workspace_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "app_data_snapshot_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       app_settings: {
         Row: {
@@ -294,7 +302,15 @@ export type Database = {
           visibility?: string;
           workspace_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "artifact_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       billing_customers: {
         Row: {
@@ -919,6 +935,7 @@ export type Database = {
           id: string;
           share_token: string;
           user_id: string;
+          workspace_id: string | null;
         };
         Insert: {
           artifact_id: string;
@@ -927,6 +944,7 @@ export type Database = {
           id: string;
           share_token: string;
           user_id: string;
+          workspace_id?: string | null;
         };
         Update: {
           artifact_id?: string;
@@ -935,8 +953,17 @@ export type Database = {
           id?: string;
           share_token?: string;
           user_id?: string;
+          workspace_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_share_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       mastra_agent_versions: {
         Row: {

@@ -18,22 +18,26 @@ export interface CreateShareResult {
 }
 
 /**
- * Mint a public share token for an artifact the caller owns. Returns null if the
- * artifact doesn't exist or isn't theirs (so the route can 404 without leaking
- * existence). `expiresInDays` is optional — omit for a link that never expires.
+ * Mint a public share token for a workspace dashboard. Any member of the
+ * workspace can share it (dashboards are a SHARED resource); `userId` is recorded
+ * only as the share's creator. Returns null if the artifact doesn't exist in this
+ * workspace (so the route can 404 without leaking existence). `expiresInDays` is
+ * optional — omit for a link that never expires.
  */
 export async function createShare(
+  workspaceId: string | undefined,
   userId: string,
   artifactId: string,
   opts: { expiresInDays?: number } = {},
 ): Promise<CreateShareResult | null> {
+  if (!workspaceId) return null;
   const supabase = getSupabase();
 
-  // Verify ownership before minting a token — never share someone else's row.
+  // Verify the artifact belongs to this workspace before minting a token.
   const { data: owned } = await supabase
     .from("artifact")
     .select("id")
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .eq("id", artifactId)
     .maybeSingle();
   if (!owned) return null;
@@ -48,6 +52,7 @@ export async function createShare(
   const { error } = await supabase.from("dashboard_share").insert({
     id: randomUUID(),
     artifact_id: artifactId,
+    workspace_id: workspaceId,
     user_id: userId,
     share_token: token,
     expires_at: expiresAt,
@@ -61,21 +66,25 @@ export async function createShare(
     .from("artifact")
     .update({ visibility: "link" })
     .eq("id", artifactId)
-    .eq("user_id", userId);
+    .eq("workspace_id", workspaceId);
 
   return { token, expiresAt };
 }
 
 /**
- * Revoke a share, scoped to the owner so one user can't delete another's token.
- * Returns true if a row was deleted.
+ * Revoke a share, scoped to the workspace so a member can revoke any of the
+ * workspace's shared dashboards. Returns true if a row was deleted.
  */
-export async function revokeShare(userId: string, token: string): Promise<boolean> {
+export async function revokeShare(
+  workspaceId: string | undefined,
+  token: string,
+): Promise<boolean> {
+  if (!workspaceId) return false;
   const supabase = getSupabase();
   const { data } = await supabase
     .from("dashboard_share")
     .delete()
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .eq("share_token", token)
     .select("id");
   return (data?.length ?? 0) > 0;
@@ -90,7 +99,7 @@ export async function getSharedArtifact(token: string): Promise<ArtifactWithData
   const supabase = getSupabase();
   const { data: share } = await supabase
     .from("dashboard_share")
-    .select("artifact_id, user_id, expires_at")
+    .select("artifact_id, workspace_id, expires_at")
     .eq("share_token", token)
     .maybeSingle();
   if (!share) return null;
@@ -99,7 +108,7 @@ export async function getSharedArtifact(token: string): Promise<ArtifactWithData
     return null; // expired — treat as not found
   }
 
-  // Reuse the owner-scoped loader: the share row carries the owner's id, so the
-  // records (scoped to the owner in the snapshot read) still resolve.
-  return getArtifactWithData(share.user_id, share.artifact_id);
+  // The share row carries the artifact's workspace, so the (workspace-scoped)
+  // records still resolve for an unauthenticated viewer — the token is the grant.
+  return getArtifactWithData(share.workspace_id ?? undefined, share.artifact_id);
 }

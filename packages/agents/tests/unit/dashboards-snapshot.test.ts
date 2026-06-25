@@ -115,7 +115,7 @@ describe("saveSnapshot", () => {
 // ─── getLatestSnapshot ──────────────────────────────────────────────────────────
 
 describe("getLatestSnapshot", () => {
-  it("returns the parsed latest snapshot scoped to (user_id, app_key)", async () => {
+  it("returns the parsed latest snapshot scoped to (workspace_id, app_key)", async () => {
     selectResult = {
       data: {
         id: "snap-1",
@@ -129,7 +129,7 @@ describe("getLatestSnapshot", () => {
     };
     const { getLatestSnapshot } = await import("@/lib/dashboards/snapshot");
 
-    const snap = await getLatestSnapshot("user-1", "hubspot");
+    const snap = await getLatestSnapshot("ws-1", "hubspot");
 
     expect(snap).toEqual({
       id: "snap-1",
@@ -139,11 +139,11 @@ describe("getLatestSnapshot", () => {
       rowCount: 1,
       refreshedAt: "2026-06-19T12:00:00.000Z",
     });
-    // Scoped by both user_id and app_key.
+    // Scoped by both workspace_id and app_key.
     const eqArgs = filters.filter((f) => f.method === "eq").map((f) => f.args);
     expect(eqArgs).toEqual(
       expect.arrayContaining([
-        ["user_id", "user-1"],
+        ["workspace_id", "ws-1"],
         ["app_key", "hubspot"],
       ]),
     );

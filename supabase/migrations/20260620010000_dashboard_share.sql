@@ -16,6 +16,7 @@
 CREATE TABLE IF NOT EXISTS public.dashboard_share (
     id text NOT NULL,
     artifact_id text NOT NULL,
+    workspace_id uuid,
     user_id text NOT NULL,
     share_token text NOT NULL,
     expires_at timestamp with time zone,
@@ -24,14 +25,19 @@ CREATE TABLE IF NOT EXISTS public.dashboard_share (
 
 ALTER TABLE public.dashboard_share OWNER TO postgres;
 ALTER TABLE public.dashboard_share ADD CONSTRAINT dashboard_share_pkey PRIMARY KEY (id);
+-- Shares belong to a workspace dashboard (SHARED); user_id is the share creator.
+-- workspace_id is what the public read uses to resolve the workspace-scoped data.
+ALTER TABLE public.dashboard_share
+    ADD CONSTRAINT dashboard_share_workspace_id_fk
+    FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE SET NULL;
 
 -- Public reads look up by token — must be unique and fast.
 CREATE UNIQUE INDEX IF NOT EXISTS dashboard_share_token_key
     ON public.dashboard_share(share_token);
 
--- Owner-scoped reads (list/revoke a dashboard's shares).
-CREATE INDEX IF NOT EXISTS dashboard_share_artifact_idx
-    ON public.dashboard_share(artifact_id, user_id);
+-- Workspace-scoped reads (list/revoke a workspace's shares) + FK covering index.
+CREATE INDEX IF NOT EXISTS dashboard_share_workspace_idx
+    ON public.dashboard_share(workspace_id, artifact_id);
 
 -- Service_role access only — match the other Foreman core tables (RLS not used).
 REVOKE SELECT ON TABLE public.dashboard_share FROM anon;
