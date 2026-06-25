@@ -47,6 +47,51 @@ export async function ensureUserExists(userId: string): Promise<void> {
   );
 }
 
+// ─── Workspace Resolution ───
+
+/**
+ * Create a personal solo workspace and return its id. Used for channel-only
+ * principals, who have no auth.users row — so the signup trigger that provisions
+ * a workspace for web users (handle_auth_user_created) never fired for them.
+ */
+async function createSoloWorkspace(name: string, slugBase: string): Promise<string> {
+  const supabase = getSupabase();
+  const id = randomUUID();
+  const slug = `${slugBase}-${id.slice(0, 8)}`.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+  await supabase.from("workspaces").insert({ id, slug, name, membership_type: "solo" });
+  return id;
+}
+
+/**
+ * The active workspace a principal operates in. Reads `public.user
+ * .default_workspace_id`; for web principals created before that column was
+ * populated, lazily backfills it from the platform solo workspace
+ * (`user_settings.default_workspace`, provisioned by the signup trigger).
+ */
+export async function resolveActiveWorkspace(userId: string): Promise<string | null> {
+  const supabase = getSupabase();
+  const { data: principal } = await supabase
+    .from("user")
+    .select("default_workspace_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (principal?.default_workspace_id) return principal.default_workspace_id as string;
+
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("default_workspace")
+    .eq("id", userId)
+    .maybeSingle();
+  if (settings?.default_workspace) {
+    await supabase
+      .from("user")
+      .update({ default_workspace_id: settings.default_workspace })
+      .eq("id", userId);
+    return settings.default_workspace as string;
+  }
+  return null;
+}
+
 // ─── API Key Resolution ───
 
 function hashApiKey(key: string): string {
@@ -137,6 +182,16 @@ export async function registerChannelUser(
     updatedAt: now,
   });
 
+  // Channel-only principals get a personal solo workspace (they have no
+  // auth.users row, so the signup trigger never provisioned one). They are NOT
+  // workspace_members — that requires an auth-backed user_profile — so they join
+  // a team by linking to a web account via channel_link_code.
+  const workspaceId = await createSoloWorkspace(
+    `${displayName || channelUserId}'s Workspace`,
+    `${channel}-${channelUserId}`,
+  );
+  await supabase.from("user").update({ default_workspace_id: workspaceId }).eq("id", userId);
+
   await supabase.from("channel_identity").insert({
     id: randomUUID(),
     user_id: userId,
@@ -215,6 +270,7 @@ export async function redeemChannelLinkCode(
 
 export interface ResolvedIdentity {
   userId: string;
+  workspaceId?: string;
   orgId?: string;
   channel:
     | "web"
@@ -245,7 +301,8 @@ export async function resolveFromRequest(request: Request): Promise<ResolvedIden
     const result = await resolveFromSupabaseJwt(token);
     if (result) {
       await ensureUserExists(result.userId);
-      return { userId: result.userId, orgId: result.orgId, channel: "web" };
+      const workspaceId = (await resolveActiveWorkspace(result.userId)) ?? undefined;
+      return { userId: result.userId, workspaceId, orgId: result.orgId, channel: "web" };
     }
   }
 
@@ -253,7 +310,10 @@ export async function resolveFromRequest(request: Request): Promise<ResolvedIden
   const apiKeyHeader = request.headers.get("x-api-key");
   if (apiKeyHeader) {
     const userId = await resolveFromApiKey(apiKeyHeader);
-    if (userId) return { userId, channel: "mcp" };
+    if (userId) {
+      const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+      return { userId, workspaceId, channel: "mcp" };
+    }
   }
 
   return null;
