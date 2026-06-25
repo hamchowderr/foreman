@@ -1,14 +1,14 @@
 # Schema & Identity Cleanup — Plan of Record
 
 > Epic: **foreman-qhbp**. Owner direction (2026-06-25): make Foreman's DB clean and
-> properly multi-tenant, **grouped the way the NextBase repos group migrations**, with
-> **no DROP migrations** (re-baseline at source — there are zero production users). Phase 1
-> (hand-rolled workflow engine removal) already shipped in `82b24fb`.
+> properly multi-tenant, with migrations **grouped one file per domain**, and **no DROP
+> migrations** (re-baseline at source — there are zero production users). Phase 1 (hand-rolled
+> workflow engine removal) already shipped in `82b24fb`.
 
-Foreman descends from **nextbase-ultimate** (Turborepo + Biome + AI SDK v5 + Supabase).
-NextBase groups its schema **one migration file per domain** (`user.sql`, `workspaces.sql`,
-`billing.sql`, `marketing.sql`, …). Foreman already matches that for the NextBase tables — the
-divergence is Foreman's own `foreman_core.sql` monolith and a half-wired multi-tenant layer.
+Foreman's schema was seeded from a Supabase SaaS starter that groups its migrations **one file
+per domain** (`user.sql`, `workspaces.sql`, `billing.sql`, …). Foreman already matches that for
+the platform tables — the divergence was Foreman's own `foreman_core.sql` monolith and a
+half-wired multi-tenant layer.
 
 ---
 
@@ -16,7 +16,7 @@ divergence is Foreman's own `foreman_core.sql` monolith and a half-wired multi-t
 
 | World | Tables | Keying | Status |
 |---|---|---|---|
-| **NextBase / Supabase-auth** | `auth.users` → `user_profiles`, `workspaces`, `workspace_members`, `user_roles`, billing_*, marketing_* | **UUID**, RLS via `auth.uid()` | Fully built, **mostly inert** |
+| **Platform / Supabase-auth** | `auth.users` → `user_profiles`, `workspaces`, `workspace_members`, `user_roles`, billing_* | **UUID**, RLS via `auth.uid()` | Fully built, **mostly inert** |
 | **Foreman runtime** | `user` (legacy Better-Auth), `conversation`, `action_proposal`, `action_run`, `zapier_identity`, `connection_alias`, `channel_identity`, `api_key`, `capability_flag`, `app_catalog`, dashboards (`artifact`/`app_data_snapshot`/`dashboard_share`), `stored_agent`, `channel_link_code` | **TEXT** `user_id` → `public."user".id` | What the app actually runs on |
 
 **The bridge already exists for web users:** `resolveFromSupabaseJwt` returns the `auth.users`
@@ -41,7 +41,7 @@ reads `workspace_id` first for shared connections, falling back to `user_id`).
 
 ## 2. Target identity & tenancy model
 
-- **`auth.users`** stays the canonical auth for **web** users; **`user_profiles`** the NextBase profile.
+- **`auth.users`** stays the canonical auth for **web** users; **`user_profiles`** the platform profile.
 - **`public."user"` stays the runtime *principal*** every Foreman table references. Web principals'
   id == `auth.users.id`; channel principals are standalone UUIDs. (Cleanup: document it as the
   principal/account table; snake_case the Better-Auth camelCase columns is *optional* later churn.)
@@ -55,45 +55,44 @@ reads `workspace_id` first for shared connections, falling back to `user_id`).
 
 ---
 
-## 3. Migration reorganization (NextBase grouping)
+## 3. Migration reorganization (one file per domain)
 
-### 3a. Decompose `foreman_core.sql` → per-domain files
-`foreman_core.sql` currently crams 11 tables (now 8, post-workflow-removal) + FKs into one file.
-Split into NextBase-style domain migrations:
+### 3a. Decompose `foreman_core.sql` → per-domain files  ✅ done (`fa51547`)
+`foreman_core.sql` crammed 8 Foreman runtime tables + FKs into one file. Now split into
+per-domain migrations (dated `20260425*` so they precede the platform migrations and `…018`):
 
-| New file | Tables |
+| File | Tables |
 |---|---|
 | `foreman_principal.sql` | `public."user"` (principal) |
 | `foreman_conversation.sql` | `conversation` |
 | `foreman_proposals.sql` | `action_proposal`, `action_run` |
 | `foreman_zapier.sql` | `zapier_identity`, `connection_alias`, `app_catalog` |
-| `foreman_channels.sql` | `channel_identity` (+ `channel_link_code` folded from its own migration) |
+| `foreman_channels.sql` | `channel_identity` |
 | `foreman_api_keys.sql` | `api_key` |
 | `foreman_capabilities.sql` | `capability_flag` |
 
 (Foreman's later additions — `mastra.sql`, `stored_agent.sql`, `app_data_snapshot.sql`,
 `artifact.sql`, `dashboard_share.sql`, `conversation_archive.sql`,
-`mastra_channels_and_schedules.sql` — are **already** one-domain-per-file; keep as-is.)
+`mastra_channels_and_schedules.sql` — are already one-domain-per-file; kept as-is.)
 
-### 3b. Keep / Cut / Regroup
-- **KEEP (NextBase multi-tenant foundation — multi-tenant is a must):** `enums`, `user` (profiles),
+### 3b. Keep / Cut
+- **KEEP (multi-tenant platform foundation — multi-tenant is a must):** `enums`, `user` (profiles),
   `workspaces`, `user_triggers`, `workspace_triggers`, `custom_access_token_hook`, `app_settings`,
   `workspace_permissions`, `application_admin`, `is_application_admin`, `org_id_to_workspace_id`,
   `rls`, `revoke_anon_grants`, `catalog_vectors_rls`.
 - **KEEP (Foreman runtime + storage):** everything in §3a + the later domain files + `mastra`.
-- **CUT — dead NextBase marketing/feedback CMS** (zero code references in agents *or* web; Foreman's
-  marketing is a bespoke landing page): `marketing`, `marketing_blog`, `marketing_changelog`,
-  `marketing_feedback`, `feedback_boards`, `feedback_subscriptions`.  ← **decision: confirm cut**
-- **KEEP but currently inert — `billing`** (Stripe). It's the org/team monetization foundation; cheap
-  to wire later, expensive to re-derive. Recommend keep.  ← **decision: confirm keep**
+- **CUT — dead marketing/feedback CMS** ✅ done (`67a4b25`): `marketing`, `marketing_blog`,
+  `marketing_changelog`, `marketing_feedback`, `feedback_boards`, `feedback_subscriptions` +
+  their orphaned enums. Zero code references; Foreman's marketing is a bespoke landing page.
+- **KEEP but currently inert — `billing`** (Stripe): the org/team monetization foundation.
 
 ### 3c. No DROP migrations
 All removals happen **at source** (delete/edit the CREATE migration). `db reset` re-baselines from
-clean files. Phase 1 already did this for the workflow tables.
+clean files.
 
 ---
 
-## 4. Multi-tenancy wiring (the behavior change)
+## 4. Multi-tenancy wiring (Phase 2b — the behavior change)
 
 From the blast-radius map (foreman-qhbp), the work is bounded:
 
@@ -112,11 +111,11 @@ From the blast-radius map (foreman-qhbp), the work is bounded:
 - **Give channel principals a solo workspace** at `registerChannelUser` time (mirror the web signup
   trigger).
 
-This is staged **after** the reorg so each diff stays reviewable.
+Staged **after** the reorg so each diff stays reviewable.
 
 ---
 
-## 5. New tables for the Zapier durable / trigger-inbox SDK surface
+## 5. New tables for the Zapier durable / trigger-inbox SDK surface (Phase 2c)
 
 Designed now, landed when durable EA arrives (foreman-13mw). Sketch (workspace-scoped):
 
@@ -135,9 +134,9 @@ the live SDK schema when EA lands.
 
 ## 6. Phased execution
 
-- **Phase 2a — Migration reorg (no behavior change):** decompose `foreman_core`, cut the marketing/
-  feedback CMS, keep everything else. `db reset` + `db:types` + full gates green. Pure
-  reorganization → safe, reviewable, ships the "group like NextBase" ask.
+- **Phase 2a — Migration reorg (no behavior change):** ✅ done — decomposed `foreman_core`
+  (`fa51547`), cut the marketing/feedback CMS (`67a4b25`). `db reset` + `db:types:check` +
+  vitest green.
 - **Phase 2b — Multi-tenancy wiring:** add `workspace_id` to remaining tables; resolve/thread it;
   scope reads/writes; solo workspace for channel principals. Code + schema.
 - **Phase 2c — Durable/trigger-inbox tables:** land §5 schema (gated on EA for the code that uses it).
@@ -146,9 +145,9 @@ Each phase: `npm test` (vitest) + `biome lint` + `next build` + `db:types:check`
 
 ---
 
-## 7. Open decisions (for sign-off)
+## 7. Open decisions
 
-1. **Cut the NextBase marketing/feedback CMS** (6 migrations, zero code refs)? — recommend **yes**.
-2. **Keep `billing`** inert as the monetization foundation? — recommend **yes**.
+1. ~~Cut the marketing/feedback CMS~~ → **done** (cut).
+2. **Keep `billing`** inert as the monetization foundation → **yes**.
 3. Identity model (§2) — keep `public."user"` as the unified principal, workspace as tenant
-   boundary — recommend **yes** (matches what the code already does + NextBase tenancy).
+   boundary → **yes** (matches what the code already does + the workspace tenancy model).

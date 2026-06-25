@@ -1,5 +1,5 @@
 -- Revoke anon SELECT from all non-public tables
--- All tables require authentication (the NextBase marketing/feedback CMS was removed)
+-- All tables require authentication (the unused marketing/feedback CMS was removed)
 
 REVOKE SELECT ON TABLE public.account_delete_tokens FROM anon;
 REVOKE SELECT ON TABLE public.action_proposal FROM anon;
