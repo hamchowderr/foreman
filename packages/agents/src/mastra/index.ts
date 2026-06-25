@@ -17,6 +17,7 @@ import { ConsoleExporter, DefaultExporter, Observability } from "@mastra/observa
 import { PostgresStore } from "@mastra/pg";
 import { createUIMessageStreamResponse, stepCountIs } from "ai";
 import type { MiddlewareHandler } from "hono";
+import { resolveActiveWorkspace } from "../lib/identity";
 import { validateAgentCapabilities } from "../lib/providers";
 import { requestUserContext } from "../lib/request-user-context";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
@@ -362,10 +363,13 @@ export function getMastra(): Mastra {
                 console.log(`[chat] no incomingTid, using random tid=${tid}`);
               }
 
-              const rctx = new RequestContext([
+              const wsId = rid ? await resolveActiveWorkspace(rid).catch(() => null) : null;
+              const ctxEntries: Array<[string, string]> = [
                 ["threadId", tid],
                 ["userId", rid],
-              ]);
+              ];
+              if (wsId) ctxEntries.push(["workspaceId", wsId]);
+              const rctx = new RequestContext(ctxEntries);
 
               // Per-request model override (the composer's model selector sends
               // `model`). Allowlisted to Foreman-supported Anthropic models so a
