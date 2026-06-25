@@ -2,9 +2,26 @@ import { createZapierSdk } from "@zapier/zapier-sdk";
 import { decryptToken, encryptToken } from "../crypto";
 import { getSupabase } from "../db";
 import { getEnv } from "../env";
+import { resolveActiveWorkspace } from "../identity";
 import { loadUserConnectionsMap } from "./aliases";
 import { onZapierSdkEvent } from "./deprecation";
 import { ZapierNotConnected, ZapierReauthRequired } from "./errors";
+
+/**
+ * How a workspace member's Zapier connection is resolved (workspace_settings
+ * .zapier_connection_mode). Absent setting ⇒ "member-first".
+ */
+type ConnectionMode = "member-first" | "shared" | "personal";
+
+async function resolveWorkspaceConnectionMode(workspaceId: string): Promise<ConnectionMode> {
+  const { data } = await getSupabase()
+    .from("workspace_settings")
+    .select("zapier_connection_mode")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  const mode = data?.zapier_connection_mode;
+  return mode === "shared" || mode === "personal" ? mode : "member-first";
+}
 
 // Must match the client ID used during the PKCE OAuth flow in connect.ts.
 // Tokens issued to a PKCE public client can only be refreshed with the same client_id and no secret.
@@ -67,30 +84,24 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     return cached.sdk;
   }
 
-  // Load from database — when workspaceId is set, try shared workspace connection first
+  // Resolve the workspace whose policy governs this user (an explicit orgId wins;
+  // otherwise the user's active workspace), then that workspace's connection mode.
   const supabase = getSupabase();
+  const workspaceId = orgId ?? (await resolveActiveWorkspace(userId)) ?? undefined;
+  const mode: ConnectionMode = workspaceId
+    ? await resolveWorkspaceConnectionMode(workspaceId)
+    : "personal";
+
   let identity: Record<string, any> | null = null;
 
-  if (orgId) {
-    const { data } = await supabase
-      .from("zapier_identity")
-      .select("*")
-      .eq("workspace_id", orgId)
-      .limit(1)
-      .maybeSingle();
-    identity = data;
-  }
-
-  // Fall back to user's personal connection. Retry briefly: immediately after the
-  // OAuth callback writes zapier_identity (e.g. the very first request from the
-  // onboarding "test" step), the row can momentarily lag, which would otherwise
-  // look like "not connected". An existing row resolves on the first attempt, so
-  // there's no added latency once a user is connected.
-  if (!identity) {
-    for (let attempt = 0; attempt < 3 && !identity; attempt++) {
-      if (attempt > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
+  // The member's own connection. Retry briefly: right after the OAuth callback
+  // writes zapier_identity (e.g. the onboarding "test" step), the row can lag,
+  // which would otherwise look like "not connected". An existing row resolves on
+  // the first attempt, so there's no added latency once a user is connected.
+  const loadPersonal = async (retry: boolean) => {
+    const attempts = retry ? 3 : 1;
+    for (let attempt = 0; attempt < attempts && !identity; attempt++) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 300));
       const { data } = await supabase
         .from("zapier_identity")
         .select("*")
@@ -99,6 +110,32 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
         .maybeSingle();
       identity = data;
     }
+  };
+
+  // The workspace's designated shared connection (a zapier_identity tagged with
+  // this workspace_id — typically owned by another member).
+  const loadShared = async () => {
+    if (!workspaceId) return;
+    const { data } = await supabase
+      .from("zapier_identity")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(1)
+      .maybeSingle();
+    identity = data;
+  };
+
+  if (mode === "personal") {
+    await loadPersonal(true);
+  } else if (mode === "shared") {
+    await loadShared();
+  } else {
+    // member-first: own connection, then the workspace's shared one. Only retry
+    // the personal lookup (for OAuth lag) once nothing else resolved, so members
+    // who rely on the shared connection don't pay the backoff on every call.
+    await loadPersonal(false);
+    if (!identity) await loadShared();
+    if (!identity) await loadPersonal(true);
   }
 
   if (!identity) {
@@ -120,7 +157,8 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
       const storedRefresh = decryptToken(identity.refresh_token);
       const refreshed = await refreshAccessToken(userId, storedRefresh);
 
-      // Update DB with new tokens
+      // Update the resolved row by its own id — it may be a shared connection
+      // owned by another member, so scoping by the requesting user_id would miss.
       await supabase
         .from("zapier_identity")
         .update({
@@ -129,12 +167,12 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
           expires_at: refreshed.expiresAt.toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", userId);
+        .eq("id", identity.id);
 
       accessToken = refreshed.accessToken;
       tokenExpiry = refreshed.expiresAt.getTime();
     } catch {
-      sdkCache.delete(userId);
+      sdkCache.delete(cacheKey);
       throw new ZapierReauthRequired(userId, "token refresh failed");
     }
   } else {

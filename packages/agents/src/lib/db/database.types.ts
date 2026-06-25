@@ -3174,14 +3174,17 @@ export type Database = {
         Row: {
           updated_at: string;
           workspace_id: string;
+          zapier_connection_mode: string;
         };
         Insert: {
           updated_at?: string;
           workspace_id: string;
+          zapier_connection_mode?: string;
         };
         Update: {
           updated_at?: string;
           workspace_id?: string;
+          zapier_connection_mode?: string;
         };
         Relationships: [
           {
