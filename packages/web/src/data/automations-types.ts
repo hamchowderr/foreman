@@ -31,7 +31,12 @@ export interface AutomationRun {
   inbox_message_id: string | null;
   trigger_id: string | null;
   durable_run_id: string | null;
+  /** Durable result on a finished run (null until terminal). */
+  output: unknown;
+  /** Failure detail on a failed/stuck run (null otherwise). */
+  error: unknown;
   created_at: string;
+  updated_at: string;
 }
 
 export interface AutomationDetail {

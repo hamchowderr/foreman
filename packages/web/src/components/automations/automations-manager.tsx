@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ChevronDownIcon,
+  ChevronRightIcon,
   ExternalLinkIcon,
   InboxIcon,
   PlayIcon,
@@ -8,7 +10,7 @@ import {
   Trash2Icon,
   ZapIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +49,25 @@ function shortId(id: string): string {
   return id.length > 10 ? `${id.slice(0, 8)}…` : id;
 }
 
+/** Run statuses the reconcile worker may still advance — drives live polling. */
+const NON_TERMINAL_RUN = new Set(["initialized", "started"]);
+/** Poll cadence while a run is in flight. DB-cheap (getAutomation reads Postgres, not Zapier). */
+const RUN_POLL_MS = 3500;
+
+function runStatusVariant(status: string): "default" | "secondary" | "destructive" {
+  if (status === "failed") return "destructive";
+  if (status === "finished") return "default";
+  return "secondary"; // initialized / started — in flight
+}
+
+function prettyJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
 export function AutomationsManager() {
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +77,9 @@ export function AutomationsManager() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedId;
 
   const loadList = useCallback(() => {
     getAutomations()
@@ -75,6 +99,7 @@ export function AutomationsManager() {
     setDetail(null);
     setInbox(null);
     setConfirmDelete(false);
+    setExpandedRunId(null);
     getAutomation(id)
       .then(setDetail)
       .catch((e) => setError((e as Error).message));
@@ -86,6 +111,34 @@ export function AutomationsManager() {
   useEffect(() => {
     if (selectedId) loadDetail(selectedId);
   }, [selectedId, loadDetail]);
+
+  // Live run-status: while the selected automation has an in-flight run, re-fetch
+  // its detail in place (no spinner, no flicker) so the reconcile worker's
+  // started → finished/failed advance shows up without a manual reload. The SDK
+  // exposes no run-status stream, so Foreman owns this — getAutomation is a cheap
+  // Postgres read. Polling stops as soon as every run is terminal.
+  const hasPendingRun = !!detail?.runs.some((r) => NON_TERMINAL_RUN.has(r.status));
+  useEffect(() => {
+    if (!selectedId || !hasPendingRun) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        const fresh = await getAutomation(selectedId);
+        if (active && selectedIdRef.current === selectedId) {
+          setDetail((cur) => (cur && cur.automation.id === fresh.automation.id ? fresh : cur));
+        }
+      } catch {
+        // Transient — keep polling; a hard error surfaces on the next user action.
+      }
+      if (active) timer = setTimeout(tick, RUN_POLL_MS);
+    };
+    timer = setTimeout(tick, RUN_POLL_MS);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [selectedId, hasPendingRun]);
 
   function act(fn: () => Promise<unknown>, reloadList = false) {
     setError(null);
@@ -224,32 +277,75 @@ export function AutomationsManager() {
 
             <TabsContent value="runs">
               {detail && detail.runs.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>When</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Durable run</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {detail.runs.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {new Date(r.created_at).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={r.status === "failed" ? "destructive" : "secondary"}>
-                            {r.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {r.durable_run_id ? shortId(r.durable_run_id) : "—"}
-                        </TableCell>
+                <div className="space-y-2">
+                  {hasPendingRun && (
+                    <p className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                      <RefreshCwIcon className="size-3 animate-spin" /> Live — updating as runs
+                      complete…
+                    </p>
+                  )}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-6" />
+                        <TableHead>When</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Durable run</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.runs.map((r) => {
+                        const detailJson = r.error != null ? r.error : (r.output ?? null);
+                        const expandable = detailJson != null;
+                        const expanded = expandedRunId === r.id;
+                        return (
+                          <Fragment key={r.id}>
+                            <TableRow
+                              className={expandable ? "cursor-pointer" : undefined}
+                              onClick={
+                                expandable
+                                  ? () => setExpandedRunId(expanded ? null : r.id)
+                                  : undefined
+                              }
+                            >
+                              <TableCell className="text-muted-foreground">
+                                {expandable &&
+                                  (expanded ? (
+                                    <ChevronDownIcon className="size-4" />
+                                  ) : (
+                                    <ChevronRightIcon className="size-4" />
+                                  ))}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">
+                                {new Date(r.created_at).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={runStatusVariant(r.status)}>{r.status}</Badge>
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {r.durable_run_id ? shortId(r.durable_run_id) : "—"}
+                              </TableCell>
+                            </TableRow>
+                            {expanded && detailJson != null && (
+                              <TableRow className="hover:bg-transparent">
+                                <TableCell className="p-0" colSpan={4}>
+                                  <div className="px-3 pb-3">
+                                    <p className="mb-1 text-muted-foreground text-xs">
+                                      {r.error != null ? "Error" : "Output"}
+                                    </p>
+                                    <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
+                                      {prettyJson(detailJson)}
+                                    </pre>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <p className="py-4 text-muted-foreground text-sm">No runs yet.</p>
               )}
