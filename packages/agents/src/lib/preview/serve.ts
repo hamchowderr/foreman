@@ -1,65 +1,128 @@
-import { foremanWorkspace } from "../../mastra/agents/workspace";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { Socket } from "node:net";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
- * Live-preview server for the sandbox spike (foreman-qq4x). The agent passes a
- * complete HTML document; we write it into the workspace and run a tiny static
- * server *inside the sandbox*, then hand back a URL the chat embeds in an iframe.
+ * Live-preview server for the real shadcn harness (foreman-8nyg). The agent
+ * builds a genuine React component using the project's shadcn/ui components;
+ * we write it into a warm Vite + React + Tailwind + shadcn template
+ * (packages/agents/preview-template) whose dev server stays running, and Vite
+ * HMR re-renders it live in the chat's preview panel.
  *
- * The server is spawned directly via the process manager (not the agent's
- * `execute_command` tool), so it is NOT tied to the agent's abort signal and keeps
- * running after the turn ends — otherwise the iframe would go dead immediately.
+ * The Vite process is spawned via node's child_process (detached + unref'd) so
+ * it survives the agent turn — exactly like a long-running dev server should.
+ * We run vite's CLI through `process.execPath` (no shell) to avoid the Windows
+ * console-window popup that `shell:true`/`npx` causes.
  *
- * SPIKE limits: single shared port/dir (not per-tenant), localhost only (works in
- * local dev where the browser can reach the agent host). Cloud needs a provider
- * preview URL (E2B/Daytona) — see foreman-691a.
+ * SPIKE limits: ONE shared template/dev-server (not per-tenant — foreman-jgme),
+ * localhost only (the dev browser reaches it directly). Cloud/per-tenant/
+ * sandbox isolation + security are phase-2.
  */
 
-const PREVIEW_PORT = Number(process.env.FOREMAN_PREVIEW_PORT ?? 7331);
-const PREVIEW_DIR = "preview";
+const PREVIEW_PORT = Number(process.env.FOREMAN_PREVIEW_PORT ?? 7332);
 
-// A dependency-free static file server, written into the workspace and run by node
-// in the sandbox. Serves the preview dir on 127.0.0.1:PORT, defaulting to index.html.
-// (Kept free of backticks so it embeds cleanly in this template literal.)
-const SERVER_MJS = `import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
-const port = Number(process.argv[2] || 7331);
-const root = process.cwd();
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
-createServer(async (req, res) => {
-  try {
-    let p = decodeURIComponent((req.url || '/').split('?')[0]);
-    if (p.endsWith('/')) p += 'index.html';
-    const file = normalize(join(root, p));
-    if (!file.startsWith(root)) { res.writeHead(403); res.end('Forbidden'); return; }
-    const buf = await readFile(file);
-    res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream' });
-    res.end(buf);
-  } catch {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not found');
+/**
+ * Locate packages/agents/preview-template robustly — works whether this module
+ * runs from source (`mastra dev` bundles it to a different depth) or from a
+ * built output, by walking up from both the module dir and process.cwd().
+ */
+function resolveTemplateDir(): string {
+  const fromEnv = process.env.FOREMAN_PREVIEW_TEMPLATE_DIR;
+  if (fromEnv && existsSync(path.join(fromEnv, "package.json"))) return fromEnv;
+
+  const starts = [path.dirname(fileURLToPath(import.meta.url)), process.cwd()];
+  for (const start of starts) {
+    let dir = start;
+    for (let i = 0; i < 12; i++) {
+      for (const candidate of [
+        path.join(dir, "preview-template"),
+        path.join(dir, "packages", "agents", "preview-template"),
+      ]) {
+        if (existsSync(path.join(candidate, "package.json"))) return candidate;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
   }
-}).listen(port, '127.0.0.1', () => console.log('[preview] listening on ' + port));
-`;
+  throw new Error(
+    "preview: could not locate packages/agents/preview-template (set FOREMAN_PREVIEW_TEMPLATE_DIR)",
+  );
+}
 
-let serverStarted = false;
+/** Resolve once and remember which port/template a started server is using. */
+let viteStarting: Promise<void> | null = null;
 
-/** Write `html` into the workspace preview dir, ensure the server is running, return the URL. */
-export async function startWorkspacePreview(html: string): Promise<{ url: string }> {
-  const fs = foremanWorkspace.filesystem;
-  const sandbox = foremanWorkspace.sandbox;
-  if (!fs) throw new Error("preview: workspace filesystem not available");
-  if (!sandbox) throw new Error("preview: workspace sandbox not available");
-  const procs = sandbox.processes;
-  if (!procs) throw new Error("preview: sandbox has no process manager");
+function waitForPort(port: number, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve, reject) => {
+    const attempt = () => {
+      const socket = new Socket();
+      socket.setTimeout(1000);
+      const cleanup = () => {
+        socket.removeAllListeners();
+        socket.destroy();
+      };
+      socket.once("connect", () => {
+        cleanup();
+        resolve();
+      });
+      const retry = () => {
+        cleanup();
+        if (Date.now() > deadline) {
+          reject(new Error(`preview: Vite did not open ${port} within ${timeoutMs}ms`));
+        } else {
+          setTimeout(attempt, 400);
+        }
+      };
+      socket.once("error", retry);
+      socket.once("timeout", retry);
+      socket.connect(port, "127.0.0.1");
+    };
+    attempt();
+  });
+}
 
-  await fs.writeFile(`${PREVIEW_DIR}/index.html`, html);
-  await fs.writeFile(`${PREVIEW_DIR}/server.mjs`, SERVER_MJS);
+/** Start the template's Vite dev server once and wait until it's accepting connections. */
+function ensureVite(templateDir: string): Promise<void> {
+  if (viteStarting) return viteStarting;
 
-  if (!serverStarted) {
-    await procs.spawn(`node server.mjs ${PREVIEW_PORT}`, { cwd: PREVIEW_DIR });
-    serverStarted = true;
-  }
+  viteStarting = (async () => {
+    const viteBin = path.join(templateDir, "node_modules", "vite", "bin", "vite.js");
+    if (!existsSync(viteBin)) {
+      throw new Error(
+        `preview: template deps missing — run \`npm install\` in ${templateDir} (node_modules/vite not found)`,
+      );
+    }
+    const child = spawn(process.execPath, [viteBin], {
+      cwd: templateDir,
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    child.unref();
+    await waitForPort(PREVIEW_PORT, 30_000);
+  })();
 
+  // If startup fails, allow a later call to retry instead of caching the rejection.
+  viteStarting.catch(() => {
+    viteStarting = null;
+  });
+
+  return viteStarting;
+}
+
+/**
+ * Write the agent's React component into the template and ensure Vite is live.
+ * Returns the dev-server URL the chat embeds in an iframe. Vite HMR makes
+ * subsequent writes update the open preview in place.
+ */
+export async function startReactPreview(componentTsx: string): Promise<{ url: string }> {
+  const templateDir = resolveTemplateDir();
+  await writeFile(path.join(templateDir, "src", "generated.tsx"), componentTsx, "utf8");
+  await ensureVite(templateDir);
   return { url: `http://localhost:${PREVIEW_PORT}` };
 }
