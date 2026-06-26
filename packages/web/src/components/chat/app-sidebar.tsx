@@ -37,7 +37,6 @@ const NAV: Array<{ href: string; label: string; Icon: LucideIcon }> = [
   { href: "/inbox", label: "Inbox", Icon: InboxIcon },
   { href: "/dashboards", label: "Dashboards", Icon: LayoutDashboardIcon },
   { href: "/workspaces", label: "Workspaces", Icon: UsersIcon },
-  { href: "/settings", label: "Settings", Icon: SettingsIcon },
 ];
 
 export function AppSidebar({ user }: { user: User | undefined }) {
@@ -127,6 +126,23 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarHistory user={user} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border pt-2 pb-5">
+        {user && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith("/settings")}
+                className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                tooltip="Settings"
+              >
+                <Link href="/settings" onClick={() => setOpenMobile(false)}>
+                  <SettingsIcon className="size-4" />
+                  <span className="text-[13px]">Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         {user && <SidebarUserNav user={user} />}
       </SidebarFooter>
       <SidebarRail />
