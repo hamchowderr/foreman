@@ -1,5 +1,4 @@
 import {
-  type AutomationTrigger,
   deleteAutomation as deleteZapierWorkflow,
   deployAutomation,
   getTriggerRunStatus,
@@ -11,6 +10,7 @@ import { resolveActiveWorkspace } from "@/lib/identity";
 import { getExperimentalSdkForUser } from "@/lib/zapier/sdk";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
+import type { InboxTriggerSpec } from "./types";
 
 /**
  * Automation orchestration (foreman-l7xq M2). Composes the durable deploy/run
@@ -32,7 +32,9 @@ export interface ProvisionInput {
   description?: string;
   source: string;
   connections?: Record<string, string | number>;
-  trigger?: AutomationTrigger;
+  /** Trigger-inbox subscription that fires this automation; omit for manual. The
+   *  worker (M3) arms the inbox idempotently on its next cycle. */
+  trigger?: InboxTriggerSpec;
   enabled?: boolean;
   isPrivate?: boolean;
 }
@@ -47,13 +49,14 @@ export async function provisionAutomation(input: ProvisionInput): Promise<Provis
   const workspaceId = input.workspaceId ?? (await resolveActiveWorkspace(input.userId));
   const sdk = await getExperimentalSdkForUser(input.userId);
 
+  // Deploy as a manual durable (no Zapier-claimed trigger). Triggering is the
+  // inbox worker's job (the locked design — Foreman owns the lease/ack loop).
   const deployed = await deployAutomation({
     sdk,
     name: input.name,
     description: input.description,
     source: input.source,
     connections: input.connections,
-    trigger: input.trigger,
     enabled: input.enabled,
     isPrivate: input.isPrivate,
   });

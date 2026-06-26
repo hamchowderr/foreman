@@ -71,28 +71,25 @@ describe("provisionAutomation", () => {
     });
   });
 
-  it("records a silent trigger-claim failure as status=trigger_claim_failed", async () => {
-    vi.mocked(deployAutomation).mockResolvedValueOnce({
-      workflowId: "wf_2",
-      versionId: "ver_2",
-      enabled: false,
-      isPrivate: true,
-      editorUrl: "e",
-      triggerUrl: "t",
-      triggerClaimFailed: true,
-      disabledReason: "trigger_claim_failed",
-    });
-
+  it("stores an inbox trigger spec (deployed as a manual durable — the worker arms it)", async () => {
     await provisionAutomation({
       userId: "user-1",
-      name: "Triggered",
+      name: "On new issue",
       source: "SRC",
-      trigger: { selectedApi: "GoogleSheetsAPI@2.3.0", action: "new_row" },
+      trigger: { app: "github", action: "new_issue", inputs: { repo: "owner/name" } },
     });
 
+    // The durable is deployed WITHOUT a Zapier-claimed trigger.
+    const deployArg = vi.mocked(deployAutomation).mock.calls[0][0] as Record<string, unknown>;
+    expect(deployArg.trigger).toBeUndefined();
+
+    // The inbox subscription is persisted on the automation for the worker.
     const persisted = vi.mocked(store.createAutomation).mock.calls[0][0];
-    expect(persisted.status).toBe("trigger_claim_failed");
-    expect(persisted.enabled).toBe(false);
+    expect(persisted.trigger).toEqual({
+      app: "github",
+      action: "new_issue",
+      inputs: { repo: "owner/name" },
+    });
   });
 });
 

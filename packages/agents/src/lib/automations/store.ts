@@ -115,6 +115,24 @@ export async function getAutomation(
   return (data as unknown as AutomationRow) ?? null;
 }
 
+/**
+ * All enabled, inbox-triggered automations across workspaces — the worker's work
+ * list (M3). Inbox-triggered = the trigger jsonb carries an app + action.
+ */
+export async function listActiveInboxAutomations(): Promise<AutomationRow[]> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("automation")
+    .select("*")
+    .eq("enabled", true)
+    .not("trigger", "is", null);
+  const rows = (data ?? []) as unknown as AutomationRow[];
+  return rows.filter((r) => {
+    const t = r.trigger as { app?: unknown; action?: unknown } | null;
+    return !!t && typeof t.app === "string" && typeof t.action === "string";
+  });
+}
+
 /** Reverse lookup used by the inbox worker (M3) to resolve a Zapier workflow to its automation. */
 export async function getAutomationByZapierWorkflowId(
   zapierWorkflowId: string,

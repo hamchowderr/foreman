@@ -19,23 +19,23 @@ import {
 
 const triggerSchema = z
   .object({
-    selectedApi: z
+    app: z
       .string()
-      .describe(
-        "Version-pinned implementation id (e.g. 'GoogleSheetsAPI@2.3.0'), NOT a bare app key — a bare key makes the trigger claim fail silently.",
-      ),
-    action: z.string().describe("Trigger action key, e.g. 'new_row'."),
-    authenticationId: z
-      .string()
+      .describe("Zapier app key/slug for the trigger, e.g. 'github' or 'google-sheets'."),
+    action: z.string().describe("Trigger key, e.g. 'new_issue' / 'new_row'."),
+    connection: z
+      .union([z.string(), z.number()])
       .nullable()
       .optional()
-      .describe("Connection id backing the trigger, when it needs auth."),
-    params: z
+      .describe("Connection id backing the trigger."),
+    inputs: z
       .record(z.string(), z.unknown())
       .optional()
-      .describe("Trigger params, each shaped to its field value_type (ARRAY vs STRING)."),
+      .describe("Trigger input fields, e.g. { repo: 'owner/name' }."),
   })
-  .describe("A Zapier app trigger to claim; omit for manual/webhook automations.");
+  .describe(
+    "A trigger-inbox subscription that fires this automation; omit for manual/webhook automations. The worker leases this inbox and fires the durable.",
+  );
 
 export const createAutomationTool = createTool({
   id: "create_automation",
@@ -44,10 +44,10 @@ export const createAutomationTool = createTool({
     "Deploy a durable Zapier automation the user described, as a shared workspace automation. You author the " +
     "durable workflow.ts `source` (createZapierSdk() at module scope, one sdk.runAction per ctx.step, " +
     "defineDurable(...) + export default); this creates + publishes it on Zapier and records it in the workspace. " +
-    "Provide a `connections` map (alias → connection id) for every alias the source references. Add `trigger` for " +
-    "an event-driven automation, or omit it for manual/webhook. Returns the Foreman automation `id` + editor link. " +
-    "If `triggerClaimFailed` is true the workflow deployed but the trigger did not claim (usually an unversioned " +
-    "selectedApi).",
+    "Provide a `connections` map (alias → connection id) for every alias the source references. Add `trigger` (an " +
+    "app/action trigger-inbox subscription) for an event-driven automation, or omit it for manual/webhook. The " +
+    "background worker arms the inbox and fires the automation on each matching event. Returns the Foreman " +
+    "automation `id` + editor link.",
   inputSchema: z.object({
     userId: z.string().describe("The user whose Zapier connection deploys the automation."),
     name: z.string().describe("Human-readable automation name."),
