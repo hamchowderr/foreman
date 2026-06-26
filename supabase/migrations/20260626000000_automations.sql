@@ -52,6 +52,7 @@ CREATE INDEX IF NOT EXISTS automation_zapier_workflow_idx
 
 ALTER TABLE public.automation ENABLE ROW LEVEL SECURITY;
 REVOKE SELECT ON TABLE public.automation FROM anon;
+GRANT ALL ON TABLE public.automation TO service_role;
 
 
 -- automation_run: run history + the idempotency store for the trigger-inbox
@@ -100,3 +101,4 @@ CREATE INDEX IF NOT EXISTS automation_run_workspace_created_idx
 
 ALTER TABLE public.automation_run ENABLE ROW LEVEL SECURITY;
 REVOKE SELECT ON TABLE public.automation_run FROM anon;
+GRANT ALL ON TABLE public.automation_run TO service_role;
