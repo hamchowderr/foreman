@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppNav } from "@/components/app-nav";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Empty,
@@ -36,54 +35,51 @@ export default async function InboxPage() {
   const subscriptions = entries.filter((e) => e.inbox);
 
   return (
-    <div className="min-h-svh bg-background">
-      <AppNav active="inbox" />
-      <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-        <h1 className="mb-1 font-semibold text-2xl tracking-tight">Inbox</h1>
-        <p className="mb-6 max-w-2xl text-muted-foreground text-sm">
-          Incoming triggers that fire your automations — new rows, webhooks, emails, and more land
-          here before Foreman runs.
-        </p>
+    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+      <h1 className="mb-1 font-semibold text-2xl tracking-tight">Inbox</h1>
+      <p className="mb-6 max-w-2xl text-muted-foreground text-sm">
+        Incoming triggers that fire your automations — new rows, webhooks, emails, and more land
+        here before Foreman runs.
+      </p>
 
-        {loadErr ? (
-          <Alert variant="destructive">
-            <AlertDescription>Couldn&apos;t load the inbox: {loadErr}</AlertDescription>
-          </Alert>
-        ) : entries.length === 0 ? (
-          <InboxEmpty />
-        ) : (
-          <div className="space-y-8">
-            <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Listening ({subscriptions.length})
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {subscriptions.map((entry) => (
-                  <SubscriptionCard key={entry.automation.id} entry={entry} />
-                ))}
+      {loadErr ? (
+        <Alert variant="destructive">
+          <AlertDescription>Couldn&apos;t load the inbox: {loadErr}</AlertDescription>
+        </Alert>
+      ) : entries.length === 0 ? (
+        <InboxEmpty />
+      ) : (
+        <div className="space-y-8">
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Listening ({subscriptions.length})
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {subscriptions.map((entry) => (
+                <SubscriptionCard key={entry.automation.id} entry={entry} />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Recent activity
+            </h2>
+            {rows.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-surface/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                No events yet. When a trigger fires, it shows up here before the run.
               </div>
-            </section>
-
-            <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Recent activity
-              </h2>
-              {rows.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border bg-surface/30 px-4 py-8 text-center text-sm text-muted-foreground">
-                  No events yet. When a trigger fires, it shows up here before the run.
-                </div>
-              ) : (
-                <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-                  {rows.map(({ msg, automation }) => (
-                    <MessageRow key={msg.id} msg={msg} automation={automation} />
-                  ))}
-                </ul>
-              )}
-            </section>
-          </div>
-        )}
-      </main>
-    </div>
+            ) : (
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                {rows.map(({ msg, automation }) => (
+                  <MessageRow key={msg.id} msg={msg} automation={automation} />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+    </main>
   );
 }
 

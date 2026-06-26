@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { BrandHeader } from "@/components/brand-header";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
 import { ShareButton } from "@/components/dashboard/share-button";
+import { ArrowLeft } from "@/components/icons/hi";
 import { getArtifact } from "@/lib/dashboards-client";
 import { createClient } from "@/lib/server";
 
@@ -22,29 +22,25 @@ export default async function DashboardArtifactPage({
   if (!artifact) notFound();
 
   return (
-    <div className="min-h-svh bg-background">
-      <BrandHeader
-        label={
-          <Link className="text-sm text-muted-foreground hover:underline" href="/dashboards">
-            Dashboards
-          </Link>
-        }
-      />
-
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="font-semibold text-2xl tracking-tight" style={{ color: "#201515" }}>
-              {artifact.title}
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: "#7A6A5C" }}>
-              {artifact.rowCount} records · updated {new Date(artifact.updatedAt).toLocaleString()}
-            </p>
-          </div>
-          <ShareButton artifactId={artifact.id} />
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
+      <Link
+        href="/dashboards"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Dashboards
+      </Link>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-semibold text-2xl tracking-tight text-foreground">
+            {artifact.title}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {artifact.rowCount} records · updated {new Date(artifact.updatedAt).toLocaleString()}
+          </p>
         </div>
-        <DashboardRenderer data={artifact.records} spec={artifact.spec} />
-      </main>
-    </div>
+        <ShareButton artifactId={artifact.id} />
+      </div>
+      <DashboardRenderer data={artifact.records} spec={artifact.spec} />
+    </main>
   );
 }

@@ -1,0 +1,52 @@
+import { cookies } from "next/headers";
+import { Toaster } from "sonner";
+import { AppSidebar } from "@/components/chat/app-sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { createClient } from "@/lib/server";
+
+/**
+ * Shared app shell — the same shadcn sidebar (AppSidebar) the chat uses, wrapped
+ * around any authed section (Automations, Inbox, Dashboards, Workspaces, …) so the
+ * whole app keeps one persistent sidebar instead of bare pages / one-off headers.
+ * Server component: reads the user + persisted sidebar collapse state, like the
+ * chat layout's SidebarShell.
+ */
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
+
+  const sidebarUser = user
+    ? {
+        id: user.id,
+        email: user.email ?? "",
+        image: user.user_metadata?.avatar_url ?? null,
+      }
+    : undefined;
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider defaultOpen={!isCollapsed}>
+        <AppSidebar user={sidebarUser} />
+        <SidebarInset>
+          <Toaster
+            position="top-center"
+            theme="system"
+            toastOptions={{
+              className:
+                "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
+            }}
+          />
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
+            <SidebarTrigger className="text-muted-foreground transition-colors hover:text-foreground" />
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  );
+}

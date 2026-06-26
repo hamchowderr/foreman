@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppNav } from "@/components/app-nav";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -40,32 +39,28 @@ export default async function DashboardsPage({
   const spec = snapshot ? defaultSpecFromRecords(appKey, snapshot.records) : null;
 
   return (
-    <div className="min-h-svh bg-background">
-      <AppNav active="dashboards" />
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          {spec ? spec.title : `${appKey} dashboard`}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {snapshot
+            ? `${snapshot.rowCount} records · refreshed ${new Date(snapshot.refreshedAt).toLocaleString()}`
+            : "Live view of data pulled from your connected app."}
+        </p>
+      </div>
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {spec ? spec.title : `${appKey} dashboard`}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {snapshot
-              ? `${snapshot.rowCount} records · refreshed ${new Date(snapshot.refreshedAt).toLocaleString()}`
-              : "Live view of data pulled from your connected app."}
-          </p>
-        </div>
-
-        {snapshotErr ? (
-          <Alert variant="destructive">
-            <AlertDescription>Couldn't load dashboard: {snapshotErr}</AlertDescription>
-          </Alert>
-        ) : spec && snapshot ? (
-          <DashboardRenderer spec={spec} data={snapshot.records} />
-        ) : (
-          <EmptyState appKey={appKey} />
-        )}
-      </main>
-    </div>
+      {snapshotErr ? (
+        <Alert variant="destructive">
+          <AlertDescription>Couldn't load dashboard: {snapshotErr}</AlertDescription>
+        </Alert>
+      ) : spec && snapshot ? (
+        <DashboardRenderer spec={spec} data={snapshot.records} />
+      ) : (
+        <EmptyState appKey={appKey} />
+      )}
+    </main>
   );
 }
 
