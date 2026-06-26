@@ -1,6 +1,5 @@
 import { Agent } from "@mastra/core/agent";
 import { ToolSearchProcessor } from "@mastra/core/processors";
-import { LocalFilesystem, LocalSandbox, Workspace } from "@mastra/core/workspace";
 import { createAnswerRelevancyScorer, createToxicityScorer } from "@mastra/evals/scorers/prebuilt";
 import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
@@ -28,7 +27,9 @@ import {
 import { connectZapierTool } from "../tools/connect-zapier";
 import { createDashboardTool } from "../tools/create-dashboard";
 import { forkConversationTool } from "../tools/fork-conversation";
+import { previewAppTool } from "../tools/preview-app";
 import { searchHistoryTool } from "../tools/search-history";
+import { foremanWorkspace } from "./workspace";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -103,6 +104,8 @@ function buildForemanTools() {
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
       create_dashboard: createDashboardTool,
+      // Live, code-built previews in the sandbox (foreman-qq4x spike).
+      preview_app: previewAppTool,
       // Durable automations (foreman-l7xq) — author/deploy/run/inspect from chat.
       create_automation: createAutomationTool,
       run_automation: runAutomationTool,
@@ -139,27 +142,6 @@ function buildForemanInputProcessors() {
 }
 
 export function createForemanAgent(databaseUrl: string) {
-  const workspacePath = "./data/workspace";
-
-  const workspace = new Workspace({
-    id: "foreman-workspace",
-    name: "Foreman Workspace",
-    filesystem: new LocalFilesystem({
-      basePath: workspacePath,
-      contained: true,
-    }),
-    sandbox: new LocalSandbox({
-      workingDirectory: workspacePath,
-    }),
-    bm25: true,
-    tools: {
-      mastra_workspace_write_file: { requireApproval: true },
-      mastra_workspace_edit_file: { requireApproval: true },
-      mastra_workspace_delete: { requireApproval: true },
-      mastra_workspace_execute_command: { requireApproval: true },
-    },
-  });
-
   return new Agent({
     id: "foreman",
     name: "Foreman",
@@ -189,7 +171,7 @@ export function createForemanAgent(databaseUrl: string) {
     },
     inputProcessors: () => buildForemanInputProcessors(),
     outputProcessors: [piiRedactor],
-    workspace,
+    workspace: foremanWorkspace,
     memory: new Memory({
       storage: new PostgresStore({
         id: "foreman-memory",

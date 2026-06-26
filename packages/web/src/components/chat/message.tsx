@@ -7,6 +7,7 @@ import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
+import { WebPreview, WebPreviewBody, WebPreviewNavigation } from "../ai-elements/web-preview";
 import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
@@ -302,6 +303,42 @@ const PurePreviewMessage = ({
       return (
         <div className="text-muted-foreground text-sm" key={toolCallId}>
           Building dashboard…
+        </div>
+      );
+    }
+
+    if (type === "tool-preview_app") {
+      const { toolCallId, state } = part;
+
+      if (state === "output-available" && part.output && !("error" in part.output)) {
+        const out = part.output as { url: string; title?: string };
+        return (
+          <div className="w-full max-w-full" key={toolCallId}>
+            <div className="mb-2 text-sm font-medium text-foreground">{out.title ?? "Preview"}</div>
+            <WebPreview className="h-[480px]" defaultUrl={out.url}>
+              <WebPreviewNavigation />
+              <WebPreviewBody src={out.url} title={out.title} />
+            </WebPreview>
+          </div>
+        );
+      }
+
+      if (state === "output-error" || (part.output && "error" in part.output)) {
+        return (
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Couldn't build the live preview:{" "}
+              {String(
+                part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
+              )}
+            </AlertDescription>
+          </Alert>
+        );
+      }
+
+      return (
+        <div className="text-muted-foreground text-sm" key={toolCallId}>
+          Building live preview…
         </div>
       );
     }
