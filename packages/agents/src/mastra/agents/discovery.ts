@@ -6,6 +6,7 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 
 const DISCOVERY_PROMPT = `You are the Discovery Agent, a specialist in exploring Zapier integrations. Your job is to help users discover what apps they have connected, what actions are available, and what inputs those actions require.
 

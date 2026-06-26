@@ -224,7 +224,7 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { capabilities: Record<string, boolean> };
       expect(body).toHaveProperty("capabilities");
       expect(body.capabilities).toHaveProperty("search", true);
       expect(body.capabilities).toHaveProperty("voice", true);
@@ -267,7 +267,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({ enabled: true }),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("Unknown capability");
     });
 
@@ -281,7 +281,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({ value: true }),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("enabled");
     });
   });
@@ -299,7 +299,11 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as {
+        rateLimit: { allowed: boolean; limits: { perMinute: number; perHour: number } };
+        appAccess: Record<string, { allowed: boolean; apps: string[] }>;
+        config: { requireApprovalForWrites: boolean; maxBulkItems: number };
+      };
 
       // Rate limit section
       expect(body).toHaveProperty("rateLimit");
@@ -361,7 +365,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({ enabled: true }),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("not a sensitive app");
     });
 
@@ -375,7 +379,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("enabled");
     });
   });
@@ -440,7 +444,7 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { appKey: string; count: number; snapshots: unknown[] };
       expect(body).toMatchObject({ appKey: "hubspot", count: 2 });
       expect(Array.isArray(body.snapshots)).toBe(true);
     });
@@ -450,7 +454,7 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("since");
     });
 
@@ -459,7 +463,7 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("limit");
     });
   });
@@ -497,7 +501,7 @@ describe("API route integration tests", () => {
       // Deliberately NO Authorization header — the public carve-out must allow it.
       const res = await app.request("/dashboards/public/sometoken");
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { spec: { title: string } };
       expect(body).toMatchObject({ id: "art-1", title: "Leads", records: [] });
       expect(body.spec.title).toBe("Leads");
     });

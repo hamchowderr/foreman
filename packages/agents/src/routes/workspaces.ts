@@ -21,7 +21,12 @@ const workspaces = new Hono<AppEnv>();
 workspaces.use("/*", authMiddleware);
 
 const ADMIN_ROLES = new Set(["owner", "admin"]);
-const ASSIGNABLE_ROLES = new Set(["admin", "member", "readonly"]); // owner is not assignable via UI
+// owner is not assignable via UI. Tuple + type guard so a validated string
+// narrows to the role union the DB columns expect (no cast at the write site).
+const ASSIGNABLE_ROLES = ["admin", "member", "readonly"] as const;
+type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+const isAssignableRole = (v: string): v is AssignableRole =>
+  (ASSIGNABLE_ROLES as readonly string[]).includes(v);
 const CONNECTION_MODES = new Set(["member-first", "shared", "personal"]);
 const MAX_NAME_LEN = 120;
 
@@ -321,7 +326,7 @@ workspaces.patch("/:id/members/:memberId", async (c) => {
 
   const body = (await c.req.json().catch(() => ({}))) as { role?: unknown };
   const newRole = typeof body.role === "string" ? body.role : "";
-  if (!ASSIGNABLE_ROLES.has(newRole)) {
+  if (!isAssignableRole(newRole)) {
     return c.json({ error: "role must be one of admin, member, readonly" }, 400);
   }
   const target = await memberRole(id, memberId);
@@ -419,7 +424,7 @@ workspaces.post("/:id/invitations", async (c) => {
   const inviteRole = typeof body.role === "string" ? body.role : "member";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ error: "A valid email is required" }, 400);
-  if (!ASSIGNABLE_ROLES.has(inviteRole)) return c.json({ error: "Invalid role" }, 400);
+  if (!isAssignableRole(inviteRole)) return c.json({ error: "Invalid role" }, 400);
 
   const supabase = getSupabase();
   // Don't duplicate an outstanding invite for the same email.

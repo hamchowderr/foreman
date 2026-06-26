@@ -6,6 +6,7 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import { connectZapierTool } from "../tools/connect-zapier";
 
 const EXECUTION_PROMPT = `You are the Execution Agent, responsible for running Zapier actions on behalf of users. You handle action execution, raw API calls, and Zapier account connections.

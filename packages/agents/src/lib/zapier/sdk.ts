@@ -2,6 +2,7 @@ import { createZapierSdk } from "@zapier/zapier-sdk";
 import { createZapierSdk as createExperimentalSdk } from "@zapier/zapier-sdk/experimental";
 import { decryptToken, encryptToken } from "../crypto";
 import { getSupabase } from "../db";
+import type { Database } from "../db/database.types";
 import { getEnv } from "../env";
 import { resolveActiveWorkspace } from "../identity";
 import { loadUserConnectionsMap } from "./aliases";
@@ -106,15 +107,21 @@ async function buildSdkForUser<T>(
     ? await resolveWorkspaceConnectionMode(workspaceId)
     : "personal";
 
-  let identity: Record<string, any> | null = null;
+  type ZapierIdentityRow = Database["public"]["Tables"]["zapier_identity"]["Row"];
+
+  // The loaders RETURN the row rather than mutating a captured `identity` — TS
+  // can't track assignments made inside a closure, so the old mutate-in-closure
+  // form left `identity` un-narrowable (it collapsed to `never` after the
+  // `if (!identity)` guards). Returning keeps the data flow visible to CFA.
 
   // The member's own connection. Retry briefly: right after the OAuth callback
   // writes zapier_identity (e.g. the onboarding "test" step), the row can lag,
   // which would otherwise look like "not connected". An existing row resolves on
   // the first attempt, so there's no added latency once a user is connected.
-  const loadPersonal = async (retry: boolean) => {
+  const loadPersonal = async (retry: boolean): Promise<ZapierIdentityRow | null> => {
     const attempts = retry ? 3 : 1;
-    for (let attempt = 0; attempt < attempts && !identity; attempt++) {
+    let found: ZapierIdentityRow | null = null;
+    for (let attempt = 0; attempt < attempts && !found; attempt++) {
       if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 300));
       const { data } = await supabase
         .from("zapier_identity")
@@ -122,34 +129,37 @@ async function buildSdkForUser<T>(
         .eq("user_id", userId)
         .limit(1)
         .maybeSingle();
-      identity = data;
+      found = data;
     }
+    return found;
   };
 
   // The workspace's designated shared connection (a zapier_identity tagged with
   // this workspace_id — typically owned by another member).
-  const loadShared = async () => {
-    if (!workspaceId) return;
+  const loadShared = async (): Promise<ZapierIdentityRow | null> => {
+    if (!workspaceId) return null;
     const { data } = await supabase
       .from("zapier_identity")
       .select("*")
       .eq("workspace_id", workspaceId)
       .limit(1)
       .maybeSingle();
-    identity = data;
+    return data;
   };
 
+  let identity: ZapierIdentityRow | null = null;
+
   if (mode === "personal") {
-    await loadPersonal(true);
+    identity = await loadPersonal(true);
   } else if (mode === "shared") {
-    await loadShared();
+    identity = await loadShared();
   } else {
     // member-first: own connection, then the workspace's shared one. Only retry
     // the personal lookup (for OAuth lag) once nothing else resolved, so members
     // who rely on the shared connection don't pay the backoff on every call.
-    await loadPersonal(false);
-    if (!identity) await loadShared();
-    if (!identity) await loadPersonal(true);
+    identity = await loadPersonal(false);
+    if (!identity) identity = await loadShared();
+    if (!identity) identity = await loadPersonal(true);
   }
 
   if (!identity) {

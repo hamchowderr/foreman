@@ -37,6 +37,22 @@ jobs:
           NODE_ENV: test
           DUCKDB_PATH: ./data/test.duckdb
 
+  typecheck:
+    name: agents (tsc)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # `mastra build` / vitest transpile with esbuild (no type-checking), so
+      # type errors never gated before — this runs `tsc --noEmit` over src + tests.
+      - name: Typecheck agents
+        run: cd packages/agents && npm run typecheck
+
   web:
     name: web (next build)
     runs-on: ubuntu-latest

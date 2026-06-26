@@ -16,6 +16,7 @@
     "db:types": "npx supabase gen types typescript --local --workdir ../.. --schema public | npx biome format --stdin-file-path=database.types.ts > src/lib/db/database.types.ts",
     "db:types:check": "npx supabase gen types typescript --local --workdir ../.. --schema public | npx biome format --stdin-file-path=database.types.ts | diff - src/lib/db/database.types.ts",
     "test": "vitest run --exclude tests/sdk/** --exclude tests/live/**",
+    "typecheck": "tsc --noEmit",
     "verify:aimock": "node scripts/verify-aimock-coverage.mjs",
     "test:live": "node --env-file=.env.local ../../node_modules/vitest/vitest.mjs run --config vitest.live.config.ts",
     "test:sdk": "vitest run --config vitest.sdk.config.ts",

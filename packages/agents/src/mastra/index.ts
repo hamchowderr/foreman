@@ -16,7 +16,6 @@ import { PinoLogger } from "@mastra/loggers";
 import { ConsoleExporter, DefaultExporter, Observability } from "@mastra/observability";
 import { PostgresStore } from "@mastra/pg";
 import { createUIMessageStreamResponse, stepCountIs } from "ai";
-import type { MiddlewareHandler } from "hono";
 import { resolveActiveWorkspace } from "../lib/identity";
 import { validateAgentCapabilities } from "../lib/providers";
 import { requestUserContext } from "../lib/request-user-context";
@@ -25,6 +24,7 @@ import { createDiscoveryAgent } from "./agents/discovery";
 import { createExecutionAgent } from "./agents/execution";
 import { createForemanAgent } from "./agents/foreman";
 import { createHistoryAgent } from "./agents/history";
+import { createPreviewBuilderAgent } from "./agents/preview-builder";
 import { createSupervisorAgent } from "./agents/supervisor";
 
 validateAgentCapabilities();
@@ -82,6 +82,7 @@ export function getMastra(): Mastra {
   const discoveryAgent = createDiscoveryAgent();
   const executionAgent = createExecutionAgent();
   const historyAgent = createHistoryAgent();
+  const previewBuilderAgent = createPreviewBuilderAgent();
   const supervisorAgent = createSupervisorAgent({
     databaseUrl,
     discoveryAgent,
@@ -121,19 +122,6 @@ export function getMastra(): Mastra {
     "/slack",
     "/discord",
   ];
-  const customMiddleware: MiddlewareHandler = async (c, next) => {
-    const p = c.req.path;
-    const owned = CUSTOM_ROUTE_PREFIXES.some(
-      (prefix) => p === prefix || p.startsWith(`${prefix}/`),
-    );
-    if (!owned) {
-      // Not a custom route — let Mastra handle it with the body intact.
-      await next();
-      return;
-    }
-    const { default: customRoutes } = await import("../routes");
-    return customRoutes.fetch(c.req.raw);
-  };
 
   // Observability is always on so the Mastra Studio Observability tab works.
   // OTEL_ENABLED=true additionally enables the OTEL Console exporter for local
@@ -205,6 +193,7 @@ export function getMastra(): Mastra {
       execution: executionAgent,
       history: historyAgent,
       supervisor: supervisorAgent,
+      "preview-builder": previewBuilderAgent,
     },
     workflows: {
       webhookHandler: webhookHandlerWorkflow,
@@ -225,7 +214,26 @@ export function getMastra(): Mastra {
     server: {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
-      middleware: [customMiddleware],
+      // Inlined so Mastra's own Middleware type contextually types (c, next):
+      // @mastra/core vendors its own hono type snapshot, so annotating with a
+      // root-`hono` MiddlewareHandler isn't assignable here. Only pre-routes the
+      // path prefixes the custom Hono app owns; everything else falls through to
+      // Mastra with the request body intact (a Web Request body is single-read —
+      // see CUSTOM_ROUTE_PREFIXES above).
+      middleware: [
+        async (c, next) => {
+          const p = c.req.path;
+          const owned = CUSTOM_ROUTE_PREFIXES.some(
+            (prefix) => p === prefix || p.startsWith(`${prefix}/`),
+          );
+          if (!owned) {
+            await next();
+            return;
+          }
+          const { default: customRoutes } = await import("../routes");
+          return customRoutes.fetch(c.req.raw);
+        },
+      ],
       // Mastra's default custom-route error handler swallows the error silently
       // (returns "Internal Server Error" with no log). This surfaces the real
       // error to the server console so failures are debuggable; the client still

@@ -4,7 +4,6 @@ import { createAnswerRelevancyScorer, createToxicityScorer } from "@mastra/evals
 import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
-import { OpenAIVoice } from "@mastra/voice-openai";
 import { stepCountIs } from "ai";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import { buildSystemPrompt, type PromptContext } from "../../lib/prompt-template";
@@ -158,7 +157,11 @@ export function createForemanAgent(databaseUrl: string) {
       stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
-    voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
+    // NOTE: no `voice:` here. Foreman's STT/TTS runs through lib/voice.ts (its own
+    // OpenAIVoice instance) behind the /voice route — nothing reads agent.voice.
+    // Wiring it here also can't type-check: @mastra/voice-openai vendors its own
+    // copy of the @internal/voice MastraVoice class, so OpenAIVoice's base is
+    // nominally distinct (private-field brand) from @mastra/core's MastraVoice.
     scorers: {
       relevancy: {
         scorer: createAnswerRelevancyScorer({ model: MODELS.fast }),

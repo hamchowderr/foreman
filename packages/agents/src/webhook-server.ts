@@ -51,7 +51,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/telegram/webhook" && req.method === "POST") {
-      const bot = getTelegramBot();
+      const bot = await getTelegramBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -69,7 +69,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/teams/webhook" && req.method === "POST") {
-      const bot = getTeamsBot();
+      const bot = await getTeamsBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -87,7 +87,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/gchat/webhook" && req.method === "POST") {
-      const bot = getGoogleChatBot();
+      const bot = await getGoogleChatBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -105,7 +105,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/whatsapp/webhook" && (req.method === "POST" || req.method === "GET")) {
-      const bot = getWhatsAppBot();
+      const bot = await getWhatsAppBot();
       const request = new Request(url, {
         method: req.method!,
         headers: Object.fromEntries(
@@ -123,7 +123,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/github/webhook" && req.method === "POST") {
-      const bot = getGitHubBot();
+      const bot = await getGitHubBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -141,7 +141,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/linear/webhook" && req.method === "POST") {
-      const bot = getLinearBot();
+      const bot = await getLinearBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -177,7 +177,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/imessage/webhook" && req.method === "POST") {
-      const bot = getiMessageBot();
+      const bot = await getiMessageBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(

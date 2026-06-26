@@ -80,7 +80,7 @@ describe("provisionAutomation", () => {
     });
 
     // The durable is deployed WITHOUT a Zapier-claimed trigger.
-    const deployArg = vi.mocked(deployAutomation).mock.calls[0][0] as Record<string, unknown>;
+    const deployArg = vi.mocked(deployAutomation).mock.calls[0][0];
     expect(deployArg.trigger).toBeUndefined();
 
     // The inbox subscription is persisted on the automation for the worker.

@@ -46,7 +46,7 @@ describe("Protocol endpoints", () => {
       const res = await fetch(`${AGENT_URL}/.well-known/foreman/agent-card.json`);
       expect(res.status).toBe(200);
 
-      const card = await res.json();
+      const card = (await res.json()) as { name: string; description: string };
       expect(card.name).toBe("Foreman");
       expect(card.description).toContain("Zapier");
     });
@@ -101,7 +101,7 @@ describe("Protocol endpoints", () => {
       });
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { error: { code: number; message: string } };
       // JSON-RPC errors are returned as 200 with an error field
       expect(body).toHaveProperty("error");
       expect(body.error).toHaveProperty("code");

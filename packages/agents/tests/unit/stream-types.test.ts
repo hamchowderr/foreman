@@ -11,6 +11,7 @@ describe("AppChunk type", () => {
     const chunk: AppChunk = {
       type: "tool-call",
       toolName: "test",
+      toolCallId: "call-1",
       args: { key: "value" },
     };
     expectTypeOf(chunk).toMatchTypeOf<AppChunk>();

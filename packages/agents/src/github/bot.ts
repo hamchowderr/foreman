@@ -18,7 +18,7 @@ export async function getGitHubBot() {
   if (_bot) return _bot;
 
   const github = createGitHubAdapter({
-    botUserId: process.env.GITHUB_BOT_USER_ID,
+    botUserId: process.env.GITHUB_BOT_USER_ID ? Number(process.env.GITHUB_BOT_USER_ID) : undefined,
   });
   _githubAdapter = github;
 

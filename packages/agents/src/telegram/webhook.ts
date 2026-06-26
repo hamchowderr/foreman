@@ -7,6 +7,6 @@ import { getTelegramBot } from "./bot";
  * verifies the secret token and dispatches to registered handlers.
  */
 export async function handleTelegramWebhook(c: Context): Promise<Response> {
-  const bot = getTelegramBot();
+  const bot = await getTelegramBot();
   return bot.webhooks.telegram(c.req.raw);
 }

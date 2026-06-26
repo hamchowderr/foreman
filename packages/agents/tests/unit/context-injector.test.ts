@@ -14,10 +14,30 @@ vi.mock("@/lib/catalog", () => ({
   searchAppCatalog: vi.fn().mockResolvedValue([]),
 }));
 
+import type { ProcessInputResultWithSystemMessages } from "@mastra/core/processors";
 import { contextInjector } from "@/lib/processors/input";
 import { listUserConnections } from "@/lib/zapier";
 
 const mockedListUserConnections = vi.mocked(listUserConnections);
+
+// The element type of what listUserConnections resolves to — a Zapier SDK
+// connection row. The catalog of required fields (date, is_invite_only,
+// is_private, shared_with_all, id, account_id) comes straight from the SDK
+// schema; app_name is NOT a field (the processor reads app_key, falling back
+// from the optional app_name it tolerates structurally).
+type Connection = Awaited<ReturnType<typeof listUserConnections>>[number];
+
+function connection(overrides: Partial<Connection> = {}): Connection {
+  return {
+    date: "2026-01-01T00:00:00Z",
+    is_invite_only: false,
+    is_private: false,
+    shared_with_all: false,
+    id: "conn-1",
+    account_id: "acct-1",
+    ...overrides,
+  };
+}
 
 describe("contextInjector", () => {
   beforeEach(() => {
@@ -34,11 +54,11 @@ describe("contextInjector", () => {
     const systemMessages = [{ role: "system" as const, content: "base" }];
     const requestContext = new Map();
 
-    const result = await contextInjector.processInput!({
+    const result = (await contextInjector.processInput!({
       messages,
       systemMessages,
       requestContext,
-    } as any);
+    } as any)) as ProcessInputResultWithSystemMessages;
 
     expect(result.messages).toEqual(messages);
     expect(result.systemMessages).toEqual(systemMessages);
@@ -51,29 +71,29 @@ describe("contextInjector", () => {
     const systemMessages = [{ role: "system" as const, content: "base" }];
     const requestContext = new Map([["userId", "user-1"]]);
 
-    const result = await contextInjector.processInput!({
+    const result = (await contextInjector.processInput!({
       messages,
       systemMessages,
       requestContext,
-    } as any);
+    } as any)) as ProcessInputResultWithSystemMessages;
 
     expect(result.systemMessages).toEqual(systemMessages);
   });
 
   it("injects context system message when connections exist", async () => {
     mockedListUserConnections.mockResolvedValue([
-      { app_name: "Gmail", app_key: "gmail" },
-      { app_name: "Slack", app_key: "slack" },
+      connection({ app_key: "Gmail" }),
+      connection({ app_key: "Slack" }),
     ]);
     const messages = [{ role: "user" as const, content: "hello" }];
     const systemMessages = [{ role: "system" as const, content: "base" }];
     const requestContext = new Map([["userId", "user-1"]]);
 
-    const result = await contextInjector.processInput!({
+    const result = (await contextInjector.processInput!({
       messages,
       systemMessages,
       requestContext,
-    } as any);
+    } as any)) as ProcessInputResultWithSystemMessages;
 
     expect(result.systemMessages).toHaveLength(2);
     const injected = result.systemMessages[1];
@@ -83,14 +103,14 @@ describe("contextInjector", () => {
   });
 
   it("uses app_key as fallback when app_name is missing", async () => {
-    mockedListUserConnections.mockResolvedValue([{ app_key: "custom_app" }]);
+    mockedListUserConnections.mockResolvedValue([connection({ app_key: "custom_app" })]);
     const requestContext = new Map([["userId", "user-1"]]);
 
-    const result = await contextInjector.processInput!({
+    const result = (await contextInjector.processInput!({
       messages: [],
       systemMessages: [],
       requestContext,
-    } as any);
+    } as any)) as ProcessInputResultWithSystemMessages;
 
     expect(result.systemMessages).toHaveLength(1);
     expect(result.systemMessages[0].content).toContain("custom_app");
@@ -102,11 +122,11 @@ describe("contextInjector", () => {
     const systemMessages = [{ role: "system" as const, content: "base" }];
     const requestContext = new Map([["userId", "user-1"]]);
 
-    const result = await contextInjector.processInput!({
+    const result = (await contextInjector.processInput!({
       messages,
       systemMessages,
       requestContext,
-    } as any);
+    } as any)) as ProcessInputResultWithSystemMessages;
 
     // Should return original messages, not throw
     expect(result.messages).toEqual(messages);
