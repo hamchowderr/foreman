@@ -19,6 +19,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { WorkspaceSwitcher } from "@/components/workspaces/workspace-switcher";
 import type { SessionUser as User } from "@/lib/auth";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
@@ -67,6 +68,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </div>
           </SidebarMenuItem>
         </SidebarMenu>
+        <WorkspaceSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="pt-2">
