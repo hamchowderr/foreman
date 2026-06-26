@@ -312,6 +312,137 @@ export type Database = {
           },
         ];
       };
+      automation: {
+        Row: {
+          connections: Json;
+          created_at: string;
+          description: string | null;
+          editor_url: string | null;
+          enabled: boolean;
+          id: string;
+          name: string;
+          source: string;
+          status: string;
+          trigger: Json | null;
+          trigger_inbox_id: string | null;
+          trigger_url: string | null;
+          updated_at: string;
+          user_id: string;
+          workspace_id: string | null;
+          zapier_version_id: string | null;
+          zapier_workflow_id: string;
+        };
+        Insert: {
+          connections?: Json;
+          created_at: string;
+          description?: string | null;
+          editor_url?: string | null;
+          enabled?: boolean;
+          id: string;
+          name: string;
+          source: string;
+          status?: string;
+          trigger?: Json | null;
+          trigger_inbox_id?: string | null;
+          trigger_url?: string | null;
+          updated_at: string;
+          user_id: string;
+          workspace_id?: string | null;
+          zapier_version_id?: string | null;
+          zapier_workflow_id: string;
+        };
+        Update: {
+          connections?: Json;
+          created_at?: string;
+          description?: string | null;
+          editor_url?: string | null;
+          enabled?: boolean;
+          id?: string;
+          name?: string;
+          source?: string;
+          status?: string;
+          trigger?: Json | null;
+          trigger_inbox_id?: string | null;
+          trigger_url?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string | null;
+          zapier_version_id?: string | null;
+          zapier_workflow_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      automation_run: {
+        Row: {
+          automation_id: string;
+          created_at: string;
+          durable_run_id: string | null;
+          error: Json | null;
+          id: string;
+          inbox_message_id: string | null;
+          input: Json | null;
+          output: Json | null;
+          status: string;
+          trigger_id: string | null;
+          updated_at: string;
+          workflow_version_id: string | null;
+          workspace_id: string | null;
+        };
+        Insert: {
+          automation_id: string;
+          created_at: string;
+          durable_run_id?: string | null;
+          error?: Json | null;
+          id: string;
+          inbox_message_id?: string | null;
+          input?: Json | null;
+          output?: Json | null;
+          status?: string;
+          trigger_id?: string | null;
+          updated_at: string;
+          workflow_version_id?: string | null;
+          workspace_id?: string | null;
+        };
+        Update: {
+          automation_id?: string;
+          created_at?: string;
+          durable_run_id?: string | null;
+          error?: Json | null;
+          id?: string;
+          inbox_message_id?: string | null;
+          input?: Json | null;
+          output?: Json | null;
+          status?: string;
+          trigger_id?: string | null;
+          updated_at?: string;
+          workflow_version_id?: string | null;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_run_automation_id_fk";
+            columns: ["automation_id"];
+            isOneToOne: false;
+            referencedRelation: "automation";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_run_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       billing_customers: {
         Row: {
           billing_email: string | null;

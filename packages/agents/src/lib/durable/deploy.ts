@@ -205,3 +205,15 @@ export async function inspectAutomation(
 export async function deleteAutomation(sdk: Sdk, workflowId: string): Promise<void> {
   await sdk.deleteWorkflow({ workflow: workflowId });
 }
+
+/** Enable or disable a deployed workflow on Zapier. Returns the resulting enabled state. */
+export async function setAutomationEnabled(
+  sdk: Sdk,
+  workflowId: string,
+  enabled: boolean,
+): Promise<boolean> {
+  const r = enabled
+    ? await sdk.enableWorkflow({ workflow: workflowId })
+    : await sdk.disableWorkflow({ workflow: workflowId });
+  return r.data.enabled;
+}

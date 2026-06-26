@@ -15,6 +15,7 @@ export {
   inspectAutomation,
   listAutomations,
   runAutomationOnce,
+  setAutomationEnabled,
   triggerAutomation,
 } from "./deploy";
 export { AGED_DURABLE_DEPS } from "./deps";

@@ -1,21 +1,20 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
-  deployAutomation,
-  getTriggerRunStatus,
-  inspectAutomation,
-  listAutomations,
-  triggerAutomation,
-} from "@/lib/durable";
-import { getExperimentalSdkForUser } from "@/lib/zapier/sdk";
+  inspectForUser,
+  listForUser,
+  provisionAutomation,
+  runAutomationById,
+} from "@/lib/automations/service";
 
 /**
- * Agent-facing tools for durable automations (foreman-l7xq M1). The agent authors
- * the durable `source` from the user's intent (per the Zapier durable format) and
- * these deploy / run / inspect it on the experimental SDK. create + run create
- * real cloud state, so they require approval. No Foreman DB here — Zapier's
- * listWorkflows/getWorkflow IS the store for M1; M2 layers workspace-scoped
- * persistence + run history on top.
+ * Agent-facing tools for durable automations (foreman-l7xq). The agent authors
+ * the durable `source` from the user's intent (per the Zapier durable format);
+ * these deploy / run / list / inspect it through lib/automations/service, which
+ * deploys to Zapier (M1) AND persists the automation as a workspace-shared
+ * resource (M2). create + run create real cloud state, so they require approval.
+ * list/inspect read the workspace's automations from Foreman's store, keyed by
+ * the Foreman automation id.
  */
 
 const triggerSchema = z
@@ -42,12 +41,13 @@ export const createAutomationTool = createTool({
   id: "create_automation",
   requireApproval: true,
   description:
-    "Deploy a durable Zapier automation the user described. You author the durable workflow.ts `source` " +
-    "(createZapierSdk() at module scope, one sdk.runAction per ctx.step, defineDurable(...) + export default), " +
-    "and this creates + publishes it on Zapier. Provide a `connections` map (alias → connection id) for every " +
-    "alias the source references. Add `trigger` for an event-driven automation, or omit it for manual/webhook. " +
-    "Returns the workflow id + editor link. If `triggerClaimFailed` is true the workflow deployed but the trigger " +
-    "did not claim (usually an unversioned selectedApi).",
+    "Deploy a durable Zapier automation the user described, as a shared workspace automation. You author the " +
+    "durable workflow.ts `source` (createZapierSdk() at module scope, one sdk.runAction per ctx.step, " +
+    "defineDurable(...) + export default); this creates + publishes it on Zapier and records it in the workspace. " +
+    "Provide a `connections` map (alias → connection id) for every alias the source references. Add `trigger` for " +
+    "an event-driven automation, or omit it for manual/webhook. Returns the Foreman automation `id` + editor link. " +
+    "If `triggerClaimFailed` is true the workflow deployed but the trigger did not claim (usually an unversioned " +
+    "selectedApi).",
   inputSchema: z.object({
     userId: z.string().describe("The user whose Zapier connection deploys the automation."),
     name: z.string().describe("Human-readable automation name."),
@@ -66,6 +66,7 @@ export const createAutomationTool = createTool({
     isPrivate: z.boolean().optional().default(true),
   }),
   outputSchema: z.object({
+    id: z.string(),
     workflowId: z.string(),
     versionId: z.string(),
     enabled: z.boolean(),
@@ -78,7 +79,7 @@ export const createAutomationTool = createTool({
   toModelOutput: (output) => ({
     type: "text" as const,
     text: JSON.stringify({
-      workflowId: output.workflowId,
+      id: output.id,
       enabled: output.enabled,
       editorUrl: output.editorUrl,
       ...(output.triggerClaimFailed
@@ -98,10 +99,9 @@ export const createAutomationTool = createTool({
     trigger,
     enabled,
     isPrivate,
-  }) => {
-    const sdk = await getExperimentalSdkForUser(userId);
-    return deployAutomation({
-      sdk,
+  }) =>
+    provisionAutomation({
+      userId,
       name,
       description,
       source,
@@ -109,73 +109,58 @@ export const createAutomationTool = createTool({
       trigger,
       enabled,
       isPrivate,
-    });
-  },
+    }),
 });
 
 export const runAutomationTool = createTool({
   id: "run_automation",
   requireApproval: true,
   description:
-    "Manually fire a deployed automation by its workflow id and return the trigger/run status. Use to test an " +
-    "automation on demand. Side effects in connected apps will happen.",
+    "Manually fire a workspace automation by its Foreman automation id and return the trigger/run status, " +
+    "recording the run. Side effects in connected apps will happen.",
   inputSchema: z.object({
     userId: z.string(),
-    workflowId: z.string().describe("The deployed automation's workflow id."),
+    automationId: z.string().describe("The Foreman automation id (from list/create)."),
     input: z.record(z.string(), z.unknown()).optional().describe("Input payload for the run."),
   }),
   outputSchema: z.object({
+    runId: z.string(),
     triggerId: z.string(),
     status: z.string(),
     durableRunId: z.string().nullable(),
   }),
-  execute: async ({ userId, workflowId, input }) => {
-    const sdk = await getExperimentalSdkForUser(userId);
-    const { triggerId } = await triggerAutomation({ sdk, workflowId, input });
-    // Bridge trigger → run for an initial status snapshot (don't long-poll in a tool).
-    const run = await getTriggerRunStatus(sdk, triggerId);
-    return { triggerId, status: run.status, durableRunId: run.durableRunId };
+  execute: async ({ userId, automationId, input }) => {
+    const result = await runAutomationById(userId, automationId, input);
+    if (!result) throw new Error("Automation not found in this workspace");
+    return result;
   },
 });
 
 export const listAutomationsTool = createTool({
   id: "list_automations",
   description:
-    "List the user's deployed durable automations (id, name, enabled, triggers, editor link). Read-only.",
+    "List the workspace's durable automations (id, name, enabled, status, editor link). Read-only.",
   inputSchema: z.object({ userId: z.string() }),
-  outputSchema: z.object({
-    automations: z.array(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-        enabled: z.boolean(),
-        isPrivate: z.boolean(),
-        editorUrl: z.string(),
-        triggers: z.unknown(),
-      }),
-    ),
-  }),
-  execute: async ({ userId }) => {
-    const sdk = await getExperimentalSdkForUser(userId);
-    return { automations: await listAutomations(sdk) };
-  },
+  outputSchema: z.object({ automations: z.array(z.unknown()) }),
+  execute: async ({ userId }) => ({ automations: await listForUser(userId) }),
 });
 
 export const inspectAutomationTool = createTool({
   id: "inspect_automation",
   description:
-    "Inspect one automation: its current definition/trigger state plus recent run history. Read-only.",
+    "Inspect one workspace automation by its Foreman id: its stored definition/trigger state plus recent run history. Read-only.",
   inputSchema: z.object({
     userId: z.string(),
-    workflowId: z.string(),
+    automationId: z.string(),
     maxRuns: z.number().optional().default(10),
   }),
   outputSchema: z.object({
-    workflow: z.unknown(),
+    automation: z.unknown(),
     runs: z.array(z.unknown()),
   }),
-  execute: async ({ userId, workflowId, maxRuns }) => {
-    const sdk = await getExperimentalSdkForUser(userId);
-    return inspectAutomation(sdk, workflowId, maxRuns);
+  execute: async ({ userId, automationId, maxRuns }) => {
+    const result = await inspectForUser(userId, automationId, maxRuns);
+    if (!result) throw new Error("Automation not found in this workspace");
+    return result;
   },
 });
