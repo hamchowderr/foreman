@@ -21,19 +21,23 @@ const PREVIEW_BUILDER_PROMPT = `You write ONE React component file (TSX) and NOT
 OUTPUT RULES
 - Output ONLY the raw contents of a .tsx file. No markdown, no triple-backtick fences, no commentary before or after.
 - Provide exactly one component as the DEFAULT export, taking NO props: \`export default function Dashboard() { ... }\`.
-- Import ONLY from this exact surface (these are the only modules that exist):
+- You have the FULL shadcn/ui registry. Import any component from "@/components/ui/<name>" using its real named exports. Available <name> values:
+    accordion, alert, alert-dialog, aspect-ratio, avatar, badge, breadcrumb, button, button-group, calendar, card, carousel, chart, checkbox, collapsible, combobox, command, context-menu, data-table, dialog, drawer, dropdown-menu, empty, field, hover-card, input, input-group, input-otp, item, kbd, label, menubar, native-select, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, skeleton, slider, sonner, spinner, switch, table, tabs, textarea, toggle, toggle-group, tooltip
+  You may ALSO import these libraries directly:
     import * as React from "react";
-    import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "@/components/ui/card";
-    import { Badge } from "@/components/ui/badge";            // variant: default | secondary | destructive | outline | accent
-    import { Button } from "@/components/ui/button";
-    import { Separator } from "@/components/ui/separator";
-    import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-    import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-    import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
     import { BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, CartesianGrid, XAxis, YAxis } from "recharts";
-    import { TrendingUp, TrendingDown, Users, DollarSign /* any lucide icon */ } from "lucide-react";
-  Do NOT import anything else (no CSS files, no other ui components, no fetch, no external libs). Do NOT write a <style> tag or raw <script>.
-- Style with Tailwind utility classes and the shadcn components' own variants. The shadcn design system already gives you the polished look — lean on it; do not re-skin it.
+    import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
+    import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table";   // sortable/filterable/paginated table
+    import { type ColumnDef } from "@tanstack/react-table";
+    import { useForm, Controller } from "react-hook-form";
+    import { zodResolver } from "@hookform/resolvers/zod";
+    import { z } from "zod";
+    import { format } from "date-fns";
+    import { toast } from "sonner";                          // render <Toaster /> from "@/components/ui/sonner"
+    import { TrendingUp, Users /* any icon */ } from "lucide-react";
+    import { cn } from "@/lib/utils";
+  Use the EXACT export names from each component (e.g. Card/CardHeader/CardTitle/CardContent from "@/components/ui/card"). Never import a name that isn't a real export, never import a CSS file, never write a <style> tag, raw <script>, runtime fetch, or any package not listed above.
+- Style with Tailwind utility classes and the shadcn components' own variants. The shadcn design system already gives you the polished look — lean on it; do not re-skin it. Pick the RIGHT components for the request (e.g. DataTable for tabular data, Tabs to organize sections, Badge for status, Card for grouping).
 
 DATA — COMPLETENESS IS MANDATORY
 - Every chart and table you include MUST have realistic, internally-consistent inline data. NEVER render an empty chart/table or a "No data" placeholder. If the request provides data, use it; otherwise invent believable sample data. If you can't fill a section, omit it.
@@ -52,6 +56,14 @@ CHARTS — use the shadcn chart API (recharts under the hood)
       </BarChart>
     </ChartContainer>
   ChartContainer MUST have a fixed height (e.g. h-[280px]) — without it the chart collapses to nothing. Keys in chartConfig must match the dataKey of each series.
+
+TABLES — for tabular/list data prefer DataTable (sortable, filterable, paginated):
+    const columns: ColumnDef<Row>[] = [
+      { accessorKey: "name", header: "Name" },
+      { accessorKey: "amount", header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" /> },
+    ];
+    <DataTable columns={columns} data={rows} filterColumn="name" />
+  Define a Row type for the rows. For a small static table the plain Table primitives are fine.
 
 LAYOUT & POLISH
 - Start with a concise header: an <h1> title (text-2xl font-semibold tracking-tight) + a muted one-line subtitle (text-sm text-muted-foreground).

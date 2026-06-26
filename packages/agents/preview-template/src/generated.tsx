@@ -1,29 +1,13 @@
-import * as React from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardAction,
-} from "@/components/ui/card";
+import { DollarSign, HandshakeIcon, TrendingUp } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  ReferenceLine,
-  ResponsiveContainer,
-} from "recharts";
-import { TrendingUp, DollarSign, HandshakeIcon } from "lucide-react";
 
 const chartData = [
   { month: "Jan", revenue: 245000 },
@@ -47,8 +31,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const averageRevenue =
-  chartData.reduce((sum, item) => sum + item.revenue, 0) / chartData.length;
+const averageRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0) / chartData.length;
 
 export default function Dashboard() {
   return (
@@ -56,9 +39,7 @@ export default function Dashboard() {
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Sales Dashboard
-          </h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Sales Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Track your sales performance and key metrics
           </p>
@@ -84,7 +65,10 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <Badge variant="secondary" className="gap-1 bg-green-50 text-green-700 hover:bg-green-50">
+              <Badge
+                variant="secondary"
+                className="gap-1 bg-green-50 text-green-700 hover:bg-green-50"
+              >
                 <TrendingUp className="h-3 w-3" />
                 <span>+12.4%</span>
               </Badge>
@@ -109,7 +93,10 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <Badge variant="secondary" className="gap-1 bg-green-50 text-green-700 hover:bg-green-50">
+              <Badge
+                variant="secondary"
+                className="gap-1 bg-green-50 text-green-700 hover:bg-green-50"
+              >
                 <TrendingUp className="h-3 w-3" />
                 <span>+8.1%</span>
               </Badge>
@@ -134,7 +121,10 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <Badge variant="secondary" className="gap-1 bg-green-50 text-green-700 hover:bg-green-50">
+              <Badge
+                variant="secondary"
+                className="gap-1 bg-green-50 text-green-700 hover:bg-green-50"
+              >
                 <TrendingUp className="h-3 w-3" />
                 <span>+3.9%</span>
               </Badge>
@@ -145,21 +135,13 @@ export default function Dashboard() {
         {/* Revenue Chart */}
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Monthly Revenue
-            </CardTitle>
-            <CardDescription>
-              Revenue trend across 12 months with average baseline
-            </CardDescription>
+            <CardTitle className="text-lg font-semibold">Monthly Revenue</CardTitle>
+            <CardDescription>Revenue trend across 12 months with average baseline</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-80 w-full">
               <BarChart data={chartData} accessibilityLayer>
-                <CartesianGrid
-                  vertical={false}
-                  stroke="hsl(210, 40%, 96%)"
-                  strokeDasharray="0"
-                />
+                <CartesianGrid vertical={false} stroke="hsl(210, 40%, 96%)" strokeDasharray="0" />
                 <XAxis
                   dataKey="month"
                   tickLine={false}
@@ -177,10 +159,7 @@ export default function Dashboard() {
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      formatter={(value) => [
-                        `$${(value as number).toLocaleString()}`,
-                        "Revenue",
-                      ]}
+                      formatter={(value) => [`$${(value as number).toLocaleString()}`, "Revenue"]}
                     />
                   }
                 />
@@ -197,11 +176,7 @@ export default function Dashboard() {
                     offset: 10,
                   }}
                 />
-                <Bar
-                  dataKey="revenue"
-                  fill="var(--color-revenue)"
-                  radius={[8, 8, 0, 0]}
-                />
+                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
