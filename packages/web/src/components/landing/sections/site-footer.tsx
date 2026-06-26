@@ -13,6 +13,7 @@ const COLUMNS: Array<{
       { label: "How it works", href: "#how" },
       { label: "Channels", href: "#channels" },
       { label: "Pricing", href: "#hosting" },
+      { label: "vs Zapier Shared Brain", href: "/compare/zapier-shared-brain" },
     ],
   },
   {
