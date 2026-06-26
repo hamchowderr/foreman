@@ -16,9 +16,22 @@ import { createZapierSdk } from "@zapier/zapier-sdk/experimental";
 // Well-formed but nonexistent UUID — clears the SDK's client-side Zod validation
 // so the call reaches the server's auth layer; a missing id then 404s (auth passed).
 const U = "00000000-0000-4000-8000-000000000000";
+// READ-ONLY endpoints only (no runDurable / createWorkflow / publish / delete) —
+// these never create or mutate a resource on the account. Covers BOTH the
+// durable-run family and the workflow-definition family so we can see, per family,
+// whether the wall is lifted under client-credentials.
 const READONLY: Array<[string, unknown]> = [
+  // durable-run family
   ["listDurableRuns", {}],
   ["getDurableRun", { run: U }],
+  // workflow-definition family (read-only members)
+  ["listWorkflows", {}],
+  ["getWorkflow", { workflow: U }],
+  ["listWorkflowVersions", { workflow: U }],
+  ["getWorkflowVersion", { workflow: U, version: U }],
+  ["listWorkflowRuns", { workflow: U }],
+  ["getWorkflowRun", { run: U }],
+  ["getTriggerRun", { trigger: U }],
 ];
 
 function classify(msg: string, code?: number): string {
