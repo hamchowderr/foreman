@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { initialArtifactData, useArtifact, useArtifactSelector } from "@/hooks/use-artifact";
+import { usePreviewPanel, usePreviewPanelSelector } from "@/hooks/use-preview-panel";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
@@ -21,6 +22,7 @@ import { DataStreamHandler } from "./data-stream-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { PreviewPanel } from "./preview-panel";
 
 export function ChatShell() {
   const {
@@ -49,6 +51,8 @@ export function ChatShell() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
+  const isPreviewOpen = usePreviewPanelSelector((state) => state.isOpen);
+  const { reset: resetPreviewPanel } = usePreviewPanel();
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
@@ -59,10 +63,11 @@ export function ChatShell() {
       prevChatIdRef.current = chatId;
       stopRef.current();
       setArtifact(initialArtifactData);
+      resetPreviewPanel();
       setEditingMessage(null);
       setAttachments([]);
     }
-  }, [chatId, setArtifact]);
+  }, [chatId, setArtifact, resetPreviewPanel]);
 
   return (
     <>
@@ -70,7 +75,7 @@ export function ChatShell() {
         <div
           className={cn(
             "flex min-w-0 flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isArtifactVisible ? "w-[40%]" : "w-full",
+            isArtifactVisible || isPreviewOpen ? "w-[40%]" : "w-full",
           )}
         >
           <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background shadow-sm md:m-3">
@@ -146,6 +151,8 @@ export function ChatShell() {
             </div>
           </div>
         </div>
+
+        <PreviewPanel />
 
         <Artifact
           addToolApprovalResponse={addToolApprovalResponse}

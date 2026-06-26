@@ -1,19 +1,12 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { Bot, ExternalLink, User } from "lucide-react";
+import { Bot, User } from "lucide-react";
 import { useEffect } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
-import {
-  WebPreview,
-  WebPreviewBody,
-  WebPreviewNavigation,
-  WebPreviewNavigationButton,
-  WebPreviewUrl,
-} from "../ai-elements/web-preview";
 import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
@@ -23,6 +16,7 @@ import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
+import { PreviewInlineChip } from "./preview-panel";
 import { Weather } from "./weather";
 
 const MessageAvatar = ({ isUser }: { isUser: boolean }) => (
@@ -318,21 +312,11 @@ const PurePreviewMessage = ({
 
       if (state === "output-available" && part.output && !("error" in part.output)) {
         const out = part.output as { url: string; title?: string };
+        // Render in the side panel (auto-opened by the chip); the chat keeps a
+        // compact re-open chip instead of an inline iframe.
         return (
           <div className="w-full max-w-full" key={toolCallId}>
-            <div className="mb-2 text-sm font-medium text-foreground">{out.title ?? "Preview"}</div>
-            <WebPreview className="h-[480px]" defaultUrl={out.url}>
-              <WebPreviewNavigation>
-                <WebPreviewUrl readOnly value={out.url} />
-                <WebPreviewNavigationButton
-                  tooltip="Open in new tab"
-                  onClick={() => window.open(out.url, "_blank", "noopener,noreferrer")}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </WebPreviewNavigationButton>
-              </WebPreviewNavigation>
-              <WebPreviewBody src={out.url} title={out.title} />
-            </WebPreview>
+            <PreviewInlineChip title={out.title ?? "Preview"} url={out.url} />
           </div>
         );
       }
