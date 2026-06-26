@@ -1,0 +1,217 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AppNav } from "@/components/app-nav";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { getAutomations, getInboxState } from "@/data/automations";
+import type { Automation, InboxMessage, InboxState } from "@/data/automations-types";
+import { createClient } from "@/lib/server";
+
+export default async function InboxPage() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) redirect("/auth/login");
+
+  let automations: Automation[] = [];
+  let loadErr: string | null = null;
+  try {
+    automations = await getAutomations();
+  } catch (e) {
+    loadErr = (e as Error).message;
+  }
+
+  // The trigger inbox is per-automation; aggregate them into one view.
+  const withInbox = automations.filter((a) => a.trigger_inbox_id);
+  const states = await Promise.all(
+    withInbox.map(async (automation) => {
+      try {
+        return { automation, state: await getInboxState(automation.id) };
+      } catch {
+        return { automation, state: null as InboxState | null };
+      }
+    }),
+  );
+
+  type Row = { msg: InboxMessage; automation: Automation };
+  const rows: Row[] = states
+    .flatMap(({ automation, state }) => (state?.messages ?? []).map((msg) => ({ msg, automation })))
+    .sort((a, b) => (a.msg.created_at < b.msg.created_at ? 1 : -1));
+
+  const subscriptions = states.filter((s) => s.state?.inbox);
+
+  return (
+    <div className="min-h-svh bg-background">
+      <AppNav active="inbox" />
+      <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+        <h1 className="mb-1 font-semibold text-2xl tracking-tight">Inbox</h1>
+        <p className="mb-6 max-w-2xl text-muted-foreground text-sm">
+          Incoming triggers that fire your automations — new rows, webhooks, emails, and more land
+          here before Foreman runs.
+        </p>
+
+        {loadErr ? (
+          <Alert variant="destructive">
+            <AlertDescription>Couldn&apos;t load the inbox: {loadErr}</AlertDescription>
+          </Alert>
+        ) : withInbox.length === 0 ? (
+          <InboxEmpty />
+        ) : (
+          <div className="space-y-8">
+            <section>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Listening ({subscriptions.length})
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {subscriptions.map(({ automation, state }) => (
+                  <SubscriptionCard key={automation.id} automation={automation} state={state} />
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Recent activity
+              </h2>
+              {rows.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border bg-surface/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                  No events yet. When a trigger fires, it shows up here before the run.
+                </div>
+              ) : (
+                <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                  {rows.map(({ msg, automation }) => (
+                    <MessageRow key={msg.id} msg={msg} automation={automation} />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function triggerLabel(automation: Automation): string {
+  const t = automation.trigger;
+  if (t?.app && t?.action) return `${t.app} · ${t.action}`;
+  if (t?.app) return t.app;
+  return "trigger";
+}
+
+function SubscriptionCard({
+  automation,
+  state,
+}: {
+  automation: Automation;
+  state: InboxState | null;
+}) {
+  const inbox = state?.inbox;
+  const paused = inbox?.paused_reason;
+  return (
+    <Link
+      href={`/automations?selected=${automation.id}`}
+      className="block rounded-xl border border-border bg-surface/40 p-4 transition-colors hover:border-border hover:bg-surface/70"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-sm font-medium text-foreground">{automation.name}</span>
+        <StatusDot ok={!paused && automation.enabled} />
+      </div>
+      <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+        {triggerLabel(automation)}
+      </p>
+      {paused ? (
+        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Paused — {paused}</p>
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {automation.enabled ? "Active" : "Disabled"}
+        </p>
+      )}
+    </Link>
+  );
+}
+
+function MessageRow({ msg, automation }: { msg: InboxMessage; automation: Automation }) {
+  const dup = msg.message_attributes?.possible_duplicate_data;
+  const err = msg.message_attributes?.error_message;
+  return (
+    <li className="flex items-start gap-3 bg-card px-4 py-3 text-sm">
+      <StatusDot ok={!err} className="mt-1.5" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-medium text-foreground">{automation.name}</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {triggerLabel(automation)}
+          </span>
+          <Badge>{msg.status}</Badge>
+          {dup && <Badge tone="warn">duplicate</Badge>}
+        </div>
+        {err && <p className="mt-1 text-xs text-destructive">{err}</p>}
+      </div>
+      <time className="shrink-0 text-xs text-muted-foreground tabular-nums">
+        {new Date(msg.created_at).toLocaleString()}
+      </time>
+    </li>
+  );
+}
+
+function Badge({ children, tone }: { children: React.ReactNode; tone?: "warn" }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+        tone === "warn"
+          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          : "bg-surface text-muted-foreground"
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function StatusDot({ ok, className = "" }: { ok: boolean; className?: string }) {
+  return (
+    <span
+      className={`h-2 w-2 shrink-0 rounded-full ${ok ? "bg-green-500" : "bg-amber-500"} ${className}`}
+      aria-hidden
+    />
+  );
+}
+
+function InboxEmpty() {
+  return (
+    <Empty className="border bg-card">
+      <EmptyHeader>
+        <EmptyTitle>No inbox activity yet</EmptyTitle>
+        <EmptyDescription>
+          When you have an automation with a trigger, every incoming event — a new row, a webhook,
+          an email — lands here before Foreman runs it. Ask Foreman in chat to build an automation
+          to start listening.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Link
+            href="/chat"
+            className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
+          >
+            Go to chat
+          </Link>
+          <Link
+            href="/automations"
+            className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-surface"
+          >
+            View automations
+          </Link>
+        </div>
+      </EmptyContent>
+    </Empty>
+  );
+}

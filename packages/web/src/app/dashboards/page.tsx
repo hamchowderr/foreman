@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BrandHeader } from "@/components/brand-header";
+import { AppNav } from "@/components/app-nav";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -41,16 +41,14 @@ export default async function DashboardsPage({
 
   return (
     <div className="min-h-svh bg-background">
-      <BrandHeader
-        label={<span className="text-sm font-medium text-foreground">Dashboards</span>}
-      />
+      <AppNav active="dashboards" />
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "#201515" }}>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {spec ? spec.title : `${appKey} dashboard`}
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "#7A6A5C" }}>
+          <p className="mt-1 text-sm text-muted-foreground">
             {snapshot
               ? `${snapshot.rowCount} records · refreshed ${new Date(snapshot.refreshedAt).toLocaleString()}`
               : "Live view of data pulled from your connected app."}
