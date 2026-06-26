@@ -19,6 +19,12 @@ import {
 } from "../../lib/providers";
 import { sanitizeToolSchemas } from "../../lib/tool-schema-sanitizer";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
+import {
+  createAutomationTool,
+  inspectAutomationTool,
+  listAutomationsTool,
+  runAutomationTool,
+} from "../tools/automations";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { createDashboardTool } from "../tools/create-dashboard";
 import { forkConversationTool } from "../tools/fork-conversation";
@@ -97,6 +103,11 @@ function buildForemanTools() {
       fork_conversation: forkConversationTool,
       connect_zapier: connectZapierTool,
       create_dashboard: createDashboardTool,
+      // Durable automations (foreman-l7xq) — author/deploy/run/inspect from chat.
+      create_automation: createAutomationTool,
+      run_automation: runAutomationTool,
+      list_automations: listAutomationsTool,
+      inspect_automation: inspectAutomationTool,
       ...coreTools,
     }),
   );

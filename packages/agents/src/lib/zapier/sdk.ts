@@ -1,4 +1,5 @@
 import { createZapierSdk } from "@zapier/zapier-sdk";
+import { createZapierSdk as createExperimentalSdk } from "@zapier/zapier-sdk/experimental";
 import { decryptToken, encryptToken } from "../crypto";
 import { getSupabase } from "../db";
 import { getEnv } from "../env";
@@ -64,12 +65,25 @@ async function refreshAccessToken(
   };
 }
 
-export async function getSdkForUser(userId: string, orgId?: string): Promise<ZapierSdk> {
+type ZapierSdkFactory<T> = (options?: Parameters<typeof createZapierSdk>[0]) => T;
+
+/**
+ * Shared per-user client builder. The stable and experimental SDK factories take
+ * the same options and differ only in the surface they expose, so both run
+ * through one token + connection-alias resolution path (and one refresh) here —
+ * each with its own cache. Don't duplicate this logic per factory.
+ */
+async function buildSdkForUser<T>(
+  factory: ZapierSdkFactory<T>,
+  cache: Map<string, { sdk: T; expiresAt: number }>,
+  userId: string,
+  orgId?: string,
+): Promise<T> {
   const env = getEnv();
 
   // DEV_ZAPIER_OVERRIDE: use a direct token for local development
   if (env.DEV_ZAPIER_OVERRIDE) {
-    return createZapierSdk({
+    return factory({
       credentials: env.DEV_ZAPIER_OVERRIDE,
       onEvent: onZapierSdkEvent,
     });
@@ -79,7 +93,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   const cacheKey = orgId ? `${userId}:org:${orgId}` : userId;
 
   // Check cache
-  const cached = sdkCache.get(cacheKey);
+  const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.sdk;
   }
@@ -142,7 +156,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
     // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json).
     // production and self_hosted both require a real per-user OAuth connection.
     if (env.FOREMAN_MODE === "dev") {
-      return createZapierSdk({ onEvent: onZapierSdkEvent });
+      return factory({ onEvent: onZapierSdkEvent });
     }
     throw new ZapierNotConnected(userId);
   }
@@ -172,7 +186,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
       accessToken = refreshed.accessToken;
       tokenExpiry = refreshed.expiresAt.getTime();
     } catch {
-      sdkCache.delete(cacheKey);
+      cache.delete(cacheKey);
       throw new ZapierReauthRequired(userId, "token refresh failed");
     }
   } else {
@@ -183,7 +197,7 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
   const connectionsMap = await loadUserConnectionsMap(userId);
   const hasConnections = Object.keys(connectionsMap).length > 0;
 
-  const sdk = createZapierSdk({
+  const sdk = factory({
     credentials: accessToken,
     ...(hasConnections ? { manifest: { connections: connectionsMap } } : {}),
     onEvent: onZapierSdkEvent,
@@ -191,10 +205,36 @@ export async function getSdkForUser(userId: string, orgId?: string): Promise<Zap
 
   // Cache for 5 minutes or until token expires, whichever is sooner
   const fiveMinutes = Date.now() + 5 * 60 * 1000;
-  sdkCache.set(cacheKey, {
+  cache.set(cacheKey, {
     sdk,
     expiresAt: Math.min(fiveMinutes, tokenExpiry),
   });
 
   return sdk;
+}
+
+/**
+ * Per-user STABLE SDK client — action execution, discovery, tables. The default
+ * surface used by the generated Zapier tools.
+ */
+export function getSdkForUser(userId: string, orgId?: string): Promise<ZapierSdk> {
+  return buildSdkForUser(createZapierSdk, sdkCache, userId, orgId);
+}
+
+export type ExperimentalZapierSdk = ReturnType<typeof createExperimentalSdk>;
+
+const experimentalSdkCache = new Map<string, { sdk: ExperimentalZapierSdk; expiresAt: number }>();
+
+/**
+ * Per-user EXPERIMENTAL SDK client — adds the durable-workflow + trigger-inbox
+ * surface (createWorkflow / publishWorkflowVersion / runDurable / triggerWorkflow,
+ * ensureTriggerInbox / lease / ack). Same token + connection-alias resolution as
+ * the stable client, cached separately. The durable rebuild (foreman-l7xq) is
+ * built entirely on this — see lib/durable + lib/trigger-inbox.
+ */
+export function getExperimentalSdkForUser(
+  userId: string,
+  orgId?: string,
+): Promise<ExperimentalZapierSdk> {
+  return buildSdkForUser(createExperimentalSdk, experimentalSdkCache, userId, orgId);
 }
