@@ -70,7 +70,7 @@ export async function getTelegramBot() {
       );
       if (result.ok) {
         await thread.post(
-          "Your Telegram account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.",
+          "Your Telegram account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 10,000+ apps for you.",
         );
       } else if (result.error === "expired") {
         await thread.post("That code has expired. Generate a new one from your Foreman settings.");

@@ -163,7 +163,7 @@ export function createForemanAgent(databaseUrl: string) {
   return new Agent({
     id: "foreman",
     name: "Foreman",
-    description: "AI assistant that helps users take actions across 9000+ apps via Zapier",
+    description: "AI assistant that helps users take actions across 10,000+ apps via Zapier",
     instructions: systemPromptFor("foreman", buildSystemPrompt()),
     model: AGENT_MODELS.foreman,
     defaultOptions: {

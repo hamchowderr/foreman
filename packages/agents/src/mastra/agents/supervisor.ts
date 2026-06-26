@@ -10,7 +10,7 @@ import {
   systemPromptFor,
 } from "../../lib/providers";
 
-const SUPERVISOR_PROMPT = `You are Foreman Supervisor, an AI assistant that helps users take actions across 9000+ apps via Zapier. You coordinate specialist agents to fulfill user requests.
+const SUPERVISOR_PROMPT = `You are Foreman Supervisor, an AI assistant that helps users take actions across 10,000+ apps via Zapier. You coordinate specialist agents to fulfill user requests.
 
 You have three specialist agents available as tools:
 - **agent-discovery**: Discovers connected apps, lists available actions, retrieves schemas and field choices. Use for any "what can I do?" or "what's connected?" questions.

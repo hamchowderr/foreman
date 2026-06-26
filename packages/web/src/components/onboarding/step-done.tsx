@@ -4,7 +4,7 @@ import { ArrowRight, MessageSquare, ShieldCheck, Zap } from "lucide-react";
 const FEATURES = [
   {
     icon: Zap,
-    label: "9,000+ apps at your fingertips",
+    label: "10,000+ apps at your fingertips",
     description: "Foreman can read and write across everything in your Zapier account.",
     color: "#FF4F00",
     bg: "#FFF3E6",

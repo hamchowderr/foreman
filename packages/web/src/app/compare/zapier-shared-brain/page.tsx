@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, ExternalLink } from "@/components/icons/hi";
+import { ArrowRight, Ban, Check, ExternalLink } from "@/components/icons/hi";
 import { Reveal } from "@/components/landing/reveal";
 import { SiteFooter } from "@/components/landing/sections/site-footer";
 import { SiteNav } from "@/components/landing/site-nav";
@@ -15,84 +15,72 @@ export const metadata: Metadata = {
 
 const SHARED_BRAIN_URL = "https://zapier.com/shared-brain";
 
-/** Each row is one dimension; both sides are written to be fair, not slanted. */
-const ROWS: Array<{ dimension: string; foreman: string; sidekick: string }> = [
-  {
-    dimension: "What it is",
-    foreman: "An open, multi-channel chat driver for the Zapier account you already have.",
-    sidekick: "Zapier's first-party shared-intelligence workspace for teams.",
-  },
-  {
-    dimension: "Where you use it",
-    foreman: "Chat apps you already live in — Slack, Discord, Teams, Telegram, and more.",
-    sidekick: "Zapier's own hosted workspace.",
-  },
-  {
-    dimension: "Apps it can drive",
-    foreman: "The same 9,000+ connections already in your Zapier account.",
-    sidekick: "9,000+ app connections.",
-  },
-  {
-    dimension: "Hosting",
-    foreman: "Self-host (one Docker container) or our cloud.",
-    sidekick: "Fully hosted by Zapier.",
-  },
-  {
-    dimension: "Source",
-    foreman: "Open source, MIT-licensed.",
-    sidekick: "Proprietary, first-party.",
-  },
-  {
-    dimension: "Your data",
-    foreman: "Stays on your own infrastructure when self-hosted.",
-    sidekick: "Lives inside the Zapier platform.",
-  },
-  {
-    dimension: "Edit the agent",
-    foreman: "Edit the agent, version its prompts, and pick the model — it is your code.",
-    sidekick: "A managed first-party agent.",
-  },
-  {
-    dimension: "See what it does",
-    foreman: "Test and watch every step, tool call, and decision live in Mastra Studio.",
-    sidekick: "Hosted — you see what Zapier surfaces.",
-  },
-  {
-    dimension: "Team knowledge & memory",
-    foreman: "Per-conversation memory plus semantic search over everything it has done.",
-    sidekick:
-      "A shared team brain that accumulates decisions, docs, and context — its core strength.",
-  },
-  {
-    dimension: "Building automations",
-    foreman: "Author durable automations from chat; every action is approval-gated and audited.",
-    sidekick: "Shared skills — skills anyone builds, everyone on the team can run.",
-  },
-  {
-    dimension: "Relationship to Zapier",
-    foreman: "Built on the Zapier SDK — it drives your account, it is not Zapier itself.",
-    sidekick: "A native Zapier product.",
-  },
+/**
+ * At-a-glance capability matrix. Honest and balanced: Foreman wins the
+ * build / own / host rows, Shared Brain wins the fully-managed / first-party
+ * rows. "soon" = on Foreman's roadmap, not shipped — never rendered as a check.
+ */
+type Cell = boolean | "soon";
+
+const MATRIX: Array<{ label: string; foreman: Cell; sidekick: Cell }> = [
+  { label: "Drives your 10,000+ Zapier connections", foreman: true, sidekick: true },
+  { label: "Use it from Slack, Discord, Telegram & more", foreman: true, sidekick: false },
+  { label: "Self-host on your own infrastructure", foreman: true, sidekick: false },
+  { label: "Open source (MIT-licensed)", foreman: true, sidekick: false },
+  { label: "Edit the agent in full detail", foreman: true, sidekick: false },
+  { label: "Version its prompts & configuration", foreman: true, sidekick: false },
+  { label: "Choose the model it runs on", foreman: true, sidekick: false },
+  { label: "Watch every step, tool call & decision", foreman: true, sidekick: false },
+  { label: "Memory & semantic recall", foreman: true, sidekick: true },
+  { label: "Shared team brain across people", foreman: "soon", sidekick: true },
+  { label: "Fully hosted & managed by Zapier", foreman: false, sidekick: true },
+  { label: "First-party Zapier support", foreman: false, sidekick: true },
 ];
 
 const CHOOSE_FOREMAN = [
-  "You want to reach your agent from the chat tools your team already uses",
+  "You're a builder — you want to own, edit, extend, and contribute to your agent, not just use it",
   "You want to edit the agent, version its prompts, and choose the model",
+  "You want to reach your agent from the chat tools your team already uses",
   "You want to test and see exactly what the agent does, step by step, in Mastra Studio",
   "You need self-hosting, data control, or open source",
   "You want every action approval-gated and audit-logged",
 ];
 
 const CHOOSE_SIDEKICK = [
-  "You want one hosted, all-in-one AI workspace",
-  "You want a shared team brain that remembers decisions and docs across people",
-  "You prefer first-party Zapier support and setup",
-  "Multi-channel access, self-hosting, and editing the agent are not requirements for you",
+  "You want a finished, hosted product that works out of the box",
+  "You're happy using the agent as Zapier designed it — no prompts to edit, no model to pick, no infrastructure to run",
+  "You'd rather not build, customize, or maintain anything yourself",
+  "You want the agent, connections, and team memory all managed for you in one place",
+  "First-party Zapier support and setup matter more to you than ownership or extensibility",
 ];
+
+function MatrixCell({ value, brand }: { value: Cell; brand?: boolean }) {
+  if (value === "soon") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+        Soon
+      </span>
+    );
+  }
+  if (value) {
+    return (
+      <>
+        <Check className={`h-4 w-4 ${brand ? "text-accent" : "text-foreground/60"}`} />
+        <span className="sr-only">Yes</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <Ban className="h-4 w-4 text-muted-foreground/40" />
+      <span className="sr-only">No</span>
+    </>
+  );
+}
 
 export default function CompareZapierSharedBrainPage() {
   return (
-    <div className="landing-brand-lock flex min-h-screen flex-col overflow-x-hidden bg-background">
+    <div className="landing-brand-lock flex min-h-screen flex-col overflow-x-clip bg-background">
       <SiteNav />
       <main className="flex-1 min-w-0">
         {/* Hero */}
@@ -107,9 +95,10 @@ export default function CompareZapierSharedBrainPage() {
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground text-pretty sm:text-lg">
                 Zapier Shared Brain and Foreman both put AI on top of the same Zapier connections,
-                but they are different shapes. Shared Brain is Zapier&apos;s own hosted team
-                workspace. Foreman is an open, multi-channel driver for the account you already have
-                — one you can edit, version, and watch end to end. Here is an honest side-by-side.
+                but they are built for different people. Shared Brain is Zapier&apos;s own hosted
+                team workspace — a finished product you use as-is. Foreman is an open, multi-channel
+                driver for the account you already have — one you can edit, version, extend, and
+                watch end to end. Here is an honest side-by-side.
               </p>
             </Reveal>
           </div>
@@ -134,7 +123,7 @@ export default function CompareZapierSharedBrainPage() {
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground text-pretty">
                     A chat driver for your Zapier account. Talk to it from Slack, Discord, Teams, or
-                    Telegram and it runs your 9,000+ connections — approval-gated, audit-logged,
+                    Telegram and it runs your 10,000+ connections — approval-gated, audit-logged,
                     open source, and self-hostable. Edit the agent, version its prompts, and watch
                     every step in Mastra Studio. Built on the Zapier SDK.
                   </p>
@@ -156,7 +145,7 @@ export default function CompareZapierSharedBrainPage() {
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground text-pretty">
                     Zapier&apos;s shared intelligence for teams — a shared brain that remembers
                     conversations, decisions, and documents, with shared skills anyone can run
-                    across 9,000+ app connections. Hosted by Zapier.
+                    across 10,000+ app connections. Hosted by Zapier.
                   </p>
                 </div>
               </Reveal>
@@ -164,30 +153,63 @@ export default function CompareZapierSharedBrainPage() {
           </div>
         </section>
 
-        {/* Comparison grid */}
+        {/* At-a-glance feature matrix */}
         <section className="py-10 sm:py-14">
           <div className="mx-auto max-w-5xl px-4 sm:px-6">
+            <Reveal className="mb-8 text-center">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-balance sm:text-3xl">
+                At a glance
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground text-pretty">
+                The same 10,000+ connections on both sides. Where they differ is who gets to build,
+                host, and see inside the agent.
+              </p>
+            </Reveal>
             <Reveal>
               <div className="overflow-hidden rounded-2xl border border-border/60">
-                <div className="grid grid-cols-3 border-b border-border/60 bg-surface/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <div className="px-4 py-3 sm:px-5" />
-                  <div className="px-4 py-3 text-accent sm:px-5">Foreman</div>
-                  <div className="px-4 py-3 sm:px-5">Zapier Shared Brain</div>
+                <div className="grid grid-cols-[1.7fr_1fr_1fr] border-b border-border/60 bg-surface/50 text-[11px] font-semibold uppercase tracking-wider">
+                  <div className="px-4 py-3 text-muted-foreground sm:px-5">Capability</div>
+                  <div className="flex items-center justify-center gap-1.5 bg-accent/5 px-3 py-3 text-center text-accent">
+                    {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+                    <img
+                      alt=""
+                      className="h-3.5 w-3.5 object-contain"
+                      height={14}
+                      src="/zapier.svg"
+                      width={14}
+                    />
+                    Foreman
+                  </div>
+                  <div className="px-3 py-3 text-center text-muted-foreground">Shared Brain</div>
                 </div>
-                {ROWS.map((row) => (
+                {MATRIX.map((row) => (
                   <div
-                    key={row.dimension}
-                    className="grid grid-cols-3 border-b border-border/40 text-sm last:border-b-0"
+                    key={row.label}
+                    className="grid grid-cols-[1.7fr_1fr_1fr] items-center border-b border-border/40 text-sm last:border-b-0"
                   >
-                    <div className="px-4 py-4 font-medium sm:px-5">{row.dimension}</div>
-                    <div className="px-4 py-4 text-muted-foreground text-pretty sm:px-5">
-                      {row.foreman}
+                    <div className="px-4 py-3.5 font-medium text-pretty sm:px-5">{row.label}</div>
+                    <div className="flex justify-center bg-accent/5 px-3 py-3.5">
+                      <MatrixCell value={row.foreman} brand />
                     </div>
-                    <div className="px-4 py-4 text-muted-foreground text-pretty sm:px-5">
-                      {row.sidekick}
+                    <div className="flex justify-center px-3 py-3.5">
+                      <MatrixCell value={row.sidekick} />
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-accent" /> Included
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Ban className="h-3.5 w-3.5 text-muted-foreground/40" /> Not available
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="rounded-full border border-accent/30 bg-accent/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                    Soon
+                  </span>{" "}
+                  On Foreman&apos;s roadmap
+                </span>
               </div>
             </Reveal>
           </div>
@@ -200,6 +222,11 @@ export default function CompareZapierSharedBrainPage() {
               <h2 className="text-2xl font-semibold tracking-[-0.02em] text-balance sm:text-3xl">
                 When to choose which
               </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground text-pretty">
+                Neither is better — they fit different people. Shared Brain is for teams who want a
+                polished product they don&apos;t have to build. Foreman is for the people who do
+                want to build, own, and extend their agent.
+              </p>
             </Reveal>
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               <Reveal>
@@ -237,10 +264,11 @@ export default function CompareZapierSharedBrainPage() {
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
             <Reveal>
               <p className="text-base leading-relaxed text-muted-foreground text-pretty sm:text-lg">
-                These are not really rivals. Foreman is built on the Zapier SDK, so it drives the
-                same account and the same connections Shared Brain uses — many teams will run both.
-                If you want an agent you can edit, version, and watch end to end, in your own
-                channels and on your own infrastructure, that is exactly what Foreman is for.
+                Foreman is built on the Zapier SDK, so it drives the same account and the same
+                connections Shared Brain does. The real difference is who each is for: Shared Brain
+                is the better pick if you want a finished product you don&apos;t have to build.
+                Foreman is for the people who do — an agent you can edit, version, extend, and watch
+                end to end, in your own channels and on your own infrastructure.
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-3">
                 <Button size="lg" variant="accent" asChild>

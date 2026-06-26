@@ -57,7 +57,8 @@ export function SiteFooter() {
               <span className="font-semibold text-foreground">Foreman</span>
             </div>
             <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-[220px]">
-              A chat driver for your Zapier account. Drive 9,000+ app connections you already built.
+              A chat driver for your Zapier account. Drive 10,000+ app connections you already
+              built.
             </p>
             <p className="text-[11px] text-muted-foreground/70 mt-3 leading-relaxed max-w-[240px]">
               Not affiliated with, endorsed by, or sponsored by Zapier. Foreman is an independent

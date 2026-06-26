@@ -91,7 +91,7 @@ export async function getDiscordBot() {
         );
         if (result.ok) {
           await thread.post(
-            "Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.",
+            "Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 10,000+ apps for you.",
           );
         } else if (result.error === "expired") {
           await thread.post(
