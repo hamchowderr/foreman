@@ -1,6 +1,6 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { Bot, User } from "lucide-react";
+import { Bot, Check, User } from "lucide-react";
 import { useEffect } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -254,6 +254,18 @@ const PurePreviewMessage = ({
         >
           <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
         </MessageContent>
+      );
+    }
+
+    if (type === "data-preview-progress") {
+      const d = (part.data ?? {}) as { stage?: string; label?: string };
+      return (
+        <div className="flex items-center gap-2 text-muted-foreground text-sm" key={key}>
+          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+            <Check className="size-3" />
+          </span>
+          <span>{d.label ?? "Working…"}</span>
+        </div>
       );
     }
 

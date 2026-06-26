@@ -80,15 +80,24 @@ export const previewAppTool = createTool({
     const builder = ctx.mastra.getAgent("preview-builder");
     if (!builder) throw new Error("preview_app: preview-builder agent is not registered");
 
+    // Live build feed (foreman-7tci): stream a part per stage so the chat shows
+    // what's happening instead of a single opaque "Building live preview…".
+    const progress = (stage: string, label: string) =>
+      ctx?.writer?.custom({ type: "data-preview-progress", data: { stage, label } });
+
     const prompt = data
       ? `Build the following page:\n\n${brief}\n\nUse ONLY this data — inline it directly into the page (do not fetch anything at runtime):\n\n${data}`
       : `Build the following page:\n\n${brief}`;
 
+    await progress("design", "Designing the page and its data with Haiku…");
     const result = await builder.generate(prompt as string);
     const html = extractHtml(result.text ?? "");
     if (!html) throw new Error("preview_app: builder returned no HTML");
 
+    await progress("build", "Writing the page into the sandbox and starting the server…");
     const { url } = await startWorkspacePreview(html);
+
+    await progress("ready", "Preview is live.");
     return { url, title: (title as string | undefined) ?? "Preview" };
   },
 });
