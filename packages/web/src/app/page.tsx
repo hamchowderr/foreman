@@ -1,3 +1,4 @@
+import { Automations } from "@/components/landing/sections/automations";
 import { Channels } from "@/components/landing/sections/channels";
 import { ClosingCta } from "@/components/landing/sections/closing-cta";
 import { FiveThings } from "@/components/landing/sections/five-things";
@@ -22,6 +23,7 @@ export default function LandingPage() {
         <WhyNotZap />
         <HowItWorks />
         <ReasoningTrace />
+        <Automations />
         <ToolDiscoverySection />
         <Channels />
         <Guardrails />

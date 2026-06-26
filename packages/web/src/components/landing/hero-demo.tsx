@@ -125,9 +125,14 @@ function UserBubble({ text }: { text: string }) {
 function ThinkingBubble() {
   return (
     <div className="flex items-center gap-2">
-      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
-        F
-      </div>
+      {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+      <img
+        alt="Foreman"
+        className="h-7 w-7 object-contain"
+        height={28}
+        src="/zapier.svg"
+        width={28}
+      />
       <div className="rounded-2xl rounded-bl-sm bg-background border border-border px-4 py-2.5 flex items-center gap-1">
         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
@@ -144,9 +149,14 @@ function ProposalCard() {
       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
       className="flex items-start gap-2"
     >
-      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold shrink-0">
-        F
-      </div>
+      {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+      <img
+        alt="Foreman"
+        className="h-7 w-7 shrink-0 object-contain"
+        height={28}
+        src="/zapier.svg"
+        width={28}
+      />
       <div className="flex-1 min-w-0 rounded-2xl rounded-bl-sm bg-background border border-accent/30 overflow-hidden shadow-sm shadow-accent/10">
         <div className="px-4 py-2 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
@@ -196,9 +206,14 @@ function Row({ label, value }: { label: string; value: string }) {
 function SentBubble() {
   return (
     <div className="flex items-center gap-2">
-      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
-        F
-      </div>
+      {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+      <img
+        alt="Foreman"
+        className="h-7 w-7 object-contain"
+        height={28}
+        src="/zapier.svg"
+        width={28}
+      />
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
