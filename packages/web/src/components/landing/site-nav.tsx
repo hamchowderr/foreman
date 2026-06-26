@@ -32,9 +32,6 @@ export function SiteNav() {
             width={24}
           />
           <span className="text-[15px]">Foreman</span>
-          <span className="hidden sm:inline text-[10px] font-medium text-accent border border-accent/30 rounded-full px-2 py-0.5 ml-0.5 uppercase tracking-wider">
-            Alpha
-          </span>
         </Link>
 
         {/* Desktop nav */}

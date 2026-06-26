@@ -23,11 +23,11 @@ export function Hosting() {
             Two ways to run it
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
-            Alpha-hosted or on your own server.
+            Cloud-hosted or on your own server.
           </h2>
           <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-            Use our alpha to try it free. Self-host when you&apos;re ready to run it for your team
-            or your clients — one Docker container, your data stays yours, full source on GitHub.
+            Start free on our cloud. Self-host when you&apos;re ready to run it for your team or
+            your clients — one Docker container, your data stays yours, full source on GitHub.
           </p>
         </Reveal>
 
@@ -42,10 +42,10 @@ export function Hosting() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold">Foreman Cloud</h3>
-                      <p className="text-xs text-muted-foreground">Free during alpha</p>
+                      <p className="text-xs text-muted-foreground">Free to start</p>
                     </div>
                   </div>
-                  <Badge variant="outline">Alpha</Badge>
+                  <Badge variant="outline">Free</Badge>
                 </div>
                 <ul className="space-y-2.5 text-sm mb-6">
                   {CLOUD_BULLETS.map((line) => (

@@ -25,7 +25,7 @@ export function ClosingCta() {
               </h2>
               <p className="text-muted-foreground mt-4 sm:mt-5 text-base sm:text-lg max-w-xl mx-auto">
                 Connect your Zapier account once. Then talk to it from any chat app you already use.
-                Approval-gated, audit-logged, open source. Free while we&apos;re in alpha.
+                Approval-gated, audit-logged, open source. Free to start.
               </p>
               <div className="flex flex-wrap justify-center gap-3 mt-6 sm:mt-8">
                 <MagneticButton strength={0.25}>
