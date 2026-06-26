@@ -6,7 +6,6 @@ import {
   type LucideIcon,
   PanelLeftIcon,
   PenSquareIcon,
-  SettingsIcon,
   UsersIcon,
   ZapIcon,
 } from "lucide-react";
@@ -96,7 +95,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   className="h-8 rounded-lg text-[13px] font-medium text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   onClick={() => {
                     setOpenMobile(false);
-                    router.push("/");
+                    router.push("/chat");
                   }}
                   tooltip="New Chat"
                 >
@@ -126,23 +125,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarHistory user={user} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border pt-2 pb-5">
-        {user && (
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith("/settings")}
-                className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
-                tooltip="Settings"
-              >
-                <Link href="/settings" onClick={() => setOpenMobile(false)}>
-                  <SettingsIcon className="size-4" />
-                  <span className="text-[13px]">Settings</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        )}
         {user && <SidebarUserNav user={user} />}
       </SidebarFooter>
       <SidebarRail />
