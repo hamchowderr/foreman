@@ -1,4 +1,4 @@
-import { foremanWorkspace } from "@/mastra/agents/workspace";
+import { foremanWorkspace } from "../../mastra/agents/workspace";
 
 /**
  * Live-preview server for the sandbox spike (foreman-qq4x). The agent passes a

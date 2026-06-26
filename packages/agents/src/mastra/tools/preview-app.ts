@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { startWorkspacePreview } from "@/lib/preview/serve";
+import { startWorkspacePreview } from "../../lib/preview/serve";
 
 // No `strict: true` and no `outputSchema` — same Anthropic-grammar constraints as
 // the other custom tools. The execute return flows to the UI as part.output for
