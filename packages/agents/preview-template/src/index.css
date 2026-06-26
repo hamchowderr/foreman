@@ -146,3 +146,12 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Hide scrollbars in the preview — content still scrolls, just no visible bar
+   (the preview reads as a clean embedded canvas, not a scrolling document). */
+* {
+  scrollbar-width: none; /* Firefox */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chromium / WebKit */
+}

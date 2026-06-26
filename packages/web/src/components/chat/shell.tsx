@@ -75,7 +75,7 @@ export function ChatShell() {
         <div
           className={cn(
             "flex min-w-0 flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isArtifactVisible || isPreviewOpen ? "w-[40%]" : "w-full",
+            isArtifactVisible || isPreviewOpen ? "w-1/2" : "w-full",
           )}
         >
           <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background shadow-sm md:m-3">

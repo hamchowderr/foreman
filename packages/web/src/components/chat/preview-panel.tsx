@@ -32,7 +32,7 @@ export function PreviewPanel() {
   }
 
   return (
-    <Artifact className="h-full flex-1 rounded-none border-0 border-l border-l-foreground/10 shadow-none">
+    <Artifact className="m-2 flex-1 rounded-xl border-foreground/10">
       <ArtifactHeader className="border-b-foreground/10">
         <ArtifactTitle>{title}</ArtifactTitle>
         <ArtifactActions>
