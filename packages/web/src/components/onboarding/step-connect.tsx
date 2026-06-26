@@ -86,16 +86,18 @@ export function StepConnect({ uses, zapierJustConnected, onNext }: Props) {
           style={{ backgroundColor: "#201515", border: "1px solid #3A2525" }}
         >
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ backgroundColor: "#FF4F00" }}
-            >
-              <Zap className="h-5 w-5 text-white" />
-            </div>
+            {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+            <img
+              alt="Zapier"
+              className="h-10 w-10 rounded-xl bg-white object-contain p-1.5"
+              height={40}
+              src="/zapier.svg"
+              width={40}
+            />
             <div>
               <p className="font-semibold text-white">Zapier</p>
               <p className="text-xs" style={{ color: "#FFBF6E" }}>
-                6,000+ app integrations
+                10,000+ app integrations
               </p>
             </div>
           </div>

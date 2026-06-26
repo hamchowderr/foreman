@@ -129,12 +129,14 @@ export function StepDone() {
           className="group flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
           style={{ backgroundColor: "#FF4F00" }}
         >
-          <span
-            className="inline-flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-bold"
-            style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-          >
-            F
-          </span>
+          {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+          <img
+            alt=""
+            className="h-6 w-6 rounded-lg bg-white object-contain p-0.5"
+            height={24}
+            src="/zapier.svg"
+            width={24}
+          />
           Open Foreman
           <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
         </a>
