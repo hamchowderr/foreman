@@ -7,6 +7,7 @@ import {
 } from "@/lib/durable";
 import type { DeployResult } from "@/lib/durable/deploy";
 import { resolveActiveWorkspace } from "@/lib/identity";
+import { getInbox, listInboxMessages } from "@/lib/trigger-inbox";
 import { getExperimentalSdkForUser } from "@/lib/zapier/sdk";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
@@ -95,6 +96,31 @@ export async function inspectForUser(
   if (!automation) return null;
   const runs = await store.listRuns(workspaceId, automationId, maxRuns);
   return { automation, runs };
+}
+
+export interface InboxView {
+  /** Live trigger-inbox state, or null if the worker hasn't armed it yet. */
+  inbox: Awaited<ReturnType<typeof getInbox>> | null;
+  /** Recent leased/queued messages (metadata + lease_count / possible_duplicate_data). */
+  messages: Awaited<ReturnType<typeof listInboxMessages>>;
+}
+
+/** Live trigger-inbox view for an automation (the inbox-visibility panel). Null if not found. */
+export async function getInboxView(
+  userId: string,
+  automationId: string,
+): Promise<InboxView | null> {
+  const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const automation = await store.getAutomation(workspaceId, automationId);
+  if (!automation) return null;
+  if (!automation.trigger_inbox_id) return { inbox: null, messages: [] };
+
+  const sdk = await getExperimentalSdkForUser(userId);
+  const [inbox, messages] = await Promise.all([
+    getInbox(sdk, automation.trigger_inbox_id),
+    listInboxMessages(sdk, automation.trigger_inbox_id, 20),
+  ]);
+  return { inbox, messages };
 }
 
 export interface RunResult {

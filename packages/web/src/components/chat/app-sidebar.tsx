@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboardIcon, PanelLeftIcon, PenSquareIcon } from "lucide-react";
+import { LayoutDashboardIcon, PanelLeftIcon, PenSquareIcon, ZapIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SidebarHistory } from "@/components/chat/sidebar-history";
@@ -97,6 +97,20 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <Link href="/dashboards" onClick={() => setOpenMobile(false)}>
                       <LayoutDashboardIcon className="size-4" />
                       <span className="text-[13px]">Dashboards</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {user && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    tooltip="Automations"
+                  >
+                    <Link href="/automations" onClick={() => setOpenMobile(false)}>
+                      <ZapIcon className="size-4" />
+                      <span className="text-[13px]">Automations</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

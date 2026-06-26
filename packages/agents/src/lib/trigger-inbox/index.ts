@@ -62,6 +62,12 @@ export async function getInbox(sdk: Sdk, inbox: string) {
   return (await sdk.getTriggerInbox({ inbox })).data;
 }
 
+/** Recent messages in an inbox (metadata + attributes, no payloads) — for the inbox view. */
+export async function listInboxMessages(sdk: Sdk, inbox: string, maxItems = 20) {
+  const res = await sdk.listTriggerInboxMessages({ inbox, maxItems });
+  return res.data;
+}
+
 export async function leaseMessages(opts: {
   sdk: Sdk;
   inbox: string;

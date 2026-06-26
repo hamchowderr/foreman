@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  getInboxView,
   inspectForUser,
   listForUser,
   provisionAutomation,
@@ -7,7 +8,7 @@ import {
   runAutomationById,
   updateAutomationForUser,
 } from "@/lib/automations/service";
-import type { AutomationTrigger } from "@/lib/durable";
+import type { InboxTriggerSpec } from "@/lib/automations/types";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
@@ -60,7 +61,7 @@ automations.post("/", async (c) => {
     description: typeof body.description === "string" ? body.description : undefined,
     source: body.source,
     connections: body.connections as Record<string, string | number> | undefined,
-    trigger: body.trigger as AutomationTrigger | undefined,
+    trigger: body.trigger as InboxTriggerSpec | undefined,
     enabled: typeof body.enabled === "boolean" ? body.enabled : undefined,
     isPrivate: typeof body.isPrivate === "boolean" ? body.isPrivate : undefined,
   });
@@ -103,6 +104,19 @@ automations.patch("/:id", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
   return c.json({ updated: true });
+});
+
+automations.get("/:id/inbox", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+  const view = await getInboxView(userId, id);
+  if (!view) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(view);
 });
 
 automations.post("/:id/run", async (c) => {
