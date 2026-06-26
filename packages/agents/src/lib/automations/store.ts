@@ -332,14 +332,18 @@ export async function listRuns(
 export const TERMINAL_RUN_STATUSES = ["finished", "failed"] as const;
 const NON_TERMINAL_RUN_STATUSES = ["initialized", "started"];
 
-/** Fired-but-not-terminal runs across all automations — the reconcile work list (M3/foreman-480k). */
+/**
+ * Non-terminal runs across all automations — the reconcile work list
+ * (foreman-480k). Includes "initialized" rows with no trigger_id (a worker that
+ * crashed between claim and dispatch) so the reconcile's stuck-run cap can fail
+ * them; normal rows clear within the same cycle, so these are only crash debris.
+ */
 export async function listPendingRuns(limit = 200): Promise<AutomationRunRow[]> {
   const supabase = getSupabase();
   const { data } = await supabase
     .from("automation_run")
     .select("*")
     .in("status", NON_TERMINAL_RUN_STATUSES)
-    .not("trigger_id", "is", null)
     .order("created_at", { ascending: true })
     .limit(limit);
   return (data ?? []) as unknown as AutomationRunRow[];

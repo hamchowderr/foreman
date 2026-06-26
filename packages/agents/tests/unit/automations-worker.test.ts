@@ -157,13 +157,17 @@ describe("runInboxCycleForAutomation", () => {
 describe("reconcilePendingRuns", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  const NOW = new Date().toISOString();
+  const OLD = "2020-01-01T00:00:00.000Z"; // older than any STUCK_RUN_TIMEOUT_MS
   const pendingRun = {
     id: "run_1",
     automation_id: "auto_1",
     trigger_id: "trig_1",
     durable_run_id: null,
     status: "started",
+    created_at: NOW,
   };
+  const auto = [{ id: "auto_1", user_id: "user-1" }];
 
   it("resolves trigger→durable and writes the terminal status", async () => {
     vi.mocked(store.listPendingRuns).mockResolvedValueOnce([pendingRun] as never);
@@ -224,6 +228,66 @@ describe("reconcilePendingRuns", () => {
     const res = await reconcilePendingRuns();
     expect(res).toEqual({ checked: 1, updated: 0 });
     expect(getDurableRunStatus).not.toHaveBeenCalled();
+    expect(store.updateRun).not.toHaveBeenCalled();
+  });
+
+  it("fails a run whose durable never linked past the stuck timeout", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      { ...pendingRun, created_at: OLD },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce(auto as never);
+    vi.mocked(getTriggerRunStatus).mockResolvedValueOnce({
+      status: "started",
+      durableRunId: null,
+      output: null,
+      error: null,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+    expect(res).toEqual({ checked: 1, updated: 1 });
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_1",
+      expect.objectContaining({ status: "failed" }),
+    );
+  });
+
+  it("fails an old claimed-but-never-dispatched run (no trigger_id)", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      {
+        id: "run_x",
+        automation_id: "auto_1",
+        trigger_id: null,
+        durable_run_id: null,
+        status: "initialized",
+        created_at: OLD,
+      },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce(auto as never);
+
+    const res = await reconcilePendingRuns();
+    expect(res).toEqual({ checked: 1, updated: 1 });
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_x",
+      expect.objectContaining({ status: "failed" }),
+    );
+    // never even resolved an SDK for an undispatched run
+    expect(getTriggerRunStatus).not.toHaveBeenCalled();
+  });
+
+  it("does NOT fail a fresh unlinked run (within the timeout)", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      { ...pendingRun, created_at: NOW },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce(auto as never);
+    vi.mocked(getTriggerRunStatus).mockResolvedValueOnce({
+      status: "started",
+      durableRunId: null,
+      output: null,
+      error: null,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+    expect(res).toEqual({ checked: 1, updated: 0 });
     expect(store.updateRun).not.toHaveBeenCalled();
   });
 });

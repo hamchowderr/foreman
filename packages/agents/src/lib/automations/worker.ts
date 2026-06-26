@@ -169,11 +169,20 @@ export async function runInboxCycle(): Promise<AutomationCycleResult[]> {
 }
 
 /**
- * Advance fired-but-not-terminal runs to their real terminal status. The durable
- * run is the authority: trigger_id → (getTriggerRun) durable_run_id →
- * (getDurableRun) started → finished/failed. The trigger run's own status never
- * advances, so we must follow the chain. Safe to call every cycle — only
- * non-terminal rows are touched, and only changed ones are written.
+ * How long a run may stay non-terminal WITHOUT a linked, running durable before we
+ * give up and mark it failed. This caps the genuinely-stuck cases (trigger never
+ * spawned a durable; worker crashed before dispatch; owner connection lost) — it
+ * does NOT cap a run whose durable IS linked and still running, because durables
+ * can legitimately run for days (waits / human-approval callbacks).
+ */
+const STUCK_RUN_TIMEOUT_MS = Number(process.env.FOREMAN_RUN_STUCK_TIMEOUT_MS) || 900_000; // 15 min
+
+/**
+ * Advance fired-but-not-terminal runs to their real terminal status, and fail
+ * genuinely-stuck ones. The durable run is the authority: trigger_id →
+ * (getTriggerRun) durable_run_id → (getDurableRun) started → finished/failed. The
+ * trigger run's own status never advances, so we follow the chain. Safe every
+ * cycle — only non-terminal rows are touched, only changes are written.
  */
 export async function reconcilePendingRuns(): Promise<{ checked: number; updated: number }> {
   const pending = await store.listPendingRuns();
@@ -184,9 +193,23 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
   const byId = new Map(automations.map((a) => [a.id, a]));
 
   let updated = 0;
+  const failRun = async (id: string, reason: string) => {
+    await store.updateRun(id, { status: "failed", error: { message: reason } });
+    updated++;
+  };
+
   for (const run of pending) {
     const automation = byId.get(run.automation_id);
-    if (!automation?.user_id || !run.trigger_id) continue;
+    if (!automation) continue;
+    const tooOld = Date.now() - new Date(run.created_at).getTime() > STUCK_RUN_TIMEOUT_MS;
+
+    // Claimed but never dispatched (worker crashed between claim and fire).
+    if (!run.trigger_id) {
+      if (tooOld) await failRun(run.id, "stuck: claimed but never dispatched");
+      continue;
+    }
+    if (!automation.user_id) continue;
+
     try {
       const sdk = await getExperimentalSdkForUser(automation.user_id);
 
@@ -196,12 +219,18 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
         const tr = await getTriggerRunStatus(sdk, run.trigger_id);
         durableRunId = tr.durableRunId;
       }
-      if (!durableRunId) continue; // durable not linked yet — try again next cycle
+      if (!durableRunId) {
+        // Should link within seconds. If it never has, the trigger failed to spawn.
+        if (tooOld) await failRun(run.id, "stuck: durable run never linked");
+        continue;
+      }
 
       const dr = await getDurableRunStatus(sdk, durableRunId);
       const terminal = dr.status === "finished" || dr.status === "failed";
       const status = terminal ? dr.status : "started";
 
+      // A linked-but-still-running durable is left alone — NO age cap (durables can
+      // run for days via waits/callbacks). Only write on a real change.
       if (status !== run.status || durableRunId !== run.durable_run_id) {
         await store.updateRun(run.id, {
           status,
@@ -211,7 +240,15 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
         if (terminal) updated++;
       }
     } catch (err) {
-      console.error(`[inbox-worker] reconcile run ${run.id} failed:`, err);
+      // Owner disconnected / transient SDK error — give up only after the timeout.
+      if (tooOld) {
+        await failRun(
+          run.id,
+          `stuck: reconcile gave up — ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } else {
+        console.error(`[inbox-worker] reconcile run ${run.id} failed (will retry):`, err);
+      }
     }
   }
   return { checked: pending.length, updated };
