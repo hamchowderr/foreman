@@ -7,6 +7,7 @@ import { Hero } from "@/components/landing/sections/hero";
 import { HistorySection } from "@/components/landing/sections/history-section";
 import { Hosting } from "@/components/landing/sections/hosting";
 import { HowItWorks } from "@/components/landing/sections/how-it-works";
+import { MoreCapabilities } from "@/components/landing/sections/more-capabilities";
 import { PiiSection } from "@/components/landing/sections/pii-section";
 import { ReasoningTrace } from "@/components/landing/sections/reasoning-trace";
 import { SiteFooter } from "@/components/landing/sections/site-footer";
@@ -29,6 +30,7 @@ export default function LandingPage() {
         <Guardrails />
         <HistorySection />
         <PiiSection />
+        <MoreCapabilities />
         <Hosting />
         <FiveThings />
         <ClosingCta />
