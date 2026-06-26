@@ -1,4 +1,4 @@
-import { getTriggerRunStatus, triggerAutomation } from "@/lib/durable";
+import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "@/lib/durable";
 import {
   ackMessages,
   ensureInbox,
@@ -55,14 +55,11 @@ export async function dispatchMessage(opts: {
       workflowId: automation.zapier_workflow_id,
       input: message.payload,
     });
-    const run = await getTriggerRunStatus(sdk, triggerId);
-    await store.updateRun(runId, {
-      status: run.status,
-      triggerId,
-      durableRunId: run.durableRunId,
-      output: run.output,
-      error: run.error,
-    });
+    // Fire-and-record. Do NOT poll for terminal status here: the durable may run
+    // for seconds to days (waits/callbacks), and the trigger run's own status is
+    // pinned at "started" anyway. reconcilePendingRuns() resolves the real
+    // durable_run_id + finished/failed on a later pass.
+    await store.updateRun(runId, { status: "started", triggerId });
     return "processed";
   } catch (err) {
     await store.updateRun(runId, {
@@ -171,6 +168,55 @@ export async function runInboxCycle(): Promise<AutomationCycleResult[]> {
   return results;
 }
 
+/**
+ * Advance fired-but-not-terminal runs to their real terminal status. The durable
+ * run is the authority: trigger_id → (getTriggerRun) durable_run_id →
+ * (getDurableRun) started → finished/failed. The trigger run's own status never
+ * advances, so we must follow the chain. Safe to call every cycle — only
+ * non-terminal rows are touched, and only changed ones are written.
+ */
+export async function reconcilePendingRuns(): Promise<{ checked: number; updated: number }> {
+  const pending = await store.listPendingRuns();
+  if (pending.length === 0) return { checked: 0, updated: 0 };
+
+  const automationIds = [...new Set(pending.map((r) => r.automation_id))];
+  const automations = await store.getAutomationsByIds(automationIds);
+  const byId = new Map(automations.map((a) => [a.id, a]));
+
+  let updated = 0;
+  for (const run of pending) {
+    const automation = byId.get(run.automation_id);
+    if (!automation?.user_id || !run.trigger_id) continue;
+    try {
+      const sdk = await getExperimentalSdkForUser(automation.user_id);
+
+      // Resolve the durable run id (it lags the trigger by a few seconds).
+      let durableRunId = run.durable_run_id;
+      if (!durableRunId) {
+        const tr = await getTriggerRunStatus(sdk, run.trigger_id);
+        durableRunId = tr.durableRunId;
+      }
+      if (!durableRunId) continue; // durable not linked yet — try again next cycle
+
+      const dr = await getDurableRunStatus(sdk, durableRunId);
+      const terminal = dr.status === "finished" || dr.status === "failed";
+      const status = terminal ? dr.status : "started";
+
+      if (status !== run.status || durableRunId !== run.durable_run_id) {
+        await store.updateRun(run.id, {
+          status,
+          durableRunId,
+          ...(terminal ? { output: dr.output, error: dr.error } : {}),
+        });
+        if (terminal) updated++;
+      }
+    } catch (err) {
+      console.error(`[inbox-worker] reconcile run ${run.id} failed:`, err);
+    }
+  }
+  return { checked: pending.length, updated };
+}
+
 /** Start the worker on an interval. Returns a stop handle. Run a single instance. */
 export function startInboxWorker(intervalMs = 60_000): () => void {
   let running = false;
@@ -179,13 +225,14 @@ export function startInboxWorker(intervalMs = 60_000): () => void {
     running = true;
     try {
       const results = await runInboxCycle();
-      if (results.length) {
+      const rec = await reconcilePendingRuns();
+      if (results.length || rec.updated) {
         const t = results.reduce(
           (a, r) => ({ p: a.p + r.processed, s: a.s + r.skipped, f: a.f + r.failed }),
           { p: 0, s: 0, f: 0 },
         );
         console.log(
-          `[inbox-worker] ${results.length} automations · processed ${t.p} · skipped ${t.s} · failed ${t.f}`,
+          `[inbox-worker] ${results.length} automations · processed ${t.p} · skipped ${t.s} · failed ${t.f} · reconciled ${rec.updated}/${rec.checked}`,
         );
       }
     } catch (err) {

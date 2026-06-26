@@ -9,9 +9,14 @@ vi.mock("@/lib/zapier/sdk", () => ({ getExperimentalSdkForUser: vi.fn(async () =
 vi.mock("@/lib/durable", () => ({
   triggerAutomation: vi.fn(async () => ({ triggerId: "trig_1" })),
   getTriggerRunStatus: vi.fn(async () => ({
-    status: "finished",
+    status: "started",
     durableRunId: "dr_1",
     output: null,
+    error: null,
+  })),
+  getDurableRunStatus: vi.fn(async () => ({
+    status: "finished",
+    output: { ok: true },
     error: null,
   })),
 }));
@@ -26,11 +31,17 @@ vi.mock("@/lib/automations/store", () => ({
   updateRun: vi.fn(async () => {}),
   updateAutomation: vi.fn(async () => true),
   listActiveInboxAutomations: vi.fn(async () => []),
+  listPendingRuns: vi.fn(async () => []),
+  getAutomationsByIds: vi.fn(async () => []),
 }));
 
 import * as store from "@/lib/automations/store";
-import { dispatchMessage, runInboxCycleForAutomation } from "@/lib/automations/worker";
-import { triggerAutomation } from "@/lib/durable";
+import {
+  dispatchMessage,
+  reconcilePendingRuns,
+  runInboxCycleForAutomation,
+} from "@/lib/automations/worker";
+import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "@/lib/durable";
 import { ackMessages, ensureInbox, leaseMessages, releaseMessages } from "@/lib/trigger-inbox";
 
 const automation = {
@@ -72,7 +83,7 @@ describe("dispatchMessage", () => {
     expect(triggerAutomation).not.toHaveBeenCalled();
   });
 
-  it("fires + records a run for a fresh message", async () => {
+  it("fires + records the run as 'started' (no blocking poll — reconcile finishes it)", async () => {
     vi.mocked(store.claimInboxMessage).mockResolvedValueOnce("run_1");
     const out = await dispatchMessage({ sdk: {} as never, automation, message: msg("m1") });
     expect(out).toBe("processed");
@@ -81,8 +92,10 @@ describe("dispatchMessage", () => {
     );
     expect(store.updateRun).toHaveBeenCalledWith(
       "run_1",
-      expect.objectContaining({ status: "finished", triggerId: "trig_1", durableRunId: "dr_1" }),
+      expect.objectContaining({ status: "started", triggerId: "trig_1" }),
     );
+    // It must NOT block on the trigger/durable status at dispatch time.
+    expect(getTriggerRunStatus).not.toHaveBeenCalled();
   });
 
   it("marks failed + records the error when the trigger throws", async () => {
@@ -138,5 +151,79 @@ describe("runInboxCycleForAutomation", () => {
     expect(res.processed).toBe(0);
     expect(ackMessages).not.toHaveBeenCalled();
     expect(releaseMessages).not.toHaveBeenCalled();
+  });
+});
+
+describe("reconcilePendingRuns", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const pendingRun = {
+    id: "run_1",
+    automation_id: "auto_1",
+    trigger_id: "trig_1",
+    durable_run_id: null,
+    status: "started",
+  };
+
+  it("resolves trigger→durable and writes the terminal status", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([pendingRun] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_1", user_id: "user-1" },
+    ] as never);
+    // durable not linked yet → getTriggerRun resolves it; getDurableRun → finished
+    vi.mocked(getTriggerRunStatus).mockResolvedValueOnce({
+      status: "started",
+      durableRunId: "dr_9",
+      output: null,
+      error: null,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+
+    expect(res).toEqual({ checked: 1, updated: 1 });
+    expect(getDurableRunStatus).toHaveBeenCalledWith(expect.anything(), "dr_9");
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_1",
+      expect.objectContaining({ status: "finished", durableRunId: "dr_9" }),
+    );
+  });
+
+  it("leaves a still-running durable as 'started' (no terminal write)", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      { ...pendingRun, durable_run_id: "dr_9" },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_1", user_id: "user-1" },
+    ] as never);
+    vi.mocked(getDurableRunStatus).mockResolvedValueOnce({
+      status: "started",
+      output: null,
+      error: null,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+    expect(res).toEqual({ checked: 1, updated: 0 });
+    // already 'started' with the same durable id → nothing to write
+    expect(store.updateRun).not.toHaveBeenCalled();
+    // and it must NOT need getTriggerRun once the durable id is known
+    expect(getTriggerRunStatus).not.toHaveBeenCalled();
+  });
+
+  it("skips a run whose durable isn't linked yet", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([pendingRun] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_1", user_id: "user-1" },
+    ] as never);
+    vi.mocked(getTriggerRunStatus).mockResolvedValueOnce({
+      status: "started",
+      durableRunId: null,
+      output: null,
+      error: null,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+    expect(res).toEqual({ checked: 1, updated: 0 });
+    expect(getDurableRunStatus).not.toHaveBeenCalled();
+    expect(store.updateRun).not.toHaveBeenCalled();
   });
 });

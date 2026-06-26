@@ -319,3 +319,36 @@ export async function listRuns(
     .limit(limit);
   return (data ?? []) as unknown as AutomationRunRow[];
 }
+
+/**
+ * automation_run.status vocabulary:
+ *   initialized → claimed (claimInboxMessage), not yet fired
+ *   started     → durable triggered + executing (dispatch sets this; the durable's
+ *                 own run is the authority — its trigger run status stays "started"
+ *                 the whole time, so we reconcile against getDurableRun, not it)
+ *   finished    → durable completed (reconcile)
+ *   failed      → durable failed, or a dispatch error (reconcile / dispatch catch)
+ */
+export const TERMINAL_RUN_STATUSES = ["finished", "failed"] as const;
+const NON_TERMINAL_RUN_STATUSES = ["initialized", "started"];
+
+/** Fired-but-not-terminal runs across all automations — the reconcile work list (M3/foreman-480k). */
+export async function listPendingRuns(limit = 200): Promise<AutomationRunRow[]> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("automation_run")
+    .select("*")
+    .in("status", NON_TERMINAL_RUN_STATUSES)
+    .not("trigger_id", "is", null)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  return (data ?? []) as unknown as AutomationRunRow[];
+}
+
+/** Resolve a set of automations by id (the reconcile needs each run's owner for SDK auth). */
+export async function getAutomationsByIds(ids: string[]): Promise<AutomationRow[]> {
+  if (ids.length === 0) return [];
+  const supabase = getSupabase();
+  const { data } = await supabase.from("automation").select("*").in("id", ids);
+  return (data ?? []) as unknown as AutomationRow[];
+}

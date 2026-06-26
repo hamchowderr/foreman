@@ -16,7 +16,7 @@
  */
 import { createZapierSdk } from "@zapier/zapier-sdk/experimental";
 import * as store from "../src/lib/automations/store";
-import { runInboxCycleForAutomation } from "../src/lib/automations/worker";
+import { reconcilePendingRuns, runInboxCycleForAutomation } from "../src/lib/automations/worker";
 import { getSupabase } from "../src/lib/db";
 import { deleteAutomation } from "../src/lib/durable";
 
@@ -105,16 +105,33 @@ async function main() {
       }
     }
 
-    // 6. Verify the automation_run row (real Postgres).
+    // 6. Reconcile — advance the run from 'started' to its real terminal status.
+    let terminal = false;
+    for (let i = 1; i <= 12 && !terminal; i++) {
+      await sleep(4000);
+      const rec = await reconcilePendingRuns();
+      const { data: rows } = await getSupabase()
+        .from("automation_run")
+        .select("status,durable_run_id")
+        .eq("automation_id", automationId);
+      const st = rows?.[0]?.status;
+      console.log(
+        `6. reconcile attempt ${i} (${i * 4}s): updated=${rec.updated} run.status=${st} durable_run_id=${rows?.[0]?.durable_run_id ?? "—"}`,
+      );
+      if (st === "finished" || st === "failed") terminal = true;
+    }
+
+    // 7. Verify the final automation_run row (real Postgres).
     const { data: runs } = await getSupabase()
       .from("automation_run")
       .select("*")
       .eq("automation_id", automationId);
-    console.log(`6. automation_run rows: ${runs?.length ?? 0}`);
+    console.log(`7. automation_run rows: ${runs?.length ?? 0}`);
     if (runs?.length) console.log(JSON.stringify(runs[0], null, 2));
 
+    const finished = runs?.[0]?.status === "finished";
     console.log(
-      `\n${fired && runs?.length ? "✓✓ FULL LOOP PASS" : "✗ LOOP INCOMPLETE"} — event → inbox → worker → durable, recorded in Postgres`,
+      `\n${fired && finished ? "✓✓ FULL LOOP PASS (run reached 'finished')" : "✗ LOOP INCOMPLETE"} — event → inbox → worker → durable → reconciled, in Postgres`,
     );
   } catch (e) {
     console.error("LOOP ERROR:", (e as Error).message);
