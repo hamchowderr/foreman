@@ -32,15 +32,15 @@ export function PreviewPanel() {
   }
 
   return (
-    <Artifact className="h-full flex-1 rounded-none border-0 border-l shadow-none">
-      <ArtifactHeader>
+    <Artifact className="h-full flex-1 rounded-none border-0 border-l border-l-foreground/10 shadow-none">
+      <ArtifactHeader className="border-b-foreground/10">
         <ArtifactTitle>{title}</ArtifactTitle>
         <ArtifactActions>
           <ArtifactClose onClick={close} />
         </ArtifactActions>
       </ArtifactHeader>
       <WebPreview className="flex-1 rounded-none border-0" defaultUrl={url}>
-        <WebPreviewNavigation>
+        <WebPreviewNavigation className="border-b-foreground/10">
           <WebPreviewUrl readOnly value={url} />
           <WebPreviewNavigationButton
             onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
@@ -75,7 +75,7 @@ export function PreviewInlineChip({ url, title }: { url: string; title: string }
 
   return (
     <button
-      className="inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm shadow-sm transition-colors hover:bg-accent"
+      className="inline-flex items-center gap-2 rounded-lg bg-card px-3 py-2 text-left text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_16px_rgba(0,0,0,0.06)] ring-1 ring-foreground/[0.06] transition-[background-color,transform] duration-150 hover:bg-accent active:scale-[0.96]"
       onClick={() => open(url, title)}
       type="button"
     >
