@@ -5,6 +5,7 @@ import { createClient } from "@/lib/server";
 import type {
   ConnectionMode,
   MyInvitation,
+  SharedConnectionInfo,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
@@ -165,4 +166,16 @@ export async function setConnectionMode(workspaceId: string, mode: ConnectionMod
     method: "PATCH",
     body: { zapier_connection_mode: mode },
   });
+}
+
+export async function getSharedConnection(workspaceId: string): Promise<SharedConnectionInfo> {
+  return agent(`/workspaces/${workspaceId}/shared-connection`);
+}
+
+export async function shareMyConnection(workspaceId: string): Promise<void> {
+  await agent(`/workspaces/${workspaceId}/shared-connection`, { method: "POST" });
+}
+
+export async function clearSharedConnection(workspaceId: string): Promise<void> {
+  await agent(`/workspaces/${workspaceId}/shared-connection`, { method: "DELETE" });
 }

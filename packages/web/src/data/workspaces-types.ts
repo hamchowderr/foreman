@@ -41,3 +41,8 @@ export interface MyInvitation {
 }
 
 export type ConnectionMode = "member-first" | "shared" | "personal";
+
+export interface SharedConnectionInfo {
+  shared: { owner_id: string; is_self: boolean } | null;
+  caller_has_connection: boolean;
+}

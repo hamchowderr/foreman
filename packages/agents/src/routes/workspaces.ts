@@ -505,4 +505,65 @@ workspaces.patch("/:id/settings", async (c) => {
   return c.json({ zapier_connection_mode: mode });
 });
 
+// ─── Shared Zapier connection (which connection "shared" mode resolves to) ───
+
+// GET /:id/shared-connection — the workspace's designated connection (members),
+// plus whether the caller has a personal connection they could designate.
+workspaces.get("/:id/shared-connection", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) return c.json({ error: "Invalid workspace id" }, 400);
+  if (!(await memberRole(id, userId))) return c.json({ error: "Not found" }, 404);
+
+  const supabase = getSupabase();
+  const [{ data: shared }, { data: mine }] = await Promise.all([
+    supabase.from("zapier_identity").select("user_id").eq("workspace_id", id).maybeSingle(),
+    supabase.from("zapier_identity").select("id").eq("user_id", userId).maybeSingle(),
+  ]);
+  return c.json({
+    shared: shared ? { owner_id: shared.user_id, is_self: shared.user_id === userId } : null,
+    caller_has_connection: Boolean(mine),
+  });
+});
+
+// POST /:id/shared-connection — designate the caller's own Zapier connection as
+// the workspace's shared one (admins only). Tags zapier_identity.workspace_id,
+// which getSdkForUser resolves for "shared"/"member-first" modes.
+workspaces.post("/:id/shared-connection", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) return c.json({ error: "Invalid workspace id" }, 400);
+  const role = await memberRole(id, userId);
+  if (!role || !ADMIN_ROLES.has(role)) return c.json({ error: "Admins only" }, 403);
+
+  const supabase = getSupabase();
+  const { data: mine } = await supabase
+    .from("zapier_identity")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!mine) return c.json({ error: "Connect your own Zapier account first" }, 400);
+
+  // Exactly one designated connection per workspace: clear the prior one, then tag the caller's.
+  await supabase.from("zapier_identity").update({ workspace_id: null }).eq("workspace_id", id);
+  const { error } = await supabase
+    .from("zapier_identity")
+    .update({ workspace_id: id })
+    .eq("user_id", userId);
+  if (error) return c.json({ error: `Failed: ${error.message}` }, 500);
+  return c.json({ ok: true });
+});
+
+// DELETE /:id/shared-connection — clear the workspace's designated connection (admins only).
+workspaces.delete("/:id/shared-connection", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) return c.json({ error: "Invalid workspace id" }, 400);
+  const role = await memberRole(id, userId);
+  if (!role || !ADMIN_ROLES.has(role)) return c.json({ error: "Admins only" }, 403);
+  const supabase = getSupabase();
+  await supabase.from("zapier_identity").update({ workspace_id: null }).eq("workspace_id", id);
+  return c.json({ ok: true });
+});
+
 export default workspaces;

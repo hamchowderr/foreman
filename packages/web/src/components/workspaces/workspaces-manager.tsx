@@ -22,9 +22,11 @@ import {
 } from "@/components/ui/table";
 import {
   acceptInvitation,
+  clearSharedConnection,
   declineInvitation,
   getMyInvitations,
   getMyWorkspaces,
+  getSharedConnection,
   getWorkspaceInvitations,
   getWorkspaceMembers,
   getWorkspaceSettings,
@@ -33,12 +35,14 @@ import {
   removeMember,
   revokeInvitation,
   setConnectionMode,
+  shareMyConnection,
   switchWorkspace,
   updateMemberRole,
 } from "@/data/workspaces";
 import type {
   ConnectionMode,
   MyInvitation,
+  SharedConnectionInfo,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
@@ -356,6 +360,7 @@ function ConnectionSection(props: {
 }) {
   const { workspaceId, pending, onAct } = props;
   const [mode, setMode] = useState<ConnectionMode>("member-first");
+  const [shared, setShared] = useState<SharedConnectionInfo | null>(null);
 
   useEffect(() => {
     getWorkspaceSettings(workspaceId)
@@ -363,17 +368,23 @@ function ConnectionSection(props: {
       .catch(() => {});
   }, [workspaceId]);
 
+  useEffect(() => {
+    getSharedConnection(workspaceId)
+      .then(setShared)
+      .catch(() => {});
+  }, [workspaceId, pending]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zapier connection mode</CardTitle>
+        <CardTitle>Zapier connections</CardTitle>
         <CardDescription>
           How members' Zapier connections resolve when the agent acts. <strong>member-first</strong>
           : own connection, else the workspace's shared one · <strong>shared</strong>: always the
           workspace's connection · <strong>personal</strong>: own only.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-4">
         <Select
           onValueChange={(m) =>
             onAct(async () => {
@@ -392,6 +403,43 @@ function ConnectionSection(props: {
             <SelectItem value="personal">personal</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="flex flex-col gap-2 border-t pt-4">
+          <p className="font-medium text-sm">Shared connection</p>
+          <p className="text-muted-foreground text-sm">
+            {shared?.shared
+              ? shared.shared.is_self
+                ? "Your Zapier connection is this workspace's shared connection."
+                : "A teammate's connection is shared with this workspace."
+              : "No shared connection set — shared / member-first fallback has nothing to resolve to yet."}
+          </p>
+          <div className="flex gap-2">
+            {!shared?.shared?.is_self && (
+              <Button
+                disabled={pending || !shared?.caller_has_connection}
+                onClick={() => onAct(() => shareMyConnection(workspaceId))}
+                size="sm"
+              >
+                Use my connection
+              </Button>
+            )}
+            {shared?.shared && (
+              <Button
+                disabled={pending}
+                onClick={() => onAct(() => clearSharedConnection(workspaceId))}
+                size="sm"
+                variant="outline"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          {!(shared?.caller_has_connection || shared?.shared) && (
+            <p className="text-muted-foreground text-xs">
+              Connect your own Zapier account first to share it with the workspace.
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
