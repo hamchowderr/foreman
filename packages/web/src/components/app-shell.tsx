@@ -7,12 +7,21 @@ import { createClient } from "@/lib/server";
 
 /**
  * Shared app shell — the same shadcn sidebar (AppSidebar) the chat uses, wrapped
- * around any authed section (Automations, Inbox, Dashboards, Workspaces, …) so the
- * whole app keeps one persistent sidebar instead of bare pages / one-off headers.
- * Server component: reads the user + persisted sidebar collapse state, like the
- * chat layout's SidebarShell.
+ * around any authed section (Automations, Inbox, Dashboards, Workspaces, Settings,
+ * Editor) so the whole app keeps one persistent sidebar instead of bare pages /
+ * one-off headers. Server component: reads the user + persisted collapse state,
+ * like the chat layout's SidebarShell.
+ *
+ * `fullBleed` drops the scrolling content wrapper + top bar so a full-height tool
+ * (the agent editor) can fill the inset itself.
  */
-export async function AppShell({ children }: { children: React.ReactNode }) {
+export async function AppShell({
+  children,
+  fullBleed = false,
+}: {
+  children: React.ReactNode;
+  fullBleed?: boolean;
+}) {
   const supabase = await createClient();
   const cookieStore = await cookies();
   const {
@@ -41,10 +50,16 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
             }}
           />
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
-            <SidebarTrigger className="text-muted-foreground transition-colors hover:text-foreground" />
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          {fullBleed ? (
+            children
+          ) : (
+            <>
+              <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
+                <SidebarTrigger className="text-muted-foreground transition-colors hover:text-foreground" />
+              </header>
+              <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+            </>
+          )}
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

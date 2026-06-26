@@ -21,7 +21,7 @@ export function EditorShell({
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
+    <div className="flex h-full min-h-0 w-full flex-1 bg-background text-foreground">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface md:flex">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <Link href="/editor" className="flex items-center gap-2 text-sm font-semibold">
