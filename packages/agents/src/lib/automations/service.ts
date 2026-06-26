@@ -123,6 +123,46 @@ export async function getInboxView(
   return { inbox, messages };
 }
 
+export interface WorkspaceInboxEntry {
+  automation: Pick<AutomationRow, "id" | "name" | "enabled" | "trigger">;
+  inbox: InboxView["inbox"];
+  messages: InboxView["messages"];
+}
+
+/**
+ * Workspace-wide trigger inbox: every automation's live inbox + recent messages
+ * in ONE call (the web /inbox page's source). Resolves the workspace + SDK once,
+ * then fans out the per-inbox reads in parallel server-side, so the web makes a
+ * single round-trip instead of N. Per-inbox failures degrade to an empty entry.
+ */
+export async function getWorkspaceInbox(
+  userId: string,
+): Promise<{ entries: WorkspaceInboxEntry[] }> {
+  const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const automations = await store.listAutomations(workspaceId);
+  const withInbox = automations.filter((a): a is AutomationRow & { trigger_inbox_id: string } =>
+    Boolean(a.trigger_inbox_id),
+  );
+  if (withInbox.length === 0) return { entries: [] };
+
+  const sdk = await getExperimentalSdkForUser(userId);
+  const entries = await Promise.all(
+    withInbox.map(async (a): Promise<WorkspaceInboxEntry> => {
+      const automation = { id: a.id, name: a.name, enabled: a.enabled, trigger: a.trigger };
+      try {
+        const [inbox, messages] = await Promise.all([
+          getInbox(sdk, a.trigger_inbox_id),
+          listInboxMessages(sdk, a.trigger_inbox_id, 20),
+        ]);
+        return { automation, inbox, messages };
+      } catch {
+        return { automation, inbox: null, messages: [] };
+      }
+    }),
+  );
+  return { entries };
+}
+
 export interface RunResult {
   runId: string;
   triggerId: string;

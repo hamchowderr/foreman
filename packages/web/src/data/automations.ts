@@ -2,7 +2,13 @@
 
 import { auth } from "@/lib/auth";
 import { createClient } from "@/lib/server";
-import type { Automation, AutomationDetail, InboxState, RunResult } from "./automations-types";
+import type {
+  Automation,
+  AutomationDetail,
+  InboxState,
+  RunResult,
+  WorkspaceInbox,
+} from "./automations-types";
 
 /**
  * Server actions for durable automations. Thin wrappers over the agent server's
@@ -55,6 +61,11 @@ export async function getAutomation(id: string): Promise<AutomationDetail> {
 
 export async function getInboxState(id: string): Promise<InboxState> {
   return agent(`/automations/${id}/inbox`);
+}
+
+/** Workspace-wide aggregate inbox — every automation's inbox in one round-trip. */
+export async function getWorkspaceInbox(): Promise<WorkspaceInbox> {
+  return agent("/automations/inbox");
 }
 
 export async function setAutomationEnabled(id: string, enabled: boolean): Promise<void> {

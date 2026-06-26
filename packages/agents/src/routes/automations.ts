@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import {
   getInboxView,
+  getWorkspaceInbox,
   inspectForUser,
   listForUser,
   provisionAutomation,
@@ -33,6 +34,13 @@ automations.use("/*", authMiddleware);
 automations.get("/", async (c) => {
   const userId = c.get("userId");
   return c.json({ automations: await listForUser(userId) });
+});
+
+// Workspace-wide aggregate inbox (the /inbox page). MUST be registered before
+// "/:id" so it isn't captured as an automation id.
+automations.get("/inbox", async (c) => {
+  const userId = c.get("userId");
+  return c.json(await getWorkspaceInbox(userId));
 });
 
 automations.post("/", async (c) => {

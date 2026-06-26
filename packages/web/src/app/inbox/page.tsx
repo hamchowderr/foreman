@@ -9,9 +9,11 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { getAutomations, getInboxState } from "@/data/automations";
-import type { Automation, InboxMessage, InboxState } from "@/data/automations-types";
+import { getWorkspaceInbox } from "@/data/automations";
+import type { InboxMessage, WorkspaceInboxEntry } from "@/data/automations-types";
 import { createClient } from "@/lib/server";
+
+type EntryAutomation = WorkspaceInboxEntry["automation"];
 
 export default async function InboxPage() {
   const supabase = await createClient();
@@ -20,32 +22,18 @@ export default async function InboxPage() {
   } = await supabase.auth.getSession();
   if (!session) redirect("/auth/login");
 
-  let automations: Automation[] = [];
+  let entries: WorkspaceInboxEntry[] = [];
   let loadErr: string | null = null;
   try {
-    automations = await getAutomations();
+    ({ entries } = await getWorkspaceInbox());
   } catch (e) {
     loadErr = (e as Error).message;
   }
 
-  // The trigger inbox is per-automation; aggregate them into one view.
-  const withInbox = automations.filter((a) => a.trigger_inbox_id);
-  const states = await Promise.all(
-    withInbox.map(async (automation) => {
-      try {
-        return { automation, state: await getInboxState(automation.id) };
-      } catch {
-        return { automation, state: null as InboxState | null };
-      }
-    }),
-  );
-
-  type Row = { msg: InboxMessage; automation: Automation };
-  const rows: Row[] = states
-    .flatMap(({ automation, state }) => (state?.messages ?? []).map((msg) => ({ msg, automation })))
+  const rows = entries
+    .flatMap((entry) => entry.messages.map((msg) => ({ msg, automation: entry.automation })))
     .sort((a, b) => (a.msg.created_at < b.msg.created_at ? 1 : -1));
-
-  const subscriptions = states.filter((s) => s.state?.inbox);
+  const subscriptions = entries.filter((e) => e.inbox);
 
   return (
     <div className="min-h-svh bg-background">
@@ -61,7 +49,7 @@ export default async function InboxPage() {
           <Alert variant="destructive">
             <AlertDescription>Couldn&apos;t load the inbox: {loadErr}</AlertDescription>
           </Alert>
-        ) : withInbox.length === 0 ? (
+        ) : entries.length === 0 ? (
           <InboxEmpty />
         ) : (
           <div className="space-y-8">
@@ -70,8 +58,8 @@ export default async function InboxPage() {
                 Listening ({subscriptions.length})
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {subscriptions.map(({ automation, state }) => (
-                  <SubscriptionCard key={automation.id} automation={automation} state={state} />
+                {subscriptions.map((entry) => (
+                  <SubscriptionCard key={entry.automation.id} entry={entry} />
                 ))}
               </div>
             </section>
@@ -99,26 +87,20 @@ export default async function InboxPage() {
   );
 }
 
-function triggerLabel(automation: Automation): string {
+function triggerLabel(automation: EntryAutomation): string {
   const t = automation.trigger;
   if (t?.app && t?.action) return `${t.app} · ${t.action}`;
   if (t?.app) return t.app;
   return "trigger";
 }
 
-function SubscriptionCard({
-  automation,
-  state,
-}: {
-  automation: Automation;
-  state: InboxState | null;
-}) {
-  const inbox = state?.inbox;
+function SubscriptionCard({ entry }: { entry: WorkspaceInboxEntry }) {
+  const { automation, inbox } = entry;
   const paused = inbox?.paused_reason;
   return (
     <Link
       href={`/automations?selected=${automation.id}`}
-      className="block rounded-xl border border-border bg-surface/40 p-4 transition-colors hover:border-border hover:bg-surface/70"
+      className="block rounded-xl border border-border bg-surface/40 p-4 transition-colors hover:bg-surface/70"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-sm font-medium text-foreground">{automation.name}</span>
@@ -138,7 +120,7 @@ function SubscriptionCard({
   );
 }
 
-function MessageRow({ msg, automation }: { msg: InboxMessage; automation: Automation }) {
+function MessageRow({ msg, automation }: { msg: InboxMessage; automation: EntryAutomation }) {
   const dup = msg.message_attributes?.possible_duplicate_data;
   const err = msg.message_attributes?.error_message;
   return (

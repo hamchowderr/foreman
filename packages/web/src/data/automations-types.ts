@@ -72,6 +72,22 @@ export interface InboxState {
   messages: InboxMessage[];
 }
 
+/** One automation's inbox within the workspace-wide aggregate (`/automations/inbox`). */
+export interface WorkspaceInboxEntry {
+  automation: {
+    id: string;
+    name: string;
+    enabled: boolean;
+    trigger: AutomationTriggerSpec | null;
+  };
+  inbox: InboxState["inbox"];
+  messages: InboxMessage[];
+}
+
+export interface WorkspaceInbox {
+  entries: WorkspaceInboxEntry[];
+}
+
 export interface RunResult {
   runId: string;
   triggerId: string;
