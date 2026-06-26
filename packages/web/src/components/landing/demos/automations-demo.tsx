@@ -22,10 +22,31 @@ const STATIC_RUNS: Array<{
   },
   {
     id: "r3",
+    label: "New GitHub issue → Linear + #bugs",
+    when: "6m ago",
+    status: "finished",
+    detail: '{ "ticket": "ENG-412", "posted": true }',
+  },
+  {
+    id: "r4",
     label: "Failed charge → dunning email",
     when: "11m ago",
     status: "failed",
     detail: 'Step "charge" exhausted all retries',
+  },
+  {
+    id: "r5",
+    label: "Typeform lead → Airtable + welcome",
+    when: "18m ago",
+    status: "finished",
+    detail: '{ "record": "recA9f2", "email": "sent" }',
+  },
+  {
+    id: "r6",
+    label: "Calendar invite → prep brief in Notion",
+    when: "32m ago",
+    status: "finished",
+    detail: '{ "page": "Prep · Q3 review" }',
   },
 ];
 
@@ -83,10 +104,10 @@ export function AutomationsDemo() {
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-semibold">New subscriber → CRM + welcome</span>
+          <span className="text-xs font-semibold">Automations</span>
         </div>
         <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-          active
+          6 active
         </span>
       </div>
 

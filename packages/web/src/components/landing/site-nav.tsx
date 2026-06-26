@@ -10,6 +10,7 @@ import { createClient } from "@/lib/client";
 export function SiteNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     createClient()
@@ -19,8 +20,25 @@ export function SiteNav() {
       });
   }, []);
 
+  // Transparent over the hero; fade in a blurred bar once the page scrolls.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Keep a readable backdrop whenever the mobile menu is open, regardless of scroll.
+  const solid = scrolled || mobileOpen;
+
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+    <nav
+      className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+        solid
+          ? "border-border/60 bg-background/80 backdrop-blur-xl"
+          : "border-transparent bg-transparent"
+      }`}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
           {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
