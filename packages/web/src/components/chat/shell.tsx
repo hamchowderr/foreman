@@ -11,11 +11,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { initialArtifactData, useArtifact, useArtifactSelector } from "@/hooks/use-artifact";
 import { usePreviewPanel, usePreviewPanelSelector } from "@/hooks/use-preview-panel";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { DataStreamHandler } from "./data-stream-handler";
@@ -72,87 +72,104 @@ export function ChatShell() {
   return (
     <>
       <div className="flex h-dvh w-full flex-row overflow-hidden">
-        <div
-          className={cn(
-            "flex min-w-0 flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isArtifactVisible || isPreviewOpen ? "w-1/2" : "w-full",
-          )}
-        >
-          <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background shadow-sm md:m-3">
-            <ChatHeader
-              chatId={chatId}
-              isReadonly={isReadonly}
-              selectedVisibilityType={visibilityType}
-              title={chatTitle}
-            />
-
-            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-              <Messages
-                addToolApprovalResponse={addToolApprovalResponse}
+        <ResizablePanelGroup className="flex-1" orientation="horizontal">
+          <ResizablePanel
+            className="flex min-w-0 flex-col bg-sidebar"
+            defaultSize={50}
+            id="chat-panel"
+            minSize={30}
+          >
+            <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background shadow-sm md:m-3">
+              <ChatHeader
                 chatId={chatId}
-                isArtifactVisible={isArtifactVisible}
-                isLoading={isLoading}
                 isReadonly={isReadonly}
-                messages={messages}
-                onEditMessage={(msg) => {
-                  const text = msg.parts
-                    ?.filter((p) => p.type === "text")
-                    .map((p) => p.text)
-                    .join("");
-                  setInput(text ?? "");
-                  setEditingMessage(msg);
-                }}
-                regenerate={regenerate}
-                selectedModelId={currentModelId}
-                setMessages={setMessages}
-                status={status}
-                votes={votes}
+                selectedVisibilityType={visibilityType}
+                title={chatTitle}
               />
 
-              <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
-                {!isReadonly && (
-                  <MultimodalInput
-                    attachments={attachments}
-                    chatId={chatId}
-                    editingMessage={editingMessage}
-                    input={input}
-                    isLoading={isLoading}
-                    messages={messages}
-                    onCancelEdit={() => {
-                      setEditingMessage(null);
-                      setInput("");
-                    }}
-                    onModelChange={setCurrentModelId}
-                    selectedModelId={currentModelId}
-                    selectedVisibilityType={visibilityType}
-                    sendMessage={
-                      editingMessage
-                        ? async () => {
-                            const msg = editingMessage;
-                            setEditingMessage(null);
-                            await submitEditedMessage({
-                              message: msg,
-                              text: input,
-                              setMessages,
-                              regenerate,
-                            });
-                            setInput("");
-                          }
-                        : sendMessage
-                    }
-                    setAttachments={setAttachments}
-                    setInput={setInput}
-                    setMessages={setMessages}
-                    status={status}
-                    stop={stop}
-                  />
-                )}
+              <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                <Messages
+                  addToolApprovalResponse={addToolApprovalResponse}
+                  chatId={chatId}
+                  isArtifactVisible={isArtifactVisible}
+                  isLoading={isLoading}
+                  isReadonly={isReadonly}
+                  messages={messages}
+                  onEditMessage={(msg) => {
+                    const text = msg.parts
+                      ?.filter((p) => p.type === "text")
+                      .map((p) => p.text)
+                      .join("");
+                    setInput(text ?? "");
+                    setEditingMessage(msg);
+                  }}
+                  regenerate={regenerate}
+                  selectedModelId={currentModelId}
+                  setMessages={setMessages}
+                  status={status}
+                  votes={votes}
+                />
+
+                <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+                  {!isReadonly && (
+                    <MultimodalInput
+                      attachments={attachments}
+                      chatId={chatId}
+                      editingMessage={editingMessage}
+                      input={input}
+                      isLoading={isLoading}
+                      messages={messages}
+                      onCancelEdit={() => {
+                        setEditingMessage(null);
+                        setInput("");
+                      }}
+                      onModelChange={setCurrentModelId}
+                      selectedModelId={currentModelId}
+                      selectedVisibilityType={visibilityType}
+                      sendMessage={
+                        editingMessage
+                          ? async () => {
+                              const msg = editingMessage;
+                              setEditingMessage(null);
+                              await submitEditedMessage({
+                                message: msg,
+                                text: input,
+                                setMessages,
+                                regenerate,
+                              });
+                              setInput("");
+                            }
+                          : sendMessage
+                      }
+                      setAttachments={setAttachments}
+                      setInput={setInput}
+                      setMessages={setMessages}
+                      status={status}
+                      stop={stop}
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </ResizablePanel>
 
-        <PreviewPanel />
+          {isPreviewOpen && (
+            <>
+              <ResizableHandle
+                className="bg-transparent hover:bg-foreground/10 [&>div]:bg-foreground/15"
+                withHandle
+              />
+              <ResizablePanel
+                className="flex min-w-0 flex-col"
+                defaultSize={50}
+                id="preview-panel"
+                minSize={25}
+              >
+                <PreviewPanel />
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
 
         <Artifact
           addToolApprovalResponse={addToolApprovalResponse}
