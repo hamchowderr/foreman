@@ -1,13 +1,19 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { Bot, User } from "lucide-react";
+import { Bot, ExternalLink, User } from "lucide-react";
 import { useEffect } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
-import { WebPreview, WebPreviewBody, WebPreviewNavigation } from "../ai-elements/web-preview";
+import {
+  WebPreview,
+  WebPreviewBody,
+  WebPreviewNavigation,
+  WebPreviewNavigationButton,
+  WebPreviewUrl,
+} from "../ai-elements/web-preview";
 import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
@@ -316,7 +322,15 @@ const PurePreviewMessage = ({
           <div className="w-full max-w-full" key={toolCallId}>
             <div className="mb-2 text-sm font-medium text-foreground">{out.title ?? "Preview"}</div>
             <WebPreview className="h-[480px]" defaultUrl={out.url}>
-              <WebPreviewNavigation />
+              <WebPreviewNavigation>
+                <WebPreviewUrl readOnly value={out.url} />
+                <WebPreviewNavigationButton
+                  tooltip="Open in new tab"
+                  onClick={() => window.open(out.url, "_blank", "noopener,noreferrer")}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </WebPreviewNavigationButton>
+              </WebPreviewNavigation>
               <WebPreviewBody src={out.url} title={out.title} />
             </WebPreview>
           </div>

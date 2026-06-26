@@ -1,137 +1,233 @@
 "use client";
 
-import { ExternalLinkIcon, RotateCwIcon } from "lucide-react";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { ChevronDownIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-/**
- * Web Preview (Vercel AI Elements style) — a faux browser frame around an iframe,
- * used to embed a live URL (e.g. a server the agent spawned in the sandbox) inline
- * in chat. Compound component: WebPreview > WebPreviewNavigation > WebPreviewUrl,
- * then WebPreviewBody.
- */
-
-type WebPreviewContextValue = {
+export type WebPreviewContextValue = {
   url: string;
   setUrl: (url: string) => void;
-  /** Bumped to force the iframe to reload. */
-  reloadKey: number;
-  reload: () => void;
+  consoleOpen: boolean;
+  setConsoleOpen: (open: boolean) => void;
 };
 
 const WebPreviewContext = createContext<WebPreviewContextValue | null>(null);
 
-function useWebPreview() {
-  const ctx = useContext(WebPreviewContext);
-  if (!ctx) throw new Error("WebPreview components must be used within <WebPreview>");
-  return ctx;
-}
+const useWebPreview = () => {
+  const context = useContext(WebPreviewContext);
+  if (!context) {
+    throw new Error("WebPreview components must be used within a WebPreview");
+  }
+  return context;
+};
 
-export function WebPreview({
-  defaultUrl = "",
+export type WebPreviewProps = ComponentProps<"div"> & {
+  defaultUrl?: string;
+  onUrlChange?: (url: string) => void;
+};
+
+export const WebPreview = ({
   className,
   children,
-}: {
-  defaultUrl?: string;
-  className?: string;
-  children: ReactNode;
-}) {
+  defaultUrl = "",
+  onUrlChange,
+  ...props
+}: WebPreviewProps) => {
   const [url, setUrl] = useState(defaultUrl);
-  const [reloadKey, setReloadKey] = useState(0);
-  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
-  const value = useMemo(() => ({ url, setUrl, reloadKey, reload }), [url, reloadKey, reload]);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+
+  const handleUrlChange = (newUrl: string) => {
+    setUrl(newUrl);
+    onUrlChange?.(newUrl);
+  };
+
+  const contextValue: WebPreviewContextValue = {
+    url,
+    setUrl: handleUrlChange,
+    consoleOpen,
+    setConsoleOpen,
+  };
 
   return (
-    <WebPreviewContext.Provider value={value}>
+    <WebPreviewContext.Provider value={contextValue}>
       <div
-        className={cn(
-          "flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-border bg-card",
-          className,
-        )}
+        className={cn("flex size-full flex-col rounded-lg border bg-card", className)}
+        {...props}
       >
         {children}
       </div>
     </WebPreviewContext.Provider>
   );
-}
+};
 
-export function WebPreviewNavigation({ className }: { className?: string }) {
-  const { url, reload } = useWebPreview();
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-1.5 border-b border-border bg-surface/60 px-2 py-1.5",
-        className,
-      )}
-    >
-      <span className="flex gap-1.5 pl-1 pr-1">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-      </span>
-      <WebPreviewUrl />
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="size-7 shrink-0"
-        onClick={reload}
-        title="Reload"
-      >
-        <RotateCwIcon className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="size-7 shrink-0"
-        asChild
-        title="Open in new tab"
-      >
-        <a href={url || undefined} target="_blank" rel="noreferrer">
-          <ExternalLinkIcon className="size-3.5" />
-        </a>
-      </Button>
-    </div>
-  );
-}
+export type WebPreviewNavigationProps = ComponentProps<"div">;
 
-export function WebPreviewUrl({ className }: { className?: string }) {
-  const { url } = useWebPreview();
-  return (
-    <span
-      className={cn(
-        "min-w-0 flex-1 truncate rounded-md bg-background px-3 py-1 font-mono text-xs text-muted-foreground",
-        className,
-      )}
-      title={url}
-    >
-      {url || "about:blank"}
-    </span>
-  );
-}
-
-export function WebPreviewBody({
-  src,
-  title = "Preview",
+export const WebPreviewNavigation = ({
   className,
-}: {
-  src?: string;
-  title?: string;
-  className?: string;
-}) {
-  const { url, reloadKey } = useWebPreview();
-  const resolved = src ?? url;
+  children,
+  ...props
+}: WebPreviewNavigationProps) => (
+  <div className={cn("flex items-center gap-1 border-b p-2", className)} {...props}>
+    {children}
+  </div>
+);
+
+export type WebPreviewNavigationButtonProps = ComponentProps<typeof Button> & {
+  tooltip?: string;
+};
+
+export const WebPreviewNavigationButton = ({
+  onClick,
+  disabled,
+  tooltip,
+  children,
+  ...props
+}: WebPreviewNavigationButtonProps) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          className="h-8 w-8 p-0 hover:text-foreground"
+          disabled={disabled}
+          onClick={onClick}
+          size="sm"
+          variant="ghost"
+          {...props}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
+
+export type WebPreviewUrlProps = ComponentProps<typeof Input>;
+
+export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPreviewUrlProps) => {
+  const { url, setUrl } = useWebPreview();
+  const [inputValue, setInputValue] = useState(url);
+
+  // Sync input value with context URL when it changes externally
+  useEffect(() => {
+    setInputValue(url);
+  }, [url]);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(event.target.value);
+    onChange?.(event);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      const target = event.target as HTMLInputElement;
+      setUrl(target.value);
+    }
+    onKeyDown?.(event);
+  };
+
   return (
-    <iframe
-      key={reloadKey}
-      src={resolved || undefined}
-      title={title}
-      className={cn("h-full min-h-[320px] w-full border-0 bg-white", className)}
-      // Sandbox the embedded preview: allow scripts + same-origin so a built app
-      // runs, but block top-navigation/popups. (Tighten further before prod.)
-      sandbox="allow-scripts allow-same-origin allow-forms"
+    <Input
+      className="h-8 flex-1 text-sm"
+      onChange={onChange ?? handleChange}
+      onKeyDown={handleKeyDown}
+      placeholder="Enter URL..."
+      value={value ?? inputValue}
+      {...props}
     />
   );
-}
+};
+
+export type WebPreviewBodyProps = ComponentProps<"iframe"> & {
+  loading?: ReactNode;
+};
+
+export const WebPreviewBody = ({ className, loading, src, ...props }: WebPreviewBodyProps) => {
+  const { url } = useWebPreview();
+
+  return (
+    <div className="flex-1">
+      <iframe
+        className={cn("size-full", className)}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        src={(src ?? url) || undefined}
+        title="Preview"
+        {...props}
+      />
+      {loading}
+    </div>
+  );
+};
+
+export type WebPreviewConsoleProps = ComponentProps<"div"> & {
+  logs?: Array<{
+    level: "log" | "warn" | "error";
+    message: string;
+    timestamp: Date;
+  }>;
+};
+
+export const WebPreviewConsole = ({
+  className,
+  logs = [],
+  children,
+  ...props
+}: WebPreviewConsoleProps) => {
+  const { consoleOpen, setConsoleOpen } = useWebPreview();
+
+  return (
+    <Collapsible
+      className={cn("border-t bg-muted/50 font-mono text-sm", className)}
+      onOpenChange={setConsoleOpen}
+      open={consoleOpen}
+      {...props}
+    >
+      <CollapsibleTrigger asChild>
+        <Button
+          className="flex w-full items-center justify-between p-4 text-left font-medium hover:bg-muted/50"
+          variant="ghost"
+        >
+          Console
+          <ChevronDownIcon
+            className={cn("h-4 w-4 transition-transform duration-200", consoleOpen && "rotate-180")}
+          />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent
+        className={cn(
+          "px-4 pb-4",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+        )}
+      >
+        <div className="max-h-48 space-y-1 overflow-y-auto">
+          {logs.length === 0 ? (
+            <p className="text-muted-foreground">No console output</p>
+          ) : (
+            logs.map((log, index) => (
+              <div
+                className={cn(
+                  "text-xs",
+                  log.level === "error" && "text-destructive",
+                  log.level === "warn" && "text-yellow-600",
+                  log.level === "log" && "text-foreground",
+                )}
+                key={`${log.timestamp.getTime()}-${index}`}
+              >
+                <span className="text-muted-foreground">{log.timestamp.toLocaleTimeString()}</span>{" "}
+                {log.message}
+              </div>
+            ))
+          )}
+          {children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
