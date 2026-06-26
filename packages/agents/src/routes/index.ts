@@ -14,6 +14,7 @@ import proposals from "./proposals";
 import storedAgents from "./stored-agents";
 import voice from "./voice";
 import webhooks from "./webhooks";
+import workspaces from "./workspaces";
 import zapierConnect, { handleOAuthCallback } from "./zapier-connect";
 
 /**
@@ -48,6 +49,7 @@ app.route("/guardrails", guardrails);
 app.route("/voice", voice);
 app.route("/api-keys", apiKeys);
 app.route("/channel-links", channelLinks);
+app.route("/workspaces", workspaces);
 app.post("/telegram/webhook", handleTelegramWebhook);
 app.post("/slack/webhook", handleSlackWebhook);
 app.get("/slack/oauth", handleSlackOAuth);

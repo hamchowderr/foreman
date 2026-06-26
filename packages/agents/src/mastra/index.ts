@@ -115,6 +115,7 @@ export function getMastra(): Mastra {
     "/voice",
     "/api-keys",
     "/channel-links",
+    "/workspaces",
     "/telegram",
     "/slack",
     "/discord",
