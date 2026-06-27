@@ -11,12 +11,12 @@ function PureChatHeader({
   chatId,
   title,
   selectedVisibilityType,
-  isReadonly,
+  isOwner,
 }: {
   chatId: string;
   title: string | null;
   selectedVisibilityType: VisibilityType;
-  isReadonly: boolean;
+  isOwner: boolean;
 }) {
   const { state, toggleSidebar, isMobile } = useSidebar();
 
@@ -34,7 +34,7 @@ function PureChatHeader({
         {title || "New chat"}
       </h1>
 
-      {!isReadonly && (
+      {isOwner && (
         <>
           <ShareButton chatId={chatId} />
           <VisibilitySelector chatId={chatId} selectedVisibilityType={selectedVisibilityType} />
@@ -49,6 +49,6 @@ export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
     prevProps.chatId === nextProps.chatId &&
     prevProps.title === nextProps.title &&
     prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
-    prevProps.isReadonly === nextProps.isReadonly
+    prevProps.isOwner === nextProps.isOwner
   );
 });

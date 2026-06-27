@@ -45,6 +45,7 @@ type ActiveChatContextValue = {
   visibilityType: VisibilityType;
   chatTitle: string | null;
   isReadonly: boolean;
+  isOwner: boolean;
   isLoading: boolean;
   votes: Vote[] | undefined;
   currentModelId: string;
@@ -385,6 +386,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   });
 
   const isReadonly = isNewChat ? false : (chatData?.isReadonly ?? false);
+  // Owner-only controls (visibility, public share, rename/delete). A teammate may
+  // write to a shared chat (foreman-whkr) but not manage it.
+  const isOwner = isNewChat ? true : (chatData?.isOwner ?? true);
 
   const { data: votes } = useSWR<Vote[]>(
     !isReadonly && messages.length >= 2
@@ -409,6 +413,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       visibilityType: visibility,
       chatTitle,
       isReadonly,
+      isOwner,
       isLoading: !isNewChat && isLoading,
       votes,
       currentModelId,
@@ -429,6 +434,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       visibility,
       chatTitle,
       isReadonly,
+      isOwner,
       isNewChat,
       isLoading,
       votes,

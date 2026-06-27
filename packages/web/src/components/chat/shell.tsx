@@ -41,6 +41,7 @@ export function ChatShell() {
     visibilityType,
     chatTitle,
     isReadonly,
+    isOwner,
     isLoading,
     votes,
     currentModelId,
@@ -87,7 +88,7 @@ export function ChatShell() {
             <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background shadow-sm md:m-3">
               <ChatHeader
                 chatId={chatId}
-                isReadonly={isReadonly}
+                isOwner={isOwner}
                 selectedVisibilityType={visibilityType}
                 title={chatTitle}
               />
@@ -152,11 +153,6 @@ export function ChatShell() {
                       status={status}
                       stop={stop}
                     />
-                  )}
-                  {isReadonly && (
-                    <p className="mx-auto rounded-full bg-muted px-3 py-1.5 text-muted-foreground text-xs">
-                      Read-only — this chat was shared with you by a teammate.
-                    </p>
                   )}
                 </div>
               </div>
