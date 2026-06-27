@@ -162,8 +162,15 @@ export function WorkspacesManager() {
         </CardContent>
       </Card>
 
-      {active && active.membership_type === "team" && (
+      {active && (active.membership_type === "team" || isAdminRole(active.role)) && (
         <>
+          {active.membership_type === "solo" && isAdminRole(active.role) && (
+            <p className="text-muted-foreground text-sm">
+              Invite a teammate to turn this personal workspace into a shared team workspace — your
+              shared documents and automations become visible to the team. Your private documents
+              stay private.
+            </p>
+          )}
           <MembersSection
             isAdmin={isAdminRole(active.role)}
             onAct={act}
@@ -173,7 +180,9 @@ export function WorkspacesManager() {
           {isAdminRole(active.role) ? (
             <>
               <InvitationsSection onAct={act} pending={pending} workspaceId={active.id} />
-              <ConnectionSection onAct={act} pending={pending} workspaceId={active.id} />
+              {active.membership_type === "team" && (
+                <ConnectionSection onAct={act} pending={pending} workspaceId={active.id} />
+              )}
             </>
           ) : (
             <Button

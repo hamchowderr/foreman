@@ -447,6 +447,16 @@ workspaces.post("/:id/invitations", async (c) => {
     status: "pending",
   });
   if (error) return c.json({ error: `Failed to invite: ${error.message}` }, 500);
+
+  // Inviting a teammate turns a personal (solo) workspace into a shared team one —
+  // so the inviter's existing shared documents/automations become team-visible
+  // (foreman-swfe). Idempotent; only flips solo → team.
+  await supabase
+    .from("workspaces")
+    .update({ membership_type: "team" })
+    .eq("id", id)
+    .eq("membership_type", "solo");
+
   return c.json({ id: invitationId, email, role: inviteRole }, 201);
 });
 
