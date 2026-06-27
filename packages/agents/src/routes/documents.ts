@@ -6,8 +6,19 @@ import {
   getSharedDocument,
   revokeDocumentShare,
 } from "../lib/documents/share";
-import { canAccessDocPath, type DocSpace, docsRoot, spaceOfPath } from "../lib/documents/spaces";
-import { getVersionContent, listVersions, restoreVersion } from "../lib/documents/versions";
+import {
+  canAccessDocPath,
+  type DocSpace,
+  docPath,
+  docsRoot,
+  spaceOfPath,
+} from "../lib/documents/spaces";
+import {
+  getVersionContent,
+  listVersions,
+  recordVersion,
+  restoreVersion,
+} from "../lib/documents/versions";
 import { foremanWorkspace } from "../mastra/agents/workspace";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
@@ -80,6 +91,52 @@ documents.get("/", async (c) => {
     listSpace(fs, "personal", userId),
   ]);
   return c.json({ documents: [...shared, ...personal] });
+});
+
+/** filename/title → a safe document slug (mirrors save_document's slugify). */
+function slugify(title: string): string {
+  const s = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return s || "untitled";
+}
+
+// POST /documents/import { name, content, space? } — create a document from an
+// uploaded text/markdown file (foreman-iznn follow-up). The client reads the file
+// as text and posts its content; the server writes it as documents/<slug>.md in
+// the chosen space and snapshots a first version. The slug is derived server-side
+// from the filename, so the client never constructs a path.
+documents.post("/import", async (c) => {
+  const userId = c.get("userId");
+  const body = (await c.req.json().catch(() => ({}))) as {
+    name?: unknown;
+    content?: unknown;
+    space?: unknown;
+  };
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const content = typeof body.content === "string" ? body.content : "";
+  if (!name) return c.json({ error: "name is required" }, 400);
+  if (!content) return c.json({ error: "content is required" }, 400);
+  // Guard against oversized payloads (text docs only; ~1MB is generous).
+  if (content.length > 1_000_000) return c.json({ error: "file too large (max ~1MB)" }, 413);
+
+  const space: DocSpace = body.space === "personal" ? "personal" : "shared";
+  const fs = await resolveFs(c.get("workspaceId"));
+  if (!fs) return c.json({ error: "workspace filesystem unavailable" }, 500);
+
+  const title = name.replace(/\.(md|markdown|txt|text)$/i, "").trim() || "Imported document";
+  const path = docPath(space, userId, slugify(title));
+  await fs.writeFile(path, content);
+  // Best-effort version snapshot — a hiccup must not fail the import (live file
+  // is already written, same posture as save_document).
+  try {
+    await recordVersion(fs, path, { title, content });
+  } catch (err) {
+    console.error("import: recordVersion failed (doc still saved)", err);
+  }
+  return c.json({ path, title, space }, 201);
 });
 
 // GET /documents/content?path=… — read one document's content. The path must be
