@@ -65,3 +65,7 @@ next-env.d.ts
 
 # Zapier SDK/CLI update watcher state (per-machine throttle + notify watermark)
 scripts/.zapier-sdk-watch.json
+preview-auth.json
+
+# Local dev-server logs (packages/agents/server-dev.log, packages/web/web-dev.log)
+*-dev.log
