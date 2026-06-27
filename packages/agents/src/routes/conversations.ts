@@ -3,13 +3,22 @@ import { Hono } from "hono";
 import { getSupabase } from "@/lib/db";
 import { validateParam } from "@/lib/validation";
 import { getMastra } from "@/mastra";
+import {
+  createShare,
+  getConversationShareToken,
+  getSharedConversation,
+  revokeShare,
+} from "../lib/conversations/share";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
 const conversations = new Hono<AppEnv>();
 
-// All routes require auth
-conversations.use("/*", authMiddleware);
+// Auth everything EXCEPT the public share read (`/conversations/public/:token`),
+// where the token itself is the capability — same model as /documents/public.
+conversations.use("*", (c, next) =>
+  c.req.path.includes("/conversations/public/") ? next() : authMiddleware(c, next),
+);
 
 // Mastra's generateTitle sometimes wraps the title in markdown (`# ...`,
 // `**...**`), prefixes it with a "Title:" label, or returns a whole sentence.
@@ -371,6 +380,82 @@ conversations.patch("/:id", async (c) => {
     ...(update.title !== undefined ? { title: update.title } : {}),
     ...(typeof body.archived === "boolean" ? { archived: body.archived } : {}),
     ...(update.visibility !== undefined ? { visibility: update.visibility } : {}),
+  });
+});
+
+// GET /:id/share — the chat's existing public link, or { token: null } if not
+// shared. Owner-only (createShare/getConversationShareToken gate on user_id).
+conversations.get("/:id/share", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) return c.json({ error: "Invalid conversation id" }, 400);
+  const existing = await getConversationShareToken(userId, id);
+  if (!existing) return c.json({ token: null });
+  return c.json({
+    token: existing.token,
+    url: `/c/${existing.token}`,
+    expiresAt: existing.expiresAt,
+  });
+});
+
+// POST /:id/share — mint a public share token for a chat the caller owns.
+conversations.post("/:id/share", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) return c.json({ error: "Invalid conversation id" }, 400);
+
+  const body = (await c.req.json().catch(() => ({}))) as { expiresInDays?: unknown };
+  let expiresInDays: number | undefined;
+  if (body.expiresInDays !== undefined) {
+    const n = Number(body.expiresInDays);
+    if (!Number.isFinite(n) || n <= 0 || n > 3650) {
+      return c.json({ error: "expiresInDays must be a positive number of days (<= 3650)" }, 400);
+    }
+    expiresInDays = n;
+  }
+
+  const share = await createShare(userId, id, { expiresInDays });
+  if (!share) return c.json({ error: "Not found" }, 404);
+  return c.json({ token: share.token, url: `/c/${share.token}`, expiresAt: share.expiresAt }, 201);
+});
+
+// DELETE /shares/:shareToken — revoke a share (owner-only).
+conversations.delete("/shares/:shareToken", async (c) => {
+  const userId = c.get("userId");
+  const token = validateParam(c.req.param("shareToken"), "shareToken");
+  if (!token) return c.json({ error: "Invalid share token" }, 400);
+  const revoked = await revokeShare(userId, token);
+  if (!revoked) return c.json({ error: "Not found" }, 404);
+  return c.json({ revoked: true });
+});
+
+// GET /public/:shareToken — public, logged-out chat read. NO auth: the token is
+// the capability (the auth middleware above exempts this path). The share lib
+// validates the token + resolves the thread; messages are loaded here from Mastra
+// Memory by thread id (recall is not resourceId-gated, so the anonymous read works).
+conversations.get("/public/:shareToken", async (c) => {
+  const token = validateParam(c.req.param("shareToken"), "shareToken");
+  if (!token) return c.json({ error: "Invalid share token" }, 400);
+  const ref = await getSharedConversation(token);
+  if (!ref) return c.json({ error: "Not found" }, 404);
+
+  const memory = await getMastra().getAgent("foreman").getMemory();
+  let messages: unknown[] = [];
+  let title = ref.title;
+  if (ref.threadId && memory) {
+    const recalled = await memory.recall({ threadId: ref.threadId, perPage: false });
+    messages = toAISdkV5Messages(recalled.messages);
+    if (!title) {
+      try {
+        const thread = await memory.getThreadById({ threadId: ref.threadId });
+        title = cleanTitle(thread?.title);
+      } catch {}
+    }
+  }
+
+  return c.json({
+    conversation: { id: ref.conversationId, title, created_at: ref.createdAt },
+    messages,
   });
 });
 

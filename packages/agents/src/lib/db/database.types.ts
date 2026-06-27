@@ -1061,6 +1061,51 @@ export type Database = {
           },
         ];
       };
+      conversation_share: {
+        Row: {
+          conversation_id: string;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          share_token: string;
+          user_id: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          conversation_id: string;
+          created_at: string;
+          expires_at?: string | null;
+          id: string;
+          share_token: string;
+          user_id: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          conversation_id?: string;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          share_token?: string;
+          user_id?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "conversation_share_conversation_id_fk";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversation";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "conversation_share_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       dashboard_share: {
         Row: {
           artifact_id: string;
