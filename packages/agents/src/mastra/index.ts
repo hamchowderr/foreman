@@ -16,7 +16,7 @@ import { PinoLogger } from "@mastra/loggers";
 import { ConsoleExporter, DefaultExporter, Observability } from "@mastra/observability";
 import { PostgresStore } from "@mastra/pg";
 import { createUIMessageStreamResponse, stepCountIs } from "ai";
-import { resolveActiveWorkspace } from "../lib/identity";
+import { resolveActiveWorkspace, resolveFromRequest } from "../lib/identity";
 import { validateAgentCapabilities } from "../lib/providers";
 import { requestUserContext } from "../lib/request-user-context";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
@@ -255,6 +255,14 @@ export function getMastra(): Mastra {
               const agent = mastra.getAgent(agentId) as Agent;
               if (!agent) return c.json({ error: "Agent not found" }, 404);
 
+              // Derive the TRUSTED user identity from the request (Bearer token /
+              // API key) instead of trusting body.resourceId, which the client
+              // supplies and could spoof to act as another user (foreman-tss9). All
+              // HTTP callers of /chat authenticate; channels invoke the agent
+              // in-process, not via this route. body.resourceId is now ignored.
+              const identity = await resolveFromRequest(c.req.raw);
+              if (!identity) return c.json({ error: "Unauthorized" }, 401);
+
               if (body.approveRunId) {
                 const result = body.approved
                   ? await agent.approveToolCall({ runId: body.approveRunId })
@@ -313,7 +321,8 @@ export function getMastra(): Mastra {
                     ]
                   : text;
 
-              const rid = body.resourceId || "";
+              // Trusted: comes from the validated token/key, not the request body.
+              const rid = identity.userId;
               const incomingTid = body.threadId || body.id;
 
               console.log(
