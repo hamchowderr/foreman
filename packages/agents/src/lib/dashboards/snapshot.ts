@@ -140,6 +140,41 @@ export async function getLatestSnapshot(
   return data ? rowToSnapshot(data) : null;
 }
 
+export interface SnapshotApp {
+  appKey: string;
+  refreshedAt: string;
+  rowCount: number;
+}
+
+/**
+ * The apps that have snapshot data in this workspace, newest-refreshed first
+ * (one entry per app, its latest refresh). Used to pick a sensible default app
+ * for the Apps page instead of hardcoding one, and to power an app switcher.
+ */
+export async function listSnapshotApps(workspaceId: string | undefined): Promise<SnapshotApp[]> {
+  if (!workspaceId) return [];
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("app_data_snapshot")
+    .select("app_key, refreshed_at, row_count")
+    .eq("workspace_id", workspaceId)
+    .order("refreshed_at", { ascending: false })
+    .limit(500);
+  // Rows are newest-first; first occurrence of each app_key is its latest refresh,
+  // and the resulting order is by each app's most-recent refresh (newest first).
+  const seen = new Map<string, SnapshotApp>();
+  for (const r of data ?? []) {
+    if (!seen.has(r.app_key)) {
+      seen.set(r.app_key, {
+        appKey: r.app_key,
+        refreshedAt: r.refreshed_at,
+        rowCount: r.row_count,
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
 /** A specific snapshot by id, scoped to the workspace. Null if not found. */
 export async function getSnapshotById(
   workspaceId: string | undefined,

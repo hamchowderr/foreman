@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getArtifactWithData } from "@/lib/dashboards/artifact";
 import { createShare, getSharedArtifact, revokeShare } from "@/lib/dashboards/share";
-import { getLatestSnapshot, getSnapshotHistory } from "@/lib/dashboards/snapshot";
+import { getLatestSnapshot, getSnapshotHistory, listSnapshotApps } from "@/lib/dashboards/snapshot";
 import { validateParam } from "@/lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
@@ -33,6 +33,15 @@ const dashboards = new Hono<AppEnv>();
 dashboards.use("/artifacts/*", authMiddleware);
 dashboards.use("/snapshots/*", authMiddleware);
 dashboards.use("/shares/*", authMiddleware);
+dashboards.use("/apps", authMiddleware);
+
+// GET /dashboards/apps — the workspace's apps that have snapshot data, newest
+// first. Lets the Apps page default to a real source instead of a hardcoded one.
+dashboards.get("/apps", async (c) => {
+  const workspaceId = c.get("workspaceId");
+  const apps = await listSnapshotApps(workspaceId);
+  return c.json({ apps });
+});
 
 // GET /dashboards/public/:shareToken — public share page data. NO auth: a valid,
 // unexpired token is the capability. Returns the same shape as the authed
