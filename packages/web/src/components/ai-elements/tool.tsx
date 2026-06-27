@@ -63,7 +63,7 @@ const statusIcons: Record<ToolPart["state"], ReactNode> = {
   "output-error": <XCircleIcon className="size-4 text-red-600" />,
 };
 
-const getStatusBadge = (status: ToolPart["state"]) => (
+export const getStatusBadge = (status: ToolPart["state"]) => (
   <Badge
     className="gap-1 rounded-full px-2 py-0 text-[11px] leading-5 bg-transparent border-0 text-muted-foreground"
     variant="secondary"
