@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FileTextIcon,
   InboxIcon,
   LayoutDashboardIcon,
   type LucideIcon,
@@ -35,6 +36,7 @@ const NAV: Array<{ href: string; label: string; Icon: LucideIcon }> = [
   { href: "/automations", label: "Automations", Icon: ZapIcon },
   { href: "/inbox", label: "Inbox", Icon: InboxIcon },
   { href: "/dashboards", label: "Apps", Icon: LayoutDashboardIcon },
+  { href: "/documents", label: "Documents", Icon: FileTextIcon },
   { href: "/workspaces", label: "Workspaces", Icon: UsersIcon },
 ];
 
