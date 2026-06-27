@@ -53,3 +53,58 @@ export async function updateChatVisibility({
 
   if (!res.ok) throw new Error(`Failed to update visibility: ${res.status}`);
 }
+
+/** Bearer token for the current Supabase session, or throw if logged out. */
+async function requireAgentToken(): Promise<string> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) throw new Error("Unauthorized");
+  return session.access_token;
+}
+
+export interface ChatShareLink {
+  token: string;
+  url: string;
+  expiresAt: string | null;
+}
+
+/** The chat's existing public link, or null if it isn't shared (foreman-mk25). */
+export async function getChatShareLink(chatId: string): Promise<ChatShareLink | null> {
+  const token = await requireAgentToken();
+  const res = await fetch(`${AGENT_SERVER_URL}/conversations/${chatId}/share`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to read share link: ${res.status}`);
+  const data = (await res.json()) as {
+    token: string | null;
+    url?: string;
+    expiresAt?: string | null;
+  };
+  if (!data.token || !data.url) return null;
+  return { token: data.token, url: data.url, expiresAt: data.expiresAt ?? null };
+}
+
+/** Mint a public share link for a chat the caller owns (foreman-mk25). */
+export async function shareChat(chatId: string): Promise<ChatShareLink> {
+  const token = await requireAgentToken();
+  const res = await fetch(`${AGENT_SERVER_URL}/conversations/${chatId}/share`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: "{}",
+  });
+  if (!res.ok) throw new Error(`Failed to create share link: ${res.status}`);
+  return (await res.json()) as ChatShareLink;
+}
+
+/** Revoke a chat's public share link (foreman-mk25). */
+export async function unshareChat(shareToken: string): Promise<void> {
+  const token = await requireAgentToken();
+  const res = await fetch(`${AGENT_SERVER_URL}/conversations/shares/${shareToken}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Failed to revoke share link: ${res.status}`);
+}

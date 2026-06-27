@@ -4,6 +4,7 @@ import { PanelLeftIcon } from "lucide-react";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { ShareButton } from "./share-button";
 import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
 
 function PureChatHeader({
@@ -34,7 +35,10 @@ function PureChatHeader({
       </h1>
 
       {!isReadonly && (
-        <VisibilitySelector chatId={chatId} selectedVisibilityType={selectedVisibilityType} />
+        <>
+          <ShareButton chatId={chatId} />
+          <VisibilitySelector chatId={chatId} selectedVisibilityType={selectedVisibilityType} />
+        </>
       )}
     </header>
   );

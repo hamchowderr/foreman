@@ -46,6 +46,7 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/docs") &&
     !request.nextUrl.pathname.startsWith("/doc/") &&
     !request.nextUrl.pathname.startsWith("/d/") &&
+    !request.nextUrl.pathname.startsWith("/c/") &&
     !request.nextUrl.pathname.startsWith("/compare") &&
     !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth")
