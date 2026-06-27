@@ -63,6 +63,9 @@ conversations.post("/", async (c) => {
   await supabase.from("conversation").insert({
     id,
     user_id: userId,
+    // Stamp the active workspace so the chat can later be shared to teammates
+    // (foreman-28cz); visibility defaults to 'private' in the DB.
+    workspace_id: c.get("workspaceId") ?? null,
     mastra_thread_id: id,
     title: null,
     created_at: now,
@@ -76,22 +79,34 @@ conversations.post("/", async (c) => {
 // otherwise archived conversations are excluded from the default history.
 conversations.get("/", async (c) => {
   const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const supabase = getSupabase();
   const onlyArchived = c.req.query("archived") === "true";
 
-  let query = supabase.from("conversation").select("*").eq("user_id", userId);
+  // The caller's own chats (any visibility) PLUS teammates' workspace-visible
+  // chats in the active workspace (foreman-28cz). userId/workspaceId come from
+  // the validated JWT, not user input, so they're safe to interpolate.
+  const orClause = workspaceId
+    ? `user_id.eq.${userId},and(workspace_id.eq.${workspaceId},visibility.eq.workspace)`
+    : `user_id.eq.${userId}`;
+  let query = supabase.from("conversation").select("*").or(orClause);
   query = onlyArchived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
 
   const { data: rows } = await query.order("updated_at", { ascending: false });
 
   // Surface Mastra's auto-generated thread title in the sidebar when the user
-  // hasn't set an explicit one. Batch all of the user's thread titles in a
-  // single query (resourceId = userId) rather than one lookup per conversation.
-  const { data: threads } = await supabase
-    .from("mastra_threads")
-    .select("id, title")
-    .eq("resourceId", userId);
-  const threadTitle = new Map<string, string>((threads ?? []).map((t: any) => [t.id, t.title]));
+  // hasn't set an explicit one. Look up titles by thread id (NOT resourceId — a
+  // teammate's shared chat belongs to the OWNER's resourceId, so a resourceId
+  // filter would miss it).
+  const threadIds = (rows ?? []).map((r: any) => r.mastra_thread_id).filter(Boolean);
+  const threadTitle = new Map<string, string>();
+  if (threadIds.length) {
+    const { data: threads } = await supabase
+      .from("mastra_threads")
+      .select("id, title")
+      .in("id", threadIds);
+    for (const t of threads ?? []) threadTitle.set(t.id, t.title);
+  }
 
   return c.json(
     (rows ?? []).map((conv: any) => ({
@@ -101,6 +116,8 @@ conversations.get("/", async (c) => {
       created_at: conv.created_at,
       updated_at: conv.updated_at,
       archived_at: conv.archived_at ?? null,
+      visibility: conv.visibility ?? "private",
+      is_owner: conv.user_id === userId,
     })),
   );
 });
@@ -211,7 +228,23 @@ conversations.get("/search", async (c) => {
   return c.json({ results });
 });
 
-// GET /:id — get conversation with messages
+/** Is `userId` a member of `workspaceId`? Used to gate teammate reads. */
+async function isWorkspaceMember(
+  workspaceId: string | null | undefined,
+  userId: string,
+): Promise<boolean> {
+  if (!workspaceId) return false;
+  const { data } = await getSupabase()
+    .from("workspace_members")
+    .select("workspace_member_id")
+    .eq("workspace_id", workspaceId)
+    .eq("workspace_member_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
+// GET /:id — get conversation with messages. The owner sees it; a workspace
+// member sees it READ-ONLY when it's shared to the workspace (foreman-28cz).
 conversations.get("/:id", async (c) => {
   const userId = c.get("userId");
   const id = validateParam(c.req.param("id"), "id");
@@ -222,11 +255,17 @@ conversations.get("/:id", async (c) => {
     .from("conversation")
     .select("*")
     .eq("id", id)
-    .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
 
   if (!conv) return c.json({ error: "Not found" }, 404);
+
+  const isOwner = conv.user_id === userId;
+  if (!isOwner) {
+    const shared =
+      conv.visibility === "workspace" && (await isWorkspaceMember(conv.workspace_id, userId));
+    if (!shared) return c.json({ error: "Not found" }, 404);
+  }
 
   // Load messages from Mastra Memory (single source of truth)
   const mastra = getMastra();
@@ -258,6 +297,8 @@ conversations.get("/:id", async (c) => {
       title,
       created_at: conv.created_at,
       updated_at: conv.updated_at,
+      visibility: conv.visibility ?? "private",
+      is_owner: isOwner,
     },
     messages,
   });
@@ -286,7 +327,12 @@ conversations.patch("/:id", async (c) => {
     return c.json({ error: "Invalid JSON" }, 400);
   }
 
-  const update: { title?: string; archived_at?: string | null; updated_at: string } = {
+  const update: {
+    title?: string;
+    archived_at?: string | null;
+    visibility?: string;
+    updated_at: string;
+  } = {
     updated_at: new Date().toISOString(),
   };
 
@@ -301,8 +347,21 @@ conversations.patch("/:id", async (c) => {
     update.archived_at = body.archived ? new Date().toISOString() : null;
   }
 
-  if (update.title === undefined && update.archived_at === undefined) {
-    return c.json({ error: "title or archived is required" }, 400);
+  // Share to / unshare from the workspace (foreman-28cz). Owner-only — this
+  // handler is already scoped to the owner via the user_id check above.
+  if (typeof body.visibility === "string") {
+    if (!["private", "workspace", "public"].includes(body.visibility)) {
+      return c.json({ error: "visibility must be private, workspace, or public" }, 400);
+    }
+    update.visibility = body.visibility;
+  }
+
+  if (
+    update.title === undefined &&
+    update.archived_at === undefined &&
+    update.visibility === undefined
+  ) {
+    return c.json({ error: "title, archived, or visibility is required" }, 400);
   }
 
   await supabase.from("conversation").update(update).eq("id", id);
@@ -311,6 +370,7 @@ conversations.patch("/:id", async (c) => {
     id,
     ...(update.title !== undefined ? { title: update.title } : {}),
     ...(typeof body.archived === "boolean" ? { archived: body.archived } : {}),
+    ...(update.visibility !== undefined ? { visibility: update.visibility } : {}),
   });
 });
 
