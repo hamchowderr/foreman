@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/chat/app-sidebar";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createClient } from "@/lib/server";
 
@@ -53,12 +53,10 @@ export async function AppShell({
           {fullBleed ? (
             children
           ) : (
-            <>
-              <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
-                <SidebarTrigger className="text-muted-foreground transition-colors hover:text-foreground" />
-              </header>
-              <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-            </>
+            // The sidebar owns the only collapse control (app-sidebar.tsx); this
+            // shell no longer renders a redundant top header just to hold a second
+            // SidebarTrigger. Pages render their own <main> + title.
+            <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
           )}
         </SidebarInset>
       </SidebarProvider>
