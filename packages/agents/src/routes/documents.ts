@@ -1,5 +1,11 @@
 import { RequestContext } from "@mastra/core/request-context";
 import { Hono } from "hono";
+import {
+  getVersionContent,
+  listVersions,
+  restoreVersion,
+  slugFromPath,
+} from "../lib/documents/versions";
 import { foremanWorkspace } from "../mastra/agents/workspace";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
@@ -81,6 +87,59 @@ documents.get("/content", async (c) => {
   } catch {
     return c.json({ error: "Not found" }, 404);
   }
+});
+
+// GET /documents/versions?path=documents/foo.md — list a document's revisions
+// (newest first), backed by the per-doc version manifest (foreman-udji).
+documents.get("/versions", async (c) => {
+  const slug = slugFromPath(c.req.query("path") ?? "");
+  if (!slug) {
+    return c.json({ error: "Invalid path" }, 400);
+  }
+  const fs = await resolveFs(c.get("workspaceId"));
+  if (!fs) {
+    return c.json({ current: 0, title: "", versions: [] });
+  }
+  return c.json(await listVersions(fs, slug));
+});
+
+// GET /documents/version?path=documents/foo.md&v=2 — read one revision's content
+// from the Mastra BlobStore (only hashes in the caller's manifest are fetched).
+documents.get("/version", async (c) => {
+  const slug = slugFromPath(c.req.query("path") ?? "");
+  const version = Number(c.req.query("v"));
+  if (!slug || !Number.isInteger(version) || version < 1) {
+    return c.json({ error: "Invalid path or version" }, 400);
+  }
+  const fs = await resolveFs(c.get("workspaceId"));
+  if (!fs) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  const result = await getVersionContent(fs, slug, version);
+  if (!result) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json({ path: `documents/${slug}.md`, version, content: result.content });
+});
+
+// POST /documents/restore { path, version } — write an older revision back as the
+// live document (recorded as a new revision so history stays append-only).
+documents.post("/restore", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { path?: string; version?: number };
+  const slug = slugFromPath(body.path ?? "");
+  const version = Number(body.version);
+  if (!slug || !Number.isInteger(version) || version < 1) {
+    return c.json({ error: "Invalid path or version" }, 400);
+  }
+  const fs = await resolveFs(c.get("workspaceId"));
+  if (!fs) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  const manifest = await restoreVersion(fs, slug, version);
+  if (!manifest) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json({ path: `documents/${slug}.md`, current: manifest.current });
 });
 
 export default documents;

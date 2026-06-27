@@ -1,6 +1,7 @@
 import { RequestContext } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { recordVersion } from "../../lib/documents/versions";
 import { foremanWorkspace } from "../agents/workspace";
 
 /**
@@ -57,8 +58,17 @@ export const saveDocumentTool = createTool({
     });
     if (!fs) throw new Error("save_document: workspace filesystem unavailable");
 
-    const path = `documents/${slugify(title)}.md`;
+    const slug = slugify(title);
+    const path = `documents/${slug}.md`;
     await fs.writeFile(path, content);
+    // Snapshot this revision into the version tree (Mastra BlobStore + manifest,
+    // foreman-udji). Best-effort: a versioning hiccup must not fail the save —
+    // the live file is already written and is the source of truth.
+    try {
+      await recordVersion(fs, { slug, title, content });
+    } catch (err) {
+      console.error("save_document: recordVersion failed (doc still saved)", err);
+    }
     return { path, title };
   },
 });

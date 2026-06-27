@@ -1,8 +1,8 @@
 "use client";
 
-import { FileTextIcon, XIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
-import useSWR from "swr";
+import { FileTextIcon, HistoryIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
 import {
   Artifact,
   ArtifactContent,
@@ -11,36 +11,141 @@ import {
 } from "@/components/ai-elements/artifact";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useKnowledgePanel } from "@/hooks/use-knowledge-panel";
-import { getDocument } from "@/lib/documents-client";
+import {
+  getDocument,
+  getDocumentVersion,
+  listDocumentVersions,
+  restoreDocumentVersion,
+} from "@/lib/documents-client";
+
+function formatStamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 /**
  * The knowledge-document side panel (foreman-aqjx). Renders a workspace document
  * (markdown) using the AI Elements Artifact primitives + the same markdown
  * renderer as chat — shown in the live-preview side panel slot so it reads "just
  * like the web preview". Docked in the resizable chat split (shell.tsx).
+ *
+ * Version history (foreman-udji): a dropdown lists every revision (from the
+ * Mastra BlobStore-backed version manifest). Picking an older revision shows its
+ * content read-only with a Restore action; the live document is always the
+ * default selection.
  */
 export function KnowledgePanel() {
   const { path, title, isOpen, close } = useKnowledgePanel();
-  const { data, isLoading, error } = useSWR(isOpen && path ? ["document", path] : null, () =>
-    getDocument(path),
+  const { mutate } = useSWRConfig();
+  // null = view the live/current document.
+  const [viewVersion, setViewVersion] = useState<number | null>(null);
+  const [restoring, setRestoring] = useState(false);
+
+  // Reset to the live view whenever a different document is opened.
+  useEffect(() => {
+    setViewVersion(null);
+  }, [path]);
+
+  const { data: history } = useSWR(isOpen && path ? ["doc-versions", path] : null, () =>
+    listDocumentVersions(path),
+  );
+  const current = history?.current ?? null;
+  const isHistorical = viewVersion !== null && current !== null && viewVersion !== current;
+
+  const { data, isLoading, error } = useSWR(
+    isOpen && path ? ["document", path, isHistorical ? viewVersion : "current"] : null,
+    () => (isHistorical ? getDocumentVersion(path, viewVersion as number) : getDocument(path)),
   );
 
   if (!isOpen || !path) {
     return null;
   }
 
+  const hasHistory = (history?.versions.length ?? 0) > 0;
+  const selectValue = isHistorical ? String(viewVersion) : "current";
+
+  async function handleRestore() {
+    if (viewVersion === null) return;
+    setRestoring(true);
+    try {
+      await restoreDocumentVersion(path, viewVersion);
+      setViewVersion(null);
+      // Refresh the version list + every cached view of this document.
+      await mutate(["doc-versions", path]);
+      await mutate(
+        (key) => Array.isArray(key) && key[0] === "document" && key[1] === path,
+        undefined,
+        { revalidate: true },
+      );
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   return (
     <div className="m-2 flex min-h-0 flex-1 flex-col overflow-hidden md:m-3">
       <Artifact className="size-full rounded-xl border-foreground/10 bg-card">
-        <ArtifactHeader className="border-foreground/10 bg-transparent">
-          <ArtifactTitle>{title}</ArtifactTitle>
+        <ArtifactHeader className="gap-2 border-foreground/10 bg-transparent">
+          <ArtifactTitle className="min-w-0 flex-1 truncate">{title}</ArtifactTitle>
+          {hasHistory && (
+            <Select
+              onValueChange={(v) => setViewVersion(v === "current" ? null : Number(v))}
+              value={selectValue}
+            >
+              <SelectTrigger className="h-7 w-auto gap-1.5 border-foreground/10 text-xs" size="sm">
+                <HistoryIcon className="size-3.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {history?.versions.map((v) => (
+                  <SelectItem className="text-xs" key={v.version} value={String(v.version)}>
+                    v{v.version}
+                    {v.version === current ? " · current" : ""}
+                    {v.note ? ` · ${v.note}` : ""}
+                    <span className="ml-2 text-muted-foreground">{formatStamp(v.createdAt)}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {isHistorical && (
+            <Button
+              className="h-7 gap-1.5 text-xs"
+              disabled={restoring}
+              onClick={handleRestore}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RotateCcwIcon className="size-3.5" />
+              {restoring ? "Restoring…" : "Restore"}
+            </Button>
+          )}
           <Button className="size-7" onClick={close} size="icon" type="button" variant="ghost">
             <XIcon className="size-4" />
             <span className="sr-only">Close document</span>
           </Button>
         </ArtifactHeader>
         <ArtifactContent>
+          {isHistorical && (
+            <p className="mb-3 rounded-md bg-muted/60 px-3 py-1.5 text-muted-foreground text-xs">
+              Viewing version {viewVersion} (read-only). Restore to make it the live document.
+            </p>
+          )}
           {isLoading && <p className="text-muted-foreground text-sm">Loading…</p>}
           {error && <p className="text-destructive text-sm">Couldn&apos;t load this document.</p>}
           {data && <MessageResponse>{data.content}</MessageResponse>}
