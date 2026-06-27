@@ -323,12 +323,23 @@ const PurePreviewMessage = ({
       const { toolCallId, state } = part;
 
       if (state === "output-available" && part.output && !("error" in part.output)) {
-        const out = part.output as { url: string; title?: string };
+        const out = part.output as {
+          url: string;
+          title?: string;
+          source?: string;
+          log?: string;
+          ok?: boolean;
+        };
         // Render in the side panel (auto-opened by the chip); the chat keeps a
         // compact re-open chip instead of an inline iframe.
         return (
           <div className="w-full max-w-full" key={toolCallId}>
-            <PreviewInlineChip title={out.title ?? "Preview"} url={out.url} />
+            <PreviewInlineChip
+              log={out.log}
+              source={out.source}
+              title={out.title ?? "Preview"}
+              url={out.url}
+            />
           </div>
         );
       }

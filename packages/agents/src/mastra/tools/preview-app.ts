@@ -82,17 +82,40 @@ export const previewAppTool = createTool({
       ? `Build this:\n\n${brief}\n\nUse ONLY this data — render from it directly (do not invent extra data):\n\n${data}`
       : `Build this:\n\n${brief}`;
 
+    // ANSI-colored terminal build log for the Sandbox's Terminal tab. Streamed
+    // live via data-preview-log so the panel's terminal can scroll as it builds.
+    const C = {
+      dim: "[90m",
+      green: "[32m",
+      red: "[31m",
+      cyan: "[36m",
+      reset: "[0m",
+    };
+    let log = "";
+    const line = (s: string) => {
+      log += `${s}\n`;
+      ctx?.writer?.custom({ type: "data-preview-log", data: { log, done: false } });
+    };
+
+    line(`${C.dim}$ build preview${C.reset}`);
     await progress("design", "Designing the component with shadcn + Haiku…");
+    line(`${C.cyan}› generating component with Haiku…${C.reset}`);
     let tsx = extractComponent((await builder.generate(prompt as string)).text ?? "");
     if (!tsx) throw new Error("preview_app: builder returned no component");
+    line(`${C.green}✓ wrote src/generated.tsx${C.reset}`);
 
     await progress("build", "Compiling and type-checking…");
+    line(`${C.dim}$ vite — starting dev server${C.reset}`);
     const { url } = await startReactPreview(tsx);
+    line(`${C.green}✓ vite ready → ${url}${C.reset}`);
 
     // Self-heal (foreman-8nyg): if the component doesn't compile, feed the real
     // type errors back to the builder and let it fix itself — up to twice.
+    line(`${C.dim}$ tsc --noEmit${C.reset}`);
     let check = await typecheckPreview();
     for (let attempt = 1; !check.ok && attempt <= 2; attempt++) {
+      line(`${C.red}${check.errors ?? "type error"}${C.reset}`);
+      line(`${C.cyan}↻ self-heal: fixing with Haiku (attempt ${attempt})…${C.reset}`);
       await progress("fix", `Found a build error — fixing it (attempt ${attempt})…`);
       const fixPrompt =
         `The component you just wrote fails to compile with these TypeScript errors:\n\n${check.errors}\n\n` +
@@ -101,13 +124,30 @@ export const previewAppTool = createTool({
       if (!fixed) break;
       tsx = fixed;
       await startReactPreview(tsx);
+      line(`${C.green}✓ rewrote src/generated.tsx${C.reset}`);
+      line(`${C.dim}$ tsc --noEmit${C.reset}`);
       check = await typecheckPreview();
     }
+    line(
+      check.ok
+        ? `${C.green}✓ type-check passed${C.reset}`
+        : `${C.red}✗ type-check still failing${C.reset}`,
+    );
+    line(
+      check.ok ? `${C.green}● preview live${C.reset}` : `${C.red}● preview live (issue)${C.reset}`,
+    );
+    ctx?.writer?.custom({ type: "data-preview-log", data: { log, done: true } });
 
     await progress(
       "ready",
       check.ok ? "Preview is live." : "Preview is live (with a known issue).",
     );
-    return { url, title: (title as string | undefined) ?? "Preview" };
+    return {
+      url,
+      title: (title as string | undefined) ?? "Preview",
+      source: tsx,
+      log,
+      ok: check.ok,
+    };
   },
 });

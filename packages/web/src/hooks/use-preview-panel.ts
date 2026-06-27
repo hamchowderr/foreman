@@ -14,12 +14,18 @@ import useSWR from "swr";
 export type PreviewPanelState = {
   url: string;
   title: string;
+  /** The generated component source (Code tab). */
+  source: string;
+  /** The build log with ANSI (Terminal tab). */
+  log: string;
   isOpen: boolean;
 };
 
 export const initialPreviewPanel: PreviewPanelState = {
   url: "",
   title: "Preview",
+  source: "",
+  log: "",
   isOpen: false,
 };
 
@@ -41,8 +47,17 @@ export function usePreviewPanel() {
   const state = data ?? initialPreviewPanel;
 
   const open = useCallback(
-    (url: string, title?: string) => {
-      mutate({ url, title: title ?? "Preview", isOpen: true }, false);
+    (next: { url: string; title?: string; source?: string; log?: string }) => {
+      mutate(
+        {
+          url: next.url,
+          title: next.title ?? "Preview",
+          source: next.source ?? "",
+          log: next.log ?? "",
+          isOpen: true,
+        },
+        false,
+      );
     },
     [mutate],
   );
