@@ -107,6 +107,7 @@ export function getMastra(): Mastra {
     "/conversations",
     "/proposals",
     "/dashboards",
+    "/documents",
     "/stored",
     "/zapier",
     "/oauth",
