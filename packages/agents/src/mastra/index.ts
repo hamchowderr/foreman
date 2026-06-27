@@ -320,6 +320,15 @@ export function getMastra(): Mastra {
                 `[chat] request agentId=${agentId} incomingTid=${incomingTid} rid=${rid || "(empty)"}`,
               );
 
+              // The resource the agent runs under (Mastra working memory +
+              // resource-scoped semantic recall are keyed on it). Defaults to the
+              // sender; for a teammate continuing a shared chat it's overridden to
+              // the THREAD OWNER below so the thread's context stays coherent
+              // (foreman-whkr). `attribution` prefixes a teammate's message so their
+              // authorship is visible in the shared thread.
+              let runResource = rid;
+              let attribution: string | null = null;
+
               // Look up mastra_thread_id from the conversation table so memory loads correctly.
               let tid: string;
               if (incomingTid) {
@@ -327,13 +336,50 @@ export function getMastra(): Mastra {
                 const supabase = getSupabase();
                 const { data: conv } = await supabase
                   .from("conversation")
-                  .select("mastra_thread_id")
+                  .select("mastra_thread_id, user_id, workspace_id, visibility")
                   .eq("id", incomingTid)
                   .limit(1)
                   .maybeSingle();
 
                 if (conv?.mastra_thread_id) {
                   tid = conv.mastra_thread_id;
+
+                  // Collaborative writing (foreman-whkr): if the sender is NOT the
+                  // chat's owner, allow the write only when the chat is shared to the
+                  // workspace AND the sender is a member — otherwise forbid. Run the
+                  // agent under the owner's resourceId (thread continuity) and tag the
+                  // teammate's message with their name so authorship is visible.
+                  const ownerId = conv.user_id as string | null;
+                  if (ownerId && rid && ownerId !== rid) {
+                    const member =
+                      conv.visibility === "workspace" && conv.workspace_id
+                        ? (
+                            await supabase
+                              .from("workspace_members")
+                              .select("workspace_member_id")
+                              .eq("workspace_id", conv.workspace_id)
+                              .eq("workspace_member_id", rid)
+                              .maybeSingle()
+                          ).data != null
+                        : false;
+                    if (!member) {
+                      console.warn(
+                        `[chat] forbidden write: rid=${rid} is not owner/member of conv=${incomingTid}`,
+                      );
+                      return c.json({ error: "Forbidden" }, 403);
+                    }
+                    runResource = ownerId;
+                    const { data: sender } = await supabase
+                      .from("user")
+                      .select("name, email")
+                      .eq("id", rid)
+                      .maybeSingle();
+                    attribution = sender?.name || sender?.email || "A teammate";
+                    console.log(
+                      `[chat] collaborative write by teammate rid=${rid} on owner=${ownerId} tid=${tid}`,
+                    );
+                  }
+
                   console.log(`[chat] found thread tid=${tid}`);
                 } else {
                   // No DB row yet — use incomingTid as the Mastra thread ID directly so the
@@ -399,10 +445,25 @@ export function getMastra(): Mastra {
                 console.warn(`[chat] ignoring unsupported model "${body.model}"`);
               }
 
+              // Tag a teammate's message with their name so the shared thread shows
+              // who said what (foreman-whkr). Text-only is the common case; with
+              // image parts, prepend a label part.
+              let finalUserContent = userContent;
+              if (attribution) {
+                if (typeof finalUserContent === "string") {
+                  finalUserContent = `${attribution}: ${finalUserContent}`;
+                } else if (Array.isArray(finalUserContent)) {
+                  finalUserContent = [
+                    { type: "text" as const, text: `${attribution}:` },
+                    ...finalUserContent,
+                  ];
+                }
+              }
+
               const result = await requestUserContext.run({ userId: rid }, () =>
-                agent.stream([{ role: "user" as const, content: userContent }], {
+                agent.stream([{ role: "user" as const, content: finalUserContent }], {
                   stopWhen: stepCountIs(15),
-                  memory: { thread: tid, resource: rid },
+                  memory: { thread: tid, resource: runResource },
                   savePerStep: true,
                   requestContext: rctx,
                   ...(requestedModel ? { model: requestedModel } : {}),
