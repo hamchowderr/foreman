@@ -27,6 +27,7 @@ import { connectZapierTool } from "../tools/connect-zapier";
 import { createDashboardTool } from "../tools/create-dashboard";
 import { forkConversationTool } from "../tools/fork-conversation";
 import { previewAppTool } from "../tools/preview-app";
+import { saveDocumentTool } from "../tools/save-document";
 import { searchHistoryTool } from "../tools/search-history";
 import { foremanWorkspace } from "./workspace";
 
@@ -105,6 +106,8 @@ function buildForemanTools() {
       create_dashboard: createDashboardTool,
       // Live, code-built previews in the sandbox (foreman-qq4x spike).
       preview_app: previewAppTool,
+      // Knowledge documents (foreman-aqjx) — save markdown to the workspace.
+      save_document: saveDocumentTool,
       // Durable automations (foreman-l7xq) — author/deploy/run/inspect from chat.
       create_automation: createAutomationTool,
       run_automation: runAutomationTool,
