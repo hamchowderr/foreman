@@ -50,7 +50,7 @@ export function PreviewPanel() {
       </div>
 
       <SandboxTabs className="flex min-h-0 flex-1 flex-col gap-0" defaultValue="preview">
-        <SandboxTabsBar>
+        <SandboxTabsBar className="border-foreground/10">
           <SandboxTabsList>
             <SandboxTabsTrigger value="preview">Preview</SandboxTabsTrigger>
             <SandboxTabsTrigger value="code">Code</SandboxTabsTrigger>
@@ -60,7 +60,7 @@ export function PreviewPanel() {
 
         <SandboxTabContent className="min-h-0 flex-1" value="preview">
           <WebPreview className="size-full rounded-none border-0" defaultUrl={url}>
-            <WebPreviewNavigation>
+            <WebPreviewNavigation className="border-b-foreground/10">
               <WebPreviewUrl readOnly value={url} />
               <WebPreviewNavigationButton
                 onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
@@ -75,7 +75,12 @@ export function PreviewPanel() {
 
         <SandboxTabContent className="min-h-0 flex-1 overflow-auto" value="code">
           {source ? (
-            <CodeBlock code={source} language="tsx" showLineNumbers />
+            <CodeBlock
+              className="rounded-none border-0"
+              code={source}
+              language="tsx"
+              showLineNumbers
+            />
           ) : (
             <div className="p-4 text-muted-foreground text-sm">No source available.</div>
           )}
