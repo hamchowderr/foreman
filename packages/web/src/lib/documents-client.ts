@@ -86,6 +86,19 @@ export async function getDocument(path: string): Promise<{ path: string; content
   return authedGet(`/documents/content?path=${encodeURIComponent(path)}`);
 }
 
+/**
+ * Import a text/markdown file as a new document. The server derives the slug from
+ * `name` and writes it into the chosen space (default shared). `content` is the
+ * file's text (read client-side).
+ */
+export async function importDocument(
+  name: string,
+  content: string,
+  space: DocSpace = "shared",
+): Promise<{ path: string; title: string; space: DocSpace }> {
+  return authedPost("/documents/import", { name, content, space });
+}
+
 export interface DocumentVersion {
   version: number;
   blobHash: string;
