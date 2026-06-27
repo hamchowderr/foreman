@@ -10,10 +10,18 @@ import { createClient } from "@/lib/client";
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
+export type DocSpace = "shared" | "personal";
+
 export interface DocumentMeta {
   name: string;
   path: string;
   size?: number;
+  space?: DocSpace;
+}
+
+/** Derive a document's Space from its path (personal docs live under _private/). */
+export function spaceOfPath(path: string): DocSpace {
+  return path.startsWith("_private/") ? "personal" : "shared";
 }
 
 async function authToken(): Promise<string> {

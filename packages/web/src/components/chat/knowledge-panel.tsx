@@ -6,8 +6,10 @@ import {
   FileTextIcon,
   HistoryIcon,
   Link2OffIcon,
+  LockIcon,
   RotateCcwIcon,
   Share2Icon,
+  UsersIcon,
   XIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -37,8 +39,26 @@ import {
   listDocumentVersions,
   restoreDocumentVersion,
   shareDocument,
+  spaceOfPath,
   unshareDocument,
 } from "@/lib/documents-client";
+
+/** A compact Space badge — "Private" (personal) or "Shared" (team). */
+function SpaceBadge({ path }: { path: string }) {
+  const personal = spaceOfPath(path) === "personal";
+  return (
+    <span
+      className={
+        personal
+          ? "inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 font-medium text-[11px] text-amber-600 dark:text-amber-500"
+          : "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium text-[11px] text-muted-foreground"
+      }
+    >
+      {personal ? <LockIcon className="size-3" /> : <UsersIcon className="size-3" />}
+      {personal ? "Private" : "Shared"}
+    </span>
+  );
+}
 
 function formatStamp(iso: string): string {
   const d = new Date(iso);
@@ -230,6 +250,7 @@ export function KnowledgePanel() {
       <Artifact className="size-full rounded-xl border-foreground/10 bg-card">
         <ArtifactHeader className="gap-2 border-foreground/10 bg-transparent">
           <ArtifactTitle className="min-w-0 flex-1 truncate">{title}</ArtifactTitle>
+          <SpaceBadge path={path} />
           {hasHistory && (
             <Select
               onValueChange={(v) => setViewVersion(v === "current" ? null : Number(v))}
@@ -302,15 +323,21 @@ export function DocumentInlineChip({ path, title }: { path: string; title: strin
     open({ path, title });
   }, [path, title, open]);
 
+  const personal = spaceOfPath(path) === "personal";
+
   return (
     <button
       className="inline-flex items-center gap-2 rounded-lg bg-card px-3 py-2 text-left text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_16px_rgba(0,0,0,0.06)] ring-1 ring-foreground/[0.06] transition-[background-color,transform] duration-150 hover:bg-accent active:scale-[0.96]"
       onClick={() => open({ path, title })}
       type="button"
     >
-      <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+      {personal ? (
+        <LockIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-500" />
+      ) : (
+        <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+      )}
       <span className="font-medium text-foreground">{title}</span>
-      <span className="text-muted-foreground">· open document</span>
+      <span className="text-muted-foreground">· {personal ? "private note" : "open document"}</span>
     </button>
   );
 }
