@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
+import { DocumentInlineChip } from "./knowledge-panel";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
@@ -317,6 +318,19 @@ const PurePreviewMessage = ({
           Building dashboard…
         </div>
       );
+    }
+
+    if (type === "tool-save_document") {
+      const { toolCallId, state } = part;
+
+      if (state === "output-available" && part.output && !("error" in part.output)) {
+        const out = part.output as { path: string; title?: string };
+        return (
+          <div className="w-full max-w-full" key={toolCallId}>
+            <DocumentInlineChip path={out.path} title={out.title ?? "Document"} />
+          </div>
+        );
+      }
     }
 
     if (type === "tool-preview_app") {

@@ -14,11 +14,13 @@ import {
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { initialArtifactData, useArtifact, useArtifactSelector } from "@/hooks/use-artifact";
+import { useKnowledgePanel, useKnowledgePanelSelector } from "@/hooks/use-knowledge-panel";
 import { usePreviewPanel, usePreviewPanelSelector } from "@/hooks/use-preview-panel";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { DataStreamHandler } from "./data-stream-handler";
+import { KnowledgePanel } from "./knowledge-panel";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
@@ -53,6 +55,8 @@ export function ChatShell() {
   const { setArtifact } = useArtifact();
   const isPreviewOpen = usePreviewPanelSelector((state) => state.isOpen);
   const { reset: resetPreviewPanel } = usePreviewPanel();
+  const isKnowledgeOpen = useKnowledgePanelSelector((state) => state.isOpen);
+  const { reset: resetKnowledgePanel } = useKnowledgePanel();
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
@@ -64,10 +68,11 @@ export function ChatShell() {
       stopRef.current();
       setArtifact(initialArtifactData);
       resetPreviewPanel();
+      resetKnowledgePanel();
       setEditingMessage(null);
       setAttachments([]);
     }
-  }, [chatId, setArtifact, resetPreviewPanel]);
+  }, [chatId, setArtifact, resetPreviewPanel, resetKnowledgePanel]);
 
   return (
     <>
@@ -153,7 +158,7 @@ export function ChatShell() {
             </div>
           </ResizablePanel>
 
-          {isPreviewOpen && (
+          {(isKnowledgeOpen || isPreviewOpen) && (
             <>
               <ResizableHandle
                 className="bg-transparent hover:bg-foreground/10 [&>div]:bg-foreground/15"
@@ -162,10 +167,12 @@ export function ChatShell() {
               <ResizablePanel
                 className="flex min-w-0 flex-col"
                 defaultSize={50}
-                id="preview-panel"
+                id="side-panel"
                 minSize={25}
               >
-                <PreviewPanel />
+                {/* One side slot; a knowledge document takes precedence over a
+                    live preview when both happen to be open. */}
+                {isKnowledgeOpen ? <KnowledgePanel /> : <PreviewPanel />}
               </ResizablePanel>
             </>
           )}
