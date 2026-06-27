@@ -1,5 +1,6 @@
 "use client";
 
+import { UsersIcon } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,27 +13,34 @@ import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { cn } from "@/lib/utils";
 import { CheckCircleFillIcon, ChevronDownIcon, GlobeIcon, LockIcon } from "./icons";
 
-export type VisibilityType = "private" | "public";
+export type VisibilityType = "private" | "workspace" | "public";
 
-const visibilities: Array<{
-  id: VisibilityType;
-  label: string;
-  description: string;
-  icon: ReactNode;
-}> = [
-  {
+type VisibilityMeta = { id: VisibilityType; label: string; description: string; icon: ReactNode };
+
+// All three are valid values; "public" (a logged-out share link for chats) isn't
+// built yet, so it's not offered in the menu — only as a fallback for display.
+const VISIBILITY_META: Record<VisibilityType, VisibilityMeta> = {
+  private: {
     id: "private",
     label: "Private",
-    description: "Only you can access this chat",
+    description: "Only you can see this chat",
     icon: <LockIcon />,
   },
-  {
+  workspace: {
+    id: "workspace",
+    label: "Team",
+    description: "Everyone in your workspace can view this chat (read-only)",
+    icon: <UsersIcon className="size-4" />,
+  },
+  public: {
     id: "public",
     label: "Public",
     description: "Anyone with the link can access this chat",
     icon: <GlobeIcon />,
   },
-];
+};
+
+const visibilities: VisibilityMeta[] = [VISIBILITY_META.private, VISIBILITY_META.workspace];
 
 export function VisibilitySelector({
   chatId,
@@ -50,7 +58,7 @@ export function VisibilitySelector({
   });
 
   const selectedVisibility = useMemo(
-    () => visibilities.find((visibility) => visibility.id === visibilityType),
+    () => VISIBILITY_META[visibilityType as VisibilityType] ?? VISIBILITY_META.private,
     [visibilityType],
   );
 

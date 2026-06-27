@@ -31,7 +31,9 @@ export async function GET(request: Request) {
       messages: data.messages || [],
       visibility: data.conversation?.visibility || "private",
       title: data.conversation?.title ?? null,
-      isReadonly: false,
+      // A workspace-shared chat opened by a teammate is read-only (foreman-28cz):
+      // they can view it but not continue someone else's thread.
+      isReadonly: data.conversation?.is_owner === false,
     });
   } catch {
     return NextResponse.json({ messages: [], visibility: "private", isReadonly: false });

@@ -27,12 +27,22 @@ export async function GET(request: Request) {
 
     const conversations = Array.isArray(data) ? data : data.conversations || [];
     const chats = conversations.map(
-      (conv: { id: string; title?: string; created_at?: string; archived_at?: string | null }) => ({
+      (conv: {
+        id: string;
+        title?: string;
+        created_at?: string;
+        archived_at?: string | null;
+        visibility?: "private" | "workspace" | "public";
+        is_owner?: boolean;
+      }) => ({
         id: conv.id,
         title: conv.title || "New conversation",
         createdAt: conv.created_at ? new Date(conv.created_at) : new Date(),
         userId: "",
-        visibility: "private" as const,
+        // Real visibility from the agent so the selector reflects a shared chat
+        // (foreman-28cz); is_owner lets the sidebar mark teammates' shared chats.
+        visibility: conv.visibility ?? ("private" as const),
+        isOwner: conv.is_owner ?? true,
         archivedAt: conv.archived_at ?? null,
       }),
     );

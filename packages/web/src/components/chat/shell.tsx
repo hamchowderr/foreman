@@ -153,6 +153,11 @@ export function ChatShell() {
                       stop={stop}
                     />
                   )}
+                  {isReadonly && (
+                    <p className="mx-auto rounded-full bg-muted px-3 py-1.5 text-muted-foreground text-xs">
+                      Read-only — this chat was shared with you by a teammate.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
