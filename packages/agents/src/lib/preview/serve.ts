@@ -126,3 +126,53 @@ export async function startReactPreview(componentTsx: string): Promise<{ url: st
   await ensureVite(templateDir);
   return { url: `http://localhost:${PREVIEW_PORT}` };
 }
+
+/**
+ * Type-check the template (incl. the just-written generated.tsx) so the
+ * preview_app self-heal loop can feed real compile errors back to the builder
+ * (foreman-8nyg). The 57 ui components are known-good, so any error is in the
+ * generated component or its usage of the registry. Fails OPEN (treats as ok) if
+ * the toolchain isn't reachable — we never want the check itself to block a
+ * preview. Incremental buildinfo lives under node_modules/.cache (gitignored),
+ * so repeat checks are fast.
+ */
+export async function typecheckPreview(): Promise<{ ok: boolean; errors?: string }> {
+  const templateDir = resolveTemplateDir();
+  const tscBin = path.join(templateDir, "node_modules", "typescript", "bin", "tsc");
+  if (!existsSync(tscBin)) return { ok: true };
+
+  return new Promise((resolve) => {
+    const child = spawn(
+      process.execPath,
+      [
+        tscBin,
+        "--noEmit",
+        "--incremental",
+        "--tsBuildInfoFile",
+        path.join("node_modules", ".cache", "preview.tsbuildinfo"),
+      ],
+      { cwd: templateDir, windowsHide: true },
+    );
+    let out = "";
+    child.stdout?.on("data", (d) => {
+      out += d.toString();
+    });
+    child.stderr?.on("data", (d) => {
+      out += d.toString();
+    });
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ ok: true });
+      } else {
+        // Prefer errors in the generated component; fall back to all output.
+        const lines = out.split(/\r?\n/);
+        const relevant = lines.filter((l) => l.includes("generated.tsx"));
+        resolve({
+          ok: false,
+          errors: (relevant.length ? relevant : lines).join("\n").slice(0, 2000),
+        });
+      }
+    });
+    child.on("error", () => resolve({ ok: true }));
+  });
+}

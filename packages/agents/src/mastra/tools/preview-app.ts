@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { startReactPreview } from "../../lib/preview/serve";
+import { startReactPreview, typecheckPreview } from "../../lib/preview/serve";
 
 /**
  * Pull the raw TSX out of the builder's reply, tolerating the model occasionally
@@ -83,14 +83,31 @@ export const previewAppTool = createTool({
       : `Build this:\n\n${brief}`;
 
     await progress("design", "Designing the component with shadcn + Haiku…");
-    const result = await builder.generate(prompt as string);
-    const tsx = extractComponent(result.text ?? "");
+    let tsx = extractComponent((await builder.generate(prompt as string)).text ?? "");
     if (!tsx) throw new Error("preview_app: builder returned no component");
 
-    await progress("build", "Compiling it with Vite…");
+    await progress("build", "Compiling and type-checking…");
     const { url } = await startReactPreview(tsx);
 
-    await progress("ready", "Preview is live.");
+    // Self-heal (foreman-8nyg): if the component doesn't compile, feed the real
+    // type errors back to the builder and let it fix itself — up to twice.
+    let check = await typecheckPreview();
+    for (let attempt = 1; !check.ok && attempt <= 2; attempt++) {
+      await progress("fix", `Found a build error — fixing it (attempt ${attempt})…`);
+      const fixPrompt =
+        `The component you just wrote fails to compile with these TypeScript errors:\n\n${check.errors}\n\n` +
+        "Return the CORRECTED, COMPLETE component following the exact same import rules. Output only the .tsx, nothing else.";
+      const fixed = extractComponent((await builder.generate(fixPrompt)).text ?? "");
+      if (!fixed) break;
+      tsx = fixed;
+      await startReactPreview(tsx);
+      check = await typecheckPreview();
+    }
+
+    await progress(
+      "ready",
+      check.ok ? "Preview is live." : "Preview is live (with a known issue).",
+    );
     return { url, title: (title as string | undefined) ?? "Preview" };
   },
 });
