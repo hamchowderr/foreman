@@ -108,6 +108,26 @@ export async function getPublicDashboard(shareToken: string): Promise<DashboardA
   return (await res.json()) as DashboardArtifact;
 }
 
+export interface SnapshotApp {
+  appKey: string;
+  refreshedAt: string;
+  rowCount: number;
+}
+
+/**
+ * The apps that have data in the caller's workspace, newest-refreshed first.
+ * Lets the Apps page default to a real source instead of a hardcoded one
+ * (foreman-djo7). Returns [] if none / on error.
+ */
+export async function listSnapshotApps(token: string): Promise<SnapshotApp[]> {
+  try {
+    const { apps } = await request<{ apps: SnapshotApp[] }>("/dashboards/apps", token);
+    return apps ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Latest snapshot for an app, or null on 404 (no data pulled yet). */
 export async function getLatestSnapshot(appKey: string, token: string): Promise<Snapshot | null> {
   try {

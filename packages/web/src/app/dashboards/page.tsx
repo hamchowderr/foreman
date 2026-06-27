@@ -9,10 +9,12 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { defaultSpecFromRecords, getLatestSnapshot } from "@/lib/dashboards-client";
+import {
+  defaultSpecFromRecords,
+  getLatestSnapshot,
+  listSnapshotApps,
+} from "@/lib/dashboards-client";
 import { createClient } from "@/lib/server";
-
-const DEFAULT_APP = "hubspot";
 
 export default async function DashboardsPage({
   searchParams,
@@ -26,14 +28,22 @@ export default async function DashboardsPage({
   if (!session) redirect("/auth/login");
 
   const { app } = await searchParams;
-  const appKey = app?.trim() || DEFAULT_APP;
+  // No ?app= → default to the workspace's most-recently-refreshed app instead of
+  // a hardcoded one, so the page shows real data when any exists (foreman-djo7).
+  let appKey = app?.trim() || "";
+  if (!appKey) {
+    const apps = await listSnapshotApps(session.access_token);
+    appKey = apps[0]?.appKey ?? "";
+  }
 
   let snapshotErr: string | null = null;
   let snapshot = null;
-  try {
-    snapshot = await getLatestSnapshot(appKey, session.access_token);
-  } catch (e) {
-    snapshotErr = (e as Error).message;
+  if (appKey) {
+    try {
+      snapshot = await getLatestSnapshot(appKey, session.access_token);
+    } catch (e) {
+      snapshotErr = (e as Error).message;
+    }
   }
 
   const spec = snapshot ? defaultSpecFromRecords(appKey, snapshot.records) : null;
@@ -42,18 +52,18 @@ export default async function DashboardsPage({
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          {spec ? spec.title : `${appKey} app`}
+          {spec ? spec.title : appKey ? `${appKey} app` : "Apps"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {snapshot
             ? `${snapshot.rowCount} records · refreshed ${new Date(snapshot.refreshedAt).toLocaleString()}`
-            : "Live view of data pulled from your connected app."}
+            : "Live view of data pulled from your connected apps."}
         </p>
       </div>
 
       {snapshotErr ? (
         <Alert variant="destructive">
-          <AlertDescription>Couldn't load dashboard: {snapshotErr}</AlertDescription>
+          <AlertDescription>Couldn't load app: {snapshotErr}</AlertDescription>
         </Alert>
       ) : spec && snapshot ? (
         <DashboardRenderer spec={spec} data={snapshot.records} />
@@ -68,10 +78,11 @@ function EmptyState({ appKey }: { appKey: string }) {
   return (
     <Empty className="border bg-card">
       <EmptyHeader>
-        <EmptyTitle>No data for "{appKey}" yet</EmptyTitle>
+        <EmptyTitle>{appKey ? `No data for "${appKey}" yet` : "No app data yet"}</EmptyTitle>
         <EmptyDescription>
-          Once a poll trigger pulls records from this app, a snapshot is stored and this dashboard
-          fills in automatically. Pass <code>?app=&lt;appKey&gt;</code> to view a different source.
+          Ask Foreman in chat to pull data from one of your connected apps (or set up a poll
+          trigger). A snapshot is stored and an app — a live dashboard or internal tool — fills in
+          here automatically.
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
