@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { MessageResponse } from "@/components/ai-elements/message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -48,9 +56,20 @@ import type {
   WorkspaceRole,
   WorkspaceSummary,
 } from "@/data/workspaces-types";
+import { type DocumentMeta, getDocument, listDocuments, spaceOfPath } from "@/lib/documents-client";
 
 const ASSIGNABLE: WorkspaceRole[] = ["admin", "member", "readonly"];
 const isAdminRole = (r?: WorkspaceRole) => r === "owner" || r === "admin";
+
+/** documents/q3-launch-plan.md → "Q3 Launch Plan" for display. */
+function docTitle(name: string): string {
+  return name
+    .replace(/\.md$/i, "")
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 export function WorkspacesManager() {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
@@ -162,6 +181,8 @@ export function WorkspacesManager() {
         </CardContent>
       </Card>
 
+      {active && <DocumentsSection workspaceId={active.id} />}
+
       {active && (active.membership_type === "team" || isAdminRole(active.role)) && (
         <>
           {active.membership_type === "solo" && isAdminRole(active.role) && (
@@ -197,6 +218,85 @@ export function WorkspacesManager() {
         </>
       )}
     </div>
+  );
+}
+
+function DocumentsSection({ workspaceId }: { workspaceId: string }) {
+  const [docs, setDocs] = useState<DocumentMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<{ path: string; title: string } | null>(null);
+  const [content, setContent] = useState<string | null>(null);
+
+  // Re-list when the active workspace changes — listDocuments() reads the
+  // server's active workspace (set by switchWorkspace), so this reflects the
+  // workspace you're currently in.
+  useEffect(() => {
+    setLoading(true);
+    listDocuments()
+      .then(setDocs)
+      .catch(() => setDocs([]))
+      .finally(() => setLoading(false));
+  }, [workspaceId]);
+
+  function openDoc(doc: DocumentMeta) {
+    setOpen({ path: doc.path, title: docTitle(doc.name) });
+    setContent(null);
+    getDocument(doc.path)
+      .then((d) => setContent(d.content))
+      .catch(() => setContent("_Couldn't load this document._"));
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Documents</CardTitle>
+        <CardDescription>
+          Knowledge documents in this workspace. Shared docs are visible to the whole team; private
+          docs are only yours. Ask Foreman in a chat to create or edit them.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : docs.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No documents yet. In a chat, ask Foreman to save one (e.g. “save a doc titled …”).
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {docs.map((doc) => (
+              <button
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                key={doc.path}
+                onClick={() => openDoc(doc)}
+                type="button"
+              >
+                <span className="truncate font-medium">{docTitle(doc.name)}</span>
+                <Badge variant={spaceOfPath(doc.path) === "personal" ? "outline" : "secondary"}>
+                  {spaceOfPath(doc.path) === "personal" ? "Private" : "Shared"}
+                </Badge>
+              </button>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog onOpenChange={(o) => !o && setOpen(null)} open={open !== null}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{open?.title}</DialogTitle>
+            <DialogDescription className="sr-only">Document contents</DialogDescription>
+          </DialogHeader>
+          {content === null ? (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          ) : (
+            <div className="prose-sm max-w-none">
+              <MessageResponse>{content}</MessageResponse>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }
 
