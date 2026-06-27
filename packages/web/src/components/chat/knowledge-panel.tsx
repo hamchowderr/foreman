@@ -1,6 +1,15 @@
 "use client";
 
-import { FileTextIcon, HistoryIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CopyIcon,
+  FileTextIcon,
+  HistoryIcon,
+  Link2OffIcon,
+  RotateCcwIcon,
+  Share2Icon,
+  XIcon,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import {
@@ -11,6 +20,7 @@ import {
 } from "@/components/ai-elements/artifact";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -20,10 +30,14 @@ import {
 } from "@/components/ui/select";
 import { useKnowledgePanel } from "@/hooks/use-knowledge-panel";
 import {
+  type DocumentShare,
   getDocument,
+  getDocumentShare,
   getDocumentVersion,
   listDocumentVersions,
   restoreDocumentVersion,
+  shareDocument,
+  unshareDocument,
 } from "@/lib/documents-client";
 
 function formatStamp(iso: string): string {
@@ -35,6 +49,121 @@ function formatStamp(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+/**
+ * Share a knowledge document via a public link (foreman-jz14). Mints/revokes a
+ * capability token through /documents/share; the link opens the logged-out
+ * /doc/<token> page. Lazy-loads the current share state when the popover opens.
+ */
+function DocumentShareButton({ path }: { path: string }) {
+  const [open, setOpen] = useState(false);
+  // undefined = not loaded yet, null = not shared, object = shared.
+  const [share, setShare] = useState<DocumentShare | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Forget cached state when the document changes.
+  useEffect(() => {
+    setShare(undefined);
+    setCopied(false);
+  }, [path]);
+
+  // Load share state the first time the popover opens for this document.
+  useEffect(() => {
+    if (open && share === undefined) {
+      getDocumentShare(path)
+        .then(setShare)
+        .catch(() => setShare(null));
+    }
+  }, [open, share, path]);
+
+  const url =
+    share && typeof window !== "undefined" ? `${window.location.origin}/doc/${share.token}` : null;
+
+  async function createLink() {
+    setBusy(true);
+    try {
+      setShare(await shareDocument(path));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function stopSharing() {
+    if (!share) return;
+    setBusy(true);
+    try {
+      await unshareDocument(share.token);
+      setShare(null);
+      setCopied(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copy() {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard blocked (insecure context) — link is still visible to copy.
+    }
+  }
+
+  return (
+    <Popover onOpenChange={setOpen} open={open}>
+      <PopoverTrigger asChild>
+        <Button className="size-7" size="icon" type="button" variant="ghost">
+          <Share2Icon className={share ? "size-4 text-primary" : "size-4"} />
+          <span className="sr-only">Share document</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80">
+        <p className="font-medium text-sm">Share document</p>
+        {share === undefined ? (
+          <p className="mt-2 text-muted-foreground text-sm">Loading…</p>
+        ) : share ? (
+          <div className="mt-3 space-y-3">
+            <p className="text-muted-foreground text-xs">Anyone with this link can view it.</p>
+            <div className="flex items-center gap-1.5">
+              <input
+                className="min-w-0 flex-1 rounded-md border bg-muted/40 px-2 py-1.5 text-xs"
+                onFocus={(e) => e.currentTarget.select()}
+                readOnly
+                value={url ?? ""}
+              />
+              <Button className="h-8 shrink-0 gap-1" onClick={copy} size="sm" variant="outline">
+                {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <button
+              className="inline-flex items-center gap-1.5 text-destructive text-xs hover:underline disabled:opacity-50"
+              disabled={busy}
+              onClick={stopSharing}
+              type="button"
+            >
+              <Link2OffIcon className="size-3.5" />
+              Stop sharing
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <p className="text-muted-foreground text-xs">
+              Create a public link anyone can open — no account needed.
+            </p>
+            <Button className="w-full gap-1.5" disabled={busy} onClick={createLink} size="sm">
+              <Share2Icon className="size-3.5" />
+              {busy ? "Creating…" : "Create public link"}
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 /**
@@ -135,6 +264,7 @@ export function KnowledgePanel() {
               {restoring ? "Restoring…" : "Restore"}
             </Button>
           )}
+          <DocumentShareButton path={path} />
           <Button className="size-7" onClick={close} size="icon" type="button" variant="ghost">
             <XIcon className="size-4" />
             <span className="sr-only">Close document</span>

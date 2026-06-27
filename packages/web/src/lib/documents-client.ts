@@ -53,6 +53,21 @@ async function authedPost<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function authedDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${AGENT_URL}${path}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${await authToken()}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`DELETE ${path} → ${res.status}`);
+  }
+  return (await res.json()) as T;
+}
+
 /** List the knowledge documents in the caller's workspace. */
 export async function listDocuments(): Promise<DocumentMeta[]> {
   return (await authedGet<{ documents: DocumentMeta[] }>("/documents")).documents;
@@ -93,4 +108,45 @@ export async function restoreDocumentVersion(
   version: number,
 ): Promise<{ path: string; current: number }> {
   return authedPost("/documents/restore", { path, version });
+}
+
+export interface DocumentShare {
+  token: string;
+  expiresAt: string | null;
+}
+
+/** The document's current public-share state (token if shared, else null). */
+export async function getDocumentShare(path: string): Promise<DocumentShare | null> {
+  const { share } = await authedGet<{ share: DocumentShare | null }>(
+    `/documents/share?path=${encodeURIComponent(path)}`,
+  );
+  return share;
+}
+
+/** Mint a public share link for a document. */
+export async function shareDocument(path: string, expiresInDays?: number): Promise<DocumentShare> {
+  return authedPost("/documents/share", { path, expiresInDays });
+}
+
+/** Revoke a public share token. */
+export async function unshareDocument(token: string): Promise<{ revoked: boolean }> {
+  return authedDelete(`/documents/share/${encodeURIComponent(token)}`);
+}
+
+/**
+ * Read a publicly shared document by token — NO auth, used by the logged-out
+ * share page (server-side fetch). Returns null on 404 (revoked/expired/unknown).
+ */
+export async function getPublicDocument(
+  token: string,
+): Promise<{ title: string; path: string; content: string } | null> {
+  const res = await fetch(`${AGENT_URL}/documents/public/${encodeURIComponent(token)}`, {
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`GET /documents/public → ${res.status}`);
+  }
+  return (await res.json()) as { title: string; path: string; content: string };
 }

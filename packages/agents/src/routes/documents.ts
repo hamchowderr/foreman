@@ -1,6 +1,12 @@
 import { RequestContext } from "@mastra/core/request-context";
 import { Hono } from "hono";
 import {
+  createDocumentShare,
+  getDocumentShareToken,
+  getSharedDocument,
+  revokeDocumentShare,
+} from "../lib/documents/share";
+import {
   getVersionContent,
   listVersions,
   restoreVersion,
@@ -31,7 +37,11 @@ import type { AppEnv } from "./types";
 const DOCS_DIR = "documents";
 
 const documents = new Hono<AppEnv>();
-documents.use("*", authMiddleware);
+// Auth everything EXCEPT the public share read (`/documents/public/:token`),
+// where the token itself is the capability — same model as /dashboards/public.
+documents.use("*", (c, next) =>
+  c.req.path.includes("/documents/public/") ? next() : authMiddleware(c, next),
+);
 
 /** The caller's per-tenant workspace filesystem, resolved by workspace_id. */
 function resolveFs(workspaceId: string | undefined) {
@@ -140,6 +150,57 @@ documents.post("/restore", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
   return c.json({ path: `documents/${slug}.md`, current: manifest.current });
+});
+
+// GET /documents/public/:token — read a publicly shared document. NO auth: a
+// valid, unexpired token is the grant (foreman-jz14). Content is read from the
+// owner's workspace fs using the workspace_id stored on the share row.
+documents.get("/public/:token", async (c) => {
+  const doc = await getSharedDocument(c.req.param("token"));
+  if (!doc) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(doc);
+});
+
+// GET /documents/share?path=documents/foo.md — the document's current share
+// state (token if shared, else null), so the UI can show "Shared"/"Share".
+documents.get("/share", async (c) => {
+  const path = c.req.query("path") ?? "";
+  if (!slugFromPath(path)) {
+    return c.json({ error: "Invalid path" }, 400);
+  }
+  const share = await getDocumentShareToken(c.get("workspaceId"), path);
+  return c.json({ share });
+});
+
+// POST /documents/share { path, expiresInDays? } — mint a public share token.
+documents.post("/share", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as {
+    path?: string;
+    expiresInDays?: number;
+  };
+  const path = body.path ?? "";
+  if (!slugFromPath(path)) {
+    return c.json({ error: "Invalid path" }, 400);
+  }
+  const userId = c.get("userId");
+  if (!userId) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  const share = await createDocumentShare(c.get("workspaceId"), userId, path, {
+    expiresInDays: body.expiresInDays,
+  });
+  if (!share) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(share);
+});
+
+// DELETE /documents/share/:token — revoke a share, workspace-scoped.
+documents.delete("/share/:token", async (c) => {
+  const revoked = await revokeDocumentShare(c.get("workspaceId"), c.req.param("token"));
+  return c.json({ revoked });
 });
 
 export default documents;
