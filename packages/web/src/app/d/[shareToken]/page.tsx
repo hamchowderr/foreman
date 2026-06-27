@@ -20,9 +20,7 @@ export default async function PublicDashboardPage({
 
   return (
     <div className="flex min-h-svh flex-col bg-background">
-      <BrandHeader
-        label={<span className="text-sm text-muted-foreground">Shared dashboard</span>}
-      />
+      <BrandHeader label={<span className="text-sm text-muted-foreground">Shared app</span>} />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-8">
         <div className="mb-6">

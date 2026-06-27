@@ -15,8 +15,8 @@ export function MoreCapabilities() {
             Beyond the chat driver.
           </h2>
           <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed text-pretty">
-            Pull live dashboards from your connected apps, and run a separate workspace for every
-            team or client — all from the same chat.
+            Build live apps — dashboards, internal tools — from the data you pull, and run a
+            separate workspace for every team or client, all from the same chat.
           </p>
         </Reveal>
 
@@ -24,15 +24,15 @@ export function MoreCapabilities() {
         <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
           <Reveal>
             <Badge variant="accent" className="mb-4">
-              Live dashboards
+              Live apps
             </Badge>
             <h3 className="text-2xl sm:text-3xl font-semibold tracking-[-0.02em] text-balance">
-              Ask for a dashboard. Get a live one.
+              Ask for an app. Get a live one.
             </h3>
             <p className="text-muted-foreground mt-4 text-base leading-relaxed text-pretty">
-              Foreman pulls the numbers from your connected apps and turns them into a shareable
-              dashboard you can bring up right from chat — KPIs, trends, and totals, refreshed
-              whenever you ask. Just say what you want to see.
+              Foreman pulls the numbers from your connected apps and turns them into a shareable app
+              — a live dashboard or internal tool — you can bring up right from chat. KPIs, trends,
+              and totals, refreshed whenever you ask. Just say what you want to see.
             </p>
             <ul className="mt-6 space-y-2 text-sm">
               {[

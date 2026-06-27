@@ -27,7 +27,7 @@ export default async function DashboardArtifactPage({
         href="/dashboards"
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" /> Dashboards
+        <ArrowLeft className="h-4 w-4" /> Apps
       </Link>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>

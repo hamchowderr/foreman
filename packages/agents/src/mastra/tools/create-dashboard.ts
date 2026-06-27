@@ -14,20 +14,17 @@ const MAX_RECORDS_TO_UI = 500;
 export const createDashboardTool = createTool({
   id: "create_dashboard",
   description:
-    "Build a dashboard from data already pulled from one of the user's connected apps " +
-    "(e.g. HubSpot, Airtable, Stripe). Use this when the user asks to 'build/make/show a " +
-    "dashboard' of an app's data. It reads the latest stored snapshot for that app, generates " +
-    "a dashboard (KPIs, a chart, and a table), saves it, and renders it inline in the chat. " +
+    "Build an app — such as a live dashboard — from data already pulled from a connected app " +
+    "(e.g. HubSpot, Airtable, Stripe). Use this when the user asks to 'build/make/show an app or " +
+    "a dashboard' of their data. It reads the latest stored snapshot for that app, generates a " +
+    "live app (KPIs, a chart, and a table), saves it, and renders it inline in the chat. " +
     "If no data has been pulled for the app yet, it tells the user to connect it / let a poll " +
     "trigger pull data first.",
   inputSchema: z.object({
     app: z
       .string()
       .describe("The connected app whose data to visualize, e.g. 'hubspot', 'airtable', 'stripe'."),
-    title: z
-      .string()
-      .optional()
-      .describe("Optional dashboard title. Defaults to '<app> overview'."),
+    title: z.string().optional().describe("Optional app title. Defaults to '<app> overview'."),
   }),
   // No `outputSchema`: the result carries an open-ended `spec` + `records` (rows
   // with arbitrary keys). Declaring those via z.any()/z.record() makes Mastra emit
@@ -42,7 +39,7 @@ export const createDashboardTool = createTool({
     const o = output as { title: string; rowCount: number; appKey: string; url: string };
     return {
       type: "text" as const,
-      text: `Built dashboard "${o.title}" from ${o.rowCount} ${o.appKey} record(s). It is shown in the chat and available at ${o.url}.`,
+      text: `Built the app "${o.title}" from ${o.rowCount} ${o.appKey} record(s). It is shown in the chat and available at ${o.url}.`,
     };
   },
   onOutput: ({ output, toolName }) => {
@@ -61,7 +58,7 @@ export const createDashboardTool = createTool({
     if (!snapshot || snapshot.records.length === 0) {
       throw new Error(
         `No data has been pulled for "${appKey}" yet. Connect the app and set up a data pull ` +
-          `(poll trigger) first, then ask me to build the dashboard.`,
+          `(poll trigger) first, then ask me to build the app.`,
       );
     }
 

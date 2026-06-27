@@ -304,7 +304,7 @@ const PurePreviewMessage = ({
         return (
           <Alert key={toolCallId} variant="destructive">
             <AlertDescription>
-              Couldn't build dashboard:{" "}
+              Couldn't build app:{" "}
               {String(
                 part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
               )}
@@ -315,7 +315,7 @@ const PurePreviewMessage = ({
 
       return (
         <div className="text-muted-foreground text-sm" key={toolCallId}>
-          Building dashboard…
+          Building app…
         </div>
       );
     }

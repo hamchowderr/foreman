@@ -34,7 +34,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 const NAV: Array<{ href: string; label: string; Icon: LucideIcon }> = [
   { href: "/automations", label: "Automations", Icon: ZapIcon },
   { href: "/inbox", label: "Inbox", Icon: InboxIcon },
-  { href: "/dashboards", label: "Dashboards", Icon: LayoutDashboardIcon },
+  { href: "/dashboards", label: "Apps", Icon: LayoutDashboardIcon },
   { href: "/workspaces", label: "Workspaces", Icon: UsersIcon },
 ];
 
