@@ -5,20 +5,35 @@ import { getDocumentBlobStore, hashContent } from "./blob-store";
  * Document version tree (foreman-udji) — the manifest half of document
  * versioning. Each saved revision's *content* lives in the Mastra `BlobStore`
  * (blob-store.ts); this module keeps the ordered list of revisions per document
- * as a manifest file in the caller's Workspace filesystem, mirroring how Mastra's
- * own skill versioning pairs a BlobStore with a version-tree.
+ * as a manifest file next to the document in the caller's Workspace filesystem,
+ * mirroring how Mastra's own skill versioning pairs a BlobStore with a
+ * version-tree.
  *
- * Layout, all inside the caller's per-tenant workspace:
- *   documents/<slug>.md            ← the LIVE copy (what the agent's file tools
- *                                     and bm25 search see; always current)
- *   documents/.history/<slug>.json ← this manifest (append-only version list)
+ * Everything is keyed off the document's physical path, so it works for any
+ * Space (foreman-5e4f) — `documents/<slug>.md` (shared) or
+ * `_private/<uid>/documents/<slug>.md` (personal) — with the manifest stored at
+ * `<dir>/.history/<slug>.json` alongside it:
+ *   <dir>/<slug>.md            ← the LIVE copy (agent file tools + bm25 see this)
+ *   <dir>/.history/<slug>.json ← this manifest (append-only version list)
  *
  * Keeping the manifest as a workspace file (not a DB row) means it is scoped to
  * the tenant's workspace automatically and needs no schema/migration.
  */
 
-const DOCS_DIR = "documents";
-const HISTORY_DIR = `${DOCS_DIR}/.history`;
+/** Split a physical doc path into its directory + slug (basename w/o `.md`). */
+function dirAndSlug(docPath: string): { dir: string; slug: string } | null {
+  const m = docPath.match(/^(.*?)\/?([^/]+)\.md$/);
+  if (!m) return null;
+  return { dir: m[1], slug: m[2] };
+}
+
+/** The manifest path that sits alongside a document. */
+function manifestPathFor(docPath: string): string | null {
+  const parts = dirAndSlug(docPath);
+  if (!parts) return null;
+  const base = parts.dir ? `${parts.dir}/.history` : ".history";
+  return `${base}/${parts.slug}.json`;
+}
 
 export interface DocumentVersionEntry {
   /** 1-based, monotonically increasing. */
@@ -45,27 +60,20 @@ export interface DocumentManifest {
   versions: DocumentVersionEntry[];
 }
 
-/** documents/<slug>.md → "<slug>". Returns null for anything outside documents/. */
+/** Basename slug of any valid `…/<slug>.md` path, else null. */
 export function slugFromPath(path: string): string | null {
-  const m = path.match(/^documents\/([^/]+)\.md$/);
-  return m ? m[1] : null;
-}
-
-export function livePathForSlug(slug: string): string {
-  return `${DOCS_DIR}/${slug}.md`;
-}
-
-function manifestPath(slug: string): string {
-  return `${HISTORY_DIR}/${slug}.json`;
+  return dirAndSlug(path)?.slug ?? null;
 }
 
 /** Read a document's version manifest, or null if it has no history yet. */
 export async function readManifest(
   fs: WorkspaceFilesystem,
-  slug: string,
+  docPath: string,
 ): Promise<DocumentManifest | null> {
+  const manifestPath = manifestPathFor(docPath);
+  if (!manifestPath) return null;
   try {
-    const raw = await fs.readFile(manifestPath(slug));
+    const raw = await fs.readFile(manifestPath);
     const text = typeof raw === "string" ? raw : raw.toString("utf8");
     return JSON.parse(text) as DocumentManifest;
   } catch {
@@ -77,17 +85,21 @@ export async function readManifest(
  * Record a new revision of a document: store its content in the BlobStore and
  * append a manifest entry. No-ops (returns the unchanged manifest) when the
  * content is byte-identical to the current revision, so repeated saves of the
- * same text don't pad the history. Does NOT write the live documents/<slug>.md —
- * the caller owns that (save_document already does, restore does below).
+ * same text don't pad the history. Does NOT write the live `<docPath>` — the
+ * caller owns that (save_document already does, restore does below).
  */
 export async function recordVersion(
   fs: WorkspaceFilesystem,
-  args: { slug: string; title: string; content: string; note?: string },
+  docPath: string,
+  args: { title: string; content: string; note?: string },
 ): Promise<DocumentManifest> {
-  const { slug, title, content, note } = args;
+  const { title, content, note } = args;
+  const manifestPath = manifestPathFor(docPath);
+  const slug = dirAndSlug(docPath)?.slug;
+  if (!manifestPath || !slug) throw new Error(`recordVersion: invalid doc path ${docPath}`);
   const blobHash = hashContent(content);
 
-  const existing = await readManifest(fs, slug);
+  const existing = await readManifest(fs, docPath);
   if (existing) {
     const latest = existing.versions[existing.versions.length - 1];
     if (latest && latest.blobHash === blobHash && existing.current === latest.version) {
@@ -122,16 +134,16 @@ export async function recordVersion(
     current: nextVersion,
     versions: [...(existing?.versions ?? []), entry],
   };
-  await fs.writeFile(manifestPath(slug), JSON.stringify(manifest, null, 2));
+  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
   return manifest;
 }
 
 /** List a document's revisions, newest first. Empty if no history. */
 export async function listVersions(
   fs: WorkspaceFilesystem,
-  slug: string,
+  docPath: string,
 ): Promise<{ current: number; title: string; versions: DocumentVersionEntry[] }> {
-  const manifest = await readManifest(fs, slug);
+  const manifest = await readManifest(fs, docPath);
   if (!manifest) return { current: 0, title: "", versions: [] };
   return {
     current: manifest.current,
@@ -147,10 +159,10 @@ export async function listVersions(
  */
 export async function getVersionContent(
   fs: WorkspaceFilesystem,
-  slug: string,
+  docPath: string,
   version: number,
 ): Promise<{ content: string; entry: DocumentVersionEntry } | null> {
-  const manifest = await readManifest(fs, slug);
+  const manifest = await readManifest(fs, docPath);
   const entry = manifest?.versions.find((v) => v.version === version);
   if (!entry) return null;
 
@@ -161,21 +173,20 @@ export async function getVersionContent(
 }
 
 /**
- * Restore an older revision: write it back as the live documents/<slug>.md and
- * record it as a NEW revision (history stays append-only, so a restore is itself
- * an undoable event). Returns the updated manifest.
+ * Restore an older revision: write it back as the live `<docPath>` and record it
+ * as a NEW revision (history stays append-only, so a restore is itself an
+ * undoable event). Returns the updated manifest.
  */
 export async function restoreVersion(
   fs: WorkspaceFilesystem,
-  slug: string,
+  docPath: string,
   version: number,
 ): Promise<DocumentManifest | null> {
-  const restored = await getVersionContent(fs, slug, version);
+  const restored = await getVersionContent(fs, docPath, version);
   if (!restored) return null;
 
-  await fs.writeFile(livePathForSlug(slug), restored.content);
-  return recordVersion(fs, {
-    slug,
+  await fs.writeFile(docPath, restored.content);
+  return recordVersion(fs, docPath, {
     title: restored.entry.title,
     content: restored.content,
     note: `restored from v${version}`,

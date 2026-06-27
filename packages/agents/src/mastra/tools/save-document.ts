@@ -1,7 +1,9 @@
 import { RequestContext } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { docPath as physicalDocPath } from "../../lib/documents/spaces";
 import { recordVersion } from "../../lib/documents/versions";
+import { requestUserContext } from "../../lib/request-user-context";
 import { foremanWorkspace } from "../agents/workspace";
 
 /**
@@ -35,10 +37,21 @@ export const saveDocumentTool = createTool({
     "user and you can read it back later. Use this when the user asks you to write up, save, or " +
     "keep a note, plan, summary, brief, spec, or doc — or to capture shared context for the team. " +
     "The document is stored in the workspace and shown in a side panel the user can open. Reusing " +
-    "the same title updates that document. Pass a short title and the full markdown content.",
+    "the same title updates that document. Documents are saved to the SHARED team space by " +
+    "default (every workspace member can see them); pass space:'personal' for a private note only " +
+    "this user should see (e.g. when they say 'just for me', 'private', or 'a personal note'). " +
+    "Pass a short title and the full markdown content.",
   inputSchema: z.object({
     title: z.string().describe("Short human title for the document, e.g. 'Q3 launch plan'."),
     content: z.string().describe("The full document body as GitHub-flavored markdown."),
+    space: z
+      .enum(["shared", "personal"])
+      .optional()
+      .describe(
+        "Where to save it: 'shared' (default — visible to the whole workspace/team) or " +
+          "'personal' (private to this user). Only use 'personal' when the user asks for a " +
+          "private/personal note.",
+      ),
   }),
   toModelOutput: (output) => {
     const o = output as { title: string; path: string };
@@ -47,7 +60,7 @@ export const saveDocumentTool = createTool({
       text: `Saved document "${o.title}" (${o.path}). It is shown in the side panel, and you can read it back anytime with your workspace file tools.`,
     };
   },
-  execute: async ({ title, content }, context) => {
+  execute: async ({ title, content, space }, context) => {
     const entries: Array<[string, string]> = [];
     const wsId = context?.requestContext?.get("workspaceId") as string | undefined;
     if (wsId) entries.push(["workspaceId", wsId]);
@@ -58,17 +71,25 @@ export const saveDocumentTool = createTool({
     });
     if (!fs) throw new Error("save_document: workspace filesystem unavailable");
 
+    // userId is needed for the per-user PERSONAL space path (foreman-5e4f).
+    const userId =
+      (context?.requestContext?.get("userId") as string | undefined) ??
+      requestUserContext.getStore()?.userId;
+    // A personal save needs a userId to scope the path; without one, fall back to
+    // the shared space rather than failing the save.
+    const resolvedSpace = space === "personal" && userId ? "personal" : "shared";
+
     const slug = slugify(title);
-    const path = `documents/${slug}.md`;
+    const path = physicalDocPath(resolvedSpace, userId, slug);
     await fs.writeFile(path, content);
     // Snapshot this revision into the version tree (Mastra BlobStore + manifest,
     // foreman-udji). Best-effort: a versioning hiccup must not fail the save —
     // the live file is already written and is the source of truth.
     try {
-      await recordVersion(fs, { slug, title, content });
+      await recordVersion(fs, path, { title, content });
     } catch (err) {
       console.error("save_document: recordVersion failed (doc still saved)", err);
     }
-    return { path, title };
+    return { path, title, space: resolvedSpace };
   },
 });

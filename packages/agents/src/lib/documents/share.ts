@@ -54,7 +54,7 @@ export async function createDocumentShare(
   const fs = await resolveFs(workspaceId);
   if (!fs || !(await fs.exists(docPath))) return null;
 
-  const manifest = await readManifest(fs, slug).catch(() => null);
+  const manifest = await readManifest(fs, docPath).catch(() => null);
   const title = manifest?.title || titleFromSlug(slug);
 
   const token = randomBytes(24).toString("base64url");
