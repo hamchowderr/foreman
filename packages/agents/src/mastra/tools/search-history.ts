@@ -1,14 +1,12 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { backgroundIfEnabled } from "@/lib/background";
 import { searchActionHistory } from "@/lib/rag";
 
+// Backgrounding (so a slow history search doesn't block chat) is opted in at the
+// AGENT level via backgroundToolsConfig() in lib/background.ts — tool-level
+// `background` config doesn't dispatch under Foreman's lazy tools resolver.
 export const searchHistoryTool = createTool({
   id: "search_history",
-  // Opt this read into Mastra background execution when FOREMAN_BACKGROUND_TOOLS=1.
-  // Simple schema (3 fields) → safe for Studio introspection, unlike the Zapier
-  // SDK tools whose schemas hang `mastra dev` when background is enabled.
-  ...backgroundIfEnabled(),
   description:
     "Search the user's past action history to find similar actions they've taken before. " +
     "Use this to recommend actions based on what the user has done previously, or to recall " +

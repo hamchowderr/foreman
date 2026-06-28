@@ -12,42 +12,45 @@ import type { AppEnv } from "./types";
  * Snapshots are append-only rows pulled from a user's connected app
  * (written via saveSnapshot in lib/dashboards/snapshot.ts), keyed by
  * (user_id, app_key). Phase 1 exposes them by app_key because the
- * `dashboard` table doesn't exist yet (Phase 2). We deliberately namespace under
- * `/snapshots/:appKey` so the future `/dashboards/:id` routes won't collide.
+ * artifact table is keyed separately. We deliberately namespace under
+ * `/snapshots/:appKey` so the `/apps/artifacts/:id` routes won't collide.
  *
- *   GET /dashboards/snapshots/:appKey                  → latest snapshot
- *   GET /dashboards/snapshots/:appKey?history=true     → series, newest-first
+ * Mounted at `/apps` (see routes/index.ts), so the full paths are:
+ *   GET /apps                                     → workspace apps with data
+ *   GET /apps/snapshots/:appKey                   → latest snapshot
+ *   GET /apps/snapshots/:appKey?history=true      → series, newest-first
  *       &since=<iso>   filter to snapshots at/after this timestamp
  *       &limit=<n>     cap the series (1..500, default 100)
  *
- * Phase 3 (public sharing):
- *   POST   /dashboards/artifacts/:id/share   → mint a public share token (authed)
- *   DELETE /dashboards/shares/:shareToken    → revoke a share (authed)
- *   GET    /dashboards/public/:shareToken    → render data, NO auth (token = grant)
+ * Public sharing:
+ *   POST   /apps/artifacts/:id/share   → mint a public share token (authed)
+ *   DELETE /apps/shares/:shareToken    → revoke a share (authed)
+ *   GET    /apps/public/:shareToken    → render data, NO auth (token = grant)
  *
  * Auth is scoped per group: the owner-scoped read/write routes require auth; the
  * public share route is intentionally unauthenticated.
  */
-const dashboards = new Hono<AppEnv>();
+const appsRouter = new Hono<AppEnv>();
 
-dashboards.use("/artifacts/*", authMiddleware);
-dashboards.use("/snapshots/*", authMiddleware);
-dashboards.use("/shares/*", authMiddleware);
-dashboards.use("/apps", authMiddleware);
+appsRouter.use("/artifacts/*", authMiddleware);
+appsRouter.use("/snapshots/*", authMiddleware);
+appsRouter.use("/shares/*", authMiddleware);
 
-// GET /dashboards/apps — the workspace's apps that have snapshot data, newest
-// first. Lets the Apps page default to a real source instead of a hardcoded one.
-dashboards.get("/apps", async (c) => {
+// GET /apps — the workspace's apps that have snapshot data, newest first. Lets
+// the Apps page default to a real source instead of a hardcoded one. Auth is
+// per-route here (not a prefix `use`) so the public /apps/public/* route below
+// stays unauthenticated.
+appsRouter.get("/", authMiddleware, async (c) => {
   const workspaceId = c.get("workspaceId");
   const apps = await listSnapshotApps(workspaceId);
   return c.json({ apps });
 });
 
-// GET /dashboards/public/:shareToken — public share page data. NO auth: a valid,
+// GET /apps/public/:shareToken — public share page data. NO auth: a valid,
 // unexpired token is the capability. Returns the same shape as the authed
 // artifact read (spec + records), so the web renderer is identical. Unknown or
 // expired tokens 404 (no existence leak).
-dashboards.get("/public/:shareToken", async (c) => {
+appsRouter.get("/public/:shareToken", async (c) => {
   const token = validateParam(c.req.param("shareToken"), "shareToken");
   if (!token) {
     return c.json({ error: "Invalid share token" }, 400);
@@ -59,9 +62,9 @@ dashboards.get("/public/:shareToken", async (c) => {
   return c.json(artifact);
 });
 
-// GET /dashboards/artifacts/:id — a stored dashboard artifact (spec + the
-// records it renders), scoped to the caller. Powers the /dashboards/[id] page.
-dashboards.get("/artifacts/:id", async (c) => {
+// GET /apps/artifacts/:id — a stored dashboard artifact (spec + the
+// records it renders), scoped to the caller. Powers the /apps/[id] page.
+appsRouter.get("/artifacts/:id", async (c) => {
   const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) {
@@ -74,10 +77,10 @@ dashboards.get("/artifacts/:id", async (c) => {
   return c.json(artifact);
 });
 
-// POST /dashboards/artifacts/:id/share — mint a public share token for a
+// POST /apps/artifacts/:id/share — mint a public share token for a
 // dashboard the caller owns. Optional body { expiresInDays } for a link that
 // auto-expires. Returns the token + the relative public path the web app serves.
-dashboards.post("/artifacts/:id/share", async (c) => {
+appsRouter.post("/artifacts/:id/share", async (c) => {
   const userId = c.get("userId");
   const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
@@ -102,8 +105,8 @@ dashboards.post("/artifacts/:id/share", async (c) => {
   return c.json({ token: share.token, url: `/d/${share.token}`, expiresAt: share.expiresAt }, 201);
 });
 
-// DELETE /dashboards/shares/:shareToken — revoke a share, owner-scoped.
-dashboards.delete("/shares/:shareToken", async (c) => {
+// DELETE /apps/shares/:shareToken — revoke a share, owner-scoped.
+appsRouter.delete("/shares/:shareToken", async (c) => {
   const workspaceId = c.get("workspaceId");
   const token = validateParam(c.req.param("shareToken"), "shareToken");
   if (!token) {
@@ -116,7 +119,7 @@ dashboards.delete("/shares/:shareToken", async (c) => {
   return c.json({ revoked: true });
 });
 
-dashboards.get("/snapshots/:appKey", async (c) => {
+appsRouter.get("/snapshots/:appKey", async (c) => {
   const workspaceId = c.get("workspaceId");
   const appKey = validateParam(c.req.param("appKey"), "appKey");
   if (!appKey) {
@@ -153,4 +156,4 @@ dashboards.get("/snapshots/:appKey", async (c) => {
   return c.json({ appKey, count: series.length, snapshots: series });
 });
 
-export default dashboards;
+export default appsRouter;

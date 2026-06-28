@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Mint (and copy) a public share link for a dashboard. POSTs through the
- * `/api/dashboards/*` proxy, which injects the owner's Supabase JWT; the agent
+ * `/api/apps/*` proxy, which injects the owner's Supabase JWT; the agent
  * returns a token + the `/d/<token>` path that the public page serves.
  */
 export function ShareButton({ artifactId }: { artifactId: string }) {
@@ -15,7 +15,7 @@ export function ShareButton({ artifactId }: { artifactId: string }) {
   async function share() {
     setState("loading");
     try {
-      const res = await fetch(`/api/dashboards/artifacts/${encodeURIComponent(artifactId)}/share`, {
+      const res = await fetch(`/api/apps/artifacts/${encodeURIComponent(artifactId)}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{}",

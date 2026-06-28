@@ -47,7 +47,7 @@ import type { AppEnv } from "./types";
  */
 const documents = new Hono<AppEnv>();
 // Auth everything EXCEPT the public share read (`/documents/public/:token`),
-// where the token itself is the capability — same model as /dashboards/public.
+// where the token itself is the capability — same model as /apps/public.
 documents.use("*", (c, next) =>
   c.req.path.includes("/documents/public/") ? next() : authMiddleware(c, next),
 );

@@ -118,6 +118,17 @@ function toKebab(name: string): string {
 }
 
 /**
+ * Tool IDs (kebab-case) of the read-only Zapier tools — the safe, no-approval
+ * reads. Used to opt them into Mastra background execution at the AGENT level
+ * (foreman-7am4): tool-level `background` config doesn't dispatch under Foreman's
+ * lazy `tools: () => …` resolver, but the agent-level `backgroundTasks.tools`
+ * map does. Write/destructive tools are intentionally excluded (stay synchronous
+ * so the proposal/approval flow is undisturbed). Computed from static metadata —
+ * no SDK init, safe to import at module load.
+ */
+export const READ_ONLY_TOOL_IDS: string[] = Array.from(READ_ONLY, toKebab);
+
+/**
  * List methods that return paginated results.
  * We pass maxItems to the SDK so it auto-paginates up to the cap.
  */

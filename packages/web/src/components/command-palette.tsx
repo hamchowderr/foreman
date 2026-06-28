@@ -27,7 +27,7 @@ export const OPEN_COMMAND_PALETTE_EVENT = "foreman:command-palette";
 const GO_TO = [
   { label: "Automations", href: "/automations", Icon: ZapIcon },
   { label: "Inbox", href: "/inbox", Icon: InboxIcon },
-  { label: "Apps", href: "/dashboards", Icon: LayoutDashboardIcon },
+  { label: "Apps", href: "/apps", Icon: LayoutDashboardIcon },
   { label: "Documents", href: "/documents", Icon: FileTextIcon },
   { label: "Workspaces", href: "/workspaces", Icon: UsersIcon },
   { label: "Settings", href: "/settings", Icon: SettingsIcon },

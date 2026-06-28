@@ -11,12 +11,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import type {
-  Aggregation,
-  DashboardBlock,
-  DashboardSpec,
-  SnapshotRecord,
-} from "@/lib/dashboards-client";
+import type { Aggregation, DashboardBlock, DashboardSpec, SnapshotRecord } from "@/lib/apps-client";
 
 const MAX_CHART_CATEGORIES = 12;
 

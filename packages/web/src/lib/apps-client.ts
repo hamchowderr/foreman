@@ -1,8 +1,8 @@
 /**
- * Typed client + spec types for the /dashboards/* routes on the agents server.
+ * Typed client + spec types for the /apps/* routes on the agents server.
  *
  * Server components pass a Supabase access token directly; client components go
- * through app/api/dashboards/[...path]/route.ts which injects the same token.
+ * through app/api/apps/[...path]/route.ts which injects the same token.
  * Shapes mirror packages/agents/src/lib/dashboards/snapshot.ts.
  */
 
@@ -80,10 +80,7 @@ export interface DashboardArtifact {
 /** A stored dashboard artifact (spec + records) by id, or null on 404. */
 export async function getArtifact(id: string, token: string): Promise<DashboardArtifact | null> {
   try {
-    return await request<DashboardArtifact>(
-      `/dashboards/artifacts/${encodeURIComponent(id)}`,
-      token,
-    );
+    return await request<DashboardArtifact>(`/apps/artifacts/${encodeURIComponent(id)}`, token);
   } catch (e) {
     if ((e as Error).message.includes("→ 404")) return null;
     throw e;
@@ -96,14 +93,14 @@ export async function getArtifact(id: string, token: string): Promise<DashboardA
  * capability). Dynamic (no-store) so the share reflects the latest snapshot.
  */
 export async function getPublicDashboard(shareToken: string): Promise<DashboardArtifact | null> {
-  const res = await fetch(`${AGENT_URL}/dashboards/public/${encodeURIComponent(shareToken)}`, {
+  const res = await fetch(`${AGENT_URL}/apps/public/${encodeURIComponent(shareToken)}`, {
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
   });
   if (res.status === 404) return null;
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`GET /dashboards/public → ${res.status}: ${body}`);
+    throw new Error(`GET /apps/public → ${res.status}: ${body}`);
   }
   return (await res.json()) as DashboardArtifact;
 }
@@ -121,7 +118,7 @@ export interface SnapshotApp {
  */
 export async function listSnapshotApps(token: string): Promise<SnapshotApp[]> {
   try {
-    const { apps } = await request<{ apps: SnapshotApp[] }>("/dashboards/apps", token);
+    const { apps } = await request<{ apps: SnapshotApp[] }>("/apps", token);
     return apps ?? [];
   } catch {
     return [];
@@ -131,7 +128,7 @@ export async function listSnapshotApps(token: string): Promise<SnapshotApp[]> {
 /** Latest snapshot for an app, or null on 404 (no data pulled yet). */
 export async function getLatestSnapshot(appKey: string, token: string): Promise<Snapshot | null> {
   try {
-    return await request<Snapshot>(`/dashboards/snapshots/${encodeURIComponent(appKey)}`, token);
+    return await request<Snapshot>(`/apps/snapshots/${encodeURIComponent(appKey)}`, token);
   } catch (e) {
     if ((e as Error).message.includes("→ 404")) return null;
     throw e;
@@ -146,10 +143,7 @@ export function getSnapshotHistory(
   const qs = new URLSearchParams({ history: "true" });
   if (opts.since) qs.set("since", opts.since);
   if (opts.limit) qs.set("limit", String(opts.limit));
-  return request<SnapshotHistory>(
-    `/dashboards/snapshots/${encodeURIComponent(appKey)}?${qs}`,
-    token,
-  );
+  return request<SnapshotHistory>(`/apps/snapshots/${encodeURIComponent(appKey)}?${qs}`, token);
 }
 
 // ─── Default spec inference ──────────────────────────────────────────────────

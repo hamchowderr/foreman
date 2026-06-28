@@ -5,6 +5,7 @@ import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
 import { stepCountIs } from "ai";
+import { backgroundToolsConfig } from "../../lib/background";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import { buildSystemPrompt, type PromptContext } from "../../lib/prompt-template";
 import {
@@ -160,6 +161,11 @@ export function createForemanAgent(databaseUrl: string) {
       stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
+    // Run read-only tools (Zapier reads + search_history) as Mastra background
+    // tasks so a slow read doesn't block chat; results fold in via /chat's
+    // streamUntilIdle. Agent-level opt-in (not tool-level) is what actually
+    // dispatches under the lazy tools resolver — see lib/background.ts (foreman-7am4).
+    backgroundTasks: backgroundToolsConfig(),
     // NOTE: no `voice:` here. Foreman's STT/TTS runs through lib/voice.ts (its own
     // OpenAIVoice instance) behind the /voice route — nothing reads agent.voice.
     // Wiring it here also can't type-check: @mastra/voice-openai vendors its own

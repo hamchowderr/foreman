@@ -12,7 +12,7 @@ import type { AppEnv } from "./types";
  * pointer (public."user".default_workspace_id lives on an RLS-locked,
  * service-role-only surface). It also can't see co-member profiles or act on
  * invitations as a not-yet-member invitee. So — matching Foreman's dominant
- * pattern (web → agent server via fetch, like /stored/agents and /dashboards) —
+ * pattern (web → agent server via fetch, like /stored/agents and /apps) —
  * ALL workspace operations run here on the service_role client, with membership
  * and admin checks enforced in code.
  */

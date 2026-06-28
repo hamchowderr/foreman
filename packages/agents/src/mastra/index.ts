@@ -106,7 +106,7 @@ export function getMastra(): Mastra {
   const CUSTOM_ROUTE_PREFIXES = [
     "/conversations",
     "/proposals",
-    "/dashboards",
+    "/apps",
     "/documents",
     "/stored",
     "/zapier",
@@ -211,6 +211,20 @@ export function getMastra(): Mastra {
     // Docs: https://mastra.ai/docs/streaming/background-tasks
     backgroundTasks: {
       enabled: true,
+      // Bound concurrency and degrade safely: if the queue is saturated, run the
+      // tool synchronously in the agentic loop ('fallback-sync') rather than
+      // queueing it behind other work — chat must never stall on a full bg queue.
+      globalConcurrency: 10,
+      perAgentConcurrency: 5,
+      backpressure: "fallback-sync",
+      // Hard cap on a single task; the per-tool config can override (background.ts).
+      defaultTimeoutMs: 300_000,
+      // Reap finished task rows so the table doesn't grow unbounded.
+      cleanup: { completedTtlMs: 3_600_000, failedTtlMs: 86_400_000 },
+      // Observability for live verification (foreman-7am4) — terminal-state hooks.
+      onTaskComplete: (task) => console.log(`[bg-task] ✓ ${task.toolName} (${task.id}) completed`),
+      onTaskFailed: (task) =>
+        console.error(`[bg-task] ✗ ${task.toolName} (${task.id}) failed: ${task.error?.message}`),
     },
     server: {
       port: Number(process.env.PORT) || 4111,
@@ -469,12 +483,20 @@ export function getMastra(): Mastra {
                 }
               }
 
+              // streamUntilIdle (not stream): when a tool dispatches as a background
+              // task (foreman-7am4), keep the SSE open and re-enter the agentic loop
+              // on completion so the result folds into the SAME response instead of
+              // landing in next-turn memory. With no background task it behaves like
+              // stream() — closes as soon as the turn ends (and falls back to stream()
+              // entirely if the agent had no memory). maxIdleMs caps the between-turn
+              // wait. Same options + same MastraModelOutput, so toAISdkStream is unchanged.
               const result = await requestUserContext.run({ userId: rid }, () =>
-                agent.stream([{ role: "user" as const, content: finalUserContent }], {
+                agent.streamUntilIdle([{ role: "user" as const, content: finalUserContent }], {
                   stopWhen: stepCountIs(15),
                   memory: { thread: tid, resource: runResource },
                   savePerStep: true,
                   requestContext: rctx,
+                  maxIdleMs: 120_000,
                   ...(requestedModel ? { model: requestedModel } : {}),
                 }),
               );

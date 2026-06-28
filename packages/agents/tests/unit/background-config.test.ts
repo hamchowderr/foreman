@@ -1,29 +1,28 @@
 /**
- * Unit tests for backgroundIfEnabled (foreman-7am4) — the env gate that opts a
- * tool into Mastra background execution. Off unless FOREMAN_BACKGROUND_TOOLS=1.
+ * Unit test for the agent-level background opt-in (foreman-7am4). Read-only tools
+ * (Zapier reads + search_history) run as Mastra background tasks; writes are
+ * excluded. There is no env gate.
  */
-import { afterEach, describe, expect, it } from "vitest";
-import { backgroundIfEnabled } from "@/lib/background";
+import { describe, expect, it } from "vitest";
+import { backgroundToolsConfig } from "@/lib/background";
+import { READ_ONLY_TOOL_IDS } from "@/lib/zapier-sdk-tools";
 
-const orig = process.env.FOREMAN_BACKGROUND_TOOLS;
-afterEach(() => {
-  if (orig === undefined) delete process.env.FOREMAN_BACKGROUND_TOOLS;
-  else process.env.FOREMAN_BACKGROUND_TOOLS = orig;
-});
-
-describe("backgroundIfEnabled", () => {
-  it("returns a background config when the flag is set to '1'", () => {
-    process.env.FOREMAN_BACKGROUND_TOOLS = "1";
-    expect(backgroundIfEnabled()).toEqual({ background: { enabled: true } });
+describe("backgroundToolsConfig", () => {
+  it("opts in every read-only Zapier tool + search_history, with a wait-timeout", () => {
+    const cfg = backgroundToolsConfig();
+    expect(cfg.waitTimeoutMs).toBe(30_000);
+    // search_history (custom read) is opted in.
+    expect(cfg.tools.search_history).toEqual({ enabled: true });
+    // Every read-only Zapier tool id is opted in.
+    for (const id of READ_ONLY_TOOL_IDS) {
+      expect(cfg.tools[id]).toEqual({ enabled: true });
+    }
+    expect(READ_ONLY_TOOL_IDS.length).toBeGreaterThan(0);
   });
 
-  it("is off by default — returns an empty slice", () => {
-    delete process.env.FOREMAN_BACKGROUND_TOOLS;
-    expect(backgroundIfEnabled()).toEqual({});
-  });
-
-  it("treats any value other than '1' as off", () => {
-    process.env.FOREMAN_BACKGROUND_TOOLS = "true";
-    expect(backgroundIfEnabled()).toEqual({});
+  it("excludes write/destructive tools (run-action, create-table-records)", () => {
+    const cfg = backgroundToolsConfig();
+    expect(cfg.tools["run-action"]).toBeUndefined();
+    expect(cfg.tools["create-table-records"]).toBeUndefined();
   });
 });

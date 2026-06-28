@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
 import { ShareButton } from "@/components/dashboard/share-button";
 import { ArrowLeft } from "@/components/icons/hi";
-import { getArtifact } from "@/lib/dashboards-client";
+import { getArtifact } from "@/lib/apps-client";
 import { createClient } from "@/lib/server";
 
 export default async function DashboardArtifactPage({
@@ -24,7 +24,7 @@ export default async function DashboardArtifactPage({
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
       <Link
-        href="/dashboards"
+        href="/apps"
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> Apps

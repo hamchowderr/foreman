@@ -1,8 +1,8 @@
 /**
- * Pass-through proxy: /api/dashboards/* → ${AGENT_URL}/dashboards/*.
+ * Pass-through proxy: /api/apps/* → ${AGENT_URL}/apps/*.
  *
  * Forwards the user's Supabase access token from the SSR session so client
- * components can call dashboard routes without ever seeing the token.
+ * components can call app data routes without ever seeing the token.
  */
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/server";
@@ -17,7 +17,7 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
   } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const target = `${AGENT_URL}/dashboards/${path.join("/")}${req.nextUrl.search}`;
+  const target = `${AGENT_URL}/apps/${path.join("/")}${req.nextUrl.search}`;
   const init: RequestInit = {
     method: req.method,
     headers: {

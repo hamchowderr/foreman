@@ -76,7 +76,7 @@ export const createDashboardTool = createTool({
     return {
       id,
       title: spec.title,
-      url: `/dashboards/${id}`,
+      url: `/apps/${id}`,
       rowCount: snapshot.rowCount,
       appKey,
       spec,

@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BrandHeader } from "@/components/brand-header";
 import { DashboardRenderer } from "@/components/dashboard/dashboard-renderer";
-import { getPublicDashboard } from "@/lib/dashboards-client";
+import { getPublicDashboard } from "@/lib/apps-client";
 
 // Public, logged-out share page. No auth: the token in the URL is the capability
-// (validated + expiry-checked by the agent's /dashboards/public/:token endpoint).
+// (validated + expiry-checked by the agent's /apps/public/:token endpoint).
 // Rendered dynamically (fetch is no-store) so a share reflects the latest
 // snapshot — matches the in-app dashboard view. (Route-segment `revalidate` ISR
 // is incompatible with this app's Next 16 `cacheComponents` config.)
