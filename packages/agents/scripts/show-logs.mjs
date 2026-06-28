@@ -6,12 +6,13 @@
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { Client } = require("C:/Users/HamCh/code/foreman/node_modules/pg");
+const { Client } = require("pg");
 
 const arg = process.argv[2] || "10";
 const watch = arg === "watch";
 const minutes = watch ? 1 : parseInt(arg, 10);
-const connStr = "postgres://postgres:postgres@127.0.0.1:54422/postgres";
+// Local Supabase default; override with DATABASE_URL for other setups.
+const connStr = process.env.DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:54422/postgres";
 
 async function fetchSince(client, since) {
   const r = await client.query(

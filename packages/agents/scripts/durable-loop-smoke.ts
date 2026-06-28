@@ -21,7 +21,10 @@ import { getSupabase } from "../src/lib/db";
 import { deleteAutomation } from "../src/lib/durable";
 
 const sdk = createZapierSdk();
-const ACCOUNT_ID = "16517571"; // numeric catch-URL account segment (admin@otakusolutions.io)
+// Numeric catch-URL account segment — find it in your Zapier catch-hook URL
+// (hooks.zapier.com/hooks/catch/<ACCOUNT_ID>/<code>/). Set via env.
+const ACCOUNT_ID = process.env.ZAPIER_ACCOUNT_ID ?? "";
+if (!ACCOUNT_ID) throw new Error("Set ZAPIER_ACCOUNT_ID to run this smoke test.");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const ECHO_SOURCE = `import { defineDurable } from "@zapier/zapier-durable";

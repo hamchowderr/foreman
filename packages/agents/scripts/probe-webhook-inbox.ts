@@ -50,7 +50,7 @@ async function main() {
     account_public_id: c?.account_public_id,
     public_id: c?.public_id,
   });
-  const candidates = [c?.account_public_id, c?.account_id, "16517571", "16517015"].filter(
+  const candidates = [c?.account_public_id, c?.account_id, process.env.ZAPIER_ACCOUNT_ID].filter(
     Boolean,
   ) as string[];
 
