@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -89,7 +90,13 @@ export function WorkspacesManager() {
     });
   };
 
-  if (loading) return <p className="text-muted-foreground text-sm">Loading…</p>;
+  if (loading)
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-6">

@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useKnowledgePanel } from "@/hooks/use-knowledge-panel";
 import {
   type DocumentShare,
@@ -297,7 +298,14 @@ export function KnowledgePanel() {
               Viewing version {viewVersion} (read-only). Restore to make it the live document.
             </p>
           )}
-          {isLoading && <p className="text-muted-foreground text-sm">Loading…</p>}
+          {isLoading && (
+            <div className="flex flex-col gap-2 px-1 py-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+            </div>
+          )}
           {error && <p className="text-destructive text-sm">Couldn&apos;t load this document.</p>}
           {data && <MessageResponse>{data.content}</MessageResponse>}
         </ArtifactContent>

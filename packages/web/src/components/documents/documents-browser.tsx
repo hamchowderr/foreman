@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   type DocumentMeta,
   getDocument,
@@ -105,7 +106,17 @@ export function DocumentsBrowser() {
     </div>
   );
 
-  if (loading) return <p className="text-muted-foreground text-sm">Loading…</p>;
+  if (loading)
+    return (
+      <>
+        {importControls}
+        <div className="flex flex-col gap-1">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton className="h-[42px] rounded-md" key={i} />
+          ))}
+        </div>
+      </>
+    );
   if (error)
     return <p className="text-destructive text-sm">Couldn't load your documents. Try again.</p>;
 
@@ -156,7 +167,12 @@ export function DocumentsBrowser() {
             <DialogDescription className="sr-only">Document contents</DialogDescription>
           </DialogHeader>
           {content === null ? (
-            <p className="text-muted-foreground text-sm">Loading…</p>
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+            </div>
           ) : (
             <div className="prose-sm max-w-none">
               <MessageResponse>{content}</MessageResponse>
