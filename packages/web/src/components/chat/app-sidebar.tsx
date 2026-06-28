@@ -7,6 +7,7 @@ import {
   type LucideIcon,
   PanelLeftIcon,
   PenSquareIcon,
+  SearchIcon,
   UsersIcon,
   ZapIcon,
 } from "lucide-react";
@@ -14,6 +15,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SidebarHistory } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
+import { CommandPalette, OPEN_COMMAND_PALETTE_EVENT } from "@/components/command-palette";
 import {
   Sidebar,
   SidebarContent,
@@ -46,90 +48,111 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { setOpenMobile, toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="pb-0 pt-3">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex flex-row items-center justify-between">
-            <div className="group/logo relative flex items-center justify-center">
-              <SidebarMenuButton
-                asChild
-                className="size-8 !px-0 items-center justify-center group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                tooltip="Foreman"
-              >
-                <Link href="/" onClick={() => setOpenMobile(false)}>
-                  {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
-                  <img
-                    alt="Zapier"
-                    className="size-5 object-contain group-data-[collapsible=icon]:size-4"
-                    height={20}
-                    src="/zapier.svg"
-                    width={20}
-                  />
-                </Link>
-              </SidebarMenuButton>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <SidebarMenuButton
-                    className="pointer-events-none absolute inset-0 size-8 opacity-0 group-data-[collapsible=icon]:pointer-events-auto group-data-[collapsible=icon]:group-hover/logo:opacity-100"
-                    onClick={() => toggleSidebar()}
-                  >
-                    <PanelLeftIcon className="size-4" />
-                  </SidebarMenuButton>
-                </TooltipTrigger>
-                <TooltipContent className="hidden md:block" side="right">
-                  Open sidebar
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="group-data-[collapsible=icon]:hidden">
-              <SidebarTrigger className="text-sidebar-foreground/60 transition-colors duration-150 hover:text-sidebar-foreground" />
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <WorkspaceSwitcher />
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="pt-2">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
+    <>
+      <CommandPalette />
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="pb-0 pt-3">
+          <SidebarMenu>
+            <SidebarMenuItem className="flex flex-row items-center justify-between">
+              <div className="group/logo relative flex items-center justify-center">
                 <SidebarMenuButton
-                  className="h-8 rounded-lg text-[13px] font-medium text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push("/chat");
-                  }}
-                  tooltip="New Chat"
+                  asChild
+                  className="size-8 !px-0 items-center justify-center group-data-[collapsible=icon]:group-hover/logo:opacity-0"
+                  tooltip="Foreman"
                 >
-                  <PenSquareIcon className="size-4" />
-                  <span>New chat</span>
+                  <Link href="/" onClick={() => setOpenMobile(false)}>
+                    {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+                    <img
+                      alt="Zapier"
+                      className="size-5 object-contain group-data-[collapsible=icon]:size-4"
+                      height={20}
+                      src="/zapier.svg"
+                      width={20}
+                    />
+                  </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              {user &&
-                NAV.map(({ href, label, Icon }) => (
-                  <SidebarMenuItem key={href}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith(href)}
-                      className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
-                      tooltip={label}
+                      className="pointer-events-none absolute inset-0 size-8 opacity-0 group-data-[collapsible=icon]:pointer-events-auto group-data-[collapsible=icon]:group-hover/logo:opacity-100"
+                      onClick={() => toggleSidebar()}
                     >
-                      <Link href={href} onClick={() => setOpenMobile(false)}>
-                        <Icon className="size-4" />
-                        <span className="text-[13px]">{label}</span>
-                      </Link>
+                      <PanelLeftIcon className="size-4" />
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent className="hidden md:block" side="right">
+                    Open sidebar
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="group-data-[collapsible=icon]:hidden">
+                <SidebarTrigger className="text-sidebar-foreground/60 transition-colors duration-150 hover:text-sidebar-foreground" />
+              </div>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          <WorkspaceSwitcher />
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup className="pt-2">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="h-8 rounded-lg text-[13px] font-medium text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push("/chat");
+                    }}
+                    tooltip="New Chat"
+                  >
+                    <PenSquareIcon className="size-4" />
+                    <span>New chat</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {user && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="h-8 rounded-lg text-[13px] text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      onClick={() => {
+                        setOpenMobile(false);
+                        window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT));
+                      }}
+                      tooltip="Search (⌘K)"
+                    >
+                      <SearchIcon className="size-4" />
+                      <span>Search</span>
+                      <kbd className="ml-auto rounded border border-sidebar-border bg-sidebar-accent/40 px-1 text-[10px] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
+                        ⌘K
+                      </kbd>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarHistory user={user} />
-      </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border pt-2 pb-5">
-        {user && <SidebarUserNav user={user} />}
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+                )}
+                {user &&
+                  NAV.map(({ href, label, Icon }) => (
+                    <SidebarMenuItem key={href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith(href)}
+                        className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                        tooltip={label}
+                      >
+                        <Link href={href} onClick={() => setOpenMobile(false)}>
+                          <Icon className="size-4" />
+                          <span className="text-[13px]">{label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarHistory user={user} />
+        </SidebarContent>
+        <SidebarFooter className="border-t border-sidebar-border pt-2 pb-5">
+          {user && <SidebarUserNav user={user} />}
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    </>
   );
 }
