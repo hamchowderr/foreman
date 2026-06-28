@@ -21,6 +21,8 @@
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
     "check:deps": "node scripts/check-dep-uniqueness.mjs",
+    "dead-code": "npx fallow dead-code",
+    "dead-code:json": "npx fallow dead-code --format json",
     "sdk:check": "node scripts/zapier-sdk-watch.mjs",
     "sdk:check:quiet": "node scripts/zapier-sdk-watch.mjs --quiet",
     "audit:ci": "npm audit --audit-level=moderate",

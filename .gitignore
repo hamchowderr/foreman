@@ -69,3 +69,4 @@ preview-auth.json
 
 # Local dev-server logs (packages/agents/server-dev.log, packages/web/web-dev.log)
 *-dev.log
+.fallow/
