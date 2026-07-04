@@ -39,8 +39,8 @@ export interface Lease {
 
 export async function ensureInbox(opts: {
   sdk: Sdk;
-  /** Idempotency key — `ensureTriggerInbox` is keyed on name; same name + different inputs errors. */
-  name: string;
+  /** Idempotency key — `ensureTriggerInbox` is keyed on `key`; same key + different inputs errors. */
+  key: string;
   app: string;
   action: string;
   connection?: string | number | null;
@@ -48,7 +48,7 @@ export async function ensureInbox(opts: {
   notificationUrl?: string;
 }) {
   const r = await opts.sdk.ensureTriggerInbox({
-    name: opts.name,
+    key: opts.key,
     app: opts.app,
     action: opts.action,
     connection: opts.connection ?? null,

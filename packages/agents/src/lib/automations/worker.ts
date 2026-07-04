@@ -9,7 +9,7 @@ import {
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "@/lib/zapier/sdk";
 import type { AutomationRow } from "./store";
 import * as store from "./store";
-import { type InboxTriggerSpec, inboxNameFor } from "./types";
+import { type InboxTriggerSpec, inboxKeyFor } from "./types";
 
 /**
  * Trigger-inbox poll worker (foreman-l7xq M3). Replaces the removed
@@ -100,7 +100,7 @@ export async function runInboxCycleForAutomation(opts: {
 
   const inbox = await ensureInbox({
     sdk,
-    name: inboxNameFor(automation.id),
+    key: inboxKeyFor(automation.id),
     app: spec.app,
     action: spec.action,
     connection: spec.connection,

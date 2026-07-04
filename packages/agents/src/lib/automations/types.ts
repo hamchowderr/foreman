@@ -16,7 +16,7 @@ export interface InboxTriggerSpec {
   inputs?: Record<string, unknown>;
 }
 
-/** Stable trigger-inbox name for an automation — keyed on its Foreman id (ensureTriggerInbox is idempotent on name). */
-export function inboxNameFor(automationId: string): string {
+/** Stable trigger-inbox key for an automation — keyed on its Foreman id (ensureTriggerInbox is idempotent on key). */
+export function inboxKeyFor(automationId: string): string {
   return `foreman-auto-${automationId}`;
 }

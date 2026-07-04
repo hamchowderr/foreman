@@ -130,7 +130,7 @@ async function main() {
   try {
     const inbox = await ensureInbox({
       sdk,
-      name: "foreman-smoke-inbox",
+      key: "foreman-smoke-inbox",
       app: "github",
       action: "issue_v2",
     });

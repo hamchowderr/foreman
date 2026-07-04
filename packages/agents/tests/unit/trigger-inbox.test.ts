@@ -43,7 +43,7 @@ describe("ensureInbox", () => {
     });
     const inbox = await ensureInbox({
       sdk,
-      name: "github-issues",
+      key: "github-issues",
       app: "github",
       action: "issue_v2",
       connection: "123",
@@ -51,7 +51,7 @@ describe("ensureInbox", () => {
     });
     expect(inbox.id).toBe("inbox_1");
     expect(sdk.ensureTriggerInbox).toHaveBeenCalledWith({
-      name: "github-issues",
+      key: "github-issues",
       app: "github",
       action: "issue_v2",
       connection: "123",
@@ -64,7 +64,7 @@ describe("ensureInbox", () => {
     const sdk = fakeSdk({
       ensureTriggerInbox: vi.fn(async () => ({ data: { id: "inbox_2" } })),
     });
-    await ensureInbox({ sdk, name: "n", app: "a", action: "b" });
+    await ensureInbox({ sdk, key: "n", app: "a", action: "b" });
     expect(
       (sdk.ensureTriggerInbox as ReturnType<typeof vi.fn>).mock.calls[0][0].connection,
     ).toBeNull();

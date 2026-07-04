@@ -57,7 +57,7 @@ async function main() {
   let inboxId: string | undefined;
   try {
     const { data: inbox } = await sdk.ensureTriggerInbox({
-      name: "foreman-hook-probe",
+      key: "foreman-hook-probe",
       app: "webhook",
       action: "hook_v2",
       inputs: { _zap_static_hook_code: CODE },

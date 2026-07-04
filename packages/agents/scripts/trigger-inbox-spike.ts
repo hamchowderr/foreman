@@ -177,7 +177,7 @@ async function main() {
           .replace(/[^a-z0-9]+/gi, "-")}`
       : "";
     const { data: inbox } = await (sdk as any).ensureTriggerInbox({
-      name: `foreman-spike-${args.app}-${pick.key}${inputHint}`,
+      key: `foreman-spike-${args.app}-${pick.key}${inputHint}`,
       app: args.app,
       action: pick.key,
       ...(connection ? { connection } : {}),
