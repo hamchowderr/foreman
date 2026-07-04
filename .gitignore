@@ -70,3 +70,8 @@ preview-auth.json
 # Local dev-server logs (packages/agents/server-dev.log, packages/web/web-dev.log)
 *-dev.log
 .fallow/
+
+# Agent skills: .claude/skills/ is the canonical (CC-read) copy and is tracked.
+# .agents/skills/ is a byte-identical mirror written by the skills tool — ignore it
+# so the same content isn't vendored twice. skills-lock.json is committed for provenance.
+.agents/skills/
