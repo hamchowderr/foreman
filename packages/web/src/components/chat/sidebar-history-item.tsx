@@ -7,6 +7,16 @@ import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { createClient } from "@/lib/client";
 import type { Chat } from "@/lib/db/schema";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuPortal,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -105,15 +115,68 @@ const PureChatItem = ({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        className="h-8 rounded-md text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground data-active:bg-transparent data-active:font-normal data-active:text-sidebar-foreground/50 data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
-        isActive={isActive}
-      >
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
-          <span className="truncate">{title}</span>
-        </Link>
-      </SidebarMenuButton>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <SidebarMenuButton
+            asChild
+            className="h-8 rounded-md text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground data-active:bg-transparent data-active:font-normal data-active:text-sidebar-foreground/50 data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
+            isActive={isActive}
+          >
+            <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
+              <span className="truncate">{title}</span>
+            </Link>
+          </SidebarMenuButton>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-44">
+          <ContextMenuItem className="cursor-pointer" onSelect={() => setIsRenaming(true)}>
+            <PencilEditIcon size={12} />
+            <span>Rename</span>
+          </ContextMenuItem>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger className="cursor-pointer">
+              <ShareIcon />
+              <span>Share</span>
+            </ContextMenuSubTrigger>
+            <ContextMenuPortal>
+              <ContextMenuSubContent>
+                <ContextMenuItem
+                  className="cursor-pointer flex-row justify-between"
+                  onClick={() => setVisibilityType("private")}
+                >
+                  <div className="flex flex-row items-center gap-2">
+                    <LockIcon size={12} />
+                    <span>Private</span>
+                  </div>
+                  {visibilityType === "private" ? <CheckCircleFillIcon /> : null}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  className="cursor-pointer flex-row justify-between"
+                  onClick={() => setVisibilityType("public")}
+                >
+                  <div className="flex flex-row items-center gap-2">
+                    <GlobeIcon />
+                    <span>Public</span>
+                  </div>
+                  {visibilityType === "public" ? <CheckCircleFillIcon /> : null}
+                </ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuPortal>
+          </ContextMenuSub>
+          {onArchiveToggle && (
+            <ContextMenuItem
+              className="cursor-pointer"
+              onSelect={() => onArchiveToggle(chat.id, !isArchived)}
+            >
+              {isArchived ? <ArchiveRestoreIcon size={14} /> : <ArchiveIcon size={14} />}
+              <span>{isArchived ? "Unarchive" : "Archive"}</span>
+            </ContextMenuItem>
+          )}
+          <ContextMenuItem onSelect={() => onDelete(chat.id)} variant="destructive">
+            <TrashIcon />
+            <span>Delete</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
