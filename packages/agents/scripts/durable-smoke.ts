@@ -22,7 +22,17 @@ import {
 } from "../src/lib/durable";
 import { ensureInbox, leaseMessages } from "../src/lib/trigger-inbox";
 
-const sdk = createZapierSdk();
+// Prefer client-credentials (env, via `infisical run`) so this runs headless in
+// CI/probes; fall back to the cached CLI login (~/.zapier-sdk/config.json) locally.
+const sdk =
+  process.env.ZAPIER_CLIENT_ID && process.env.ZAPIER_CLIENT_SECRET
+    ? createZapierSdk({
+        credentials: {
+          clientId: process.env.ZAPIER_CLIENT_ID,
+          clientSecret: process.env.ZAPIER_CLIENT_SECRET,
+        },
+      })
+    : createZapierSdk();
 
 const ECHO_SOURCE = `import { defineDurable } from "@zapier/zapier-durable";
 

@@ -1,5 +1,22 @@
 # Durable Execution — Questions for Zapier Engineers
 
+> ## ✅ UPDATE 2026-07-05 (SDK 0.81.0) — durables now WORK; questions narrowed
+>
+> The two original blockers below are **RESOLVED** on `@zapier/zapier-sdk@0.81.0`:
+> - **Auth:** a live re-probe (`scripts/durable-endpoints-probe.ts`, app-level **client-credentials**) returns **0/18 durable methods walled** — `runDurable` / `createWorkflow` / `listWorkflows` all `2xx`. The `internal`-scope `userJwt` wall is gone for the client-creds token.
+> - **Source-file contract:** `defineDurable(...)` + `ctx.step` / `ctx.wait` / `ctx.createCallback` deploy and run end-to-end. Verified live: ephemeral `runDurable` → finished; `createWorkflow`+`publishWorkflowVersion` → `triggerWorkflow` → finished; a `createCallback` gate parks in `execution.status="waiting"` and resumes on a POST.
+>
+> **The remaining questions (evidence-backed, 2026-07-05):**
+>
+> 1. **Stability / GA.** Is the durable API now generally available and stable for public-SDK **client-credentials** (external-scope) tokens, or did we slip through an early-access gate that may re-close? Between 0.79.0 (14/18 scope-walled + 4/18 early-access-gated) and 0.81.0 (0/18) the wall fully opened — before we build a product on it, we need to know it's permanent.
+> 2. **Human-approval callback URL is not obtainable from outside.** `getDurableRun.execution.operations[]` exposes a callback op's `callback_token`, `payload_schema`, `expires_at` — but **not the callback URL**. The real URL is `https://code-substrate-runner.zapier.com/api/v0/callbacks/<opaque-id>`, and `<opaque-id>` is **different** from `callback_token`, so it can't be reconstructed. Today an external orchestrator can only obtain the URL by having the durable **self-report it** via a step output. **Will you expose the callback URL (or add a resume-by-token endpoint / `resumeDurableRun({ run, operation, payload })`) on `getDurableRun`** so the self-report convention isn't required? There is no `resumeDurableRun`/`postCallback` in the SDK today (only `resumeTriggerInbox`, which is inbox-not-durable).
+> 3. **Callback security model.** The callback URL is a **public, unauthenticated bearer endpoint** — a `POST {json}` with no auth header returns `200 {"ok":true}` and resumes the run. Is that the intended model (possession = capability)? Any plans for a **signed / account-authenticated** resume, and what are the **expiry / single-use** semantics? (We observed `expires_at` ~30 days.)
+> 4. **`payload_schema` enforcement.** Is the POSTed callback payload validated against the callback's `payloadSchema` **server-side**, or passed through to the durable unchecked? (We POSTed arbitrary JSON and it was accepted + delivered.)
+>
+> Everything below is the **original (now-resolved) auth/contract report**, kept for history.
+
+---
+
 **From:** Foreman team (admin@otakusolutions.io)
 **Re:** `@zapier/zapier-sdk/experimental` durable-workflow API (`runDurable` / `publishWorkflowVersion`)
 **Date of findings:** 2026-06-11 (SDK `0.69.3`); re-confirmed 2026-06-16 on `0.70.4`, and again 2026-06-22 on the current `0.76.0` — both credential types, identical 403; `defineDurable` still a "not callable — Phase 2" stub on 0.76.0
