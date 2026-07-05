@@ -326,11 +326,14 @@ export async function listRuns(
  *   started     → durable triggered + executing (dispatch sets this; the durable's
  *                 own run is the authority — its trigger run status stays "started"
  *                 the whole time, so we reconcile against getDurableRun, not it)
+ *   retrying    → a step is mid-retry (foreman-jc12); top-level durable status is
+ *                 still "started" but execution.detail carries last_error + the ops.
+ *                 Non-terminal — reconcile keeps polling until it clears/finishes.
  *   finished    → durable completed (reconcile)
  *   failed      → durable failed, or a dispatch error (reconcile / dispatch catch)
  */
 export const TERMINAL_RUN_STATUSES = ["finished", "failed"] as const;
-const NON_TERMINAL_RUN_STATUSES = ["initialized", "started"];
+const NON_TERMINAL_RUN_STATUSES = ["initialized", "started", "retrying"];
 
 /**
  * Non-terminal runs across all automations — the reconcile work list

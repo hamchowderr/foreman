@@ -109,11 +109,20 @@ export async function runInboxCycleForAutomation(opts: {
   result.inboxId = inbox.id;
   result.inboxStatus = inbox.status;
 
-  // Persist the inbox id the first time we arm it (so the UI can show it).
-  if (automation.trigger_inbox_id !== inbox.id) {
-    await store.updateAutomation(automation.workspace_id ?? undefined, automation.id, {
-      triggerInboxId: inbox.id,
-    });
+  // Keep the automation row in sync with its inbox subscription (foreman-dwf8):
+  // persist the inbox id the first time we arm it, AND reflect a failed/recovered
+  // subscription in the automation status. An inbox that can't subscribe (missing/
+  // expired connection, bad inputs) goes "initialization_failure" — without this the
+  // automation looks enabled in the UI but silently never fires.
+  const patch: Parameters<typeof store.updateAutomation>[2] = {};
+  if (automation.trigger_inbox_id !== inbox.id) patch.triggerInboxId = inbox.id;
+  if (inbox.status === "initialization_failure") {
+    if (automation.status !== "trigger_failed") patch.status = "trigger_failed";
+  } else if (automation.status === "trigger_failed") {
+    patch.status = "active"; // subscription recovered — clear the failed flag
+  }
+  if (Object.keys(patch).length > 0) {
+    await store.updateAutomation(automation.workspace_id ?? undefined, automation.id, patch);
   }
 
   const lease = await leaseMessages({ sdk, inbox: inbox.id, leaseLimit, leaseSeconds });
@@ -227,15 +236,37 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
 
       const dr = await getDurableRunStatus(sdk, durableRunId);
       const terminal = dr.status === "finished" || dr.status === "failed";
-      const status = terminal ? dr.status : "started";
+
+      // Resolve the run's next status + the payload we surface as `error`:
+      //   terminal  → finished/failed, with the durable's own output/error
+      //   retrying  → a step is mid-retry (foreman-jc12): top-level status is still
+      //               "started" but execution.detail carries last_error + the ops;
+      //               surface that so the run doesn't look like a stalled "started"
+      //   started   → executing cleanly; clear any stale retry detail
+      let status: string;
+      let nextError: unknown;
+      if (terminal) {
+        status = dr.status;
+        nextError = dr.error ?? null;
+      } else if (dr.detail) {
+        status = "retrying";
+        nextError = dr.detail;
+      } else {
+        status = "started";
+        nextError = null;
+      }
 
       // A linked-but-still-running durable is left alone — NO age cap (durables can
-      // run for days via waits/callbacks). Only write on a real change.
-      if (status !== run.status || durableRunId !== run.durable_run_id) {
+      // run for days via waits/callbacks). Write on any real change, including the
+      // retry detail evolving (retry_count / next_retry_at) while status stays
+      // "retrying". Both are plain JSON so a stringify compare is enough.
+      const errorChanged = JSON.stringify(nextError ?? null) !== JSON.stringify(run.error ?? null);
+      if (status !== run.status || durableRunId !== run.durable_run_id || errorChanged) {
         await store.updateRun(run.id, {
           status,
           durableRunId,
-          ...(terminal ? { output: dr.output, error: dr.error } : {}),
+          error: nextError,
+          ...(terminal ? { output: dr.output } : {}),
         });
         if (terminal) updated++;
       }

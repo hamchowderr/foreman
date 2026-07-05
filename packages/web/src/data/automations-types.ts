@@ -33,7 +33,10 @@ export interface AutomationRun {
   durable_run_id: string | null;
   /** Durable result on a finished run (null until terminal). */
   output: unknown;
-  /** Failure detail on a failed/stuck run (null otherwise). */
+  /**
+   * Failure detail on a failed/stuck run; while status is "retrying" it holds the
+   * in-flight DurableRunDetail (last_error + retrying ops, foreman-jc12). Null otherwise.
+   */
   error: unknown;
   created_at: string;
   updated_at: string;

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AGED_DURABLE_DEPS,
   deployAutomation,
+  getDurableRunStatus,
   inspectAutomation,
   listAutomations,
   runAutomationOnce,
@@ -114,6 +115,108 @@ describe("triggerAutomation", () => {
     const res = await triggerAutomation({ sdk, workflowId: "wf_1", input: { x: 1 } });
     expect(res).toEqual({ triggerId: "trig_1" });
     expect(sdk.triggerWorkflow).toHaveBeenCalledWith({ workflow: "wf_1", input: { x: 1 } });
+  });
+});
+
+describe("getDurableRunStatus — execution detail (foreman-jc12)", () => {
+  const runData = (execution: unknown, status = "started") => ({
+    data: { id: "r", status, output: null, error: null, execution },
+  });
+
+  it("returns null detail for a clean, still-running execution", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () =>
+        runData({
+          id: "e",
+          name: "n",
+          status: "running",
+          input: null,
+          created_at: "t",
+          summary: { total_attempts: 1 },
+          operations: [
+            {
+              id: "o",
+              execution_id: "e",
+              name: "step",
+              type: "run",
+              status: "success",
+              retry_count: 0,
+              created_at: "t",
+            },
+          ],
+        }),
+      ),
+    });
+    const res = await getDurableRunStatus(sdk, "r");
+    expect(res).toMatchObject({ status: "started", detail: null });
+  });
+
+  it("extracts last_error + only the retrying/failed ops", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () =>
+        runData({
+          id: "e",
+          name: "n",
+          status: "running",
+          input: null,
+          created_at: "t",
+          summary: {
+            total_attempts: 3,
+            last_error: { code: "RATE_LIMIT", title: "Too many requests", detail: "retry later" },
+          },
+          operations: [
+            {
+              id: "o1",
+              execution_id: "e",
+              name: "post-slack",
+              type: "run",
+              status: "retrying",
+              retry_count: 2,
+              max_attempts: 5,
+              next_retry_at: "2026-07-05T00:00:00Z",
+              created_at: "t",
+              error: { message: "429" },
+            },
+            {
+              id: "o2",
+              execution_id: "e",
+              name: "read-row",
+              type: "read",
+              status: "success",
+              retry_count: 0,
+              created_at: "t",
+            },
+          ],
+        }),
+      ),
+    });
+    const res = await getDurableRunStatus(sdk, "r");
+    expect(res.detail).toEqual({
+      totalAttempts: 3,
+      lastError: { code: "RATE_LIMIT", title: "Too many requests", detail: "retry later" },
+      retrying: [
+        {
+          name: "post-slack",
+          type: "run",
+          status: "retrying",
+          retryCount: 2,
+          maxAttempts: 5,
+          nextRetryAt: "2026-07-05T00:00:00Z",
+          error: { message: "429" },
+        },
+      ],
+    });
+  });
+
+  it("returns null detail when there is no execution", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () => ({
+        data: { id: "r", status: "finished", output: { ok: true }, error: null, execution: null },
+      })),
+    });
+    const res = await getDurableRunStatus(sdk, "r");
+    expect(res.detail).toBeNull();
+    expect(res.output).toEqual({ ok: true });
   });
 });
 

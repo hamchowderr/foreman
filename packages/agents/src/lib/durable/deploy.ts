@@ -150,12 +150,62 @@ export async function triggerAutomation(opts: {
   return { triggerId: r.data.id };
 }
 
+/** One durable operation (step) that has retried or is failing — the actionable subset. */
+export interface DurableOpDetail {
+  name: string;
+  type: string;
+  status: string;
+  retryCount: number;
+  maxAttempts?: number;
+  /** When the engine will retry this op next (ISO), while it's between attempts. */
+  nextRetryAt?: string;
+  error?: unknown;
+}
+
+/**
+ * Compact in-flight failure/retry view distilled from `getDurableRun.execution`
+ * (foreman-jc12). The top-level run status stays "started" while a step RETRIES,
+ * so the real signal lives here: `execution.summary.last_error` and the ops that
+ * are retrying/failed. Null when the run is executing cleanly (nothing to surface).
+ */
+export interface DurableRunDetail {
+  totalAttempts?: number;
+  lastError?: { code: string; title: string; detail?: string | null } | null;
+  retrying: DurableOpDetail[];
+}
+
+type DurableExecution = NonNullable<Awaited<ReturnType<Sdk["getDurableRun"]>>["data"]["execution"]>;
+
+function extractRunDetail(execution: DurableExecution | null): DurableRunDetail | null {
+  if (!execution) return null;
+  const retrying: DurableOpDetail[] = (execution.operations ?? [])
+    .filter((o) => o.retry_count > 0 || o.status === "failed" || o.status === "retrying")
+    .map((o) => ({
+      name: o.name,
+      type: o.type,
+      status: o.status,
+      retryCount: o.retry_count,
+      maxAttempts: o.max_attempts,
+      nextRetryAt: o.next_retry_at,
+      error: o.error,
+    }));
+  const lastError = execution.summary?.last_error ?? null;
+  // Nothing actionable — a clean, still-running execution.
+  if (!lastError && retrying.length === 0) return null;
+  return { totalAttempts: execution.summary?.total_attempts, lastError, retrying };
+}
+
 export async function getDurableRunStatus(
   sdk: Sdk,
   runId: string,
-): Promise<{ status: string; output: unknown; error: unknown }> {
+): Promise<{ status: string; output: unknown; error: unknown; detail: DurableRunDetail | null }> {
   const r = await sdk.getDurableRun({ run: runId });
-  return { status: r.data.status, output: r.data.output, error: r.data.error };
+  return {
+    status: r.data.status,
+    output: r.data.output,
+    error: r.data.error,
+    detail: extractRunDetail(r.data.execution),
+  };
 }
 
 export async function getTriggerRunStatus(

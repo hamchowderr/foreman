@@ -7,6 +7,8 @@ export {
   type AutomationSummary,
   type DeployAutomationOptions,
   type DeployResult,
+  type DurableOpDetail,
+  type DurableRunDetail,
   deleteAutomation,
   deployAutomation,
   editorUrl,

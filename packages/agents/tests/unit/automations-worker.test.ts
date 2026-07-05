@@ -18,6 +18,7 @@ vi.mock("@/lib/durable", () => ({
     status: "finished",
     output: { ok: true },
     error: null,
+    detail: null,
   })),
 }));
 vi.mock("@/lib/trigger-inbox", () => ({
@@ -138,6 +139,32 @@ describe("runInboxCycleForAutomation", () => {
     });
   });
 
+  it("marks the automation trigger_failed when the inbox can't initialize (foreman-dwf8)", async () => {
+    vi.mocked(ensureInbox).mockResolvedValueOnce({
+      id: "inbox_1",
+      status: "initialization_failure",
+    } as never);
+    vi.mocked(leaseMessages).mockResolvedValueOnce(leaseOf([], null) as never);
+    // Inbox already armed + currently "active" — only the status should change.
+    const armed = { ...(automation as object), trigger_inbox_id: "inbox_1", status: "active" };
+    await runInboxCycleForAutomation({ sdk: {} as never, automation: armed as never });
+    expect(store.updateAutomation).toHaveBeenCalledWith("ws-1", "auto_1", {
+      status: "trigger_failed",
+    });
+  });
+
+  it("clears trigger_failed back to active once the inbox recovers (foreman-dwf8)", async () => {
+    vi.mocked(ensureInbox).mockResolvedValueOnce({ id: "inbox_1", status: "active" } as never);
+    vi.mocked(leaseMessages).mockResolvedValueOnce(leaseOf([], null) as never);
+    const failed = {
+      ...(automation as object),
+      trigger_inbox_id: "inbox_1",
+      status: "trigger_failed",
+    };
+    await runInboxCycleForAutomation({ sdk: {} as never, automation: failed as never });
+    expect(store.updateAutomation).toHaveBeenCalledWith("ws-1", "auto_1", { status: "active" });
+  });
+
   it("returns zeros and skips ensureInbox when not inbox-triggered", async () => {
     const noTrigger = { ...(automation as object), trigger: null } as never;
     const res = await runInboxCycleForAutomation({ sdk: {} as never, automation: noTrigger });
@@ -189,6 +216,60 @@ describe("reconcilePendingRuns", () => {
     expect(store.updateRun).toHaveBeenCalledWith(
       "run_1",
       expect.objectContaining({ status: "finished", durableRunId: "dr_9" }),
+    );
+  });
+
+  it("flips a run to 'retrying' and surfaces the durable detail (foreman-jc12)", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      { ...pendingRun, durable_run_id: "dr_9" },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_1", user_id: "user-1" },
+    ] as never);
+    const detail = {
+      totalAttempts: 2,
+      lastError: { code: "X", title: "boom" },
+      retrying: [{ name: "s", type: "run", status: "retrying", retryCount: 1 }],
+    };
+    vi.mocked(getDurableRunStatus).mockResolvedValueOnce({
+      status: "started",
+      output: null,
+      error: null,
+      detail,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+    // Non-terminal → not counted as "updated", but the row is rewritten.
+    expect(res).toEqual({ checked: 1, updated: 0 });
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_1",
+      expect.objectContaining({ status: "retrying", error: detail }),
+    );
+  });
+
+  it("returns a recovered run to 'started' and clears the retry detail (foreman-jc12)", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      {
+        ...pendingRun,
+        durable_run_id: "dr_9",
+        status: "retrying",
+        error: { totalAttempts: 1, retrying: [{ name: "s" }] },
+      },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_1", user_id: "user-1" },
+    ] as never);
+    vi.mocked(getDurableRunStatus).mockResolvedValueOnce({
+      status: "started",
+      output: null,
+      error: null,
+      detail: null,
+    } as never);
+
+    await reconcilePendingRuns();
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_1",
+      expect.objectContaining({ status: "started", error: null }),
     );
   });
 

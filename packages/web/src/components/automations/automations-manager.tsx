@@ -48,7 +48,10 @@ import {
 import type { Automation, AutomationDetail, InboxState } from "@/data/automations-types";
 
 function statusVariant(status: string, enabled: boolean): "default" | "secondary" | "destructive" {
-  if (status === "trigger_claim_failed") return "destructive";
+  // trigger_claim_failed = the deploy-time claim failed; trigger_failed = the inbox
+  // subscription later went into initialization_failure (foreman-dwf8). Both mean
+  // "enabled but won't fire" → flag them red.
+  if (status === "trigger_claim_failed" || status === "trigger_failed") return "destructive";
   return enabled ? "default" : "secondary";
 }
 
@@ -57,14 +60,15 @@ function shortId(id: string): string {
 }
 
 /** Run statuses the reconcile worker may still advance — drives live polling. */
-const NON_TERMINAL_RUN = new Set(["initialized", "started"]);
+const NON_TERMINAL_RUN = new Set(["initialized", "started", "retrying"]);
 const RUNS_PER_PAGE = 10;
 /** Poll cadence while a run is in flight. DB-cheap (getAutomation reads Postgres, not Zapier). */
 const RUN_POLL_MS = 3500;
 
-function runStatusVariant(status: string): "default" | "secondary" | "destructive" {
+function runStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   if (status === "failed") return "destructive";
   if (status === "finished") return "default";
+  if (status === "retrying") return "outline"; // mid-retry — surfaced, not yet failed
   return "secondary"; // initialized / started — in flight
 }
 
@@ -280,6 +284,13 @@ export function AutomationsManager() {
             )}
           </div>
 
+          {(selected.status === "trigger_failed" || selected.status === "trigger_claim_failed") && (
+            <p className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-sm">
+              This automation’s trigger couldn’t subscribe, so it won’t fire. Reconnect the app or
+              check the trigger inputs, then toggle it off and on to re-arm.
+            </p>
+          )}
+
           <Tabs className="mt-4" defaultValue="runs">
             <TabsList>
               <TabsTrigger value="runs">
@@ -346,7 +357,11 @@ export function AutomationsManager() {
                                 <TableCell className="p-0" colSpan={4}>
                                   <div className="px-3 pb-3">
                                     <p className="mb-1 text-muted-foreground text-xs">
-                                      {r.error != null ? "Error" : "Output"}
+                                      {r.status === "retrying"
+                                        ? "Retry detail"
+                                        : r.error != null
+                                          ? "Error"
+                                          : "Output"}
                                     </p>
                                     <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
                                       {prettyJson(detailJson)}
