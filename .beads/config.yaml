@@ -54,5 +54,12 @@
 # - github.repo
 
 sync-branch: "beads-sync"
+issue-prefix: "foreman"
 
-dolt.shared-server: true
+# Switched from the shared Dolt server to a self-contained EMBEDDED store
+# 2026-07-04: the shared server proved unreliable on this Windows machine — the
+# jsonl-reimport clobber (bd #4128, fixed in 1.1.0) then a crash-under-load
+# (#4132) that took it down entirely. Embedded store lives in .beads/embeddeddolt
+# and mirrors to .beads/issues.jsonl (git source of truth). dolt_mode=embedded is
+# set in metadata.json. Re-enable dolt.shared-server only if it's proven stable.
+# dolt.shared-server: true
