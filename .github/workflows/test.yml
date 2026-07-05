@@ -113,7 +113,7 @@ jobs:
           # newest version — that call is rate-limited on shared runners and
           # flaked this job ("Failed to resolve latest Supabase CLI release:
           # rate limit exceeded", foreman-fjl3). Bump deliberately when needed.
-          version: 2.107.0
+          version: 2.109.0
       - run: npm ci
       - name: Start local Supabase (db + meta only)
         # `db:types:check` only needs the database + postgres-meta to introspect
