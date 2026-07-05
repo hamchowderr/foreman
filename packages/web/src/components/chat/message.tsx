@@ -2,6 +2,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { Bot, Check, User } from "lucide-react";
 import { useEffect } from "react";
+import { initialsFrom, seedToGradient } from "@/lib/avatar";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
 import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "../ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
@@ -20,11 +22,42 @@ import { PreviewAttachment } from "./preview-attachment";
 import { PreviewInlineChip } from "./preview-panel";
 import { Weather } from "./weather";
 
-const MessageAvatar = ({ isUser }: { isUser: boolean }) => (
-  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-    {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
-  </div>
-);
+const MessageAvatar = ({
+  isUser,
+  userImage,
+  userEmail,
+}: {
+  isUser: boolean;
+  userImage?: string | null;
+  userEmail?: string;
+}) => {
+  // Assistant: Foreman's bot mark. User: real avatar image when available,
+  // otherwise initials on an email-seeded gradient (foreman-3f1v).
+  if (!isUser) {
+    return (
+      <Avatar className="size-7 shrink-0">
+        <AvatarFallback className="bg-secondary text-muted-foreground">
+          <Bot className="size-4" />
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+  const email = userEmail ?? "";
+  return (
+    <Avatar className="size-7 shrink-0">
+      {userImage ? <AvatarImage alt="" src={userImage} /> : null}
+      <AvatarFallback
+        className={cn(
+          "text-[11px] font-medium",
+          email ? "text-white" : "bg-secondary text-muted-foreground",
+        )}
+        style={email ? { background: seedToGradient(email) } : undefined}
+      >
+        {email ? initialsFrom(email) : <User className="size-4" />}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
 
 function getAlwaysAllowedTools(): Set<string> {
   try {
@@ -166,6 +199,8 @@ const PurePreviewMessage = ({
   isReadonly,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
+  userImage,
+  userEmail,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -177,6 +212,8 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
+  userImage?: string | null;
+  userEmail?: string;
 }) => {
   const attachmentsFromMessage = message.parts.filter((part) => part.type === "file");
 
@@ -572,7 +609,7 @@ const PurePreviewMessage = ({
       data-testid={`message-${message.role}`}
     >
       <div className={cn("flex items-start gap-2.5", isUser && "flex-row-reverse")}>
-        <MessageAvatar isUser={isUser} />
+        <MessageAvatar isUser={isUser} userEmail={userEmail} userImage={userImage} />
         <div
           className={cn(
             "flex min-w-0 flex-1 flex-col gap-1.5",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ import type {
   WorkspaceRole,
   WorkspaceSummary,
 } from "@/data/workspaces-types";
+import { initialsFrom, seedToGradient } from "@/lib/avatar";
 
 const ASSIGNABLE: WorkspaceRole[] = ["admin", "member", "readonly"];
 const isAdminRole = (r?: WorkspaceRole) => r === "owner" || r === "admin";
@@ -242,8 +244,21 @@ function MembersSection(props: {
             {members.map((m) => (
               <TableRow key={m.id}>
                 <TableCell>
-                  {m.name ?? m.id.slice(0, 8)}
-                  {m.is_self && <span className="text-muted-foreground"> (you)</span>}
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="size-7 shrink-0">
+                      {m.avatar_url ? <AvatarImage alt="" src={m.avatar_url} /> : null}
+                      <AvatarFallback
+                        className="text-[11px] font-medium text-white"
+                        style={{ background: seedToGradient(m.name ?? m.id) }}
+                      >
+                        {initialsFrom(m.name ?? m.id)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>
+                      {m.name ?? m.id.slice(0, 8)}
+                      {m.is_self && <span className="text-muted-foreground"> (you)</span>}
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {isAdmin && m.role !== "owner" ? (
