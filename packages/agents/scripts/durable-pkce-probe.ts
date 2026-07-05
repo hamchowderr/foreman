@@ -127,65 +127,60 @@ async function mintUserJwt(): Promise<string> {
   return data.access_token;
 }
 
-// Best-effort hello-world against @zapier/zapier-durable's defineDurable shape.
-// (Contract is undocumented — this is a probe; the runtime error teaches us the real shape.)
-const HELLO_SOURCE = `import { defineDurable } from "@zapier/zapier-durable";
-import { z } from "zod";
+// Echo durable in the CURRENT @zapier/zapier-durable contract (matches durable-smoke.ts),
+// run via Foreman's own lib/durable (aged deps + camelCase) so this is apples-to-apples
+// with the client-creds smoke — a passing auth yields a real finished run.
+const ECHO_SOURCE = `import { defineDurable } from "@zapier/zapier-durable";
 
-export default defineDurable({
-  name: "hello-world",
-  inputSchema: z.object({ name: z.string().optional() }),
-  run: async (ctx, input) => {
-    const greeting = await ctx.step("greet", async () => \`Hello, \${input?.name ?? "world"}!\`);
-    return { greeting };
-  },
+const workflow = defineDurable("foreman-pkce-probe", async (ctx, input) => {
+  return await ctx.step("echo", async () => ({ ok: true, echo: input }));
 });
+
+export default workflow;
 `;
 
 async function main() {
   const token = await mintUserJwt();
-  const sdk = createZapierSdk({ credentials: token }) as any;
+  const sdk = createZapierSdk({ credentials: token });
 
   try {
-    const { data: profile } = await sdk.getProfile();
+    const { data: profile } = (await sdk.getProfile()) as { data: { email?: string; id?: string } };
     console.log(`profile OK: ${profile?.email ?? profile?.id ?? "?"}`);
   } catch (e) {
     console.log(`profile probe failed: ${(e as Error).message}`);
   }
 
-  console.log("\nCalling runDurable with the userJwt…");
-  let run: any;
+  // Use Foreman's PRODUCTION durable code path with this per-user token.
+  const { runAutomationOnce, getDurableRunStatus } = await import("../src/lib/durable");
+
+  console.log("\nrunDurable via the per-user PKCE token (Foreman's production path)…");
+  let runId: string | undefined;
   try {
-    const { data } = await sdk.runDurable({
-      source_files: { "index.ts": HELLO_SOURCE },
-      input: { name: "Foreman" },
-      private: true,
-    });
-    run = data;
-    console.log(`✓ AUTH PASSED — runDurable accepted. run id=${data.id} status=${data.status}`);
-  } catch (e: any) {
-    const msg = String(e?.message ?? e);
-    console.log(`runDurable threw: ${msg}`);
-    if (/userJwt|security scheme|authenticate|unauthor/i.test(msg)) {
-      console.log("→ STILL AN AUTH FAILURE: the userJwt did NOT satisfy the durable scheme.");
+    const once = await runAutomationOnce({ sdk, source: ECHO_SOURCE, input: { hello: "pkce" } });
+    runId = once.runId;
+    console.log(`✓ AUTH PASSED — runDurable accepted. run id=${once.runId} status=${once.status}`);
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? e);
+    console.log(`runDurable threw: ${msg.slice(0, 400)}`);
+    if (/userJwt|security scheme|authenticate|unauthor|403/i.test(msg)) {
+      console.log(
+        "→ ❌ STILL AN AUTH WALL for the per-user PKCE token — durable is NOT open on the production path.",
+      );
     } else {
-      console.log("→ AUTH PASSED (error is NOT auth-related — likely source_files contract).");
-    }
-    for (const k of ["status", "statusCode", "response", "body", "cause"]) {
-      if (e?.[k] !== undefined)
-        console.log(`  ${k}:`, JSON.stringify(e[k], null, 2).slice(0, 1500));
+      console.log("→ ✅ AUTH PASSED (error is NOT auth-related — a contract/validation error).");
     }
     return;
   }
 
-  console.log("\nPolling getDurableRun to terminal…");
+  console.log("\nPolling getDurableRunStatus to terminal…");
   for (let i = 0; i < 20; i++) {
     await sleep(3000);
-    const { data: cur } = await sdk.getDurableRun({ run: run.id });
-    console.log(`  status=${cur.status}`);
-    if (["finished", "failed", "cancelled"].includes(cur.status)) {
-      console.log("\nFINAL RUN STATE:");
-      console.log(JSON.stringify(cur, null, 2).slice(0, 4000));
+    const s = await getDurableRunStatus(sdk, runId);
+    console.log(`  status=${s.status}`);
+    if (["finished", "failed", "cancelled"].includes(s.status)) {
+      console.log(
+        `\n✅ PER-USER PKCE PATH WORKS — final=${s.status} output=${JSON.stringify(s.output)}`,
+      );
       return;
     }
   }
