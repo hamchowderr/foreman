@@ -38,7 +38,7 @@ Import each component from `@/components/ui/<name>` using its **exact** export n
 Full registry available (import any by `@/components/ui/<name>`):
 `accordion, alert, alert-dialog, aspect-ratio, avatar, badge, breadcrumb, button, button-group, calendar, card, carousel, chart, checkbox, collapsible, combobox, command, context-menu, data-table, dialog, drawer, dropdown-menu, empty, field, hover-card, input, input-group, input-otp, item, kbd, label, menubar, native-select, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, skeleton, slider, sonner, spinner, switch, table, tabs, textarea, toggle, toggle-group, tooltip`.
 
-If you are unsure of a component's exact export names, use `skill_read` on this skill's `references/` or pick a simpler component you're sure of. **Never guess an export name** — a wrong guess fails the type-check.
+If you are unsure of a component's exact export names, stick to the components in the import map above, or pick a simpler component you're sure of. **Never guess an export name** — a wrong guess fails the type-check.
 
 ## Allowed direct library imports
 
