@@ -20,6 +20,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -51,6 +58,7 @@ function shortId(id: string): string {
 
 /** Run statuses the reconcile worker may still advance — drives live polling. */
 const NON_TERMINAL_RUN = new Set(["initialized", "started"]);
+const RUNS_PER_PAGE = 10;
 /** Poll cadence while a run is in flight. DB-cheap (getAutomation reads Postgres, not Zapier). */
 const RUN_POLL_MS = 3500;
 
@@ -78,6 +86,7 @@ export function AutomationsManager() {
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [runsPage, setRunsPage] = useState(0);
   const selectedIdRef = useRef<string | null>(null);
   selectedIdRef.current = selectedId;
 
@@ -100,6 +109,7 @@ export function AutomationsManager() {
     setInbox(null);
     setConfirmDelete(false);
     setExpandedRunId(null);
+    setRunsPage(0);
     getAutomation(id)
       .then(setDetail)
       .catch((e) => setError((e as Error).message));
@@ -118,6 +128,11 @@ export function AutomationsManager() {
   // exposes no run-status stream, so Foreman owns this — getAutomation is a cheap
   // Postgres read. Polling stops as soon as every run is terminal.
   const hasPendingRun = !!detail?.runs.some((r) => NON_TERMINAL_RUN.has(r.status));
+
+  const allRuns = detail?.runs ?? [];
+  const runsPageCount = Math.max(1, Math.ceil(allRuns.length / RUNS_PER_PAGE));
+  const runsSafePage = Math.min(runsPage, runsPageCount - 1);
+  const pagedRuns = allRuns.slice(runsSafePage * RUNS_PER_PAGE, (runsSafePage + 1) * RUNS_PER_PAGE);
   useEffect(() => {
     if (!selectedId || !hasPendingRun) return;
     let active = true;
@@ -294,7 +309,7 @@ export function AutomationsManager() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {detail.runs.map((r) => {
+                      {pagedRuns.map((r) => {
                         const detailJson = r.error != null ? r.error : (r.output ?? null);
                         const expandable = detailJson != null;
                         const expanded = expandedRunId === r.id;
@@ -345,6 +360,45 @@ export function AutomationsManager() {
                       })}
                     </TableBody>
                   </Table>
+                  {runsPageCount > 1 && (
+                    <Pagination className="justify-end">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            aria-disabled={runsSafePage === 0}
+                            className={
+                              runsSafePage === 0 ? "pointer-events-none opacity-50" : undefined
+                            }
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setRunsPage(Math.max(0, runsSafePage - 1));
+                            }}
+                          />
+                        </PaginationItem>
+                        <PaginationItem>
+                          <span className="px-2 text-muted-foreground text-xs">
+                            Page {runsSafePage + 1} of {runsPageCount}
+                          </span>
+                        </PaginationItem>
+                        <PaginationItem>
+                          <PaginationNext
+                            aria-disabled={runsSafePage >= runsPageCount - 1}
+                            className={
+                              runsSafePage >= runsPageCount - 1
+                                ? "pointer-events-none opacity-50"
+                                : undefined
+                            }
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setRunsPage(Math.min(runsPageCount - 1, runsSafePage + 1));
+                            }}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </div>
               ) : (
                 <p className="py-4 text-muted-foreground text-sm">No runs yet.</p>
