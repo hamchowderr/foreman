@@ -15,6 +15,7 @@ The single most common failure is **importing a name that is not a real export, 
 - Exactly one component as the **default export**, taking **no props**: `export default function Dashboard() { … }`.
 - No CSS imports, no `<style>` tag, no raw `<script>`, no runtime `fetch`, no `import` of any package outside the allowed set below.
 - Prefer real, internally-consistent inline data. NEVER render an empty chart/table or a "No data" placeholder — invent believable sample data if none is given. If you can't fill a section, omit it.
+- **Imports must match usage exactly.** Before you finish, check that every name you render (each component, icon, hook, helper) is imported, and every import is actually used. A used-but-unimported name and an imported-but-unused name are the two most common `tsc` failures here — scan your imports against your JSX one last time.
 
 ## Import map — which name comes from which module
 
@@ -42,17 +43,20 @@ If you are unsure of a component's exact export names, stick to the components i
 
 ## Allowed direct library imports
 
+These are the ONLY packages you may import — and import **only the specific names you actually use**. An unused import or variable fails `tsc` under `noUnusedLocals`.
+
+**React:** the template uses React 19's automatic JSX runtime, so you do **NOT** import React to write JSX. Import hooks by name only when you use them (`import { useState } from "react"`). Never write `import * as React from "react"` unless you actually reference `React.` somewhere — a bare, unused React import is the single most common type error here.
+
 ```ts
-import * as React from "react";
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
-         CartesianGrid, XAxis, YAxis } from "recharts";
+import { useState } from "react"; // ONLY if you use a hook — omit entirely otherwise
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis } from "recharts"; // only the pieces you render
 import { type ColumnDef } from "@tanstack/react-table";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { TrendingUp, Users /* any real lucide icon */ } from "lucide-react";
+import { TrendingUp } from "lucide-react"; // only icons you actually render
 import { cn } from "@/lib/utils";
 ```
 
@@ -124,6 +128,7 @@ const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { e
 - `ColumnDef<Row>` with an `accessorKey` that isn't a key of `Row`; or omitting the `Row` type so everything is `any`.
 - Wrapping a `ChartContainer` child in your own `ResponsiveContainer`.
 - A misspelled `lucide-react` icon (no such export).
+- An **unused import or variable** — a bare `import * as React` you never reference, an icon or recharts piece you imported but didn't render, a `const` you never use. Fails `tsc` under `noUnusedLocals`. Import only what you use.
 - Importing a CSS file, a `<style>` tag, a runtime `fetch`, or any package not listed above.
 
 ## Layout & polish

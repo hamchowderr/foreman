@@ -66,9 +66,24 @@ async function main() {
       for (const tc of st.toolCalls ?? []) toolCalls.push(tc.toolName ?? "?");
   }
 
-  const tsx = extractComponent(r.text ?? "");
+  let tsx = extractComponent(r.text ?? "");
   await writeFile(GENERATED, tsx, "utf8");
-  const check = await typecheckPreview();
+  let check = await typecheckPreview();
+  const firstTryOk = check.ok;
+
+  // Mirror preview_app's self-heal loop: feed real tsc errors back, up to 2×.
+  let heals = 0;
+  for (let attempt = 1; !check.ok && attempt <= 2; attempt++) {
+    const fixPrompt =
+      `The component you just wrote fails to compile with these TypeScript errors:\n\n${check.errors}\n\n` +
+      "Return the CORRECTED, COMPLETE component following the exact same import rules. Output only the .tsx, nothing else.";
+    const fixed = extractComponent((await agent.generate(fixPrompt)).text ?? "");
+    if (!fixed) break;
+    tsx = fixed;
+    heals = attempt;
+    await writeFile(GENERATED, tsx, "utf8");
+    check = await typecheckPreview();
+  }
 
   const skillInvoked = toolCalls.some((t) => t === "skill" || t.startsWith("skill"));
   console.log("─".repeat(60));
@@ -76,8 +91,12 @@ async function main() {
   console.log("tool calls        :", toolCalls.length ? toolCalls.join(", ") : "(none captured)");
   console.log("skill tool invoked:", skillInvoked ? "YES ✓" : "NO ✗");
   console.log("tsx length        :", tsx.length, "chars");
-  console.log("type-checks (tsc) :", check.ok ? "PASS ✓ (first try)" : "FAIL ✗");
-  if (!check.ok) console.log("errors:\n" + check.errors);
+  console.log("first-try compile :", firstTryOk ? "PASS ✓" : "FAIL (needed self-heal)");
+  console.log(
+    "final compile     :",
+    check.ok ? `PASS ✓ (after ${heals} self-heal${heals === 1 ? "" : "s"})` : "FAIL ✗",
+  );
+  if (!check.ok) console.log(`errors:\n${check.errors}`);
   console.log("─".repeat(60));
   process.exit(0);
 }
