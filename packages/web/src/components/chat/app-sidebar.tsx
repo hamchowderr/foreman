@@ -16,6 +16,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { SidebarHistory } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
 import { CommandPalette, OPEN_COMMAND_PALETTE_EVENT } from "@/components/command-palette";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Sidebar,
   SidebarContent,
@@ -121,9 +122,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     >
                       <SearchIcon className="size-4" />
                       <span>Search</span>
-                      <kbd className="ml-auto rounded border border-sidebar-border bg-sidebar-accent/40 px-1 text-[10px] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
-                        ⌘K
-                      </kbd>
+                      <Kbd className="ml-auto group-data-[collapsible=icon]:hidden">⌘K</Kbd>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
