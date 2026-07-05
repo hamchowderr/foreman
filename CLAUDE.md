@@ -1,5 +1,11 @@
 @AGENTS.md
 
+<!-- Project coding rules (imperative conventions; see rules/index.md). -->
+@rules/index.md
+@rules/zapier-sdk.md
+@rules/mastra.md
+@rules/testing-and-db.md
+
 ## Monorepo Layout
 
 ```
