@@ -4,11 +4,19 @@
  * functions. Shapes mirror the agent /automations route responses.
  */
 
+export type ScheduleSpec =
+  | { kind: "interval"; everyMinutes: number }
+  | { kind: "daily"; atHourUtc: number; atMinuteUtc?: number };
+
 export interface AutomationTriggerSpec {
   app?: string;
   action?: string;
   connection?: string | number | null;
   inputs?: Record<string, unknown>;
+  /** A recurring schedule (foreman-ufo3.3) — present instead of app/action for scheduled automations. */
+  schedule?: ScheduleSpec;
+  /** With `schedule`, this automation is a daily digest of recent activity. */
+  digest?: boolean;
 }
 
 export interface Automation {

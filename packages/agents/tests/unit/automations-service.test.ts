@@ -111,6 +111,36 @@ describe("provisionAutomation", () => {
       inputs: { repo: "owner/name" },
     });
   });
+
+  it("creates a digest automation WITHOUT deploying a durable (foreman-ufo3.3)", async () => {
+    const result = await provisionAutomation({
+      userId: "user-1",
+      name: "Morning digest",
+      schedule: { kind: "daily", atHourUtc: 9 },
+      digest: true,
+    });
+
+    expect(result.id).toBe("auto_1");
+    expect(deployAutomation).not.toHaveBeenCalled(); // no Zapier durable for a digest
+
+    const persisted = vi.mocked(store.createAutomation).mock.calls[0][0];
+    expect(persisted.trigger).toEqual({ schedule: { kind: "daily", atHourUtc: 9 }, digest: true });
+    expect(persisted.zapierWorkflowId).toMatch(/^foreman:digest:/); // unique sentinel
+    expect(persisted.status).toBe("active");
+  });
+
+  it("deploys a durable for a non-digest scheduled automation and stores the schedule", async () => {
+    await provisionAutomation({
+      userId: "user-1",
+      name: "Nightly sync",
+      source: "SRC",
+      schedule: { kind: "interval", everyMinutes: 60 },
+    });
+
+    expect(deployAutomation).toHaveBeenCalled();
+    const persisted = vi.mocked(store.createAutomation).mock.calls[0][0];
+    expect(persisted.trigger).toEqual({ schedule: { kind: "interval", everyMinutes: 60 } });
+  });
 });
 
 describe("runAutomationById", () => {

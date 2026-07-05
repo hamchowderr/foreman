@@ -49,7 +49,25 @@ import {
   runAutomation,
   setAutomationEnabled,
 } from "@/data/automations";
-import type { Automation, AutomationDetail, InboxState } from "@/data/automations-types";
+import type {
+  Automation,
+  AutomationDetail,
+  InboxState,
+  ScheduleSpec,
+} from "@/data/automations-types";
+
+/** Human label for a schedule (foreman-ufo3.3), e.g. "Daily 09:00 UTC" / "Every 15m". */
+function scheduleLabel(s: ScheduleSpec): string {
+  if (s.kind === "interval") {
+    const m = s.everyMinutes;
+    if (m % 1440 === 0) return `Every ${m / 1440}d`;
+    if (m % 60 === 0) return `Every ${m / 60}h`;
+    return `Every ${m}m`;
+  }
+  const hh = String(s.atHourUtc).padStart(2, "0");
+  const mm = String(s.atMinuteUtc ?? 0).padStart(2, "0");
+  return `Daily ${hh}:${mm} UTC`;
+}
 
 function statusVariant(status: string, enabled: boolean): "default" | "secondary" | "destructive" {
   // trigger_claim_failed = the deploy-time claim failed; trigger_failed = the inbox
@@ -217,7 +235,16 @@ export function AutomationsManager() {
               type="button"
             >
               <span className="truncate font-medium">{a.name}</span>
-              <Badge variant={statusVariant(a.status, a.enabled)}>{a.enabled ? "on" : "off"}</Badge>
+              <span className="flex shrink-0 items-center gap-1.5">
+                {a.trigger?.schedule && (
+                  <span className="text-muted-foreground text-xs">
+                    {a.trigger.digest ? "Digest" : scheduleLabel(a.trigger.schedule)}
+                  </span>
+                )}
+                <Badge variant={statusVariant(a.status, a.enabled)}>
+                  {a.enabled ? "on" : "off"}
+                </Badge>
+              </span>
             </button>
           </li>
         ))}
@@ -233,6 +260,10 @@ export function AutomationsManager() {
                 <Badge variant={statusVariant(selected.status, selected.enabled)}>
                   {selected.status}
                 </Badge>
+                {selected.trigger?.digest && <Badge variant="secondary">Digest</Badge>}
+                {selected.trigger?.schedule && (
+                  <Badge variant="outline">{scheduleLabel(selected.trigger.schedule)}</Badge>
+                )}
               </div>
               {selected.description && (
                 <p className="mt-0.5 text-muted-foreground text-sm">{selected.description}</p>
@@ -478,7 +509,13 @@ export function AutomationsManager() {
             </TabsContent>
 
             <TabsContent value="inbox">
-              {!selected.trigger ? (
+              {selected.trigger?.schedule ? (
+                <p className="py-4 text-muted-foreground text-sm">
+                  {selected.trigger.digest
+                    ? `Daily digest — ${scheduleLabel(selected.trigger.schedule)}. Synthesizes a prioritized summary of recent activity into the Inbox. No trigger inbox.`
+                    : `Scheduled automation — fires ${scheduleLabel(selected.trigger.schedule).toLowerCase()}. No trigger inbox.`}
+                </p>
+              ) : !selected.trigger ? (
                 <p className="py-4 text-muted-foreground text-sm">
                   Manual automation — no trigger inbox. Use “Run now” to fire it.
                 </p>

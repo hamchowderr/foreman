@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   cancelDurableRun,
   deleteAutomation as deleteZapierWorkflow,
@@ -14,6 +15,7 @@ import { getInbox, listInboxMessages } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
 import type { AutomationDigest } from "./digest";
 import { type InboxPriority, scoreInboxEntry } from "./inbox-priority";
+import type { ScheduleSpec } from "./schedule";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
 import type { InboxTriggerSpec } from "./types";
@@ -36,11 +38,17 @@ export interface ProvisionInput {
   workspaceId?: string | null;
   name: string;
   description?: string;
-  source: string;
+  /** The durable workflow source. Optional only for a digest (no durable runs). */
+  source?: string;
   connections?: Record<string, string | number>;
   /** Trigger-inbox subscription that fires this automation; omit for manual. The
    *  worker (M3) arms the inbox idempotently on its next cycle. */
   trigger?: InboxTriggerSpec;
+  /** Schedule that fires this automation on a cadence (foreman-ufo3.3). Mutually
+   *  exclusive with `trigger` — a scheduled automation isn't inbox-driven. */
+  schedule?: ScheduleSpec;
+  /** With `schedule`, makes this a daily digest — synthesized by the worker, no durable. */
+  digest?: boolean;
   enabled?: boolean;
   isPrivate?: boolean;
 }
@@ -53,6 +61,45 @@ export interface ProvisionResult extends DeployResult {
 /** Deploy a durable automation to Zapier and persist it as a workspace resource. */
 export async function provisionAutomation(input: ProvisionInput): Promise<ProvisionResult> {
   const workspaceId = input.workspaceId ?? (await resolveActiveWorkspace(input.userId));
+
+  // A scheduled automation stores its schedule in the trigger json (see schedule.ts);
+  // it's fired by the worker's runDueSchedules, not the inbox lease loop.
+  const scheduleTrigger = input.schedule
+    ? { schedule: input.schedule, ...(input.digest ? { digest: true } : {}) }
+    : null;
+
+  // A digest has no durable — the worker synthesizes it deterministically. Persist
+  // it with a unique sentinel workflow id (never sent to Zapier) so the shared
+  // automation schema stays uniform without a nullable-column migration.
+  if (input.schedule && input.digest) {
+    const id = await store.createAutomation({
+      userId: input.userId,
+      workspaceId: workspaceId ?? null,
+      name: input.name,
+      description: input.description ?? null,
+      zapierWorkflowId: `foreman:digest:${randomUUID()}`,
+      zapierVersionId: null,
+      source: input.source ?? "",
+      connections: input.connections,
+      trigger: scheduleTrigger,
+      enabled: input.enabled ?? true,
+      status: "active",
+      editorUrl: null,
+      triggerUrl: null,
+    });
+    return {
+      id,
+      workflowId: "",
+      versionId: "",
+      enabled: input.enabled ?? true,
+      isPrivate: true,
+      editorUrl: "",
+      triggerUrl: "",
+      triggerClaimFailed: false,
+      disabledReason: null,
+    };
+  }
+
   const sdk = await getExperimentalSdkForUser(input.userId);
 
   // Deploy as a manual durable (no Zapier-claimed trigger). Triggering is the
@@ -61,7 +108,7 @@ export async function provisionAutomation(input: ProvisionInput): Promise<Provis
     sdk,
     name: input.name,
     description: input.description,
-    source: input.source,
+    source: input.source ?? "",
     connections: input.connections,
     enabled: input.enabled,
     isPrivate: input.isPrivate,
@@ -74,9 +121,10 @@ export async function provisionAutomation(input: ProvisionInput): Promise<Provis
     description: input.description ?? null,
     zapierWorkflowId: deployed.workflowId,
     zapierVersionId: deployed.versionId,
-    source: input.source,
+    source: input.source ?? "",
     connections: input.connections,
-    trigger: input.trigger ? { ...input.trigger } : null,
+    // A schedule wins over an event trigger; otherwise persist the event spec.
+    trigger: scheduleTrigger ?? (input.trigger ? { ...input.trigger } : null),
     enabled: deployed.enabled,
     status: statusFor(deployed),
     editorUrl: deployed.editorUrl,

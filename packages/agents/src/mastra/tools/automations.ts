@@ -37,6 +37,22 @@ const triggerSchema = z
     "A trigger-inbox subscription that fires this automation; omit for manual/webhook automations. The worker leases this inbox and fires the durable.",
   );
 
+const scheduleSchema = z
+  .union([
+    z.object({
+      kind: z.literal("interval"),
+      everyMinutes: z.number().int().min(1).describe("Fire every N minutes (>=1)."),
+    }),
+    z.object({
+      kind: z.literal("daily"),
+      atHourUtc: z.number().int().min(0).max(23).describe("Hour of day in UTC (0-23)."),
+      atMinuteUtc: z.number().int().min(0).max(59).optional().describe("Minute (0-59); default 0."),
+    }),
+  ])
+  .describe(
+    "Fire this automation on a cadence instead of on an event. Use for 'every morning at 9' (daily, atHourUtc:9) or 'every 15 minutes' (interval). Mutually exclusive with `trigger`.",
+  );
+
 export const createAutomationTool = createTool({
   id: "create_automation",
   requireApproval: true,
@@ -44,24 +60,33 @@ export const createAutomationTool = createTool({
     "Deploy a durable Zapier automation the user described, as a shared workspace automation. You author the " +
     "durable workflow.ts `source` (createZapierSdk() at module scope, one sdk.runAction per ctx.step, " +
     "defineDurable(...) + export default); this creates + publishes it on Zapier and records it in the workspace. " +
-    "Provide a `connections` map (alias → connection id) for every alias the source references. Add `trigger` (an " +
-    "app/action trigger-inbox subscription) for an event-driven automation, or omit it for manual/webhook. The " +
-    "background worker arms the inbox and fires the automation on each matching event. Returns the Foreman " +
-    "automation `id` + editor link.",
+    "Provide a `connections` map (alias → connection id) for every alias the source references. Choose ONE trigger: " +
+    "`trigger` (an app/action trigger-inbox subscription) for event-driven; `schedule` for a recurring cadence " +
+    "('every morning at 9' → daily/atHourUtc:9); or omit both for manual/webhook. For a scheduled DIGEST that " +
+    "summarizes recent automation activity into the inbox, pass `schedule` + `digest:true` and OMIT `source` " +
+    "(the worker synthesizes it — no durable). Returns the Foreman automation `id` + editor link.",
   inputSchema: z.object({
     userId: z.string().describe("The user whose Zapier connection deploys the automation."),
     name: z.string().describe("Human-readable automation name."),
     description: z.string().optional(),
     source: z
       .string()
+      .optional()
       .describe(
-        "The durable workflow.ts source — defineDurable(name, async (ctx, input) => {...}) + export default.",
+        "The durable workflow.ts source — defineDurable(name, async (ctx, input) => {...}) + export default. Omit ONLY for a digest (digest:true).",
       ),
     connections: z
       .record(z.string(), z.union([z.string(), z.number()]))
       .optional()
       .describe("Connection alias → connection id, for every alias the source references."),
     trigger: triggerSchema.optional(),
+    schedule: scheduleSchema.optional(),
+    digest: z
+      .boolean()
+      .optional()
+      .describe(
+        "With `schedule`, makes this a daily digest of recent activity (no durable source).",
+      ),
     enabled: z.boolean().optional().default(true),
     isPrivate: z.boolean().optional().default(true),
   }),
@@ -97,6 +122,8 @@ export const createAutomationTool = createTool({
     source,
     connections,
     trigger,
+    schedule,
+    digest,
     enabled,
     isPrivate,
   }) =>
@@ -107,6 +134,8 @@ export const createAutomationTool = createTool({
       source,
       connections,
       trigger,
+      schedule,
+      digest,
       enabled,
       isPrivate,
     }),
