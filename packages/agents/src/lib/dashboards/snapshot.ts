@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getSupabase } from "@/lib/db";
+import { getSupabase } from "../db";
 
 export type SnapshotRecord = Record<string, unknown>;
 

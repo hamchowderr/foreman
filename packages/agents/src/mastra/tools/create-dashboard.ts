@@ -1,9 +1,9 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { resolveAppSlug } from "@/lib/catalog/resolve";
-import { saveArtifact } from "@/lib/dashboards/artifact";
-import { getLatestSnapshot } from "@/lib/dashboards/snapshot";
-import { buildDefaultSpec } from "@/lib/dashboards/spec";
+import { resolveAppSlug } from "../../lib/catalog/resolve";
+import { saveArtifact } from "../../lib/dashboards/artifact";
+import { getLatestSnapshot } from "../../lib/dashboards/snapshot";
+import { buildDefaultSpec } from "../../lib/dashboards/spec";
 
 // Cap how many records ride along in the tool result to the UI — enough to
 // render a dashboard, bounded so a huge snapshot can't bloat the message stream.

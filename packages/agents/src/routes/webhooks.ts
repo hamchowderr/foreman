@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getMastra } from "@/mastra";
-import type { WebhookPayload } from "@/workflows/webhook-handler";
+import { getMastra } from "../mastra";
+import type { WebhookPayload } from "../workflows/webhook-handler";
 
 const webhooks = new Hono();
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
-import { getSupabase } from "@/lib/db";
-import { validateParam } from "@/lib/validation";
+import { getSupabase } from "../lib/db";
+import { validateParam } from "../lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

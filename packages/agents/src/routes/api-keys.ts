@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getSupabase } from "@/lib/db";
-import { createApiKey } from "@/lib/identity";
+import { getSupabase } from "../lib/db";
+import { createApiKey } from "../lib/identity";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

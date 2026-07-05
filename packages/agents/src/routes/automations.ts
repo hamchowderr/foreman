@@ -8,9 +8,9 @@ import {
   removeAutomationForUser,
   runAutomationById,
   updateAutomationForUser,
-} from "@/lib/automations/service";
-import type { InboxTriggerSpec } from "@/lib/automations/types";
-import { validateParam } from "@/lib/validation";
+} from "../lib/automations/service";
+import type { InboxTriggerSpec } from "../lib/automations/types";
+import { validateParam } from "../lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

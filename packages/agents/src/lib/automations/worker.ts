@@ -1,12 +1,12 @@
-import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "@/lib/durable";
+import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "../durable";
 import {
   ackMessages,
   ensureInbox,
   type LeasedMessage,
   leaseMessages,
   releaseMessages,
-} from "@/lib/trigger-inbox";
-import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "@/lib/zapier/sdk";
+} from "../trigger-inbox";
+import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
 import type { AutomationRow } from "./store";
 import * as store from "./store";
 import { type InboxTriggerSpec, inboxKeyFor } from "./types";

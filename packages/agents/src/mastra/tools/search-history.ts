@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { searchActionHistory } from "@/lib/rag";
+import { searchActionHistory } from "../../lib/rag";
 
 // Backgrounding (so a slow history search doesn't block chat) is opted in at the
 // AGENT level via backgroundToolsConfig() in lib/background.ts — tool-level

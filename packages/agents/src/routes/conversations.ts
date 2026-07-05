@@ -1,14 +1,14 @@
 import { toAISdkV5Messages } from "@mastra/ai-sdk/ui";
 import { Hono } from "hono";
-import { getSupabase } from "@/lib/db";
-import { validateParam } from "@/lib/validation";
-import { getMastra } from "@/mastra";
 import {
   createShare,
   getConversationShareToken,
   getSharedConversation,
   revokeShare,
 } from "../lib/conversations/share";
+import { getSupabase } from "../lib/db";
+import { validateParam } from "../lib/validation";
+import { getMastra } from "../mastra";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

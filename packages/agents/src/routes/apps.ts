@@ -1,8 +1,12 @@
 import { Hono } from "hono";
-import { getArtifactWithData } from "@/lib/dashboards/artifact";
-import { createShare, getSharedArtifact, revokeShare } from "@/lib/dashboards/share";
-import { getLatestSnapshot, getSnapshotHistory, listSnapshotApps } from "@/lib/dashboards/snapshot";
-import { validateParam } from "@/lib/validation";
+import { getArtifactWithData } from "../lib/dashboards/artifact";
+import { createShare, getSharedArtifact, revokeShare } from "../lib/dashboards/share";
+import {
+  getLatestSnapshot,
+  getSnapshotHistory,
+  listSnapshotApps,
+} from "../lib/dashboards/snapshot";
+import { validateParam } from "../lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

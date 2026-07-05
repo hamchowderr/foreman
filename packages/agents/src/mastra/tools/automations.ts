@@ -5,7 +5,7 @@ import {
   listForUser,
   provisionAutomation,
   runAutomationById,
-} from "@/lib/automations/service";
+} from "../../lib/automations/service";
 
 /**
  * Agent-facing tools for durable automations (foreman-l7xq). The agent authors

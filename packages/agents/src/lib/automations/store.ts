@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getSupabase } from "@/lib/db";
+import { getSupabase } from "../db";
 
 /**
  * Automation persistence (foreman-l7xq M2). A SHARED workspace resource — all

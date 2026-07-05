@@ -1,4 +1,4 @@
-import type { ExperimentalZapierSdk } from "@/lib/zapier/sdk";
+import type { ExperimentalZapierSdk } from "../zapier/sdk";
 
 /**
  * Trigger-inbox layer (foreman-l7xq) — the chosen trigger substrate. A trigger

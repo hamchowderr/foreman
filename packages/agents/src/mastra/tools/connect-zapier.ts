@@ -1,8 +1,8 @@
 import { createTool } from "@mastra/core/tools";
 import { createZapierSdk } from "@zapier/zapier-sdk";
 import { z } from "zod";
-import { onZapierSdkEvent } from "@/lib/zapier/deprecation";
-import { getSdkForUser } from "@/lib/zapier/sdk";
+import { onZapierSdkEvent } from "../../lib/zapier/deprecation";
+import { getSdkForUser } from "../../lib/zapier/sdk";
 
 const ZAPIER_CONNECTIONS_PAGE = "https://zapier.com/app/connections";
 

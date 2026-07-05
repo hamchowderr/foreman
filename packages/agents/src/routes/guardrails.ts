@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { setCapability } from "@/lib/capabilities";
-import { checkAppAccess, checkRateLimit, SENSITIVE_APP_CATEGORIES } from "@/lib/guardrails";
-import { getOrgGuardrailConfig } from "@/lib/guardrails-config";
-import { validateParam } from "@/lib/validation";
+import { setCapability } from "../lib/capabilities";
+import { checkAppAccess, checkRateLimit, SENSITIVE_APP_CATEGORIES } from "../lib/guardrails";
+import { getOrgGuardrailConfig } from "../lib/guardrails-config";
+import { validateParam } from "../lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

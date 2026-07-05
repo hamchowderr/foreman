@@ -4,11 +4,11 @@ import {
   getTriggerRunStatus,
   setAutomationEnabled,
   triggerAutomation,
-} from "@/lib/durable";
-import type { DeployResult } from "@/lib/durable/deploy";
-import { resolveActiveWorkspace } from "@/lib/identity";
-import { getInbox, listInboxMessages } from "@/lib/trigger-inbox";
-import { getExperimentalSdkForUser } from "@/lib/zapier/sdk";
+} from "../durable";
+import type { DeployResult } from "../durable/deploy";
+import { resolveActiveWorkspace } from "../identity";
+import { getInbox, listInboxMessages } from "../trigger-inbox";
+import { getExperimentalSdkForUser } from "../zapier/sdk";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
 import type { InboxTriggerSpec } from "./types";

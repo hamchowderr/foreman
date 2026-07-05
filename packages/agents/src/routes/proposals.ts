@@ -1,12 +1,12 @@
 import { Hono } from "hono";
-import { getSupabase } from "@/lib/db";
-import { loadOwnedProposal } from "@/lib/proposals";
-import { indexActionRun } from "@/lib/rag";
-import { encodeSSE, sseHeaders } from "@/lib/stream/sse";
-import type { AppChunk } from "@/lib/stream/types";
-import { validateParam } from "@/lib/validation";
-import { getInputFieldChoices, ZapierReauthRequired } from "@/lib/zapier";
-import { getMastra } from "@/mastra";
+import { getSupabase } from "../lib/db";
+import { loadOwnedProposal } from "../lib/proposals";
+import { indexActionRun } from "../lib/rag";
+import { encodeSSE, sseHeaders } from "../lib/stream/sse";
+import type { AppChunk } from "../lib/stream/types";
+import { validateParam } from "../lib/validation";
+import { getInputFieldChoices, ZapierReauthRequired } from "../lib/zapier";
+import { getMastra } from "../mastra";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

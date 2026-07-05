@@ -1,4 +1,4 @@
-import { getSupabase } from "@/lib/db";
+import { getSupabase } from "./db";
 
 export async function loadOwnedProposal(proposalId: string, userId: string) {
   const supabase = getSupabase();

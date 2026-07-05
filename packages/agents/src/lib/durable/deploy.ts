@@ -1,4 +1,4 @@
-import type { ExperimentalZapierSdk } from "@/lib/zapier/sdk";
+import type { ExperimentalZapierSdk } from "../zapier/sdk";
 import { AGED_DURABLE_DEPS } from "./deps";
 import type { AutomationTrigger } from "./types";
 

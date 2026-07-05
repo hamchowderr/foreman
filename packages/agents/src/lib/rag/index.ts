@@ -2,7 +2,7 @@ import { fastembed } from "@mastra/fastembed";
 import { PgVector } from "@mastra/pg";
 import { MDocument } from "@mastra/rag";
 import { embedMany } from "ai";
-import { getEnv } from "@/lib/env";
+import { getEnv } from "../env";
 
 const INDEX_NAME = "action_history";
 // Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed,

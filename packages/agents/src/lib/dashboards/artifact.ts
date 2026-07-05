@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getSupabase } from "@/lib/db";
+import { getSupabase } from "../db";
 import { getSnapshotById, type SnapshotRecord } from "./snapshot";
 import { type DashboardSpec, dashboardSpecSchema } from "./spec";
 

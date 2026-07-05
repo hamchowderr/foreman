@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from "hono";
-import { resolveFromRequest } from "@/lib/identity";
+import { resolveFromRequest } from "../lib/identity";
 import type { AppEnv } from "./types";
 
 /**
