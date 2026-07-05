@@ -2,15 +2,11 @@ import { enableFileLogging } from "../lib/file-logger";
 
 enableFileLogging();
 
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { toAISdkStream } from "@mastra/ai-sdk";
 import { Mastra } from "@mastra/core";
 import type { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
 import { registerApiRoute } from "@mastra/core/server";
-import { MastraCompositeStore } from "@mastra/core/storage";
-import { DuckDBStore } from "@mastra/duckdb";
 import { MastraEditor } from "@mastra/editor";
 import { PinoLogger } from "@mastra/loggers";
 import { ConsoleExporter, DefaultExporter, Observability } from "@mastra/observability";
@@ -44,40 +40,14 @@ export function getMastra(): Mastra {
 
   const databaseUrl = process.env.DATABASE_URL!;
 
-  // Postgres handles every storage domain except observability — Mastra's
-  // observability domain (traces, metrics, logs, scores, feedback) needs an
-  // OLAP-capable backend. Per Mastra docs, Postgres/LibSQL are NOT supported
-  // for observability; DuckDB is the recommended local-dev backend (ClickHouse
-  // for production). Composite store routes the observability domain to
-  // DuckDB while leaving the rest on Postgres.
-  // Docs: https://mastra.ai/docs/observability/metrics/overview
-  const storage = new MastraCompositeStore({
+  // Postgres (Supabase) backs EVERY Mastra storage domain, including
+  // observability — @mastra/pg ships ObservabilityPG (mastra_ai_spans / scorers /
+  // etc.), and PostgresStore is itself a composite over all domains, so no wrapper
+  // and no separate OLAP backend is needed. (This previously routed observability
+  // to DuckDB; @mastra/pg now supports it natively → pure Postgres.)
+  const storage = new PostgresStore({
     id: "foreman-storage",
-    default: new PostgresStore({
-      id: "foreman-storage-pg",
-      connectionString: databaseUrl,
-    }),
-    domains: {
-      observability: new DuckDBStore({
-        // Resolve relative to THIS file's location, not process.cwd().
-        // `mastra dev` runs the bundled entry from .mastra/output/index.mjs
-        // with cwd set to src/mastra/public/ — using cwd would put the file
-        // there and (a) fail to find its dir on first boot, (b) lock the
-        // bundled-assets dir for the next build. import.meta.url is stable:
-        // - source path `src/mastra/index.ts` → ../../data/mastra.duckdb
-        //   under packages/agents/data/
-        // - bundled path `.mastra/output/index.mjs` → same destination
-        path:
-          process.env.DUCKDB_PATH ??
-          path.resolve(
-            path.dirname(fileURLToPath(import.meta.url)),
-            "..",
-            "..",
-            "data",
-            "mastra.duckdb",
-          ),
-      }).observability,
-    },
+    connectionString: databaseUrl,
   });
 
   const foremanAgent = createForemanAgent(databaseUrl);
@@ -130,7 +100,7 @@ export function getMastra(): Mastra {
   // OTEL_ENABLED=true additionally enables the OTEL Console exporter for local
   // span dumping; production typically only wants the DefaultExporter.
   // The `logging` block forwards PinoLogger calls into the observability log
-  // store (DuckDB) so Studio's Logs tab is populated by application logger
+  // store (Postgres) so Studio's Logs tab is populated by application logger
   // calls, not just Mastra-internal traces.
   // Docs: https://mastra.ai/docs/observability/logging
   const observability = new Observability({
