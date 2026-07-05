@@ -32,10 +32,6 @@ vi.mock("@/lib/automations/store", () => ({
   updateRun: vi.fn(async () => {}),
   updateAutomation: vi.fn(async () => true),
   listActiveInboxAutomations: vi.fn(async () => []),
-  listActiveScheduledAutomations: vi.fn(async () => []),
-  getLastRunAt: vi.fn(async () => null),
-  recordRun: vi.fn(async () => "run_sched"),
-  listRecentRunsForWorkspace: vi.fn(async () => []),
   listPendingRuns: vi.fn(async () => []),
   getAutomationsByIds: vi.fn(async () => []),
 }));
@@ -44,7 +40,6 @@ import * as store from "@/lib/automations/store";
 import {
   dispatchMessage,
   reconcilePendingRuns,
-  runDueSchedules,
   runInboxCycleForAutomation,
 } from "@/lib/automations/worker";
 import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "@/lib/durable";
@@ -206,95 +201,6 @@ describe("runInboxCycleForAutomation", () => {
     expect(res.processed).toBe(0);
     expect(ackMessages).not.toHaveBeenCalled();
     expect(releaseMessages).not.toHaveBeenCalled();
-  });
-});
-
-describe("runDueSchedules (foreman-ufo3.1)", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  const NOW = Date.parse("2026-07-05T12:00:00Z");
-  const scheduled = {
-    id: "sched_1",
-    user_id: "user-1",
-    workspace_id: "ws-1",
-    zapier_workflow_id: "wf_1",
-    trigger: { schedule: { kind: "interval", everyMinutes: 15 } },
-  };
-
-  it("fires a due schedule and records the run as 'started'", async () => {
-    vi.mocked(store.listActiveScheduledAutomations).mockResolvedValueOnce([scheduled] as never);
-    vi.mocked(store.getLastRunAt).mockResolvedValueOnce(null); // never run → due
-
-    const res = await runDueSchedules(NOW);
-
-    expect(res).toEqual([{ automationId: "sched_1", fired: true, status: "started" }]);
-    expect(triggerAutomation).toHaveBeenCalledWith(expect.objectContaining({ workflowId: "wf_1" }));
-    expect(store.recordRun).toHaveBeenCalledWith(
-      expect.objectContaining({ automationId: "sched_1", status: "started", triggerId: "trig_1" }),
-    );
-  });
-
-  it("skips a not-due schedule without firing", async () => {
-    vi.mocked(store.listActiveScheduledAutomations).mockResolvedValueOnce([scheduled] as never);
-    vi.mocked(store.getLastRunAt).mockResolvedValueOnce(new Date(NOW - 5 * 60_000).toISOString());
-
-    const res = await runDueSchedules(NOW);
-
-    expect(res).toEqual([{ automationId: "sched_1", fired: false }]);
-    expect(triggerAutomation).not.toHaveBeenCalled();
-    expect(store.recordRun).not.toHaveBeenCalled();
-  });
-
-  it("synthesizes a digest instead of firing a durable (foreman-ufo3.2)", async () => {
-    const digest = {
-      ...scheduled,
-      id: "digest_1",
-      workspace_id: "ws-1",
-      trigger: { schedule: { kind: "daily", atHourUtc: 9 }, digest: true },
-    };
-    vi.mocked(store.listActiveScheduledAutomations).mockResolvedValueOnce([digest] as never);
-    vi.mocked(store.getLastRunAt).mockResolvedValueOnce(null); // due
-    vi.mocked(store.listRecentRunsForWorkspace).mockResolvedValueOnce([
-      {
-        automation_id: "auto_x",
-        status: "failed",
-        error: { message: "boom" },
-        created_at: "2026-07-05T10:00:00Z",
-      },
-    ] as never);
-    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
-      { id: "auto_x", name: "Nightly sync" },
-    ] as never);
-
-    const res = await runDueSchedules(NOW);
-
-    expect(res[0]).toMatchObject({ automationId: "digest_1", fired: true, status: "finished" });
-    // Digest does NOT fire a Zapier durable — it records a finished run carrying the summary.
-    expect(triggerAutomation).not.toHaveBeenCalled();
-    expect(store.recordRun).toHaveBeenCalledWith(
-      expect.objectContaining({
-        automationId: "digest_1",
-        status: "finished",
-        output: expect.objectContaining({
-          kind: "automation_digest",
-          headline: expect.any(String),
-        }),
-      }),
-    );
-  });
-
-  it("continues past a fire failure (one unconnected owner)", async () => {
-    const a2 = { ...scheduled, id: "sched_2" };
-    vi.mocked(store.listActiveScheduledAutomations).mockResolvedValueOnce([scheduled, a2] as never);
-    vi.mocked(store.getLastRunAt).mockResolvedValue(null); // both due
-    vi.mocked(triggerAutomation)
-      .mockRejectedValueOnce(new Error("reauth required"))
-      .mockResolvedValueOnce({ triggerId: "trig_2" } as never);
-
-    const res = await runDueSchedules(NOW);
-
-    expect(res[0]).toMatchObject({ automationId: "sched_1", fired: false });
-    expect(res[1]).toMatchObject({ automationId: "sched_2", fired: true });
   });
 });
 

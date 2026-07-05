@@ -1,31 +1,18 @@
 /**
- * LLM narrative layer for the daily digest (foreman-ufo3, opt-in). The digest
- * itself is deterministic (digest.ts); this OPTIONALLY wraps it with a short
- * prose summary from a small model. Off by default — enable with
- * FOREMAN_DIGEST_NARRATIVE=true — and it degrades to null on any failure so the
- * deterministic digest always ships regardless of the LLM.
- *
- * Model: FOREMAN_DIGEST_MODEL (a `provider/model` string, e.g.
- * openai/gpt-4o-mini) falling back to the fast tier. Resolution + provider keys
- * go through Mastra's gateway, same as the agents.
+ * LLM narrative layer for the daily digest (foreman-bhb5). Wraps the deterministic
+ * digest (digest.ts) with a short prose summary. The narrator is a first-class
+ * registry agent — its model comes from `AGENT_MODELS.digest` (env override
+ * `DIGEST_MODEL`, fast-tier default), exactly like the other agents. No bespoke
+ * feature flag: narration is a step of the digest workflow. It still fails soft to
+ * null so a narrator error never breaks the (already-recorded) digest.
  */
 import { Agent } from "@mastra/core/agent";
-import { MODELS } from "../providers/models";
+import { AGENT_MODELS } from "../providers/models";
 import {
   type AutomationDigest,
   buildDigestNarrativePrompt,
   DIGEST_NARRATOR_INSTRUCTIONS,
 } from "./digest";
-
-/** Is the LLM narrative layer switched on? Off unless explicitly enabled. */
-export function isDigestNarrativeEnabled(): boolean {
-  return process.env.FOREMAN_DIGEST_NARRATIVE === "true";
-}
-
-function digestModel(): string {
-  const override = process.env.FOREMAN_DIGEST_MODEL?.trim();
-  return override && override.length > 0 ? override : MODELS.fast;
-}
 
 /** One-shot LLM call producing the narrative text. Overridable in tests. */
 export type NarrativeGenerator = (instructions: string, prompt: string) => Promise<string>;
@@ -35,21 +22,21 @@ const defaultGenerator: NarrativeGenerator = async (instructions, prompt) => {
     id: "digest-narrator",
     name: "digest-narrator",
     instructions,
-    model: digestModel(),
+    model: AGENT_MODELS.digest,
   });
   const result = await agent.generate(prompt);
   return result.text ?? "";
 };
 
 /**
- * Produce a prose summary of a digest, or null when disabled/failed. Never throws
- * — a narrator failure must not stop the digest from being recorded.
+ * Produce a prose summary of a digest, or null on failure. Never throws — a
+ * narrator failure (no provider key, rate limit, empty output) must not stop the
+ * digest from being recorded.
  */
 export async function narrateDigest(
   digest: AutomationDigest,
   generate: NarrativeGenerator = defaultGenerator,
 ): Promise<string | null> {
-  if (!isDigestNarrativeEnabled()) return null;
   try {
     const text = (
       await generate(DIGEST_NARRATOR_INSTRUCTIONS, buildDigestNarrativePrompt(digest))

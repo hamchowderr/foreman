@@ -56,17 +56,20 @@ import type {
   ScheduleSpec,
 } from "@/data/automations-types";
 
-/** Human label for a schedule (foreman-ufo3.3), e.g. "Daily 09:00 UTC" / "Every 15m". */
+/**
+ * Human label for a cron schedule (foreman-bhb5). Humanizes the common daily case
+ * ("0 9 * * *" → "Daily 09:00"); otherwise shows the raw cron. Appends the tz.
+ */
 function scheduleLabel(s: ScheduleSpec): string {
-  if (s.kind === "interval") {
-    const m = s.everyMinutes;
-    if (m % 1440 === 0) return `Every ${m / 1440}d`;
-    if (m % 60 === 0) return `Every ${m / 60}h`;
-    return `Every ${m}m`;
+  const tz = s.timezone ?? "UTC";
+  const parts = s.cron.trim().split(/\s+/);
+  if (parts.length === 5) {
+    const [min, hour, dom, mon, dow] = parts;
+    if (dom === "*" && mon === "*" && dow === "*" && /^\d+$/.test(min) && /^\d+$/.test(hour)) {
+      return `Daily ${hour.padStart(2, "0")}:${min.padStart(2, "0")} ${tz}`;
+    }
   }
-  const hh = String(s.atHourUtc).padStart(2, "0");
-  const mm = String(s.atMinuteUtc ?? 0).padStart(2, "0");
-  return `Daily ${hh}:${mm} UTC`;
+  return `${s.cron} (${tz})`;
 }
 
 function statusVariant(status: string, enabled: boolean): "default" | "secondary" | "destructive" {

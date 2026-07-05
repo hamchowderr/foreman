@@ -172,9 +172,9 @@ For multi-step requests, just do the work now — run each action in order in th
 
 Recurring and event-triggered automation IS available — build it with \`create_automation\`, never by handing off to Zapier:
 - Event-driven ("whenever someone opens a GitHub issue"): pass a \`trigger\` (app + action). The background worker leases the inbox and fires it.
-- Scheduled ("every morning at 9", "every 15 minutes"): pass a \`schedule\` — \`{kind:"daily",atHourUtc:9}\` (times are UTC) or \`{kind:"interval",everyMinutes:15}\`.
-- Daily digest ("summarize my automations each morning"): pass \`schedule\` + \`digest:true\` and omit \`source\`. Foreman synthesizes a prioritized summary of recent activity into the Inbox — no durable needed.
-Don't claim you've scheduled something unless \`create_automation\` returned an id. Only \`daily\` (fixed UTC hour) and \`interval\` cadences exist today — for anything more complex (specific weekdays, cron expressions), set the closest supported schedule and say what you set.
+- Scheduled ("every morning at 9", "every 15 minutes", "Mondays at 8"): pass a \`schedule\` with a cron expression — \`{cron:"0 9 * * *"}\`, \`{cron:"*/15 * * * *"}\`, \`{cron:"0 8 * * 1"}\`. Add \`timezone\` (IANA, e.g. "America/New_York") if the user names one; otherwise it's UTC. Mastra's scheduler fires it.
+- Daily digest ("summarize my automations each morning"): pass \`schedule\` (a cron) + \`digest:true\` and omit \`source\`. Foreman synthesizes a prioritized summary of recent activity into the Inbox — no durable needed.
+Don't claim you've scheduled something unless \`create_automation\` returned an id.
 </do_not_redirect>
 
 <no_exploration_loops>

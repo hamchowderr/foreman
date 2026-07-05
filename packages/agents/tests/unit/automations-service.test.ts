@@ -10,6 +10,11 @@ vi.mock("@/lib/zapier/sdk", () => ({
   getExperimentalSdkForUser: vi.fn(async (userId: string) => ({ __owner: userId })),
 }));
 vi.mock("@/lib/trigger-inbox", () => ({ getInbox: vi.fn(), listInboxMessages: vi.fn() }));
+vi.mock("@/lib/automations/schedules", () => ({
+  registerAutomationSchedule: vi.fn(async () => true),
+  unregisterAutomationSchedule: vi.fn(async () => {}),
+  assertValidCron: vi.fn(),
+}));
 vi.mock("@/lib/durable", () => ({
   deployAutomation: vi.fn(async () => ({
     workflowId: "wf_1",
@@ -47,6 +52,7 @@ vi.mock("@/lib/automations/store", () => ({
   updateAutomation: vi.fn(async () => true),
 }));
 
+import { registerAutomationSchedule } from "@/lib/automations/schedules";
 import {
   cancelRunForUser,
   getWorkspaceInbox,
@@ -112,11 +118,11 @@ describe("provisionAutomation", () => {
     });
   });
 
-  it("creates a digest automation WITHOUT deploying a durable (foreman-ufo3.3)", async () => {
+  it("creates a digest WITHOUT a durable + registers a daily-digest schedule (foreman-bhb5)", async () => {
     const result = await provisionAutomation({
       userId: "user-1",
       name: "Morning digest",
-      schedule: { kind: "daily", atHourUtc: 9 },
+      schedule: { cron: "0 9 * * *" },
       digest: true,
     });
 
@@ -124,22 +130,36 @@ describe("provisionAutomation", () => {
     expect(deployAutomation).not.toHaveBeenCalled(); // no Zapier durable for a digest
 
     const persisted = vi.mocked(store.createAutomation).mock.calls[0][0];
-    expect(persisted.trigger).toEqual({ schedule: { kind: "daily", atHourUtc: 9 }, digest: true });
+    expect(persisted.trigger).toEqual({ schedule: { cron: "0 9 * * *" }, digest: true });
     expect(persisted.zapierWorkflowId).toMatch(/^foreman:digest:/); // unique sentinel
     expect(persisted.status).toBe("active");
+
+    // Mastra owns the firing — a schedule targeting the digest workflow is registered.
+    expect(registerAutomationSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        automationId: "auto_1",
+        workflow: "daily-digest",
+        cron: "0 9 * * *",
+      }),
+    );
   });
 
-  it("deploys a durable for a non-digest scheduled automation and stores the schedule", async () => {
+  it("deploys a durable for a scheduled automation + registers a run-automation schedule", async () => {
     await provisionAutomation({
       userId: "user-1",
       name: "Nightly sync",
       source: "SRC",
-      schedule: { kind: "interval", everyMinutes: 60 },
+      schedule: { cron: "0 3 * * *", timezone: "America/New_York" },
     });
 
     expect(deployAutomation).toHaveBeenCalled();
     const persisted = vi.mocked(store.createAutomation).mock.calls[0][0];
-    expect(persisted.trigger).toEqual({ schedule: { kind: "interval", everyMinutes: 60 } });
+    expect(persisted.trigger).toEqual({
+      schedule: { cron: "0 3 * * *", timezone: "America/New_York" },
+    });
+    expect(registerAutomationSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ automationId: "auto_1", workflow: "run-automation" }),
+    );
   });
 });
 

@@ -7,15 +7,9 @@ import {
   releaseMessages,
 } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
-import { buildDigest, type DigestInputRun } from "./digest";
-import { narrateDigest } from "./digest-narrator";
-import { isDigestTrigger, isScheduleDue, scheduleOf } from "./schedule";
 import type { AutomationRow } from "./store";
 import * as store from "./store";
 import { type InboxTriggerSpec, inboxKeyFor } from "./types";
-
-/** How far back a daily digest looks when synthesizing recent activity. */
-const DIGEST_PERIOD_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Trigger-inbox poll worker (foreman-l7xq M3). Replaces the removed
@@ -202,118 +196,6 @@ export async function runInboxCycle(): Promise<AutomationCycleResult[]> {
 }
 
 /**
- * Synthesize a daily digest for a digest automation (foreman-ufo3.2). Gathers the
- * workspace's recent runs (excluding the digest's own), builds a deterministic
- * prioritized summary, and records it as a `finished` run whose `output` is the
- * digest — so it lands in the inbox (getLatestDigest reads it via the `kind` tag)
- * with no new table. A workspace-less automation records an empty-period digest.
- */
-async function runDigestForAutomation(automation: AutomationRow, now: number): Promise<void> {
-  const periodEnd = new Date(now).toISOString();
-  const periodStart = new Date(now - DIGEST_PERIOD_MS).toISOString();
-
-  let input: DigestInputRun[] = [];
-  if (automation.workspace_id) {
-    const runs = await store.listRecentRunsForWorkspace(automation.workspace_id, periodStart, {
-      excludeAutomationId: automation.id,
-    });
-    const names = new Map(
-      (await store.getAutomationsByIds([...new Set(runs.map((r) => r.automation_id))])).map((a) => [
-        a.id,
-        a.name,
-      ]),
-    );
-    input = runs.map((r) => ({
-      automationId: r.automation_id,
-      automationName: names.get(r.automation_id) ?? "(deleted automation)",
-      status: r.status,
-      error: r.error,
-      createdAt: r.created_at,
-    }));
-  }
-
-  const digest = buildDigest(input, periodStart, periodEnd);
-  // Optional LLM prose summary (opt-in; null when disabled or on failure).
-  digest.narrative = await narrateDigest(digest);
-  await store.recordRun({
-    automationId: automation.id,
-    workspaceId: automation.workspace_id,
-    status: "finished",
-    output: digest,
-    input: { scheduledAt: periodEnd },
-  });
-}
-
-export interface ScheduleFireResult {
-  automationId: string;
-  fired: boolean;
-  status?: string;
-  /** Why it wasn't fired (an error) — omitted on a normal skip/fire. */
-  reason?: string;
-}
-
-/**
- * Fire scheduled automations whose next run is due (foreman-ufo3.1). Runs every
- * worker tick alongside the inbox cycle. A due automation's durable is fired via
- * triggerAutomation and the run recorded as "started"; reconcilePendingRuns then
- * advances it exactly like an event-fired run. Digest automations (foreman-ufo3.2)
- * are recognized here but their synthesis is wired in that slice — for now they're
- * skipped so we never fire a bare durable for one.
- *
- * Due-ness is derived from the automation's last run time, so recording the run
- * makes the next tick see it as not-due — no separate cursor. The single-instance,
- * non-overlapping worker means no distributed lock is needed.
- */
-export async function runDueSchedules(now: number = Date.now()): Promise<ScheduleFireResult[]> {
-  const automations = await store.listActiveScheduledAutomations();
-  const results: ScheduleFireResult[] = [];
-  for (const automation of automations) {
-    const schedule = scheduleOf(automation.trigger);
-    if (!schedule) continue;
-    try {
-      const lastRunAt = await store.getLastRunAt(automation.id);
-      const lastMs = lastRunAt ? new Date(lastRunAt).getTime() : null;
-      if (!isScheduleDue(schedule, lastMs, now)) {
-        results.push({ automationId: automation.id, fired: false });
-        continue;
-      }
-
-      // A digest synthesizes recent runs instead of firing a durable (foreman-ufo3.2).
-      if (isDigestTrigger(automation.trigger)) {
-        await runDigestForAutomation(automation, now);
-        results.push({ automationId: automation.id, fired: true, status: "finished" });
-        continue;
-      }
-
-      const sdk = await getExperimentalSdkForUser(automation.user_id);
-      const input = { scheduledAt: new Date(now).toISOString() };
-      const { triggerId } = await triggerAutomation({
-        sdk,
-        workflowId: automation.zapier_workflow_id,
-        input,
-      });
-      await store.recordRun({
-        automationId: automation.id,
-        workspaceId: automation.workspace_id,
-        triggerId,
-        status: "started",
-        input,
-      });
-      results.push({ automationId: automation.id, fired: true, status: "started" });
-    } catch (err) {
-      // One schedule's failure (e.g. an unconnected owner) must not stop the others.
-      console.error(`[inbox-worker] schedule ${automation.id} fire failed:`, err);
-      results.push({
-        automationId: automation.id,
-        fired: false,
-        reason: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-  return results;
-}
-
-/**
  * How long a run may stay non-terminal WITHOUT a linked, running durable before we
  * give up and mark it failed. This caps the genuinely-stuck cases (trigger never
  * spawned a durable; worker crashed before dispatch; owner connection lost) — it
@@ -437,16 +319,14 @@ export function startInboxWorker(intervalMs = 60_000): () => void {
     running = true;
     try {
       const results = await runInboxCycle();
-      const scheduled = await runDueSchedules();
       const rec = await reconcilePendingRuns();
-      const firedCount = scheduled.filter((s) => s.fired).length;
-      if (results.length || firedCount || rec.updated) {
+      if (results.length || rec.updated) {
         const t = results.reduce(
           (a, r) => ({ p: a.p + r.processed, s: a.s + r.skipped, f: a.f + r.failed }),
           { p: 0, s: 0, f: 0 },
         );
         console.log(
-          `[inbox-worker] ${results.length} automations · processed ${t.p} · skipped ${t.s} · failed ${t.f} · scheduled-fired ${firedCount} · reconciled ${rec.updated}/${rec.checked}`,
+          `[inbox-worker] ${results.length} automations · processed ${t.p} · skipped ${t.s} · failed ${t.f} · reconciled ${rec.updated}/${rec.checked}`,
         );
       }
     } catch (err) {

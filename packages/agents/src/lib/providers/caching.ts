@@ -37,6 +37,7 @@ export const AGENT_PROMPT_CACHING: Record<AgentName, boolean> = {
   execution: parseBoolEnv(process.env.EXECUTION_PROMPT_CACHING),
   supervisor: parseBoolEnv(process.env.SUPERVISOR_PROMPT_CACHING),
   history: parseBoolEnv(process.env.HISTORY_PROMPT_CACHING),
+  digest: parseBoolEnv(process.env.DIGEST_PROMPT_CACHING),
 };
 
 export const AGENT_TOOL_CACHING: Record<AgentName, boolean> = {
@@ -45,6 +46,7 @@ export const AGENT_TOOL_CACHING: Record<AgentName, boolean> = {
   execution: parseBoolEnv(process.env.EXECUTION_TOOL_CACHING),
   supervisor: parseBoolEnv(process.env.SUPERVISOR_TOOL_CACHING),
   history: parseBoolEnv(process.env.HISTORY_TOOL_CACHING),
+  digest: parseBoolEnv(process.env.DIGEST_TOOL_CACHING),
 };
 
 /** True when the agent opted into either caching mode. */

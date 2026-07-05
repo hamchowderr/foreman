@@ -13,7 +13,15 @@ import { getMastra } from "./mastra";
 
 // Construct the agent in THIS process so the experimental SDK / registry init
 // happens here (mirrors how cron-driver-server built Mastra in-worker).
-getMastra();
+const mastra = getMastra();
+
+// Run Mastra's workers here (foreman-bhb5): the WorkflowScheduler that fires
+// cron schedules (daily-digest / run-automation) + the evented workflow executor
+// that runs them. This dedicated long-lived process is the natural home; the CAS
+// on mastra_schedules makes it safe even if the web server also runs them.
+mastra.startWorkers().catch((err) => {
+  console.error("[inbox-worker] startWorkers failed:", err);
+});
 
 const intervalMs = Number(process.env.FOREMAN_INBOX_WORKER_INTERVAL_MS) || 60_000;
 console.log(`[inbox-worker] starting · interval ${intervalMs}ms`);

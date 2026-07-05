@@ -15,9 +15,22 @@ import { getInbox, listInboxMessages } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
 import type { AutomationDigest } from "./digest";
 import { type InboxPriority, scoreInboxEntry } from "./inbox-priority";
-import type { ScheduleSpec } from "./schedule";
+import {
+  assertValidCron,
+  registerAutomationSchedule,
+  unregisterAutomationSchedule,
+} from "./schedules";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
+
+/** A cron schedule for an automation (foreman-bhb5) — Mastra owns the firing. */
+export interface CronSchedule {
+  /** 5-, 6-, or 7-part cron expression (validated by Mastra). */
+  cron: string;
+  /** Optional IANA timezone; defaults to the host tz. */
+  timezone?: string;
+}
+
 import type { InboxTriggerSpec } from "./types";
 
 /**
@@ -44,10 +57,10 @@ export interface ProvisionInput {
   /** Trigger-inbox subscription that fires this automation; omit for manual. The
    *  worker (M3) arms the inbox idempotently on its next cycle. */
   trigger?: InboxTriggerSpec;
-  /** Schedule that fires this automation on a cadence (foreman-ufo3.3). Mutually
-   *  exclusive with `trigger` — a scheduled automation isn't inbox-driven. */
-  schedule?: ScheduleSpec;
-  /** With `schedule`, makes this a daily digest — synthesized by the worker, no durable. */
+  /** Cron schedule that fires this automation (foreman-bhb5). Mutually exclusive
+   *  with `trigger`; Mastra's WorkflowScheduler owns the firing. */
+  schedule?: CronSchedule;
+  /** With `schedule`, makes this a daily digest — synthesized by the daily-digest workflow, no durable. */
   digest?: boolean;
   enabled?: boolean;
   isPrivate?: boolean;
@@ -62,15 +75,17 @@ export interface ProvisionResult extends DeployResult {
 export async function provisionAutomation(input: ProvisionInput): Promise<ProvisionResult> {
   const workspaceId = input.workspaceId ?? (await resolveActiveWorkspace(input.userId));
 
-  // A scheduled automation stores its schedule in the trigger json (see schedule.ts);
-  // it's fired by the worker's runDueSchedules, not the inbox lease loop.
+  // Validate the cron up front (throws) so the agent sees a clear error; persist
+  // the schedule on the trigger json for display/inspection.
+  if (input.schedule) assertValidCron(input.schedule.cron, input.schedule.timezone);
   const scheduleTrigger = input.schedule
     ? { schedule: input.schedule, ...(input.digest ? { digest: true } : {}) }
     : null;
 
-  // A digest has no durable — the worker synthesizes it deterministically. Persist
-  // it with a unique sentinel workflow id (never sent to Zapier) so the shared
-  // automation schema stays uniform without a nullable-column migration.
+  // A digest has no durable — the daily-digest workflow synthesizes it. Persist it
+  // with a unique sentinel workflow id (never sent to Zapier) so the shared
+  // automation schema stays uniform without a nullable-column migration, then
+  // register a Mastra schedule that fires the digest workflow on cron.
   if (input.schedule && input.digest) {
     const id = await store.createAutomation({
       userId: input.userId,
@@ -87,6 +102,13 @@ export async function provisionAutomation(input: ProvisionInput): Promise<Provis
       editorUrl: null,
       triggerUrl: null,
     });
+    await registerAutomationSchedule({
+      automationId: id,
+      workspaceId: workspaceId ?? null,
+      workflow: "daily-digest",
+      cron: input.schedule.cron,
+      timezone: input.schedule.timezone,
+    });
     return {
       id,
       workflowId: "",
@@ -102,8 +124,8 @@ export async function provisionAutomation(input: ProvisionInput): Promise<Provis
 
   const sdk = await getExperimentalSdkForUser(input.userId);
 
-  // Deploy as a manual durable (no Zapier-claimed trigger). Triggering is the
-  // inbox worker's job (the locked design — Foreman owns the lease/ack loop).
+  // Deploy as a manual durable (no Zapier-claimed trigger). Triggering is either
+  // the inbox worker (event) or Mastra's scheduler (cron) — Foreman owns the firing.
   const deployed = await deployAutomation({
     sdk,
     name: input.name,
@@ -130,6 +152,17 @@ export async function provisionAutomation(input: ProvisionInput): Promise<Provis
     editorUrl: deployed.editorUrl,
     triggerUrl: deployed.triggerUrl,
   });
+
+  // A scheduled durable fires via Mastra's scheduler → the run-automation workflow.
+  if (input.schedule) {
+    await registerAutomationSchedule({
+      automationId: id,
+      workspaceId: workspaceId ?? null,
+      workflow: "run-automation",
+      cron: input.schedule.cron,
+      timezone: input.schedule.timezone,
+    });
+  }
 
   return { id, ...deployed };
 }
@@ -432,6 +465,8 @@ export async function removeAutomationForUser(
   const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
   const removed = await store.deleteAutomation(workspaceId, automationId);
   if (!removed) return false;
+  // Remove its Mastra cron schedule (no-op if it wasn't scheduled).
+  await unregisterAutomationSchedule(automationId);
   try {
     const sdk = await getExperimentalSdkForUser(userId);
     await deleteZapierWorkflow(sdk, removed.zapier_workflow_id);

@@ -4,9 +4,11 @@
  * functions. Shapes mirror the agent /automations route responses.
  */
 
-export type ScheduleSpec =
-  | { kind: "interval"; everyMinutes: number }
-  | { kind: "daily"; atHourUtc: number; atMinuteUtc?: number };
+export interface ScheduleSpec {
+  /** Cron expression; Mastra's WorkflowScheduler owns the firing (foreman-bhb5). */
+  cron: string;
+  timezone?: string;
+}
 
 export interface AutomationTriggerSpec {
   app?: string;

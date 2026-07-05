@@ -4,7 +4,7 @@
  * the SHIPPED narrateDigest through the SHIPPED Mastra-agent path.
  *
  * Run (packages/agents, needs the provider key via Infisical):
- *   $env:FOREMAN_DIGEST_NARRATIVE="true"; $env:FOREMAN_DIGEST_MODEL="openai/gpt-4o-mini"
+ *   $env:DIGEST_MODEL="openai/gpt-4o-mini"
  *   infisical run --projectId <id> --env dev --path=/foreman --silent -- \
  *     npx tsx scripts/digest-narrator-probe.ts
  */
@@ -44,7 +44,7 @@ const digest = buildDigest(
 );
 
 async function main() {
-  console.log(`model    : ${process.env.FOREMAN_DIGEST_MODEL ?? "(fast tier default)"}`);
+  console.log(`model    : ${process.env.DIGEST_MODEL ?? "(fast tier default)"}`);
   console.log(`headline : ${digest.headline}`);
   const narrative = await narrateDigest(digest);
   console.log(`narrative: ${narrative ?? "(null — disabled or failed)"}`);

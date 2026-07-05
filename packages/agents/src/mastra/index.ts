@@ -19,6 +19,8 @@ import { createUIMessageStreamResponse, stepCountIs } from "ai";
 import { resolveActiveWorkspace, resolveFromRequest } from "../lib/identity";
 import { validateAgentCapabilities } from "../lib/providers";
 import { requestUserContext } from "../lib/request-user-context";
+import { dailyDigestWorkflow } from "../workflows/daily-digest";
+import { runAutomationWorkflow } from "../workflows/run-automation";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import { createDiscoveryAgent } from "./agents/discovery";
 import { createExecutionAgent } from "./agents/execution";
@@ -198,8 +200,17 @@ export function getMastra(): Mastra {
     },
     workflows: {
       webhookHandler: webhookHandlerWorkflow,
+      // Keys MUST match each workflow's own id — imperative schedules target them
+      // by id and the event dispatcher resolves by id first (foreman-bhb5).
+      "daily-digest": dailyDigestWorkflow,
+      "run-automation": runAutomationWorkflow,
     },
     storage,
+    // Enable the workflow cron scheduler. Digest schedules are managed
+    // imperatively (schedulesStore.createSchedule per workspace), so it must be
+    // explicitly enabled — there are no declarative `schedule` configs to
+    // auto-enable it. SchedulesPG (via the Postgres default store) backs it.
+    scheduler: { enabled: true },
     observability,
     editor,
     logger,

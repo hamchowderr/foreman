@@ -38,19 +38,19 @@ const triggerSchema = z
   );
 
 const scheduleSchema = z
-  .union([
-    z.object({
-      kind: z.literal("interval"),
-      everyMinutes: z.number().int().min(1).describe("Fire every N minutes (>=1)."),
-    }),
-    z.object({
-      kind: z.literal("daily"),
-      atHourUtc: z.number().int().min(0).max(23).describe("Hour of day in UTC (0-23)."),
-      atMinuteUtc: z.number().int().min(0).max(59).optional().describe("Minute (0-59); default 0."),
-    }),
-  ])
+  .object({
+    cron: z
+      .string()
+      .describe(
+        "A cron expression (5-part) — e.g. '0 9 * * *' (every day 9am), '*/15 * * * *' (every 15 min), '0 9 * * 1' (Mondays 9am). Times are in `timezone`.",
+      ),
+    timezone: z
+      .string()
+      .optional()
+      .describe("IANA timezone for the cron, e.g. 'America/New_York'. Defaults to UTC."),
+  })
   .describe(
-    "Fire this automation on a cadence instead of on an event. Use for 'every morning at 9' (daily, atHourUtc:9) or 'every 15 minutes' (interval). Mutually exclusive with `trigger`.",
+    "Fire this automation on a cron cadence instead of on an event. Mastra's scheduler owns the firing. Mutually exclusive with `trigger`.",
   );
 
 export const createAutomationTool = createTool({
@@ -61,10 +61,10 @@ export const createAutomationTool = createTool({
     "durable workflow.ts `source` (createZapierSdk() at module scope, one sdk.runAction per ctx.step, " +
     "defineDurable(...) + export default); this creates + publishes it on Zapier and records it in the workspace. " +
     "Provide a `connections` map (alias → connection id) for every alias the source references. Choose ONE trigger: " +
-    "`trigger` (an app/action trigger-inbox subscription) for event-driven; `schedule` for a recurring cadence " +
-    "('every morning at 9' → daily/atHourUtc:9); or omit both for manual/webhook. For a scheduled DIGEST that " +
-    "summarizes recent automation activity into the inbox, pass `schedule` + `digest:true` and OMIT `source` " +
-    "(the worker synthesizes it — no durable). Returns the Foreman automation `id` + editor link.",
+    "`trigger` (an app/action trigger-inbox subscription) for event-driven; `schedule` (a cron expression) for a " +
+    "recurring cadence ('every morning at 9' → cron '0 9 * * *'); or omit both for manual/webhook. For a scheduled " +
+    "DIGEST that summarizes recent automation activity into the inbox, pass `schedule` + `digest:true` and OMIT " +
+    "`source` (a Mastra workflow synthesizes it — no durable). Returns the Foreman automation `id` + editor link.",
   inputSchema: z.object({
     userId: z.string().describe("The user whose Zapier connection deploys the automation."),
     name: z.string().describe("Human-readable automation name."),

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { getSupabase } from "../db";
-import { scheduleOf } from "./schedule";
 
 /**
  * Automation persistence (foreman-l7xq M2). A SHARED workspace resource — all
@@ -132,35 +131,6 @@ export async function listActiveInboxAutomations(): Promise<AutomationRow[]> {
     const t = r.trigger as { app?: unknown; action?: unknown } | null;
     return !!t && typeof t.app === "string" && typeof t.action === "string";
   });
-}
-
-/**
- * All enabled, schedule-triggered automations across workspaces — the scheduling
- * worker's work list (foreman-ufo3.1). Schedule-triggered = the trigger jsonb
- * carries a valid `schedule` (see scheduleOf); the worker checks each is due.
- */
-export async function listActiveScheduledAutomations(): Promise<AutomationRow[]> {
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from("automation")
-    .select("*")
-    .eq("enabled", true)
-    .not("trigger", "is", null);
-  const rows = (data ?? []) as unknown as AutomationRow[];
-  return rows.filter((r) => scheduleOf(r.trigger) !== null);
-}
-
-/** The automation's most recent run time (ISO), or null if it has never run — the schedule due-check's reference point. */
-export async function getLastRunAt(automationId: string): Promise<string | null> {
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from("automation_run")
-    .select("created_at")
-    .eq("automation_id", automationId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data as { created_at?: string } | null)?.created_at ?? null;
 }
 
 /** Reverse lookup used by the inbox worker (M3) to resolve a Zapier workflow to its automation. */
