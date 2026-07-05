@@ -35,6 +35,7 @@ vi.mock("@/lib/automations/store", () => ({
   listActiveScheduledAutomations: vi.fn(async () => []),
   getLastRunAt: vi.fn(async () => null),
   recordRun: vi.fn(async () => "run_sched"),
+  listRecentRunsForWorkspace: vi.fn(async () => []),
   listPendingRuns: vi.fn(async () => []),
   getAutomationsByIds: vi.fn(async () => []),
 }));
@@ -244,21 +245,42 @@ describe("runDueSchedules (foreman-ufo3.1)", () => {
     expect(store.recordRun).not.toHaveBeenCalled();
   });
 
-  it("recognizes a due digest but does NOT fire a bare durable (foreman-ufo3.2)", async () => {
+  it("synthesizes a digest instead of firing a durable (foreman-ufo3.2)", async () => {
     const digest = {
       ...scheduled,
       id: "digest_1",
+      workspace_id: "ws-1",
       trigger: { schedule: { kind: "daily", atHourUtc: 9 }, digest: true },
     };
     vi.mocked(store.listActiveScheduledAutomations).mockResolvedValueOnce([digest] as never);
     vi.mocked(store.getLastRunAt).mockResolvedValueOnce(null); // due
+    vi.mocked(store.listRecentRunsForWorkspace).mockResolvedValueOnce([
+      {
+        automation_id: "auto_x",
+        status: "failed",
+        error: { message: "boom" },
+        created_at: "2026-07-05T10:00:00Z",
+      },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_x", name: "Nightly sync" },
+    ] as never);
 
     const res = await runDueSchedules(NOW);
 
-    expect(res[0]).toMatchObject({ automationId: "digest_1", fired: false });
-    expect(res[0].reason).toMatch(/digest/);
+    expect(res[0]).toMatchObject({ automationId: "digest_1", fired: true, status: "finished" });
+    // Digest does NOT fire a Zapier durable — it records a finished run carrying the summary.
     expect(triggerAutomation).not.toHaveBeenCalled();
-    expect(store.recordRun).not.toHaveBeenCalled();
+    expect(store.recordRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        automationId: "digest_1",
+        status: "finished",
+        output: expect.objectContaining({
+          kind: "automation_digest",
+          headline: expect.any(String),
+        }),
+      }),
+    );
   });
 
   it("continues past a fire failure (one unconnected owner)", async () => {

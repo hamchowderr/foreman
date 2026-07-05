@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/empty";
 import { getWorkspaceInbox } from "@/data/automations";
 import type {
+  AutomationDigest,
   InboxMessage,
   InboxPriorityLevel,
   WorkspaceInboxEntry,
@@ -27,9 +28,10 @@ export default async function InboxPage() {
   if (!session) redirect("/auth/login");
 
   let entries: WorkspaceInboxEntry[] = [];
+  let digest: AutomationDigest | null = null;
   let loadErr: string | null = null;
   try {
-    ({ entries } = await getWorkspaceInbox());
+    ({ entries, digest } = await getWorkspaceInbox());
   } catch (e) {
     loadErr = (e as Error).message;
   }
@@ -55,10 +57,12 @@ export default async function InboxPage() {
         <Alert variant="destructive">
           <AlertDescription>Couldn&apos;t load the inbox: {loadErr}</AlertDescription>
         </Alert>
-      ) : entries.length === 0 ? (
+      ) : entries.length === 0 && !digest ? (
         <InboxEmpty />
       ) : (
         <div className="space-y-8">
+          {digest && <DigestCard digest={digest} />}
+
           {needsAttention.length > 0 && (
             <section>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -110,6 +114,48 @@ function triggerLabel(automation: EntryAutomation): string {
   if (t?.app && t?.action) return `${t.app} · ${t.action}`;
   if (t?.app) return t.app;
   return "trigger";
+}
+
+function DigestCard({ digest }: { digest: AutomationDigest }) {
+  const { totals, failures, waiting } = digest;
+  const when = new Date(digest.periodEnd).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+  return (
+    <section className="rounded-xl border border-border bg-surface/40 p-4">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="font-semibold text-sm text-foreground">Daily digest</h2>
+        <span className="text-muted-foreground text-xs">{when}</span>
+      </div>
+      <p className="font-medium text-foreground text-sm">{digest.headline}</p>
+      {totals.total > 0 && (failures.length > 0 || waiting.length > 0) && (
+        <ul className="mt-3 space-y-1.5 text-sm">
+          {failures.map((f) => (
+            <li key={`f-${f.automationId}-${f.createdAt}`} className="flex items-start gap-2">
+              <PriorityDot level="high" className="mt-1.5" />
+              <span className="min-w-0">
+                <span className="font-medium text-foreground">{f.automationName}</span>{" "}
+                <span className="text-destructive text-xs">
+                  failed{f.error ? ` — ${f.error}` : ""}
+                </span>
+              </span>
+            </li>
+          ))}
+          {waiting.map((w) => (
+            <li key={`w-${w.automationId}-${w.createdAt}`} className="flex items-start gap-2">
+              <PriorityDot level="medium" className="mt-1.5" />
+              <span className="min-w-0">
+                <span className="font-medium text-foreground">{w.automationName}</span>{" "}
+                <span className="text-muted-foreground text-xs">waiting for approval</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function SubscriptionCard({ entry }: { entry: WorkspaceInboxEntry }) {

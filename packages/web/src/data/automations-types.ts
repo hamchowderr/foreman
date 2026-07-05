@@ -100,8 +100,36 @@ export interface WorkspaceInboxEntry {
   priority: InboxPriority;
 }
 
+/** A run surfaced in a digest bucket (failures / waiting / retrying). */
+export interface DigestRunRef {
+  automationId: string;
+  automationName: string;
+  createdAt: string;
+  error?: string | null;
+}
+
+/** The workspace's latest daily digest (foreman-ufo3.2). */
+export interface AutomationDigest {
+  kind: "automation_digest";
+  periodStart: string;
+  periodEnd: string;
+  totals: {
+    total: number;
+    finished: number;
+    failed: number;
+    waiting: number;
+    retrying: number;
+    other: number;
+  };
+  failures: DigestRunRef[];
+  waiting: DigestRunRef[];
+  retrying: DigestRunRef[];
+  headline: string;
+}
+
 export interface WorkspaceInbox {
   entries: WorkspaceInboxEntry[];
+  digest: AutomationDigest | null;
 }
 
 export interface RunResult {

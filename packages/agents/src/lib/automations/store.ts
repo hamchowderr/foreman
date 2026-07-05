@@ -367,6 +367,47 @@ export async function listRuns(
 }
 
 /**
+ * Recent runs across the whole workspace since `sinceIso` — the digest's input
+ * (foreman-ufo3.2). Optionally excludes one automation (the digest excludes its
+ * own runs so it never summarizes itself).
+ */
+export async function listRecentRunsForWorkspace(
+  workspaceId: string,
+  sinceIso: string,
+  opts: { excludeAutomationId?: string; limit?: number } = {},
+): Promise<AutomationRunRow[]> {
+  const supabase = getSupabase();
+  let q = supabase
+    .from("automation_run")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .gte("created_at", sinceIso)
+    .order("created_at", { ascending: false })
+    .limit(opts.limit ?? 500);
+  if (opts.excludeAutomationId) q = q.neq("automation_id", opts.excludeAutomationId);
+  const { data } = await q;
+  return (data ?? []) as unknown as AutomationRunRow[];
+}
+
+/**
+ * The workspace's most recent digest (foreman-ufo3.2) — the latest finished
+ * digest run's `output`, found via the `kind` discriminator in the output json.
+ * Returns the raw summary object (validated/typed by the caller) or null.
+ */
+export async function getLatestDigest(workspaceId: string): Promise<unknown | null> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("automation_run")
+    .select("output, created_at")
+    .eq("workspace_id", workspaceId)
+    .eq("output->>kind", "automation_digest")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { output?: unknown } | null)?.output ?? null;
+}
+
+/**
  * automation_run.status vocabulary:
  *   initialized → claimed (claimInboxMessage), not yet fired
  *   started     → durable triggered + executing (dispatch sets this; the durable's

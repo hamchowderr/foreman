@@ -7,10 +7,14 @@ import {
   releaseMessages,
 } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
+import { buildDigest, type DigestInputRun } from "./digest";
 import { isDigestTrigger, isScheduleDue, scheduleOf } from "./schedule";
 import type { AutomationRow } from "./store";
 import * as store from "./store";
 import { type InboxTriggerSpec, inboxKeyFor } from "./types";
+
+/** How far back a daily digest looks when synthesizing recent activity. */
+const DIGEST_PERIOD_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Trigger-inbox poll worker (foreman-l7xq M3). Replaces the removed
@@ -196,11 +200,52 @@ export async function runInboxCycle(): Promise<AutomationCycleResult[]> {
   return results;
 }
 
+/**
+ * Synthesize a daily digest for a digest automation (foreman-ufo3.2). Gathers the
+ * workspace's recent runs (excluding the digest's own), builds a deterministic
+ * prioritized summary, and records it as a `finished` run whose `output` is the
+ * digest — so it lands in the inbox (getLatestDigest reads it via the `kind` tag)
+ * with no new table. A workspace-less automation records an empty-period digest.
+ */
+async function runDigestForAutomation(automation: AutomationRow, now: number): Promise<void> {
+  const periodEnd = new Date(now).toISOString();
+  const periodStart = new Date(now - DIGEST_PERIOD_MS).toISOString();
+
+  let input: DigestInputRun[] = [];
+  if (automation.workspace_id) {
+    const runs = await store.listRecentRunsForWorkspace(automation.workspace_id, periodStart, {
+      excludeAutomationId: automation.id,
+    });
+    const names = new Map(
+      (await store.getAutomationsByIds([...new Set(runs.map((r) => r.automation_id))])).map((a) => [
+        a.id,
+        a.name,
+      ]),
+    );
+    input = runs.map((r) => ({
+      automationId: r.automation_id,
+      automationName: names.get(r.automation_id) ?? "(deleted automation)",
+      status: r.status,
+      error: r.error,
+      createdAt: r.created_at,
+    }));
+  }
+
+  const digest = buildDigest(input, periodStart, periodEnd);
+  await store.recordRun({
+    automationId: automation.id,
+    workspaceId: automation.workspace_id,
+    status: "finished",
+    output: digest,
+    input: { scheduledAt: periodEnd },
+  });
+}
+
 export interface ScheduleFireResult {
   automationId: string;
   fired: boolean;
   status?: string;
-  /** Why it wasn't fired (a digest, or an error) — omitted on a normal skip/fire. */
+  /** Why it wasn't fired (an error) — omitted on a normal skip/fire. */
   reason?: string;
 }
 
@@ -230,13 +275,10 @@ export async function runDueSchedules(now: number = Date.now()): Promise<Schedul
         continue;
       }
 
-      // Digest synthesis lands in foreman-ufo3.2; don't fire a bare durable for it.
+      // A digest synthesizes recent runs instead of firing a durable (foreman-ufo3.2).
       if (isDigestTrigger(automation.trigger)) {
-        results.push({
-          automationId: automation.id,
-          fired: false,
-          reason: "digest (synthesis not yet wired)",
-        });
+        await runDigestForAutomation(automation, now);
+        results.push({ automationId: automation.id, fired: true, status: "finished" });
         continue;
       }
 

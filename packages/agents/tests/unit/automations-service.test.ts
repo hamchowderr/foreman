@@ -39,6 +39,7 @@ vi.mock("@/lib/automations/store", () => ({
   getAutomation: vi.fn(),
   listAutomations: vi.fn(async () => [{ id: "auto_1" }]),
   listRuns: vi.fn(async () => []),
+  getLatestDigest: vi.fn(async () => null),
   getRun: vi.fn(),
   recordRun: vi.fn(async () => "run_1"),
   updateRun: vi.fn(async () => {}),
@@ -316,9 +317,11 @@ describe("getWorkspaceInbox (foreman-6r9y)", () => {
     expect(getInbox).not.toHaveBeenCalled();
   });
 
-  it("returns no entries when the workspace has no inbox-triggered automations", async () => {
+  it("returns no entries but still the latest digest when there are no inbox automations", async () => {
     vi.mocked(store.listAutomations).mockResolvedValueOnce([automations[2]] as never);
-    expect(await getWorkspaceInbox("user-1")).toEqual({ entries: [] });
+    const fakeDigest = { kind: "automation_digest", headline: "2 runs · 2 ok" };
+    vi.mocked(store.getLatestDigest).mockResolvedValueOnce(fakeDigest as never);
+    expect(await getWorkspaceInbox("user-1")).toEqual({ entries: [], digest: fakeDigest });
     expect(getExperimentalSdkForUser).not.toHaveBeenCalled();
   });
 });

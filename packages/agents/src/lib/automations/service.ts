@@ -12,6 +12,7 @@ import type { DeployResult } from "../durable/deploy";
 import { resolveActiveWorkspace } from "../identity";
 import { getInbox, listInboxMessages } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
+import type { AutomationDigest } from "./digest";
 import { type InboxPriority, scoreInboxEntry } from "./inbox-priority";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
@@ -137,25 +138,33 @@ export interface WorkspaceInboxEntry {
   priority: InboxPriority;
 }
 
+export interface WorkspaceInboxResult {
+  entries: WorkspaceInboxEntry[];
+  /** The workspace's most recent daily digest, if one has run (foreman-ufo3.2). */
+  digest: AutomationDigest | null;
+}
+
 /**
  * Workspace-wide trigger inbox: every automation's live inbox + recent messages
  * in ONE call (the web /inbox page's source), ranked by how much attention each
- * needs. Automations are a shared workspace resource, so this already spans every
- * member — but each trigger inbox lives under its OWNER's Zapier identity, so we
- * read each inbox with the owner's SDK (reading a teammate's inbox with the
- * requester's SDK 403s). One SDK is resolved per distinct owner and cached; an
- * un-connected owner or a per-inbox failure degrades to an empty entry rather
- * than failing the whole view. Entries come back sorted highest-priority first.
+ * needs, plus the latest daily digest. Automations are a shared workspace
+ * resource, so this already spans every member — but each trigger inbox lives
+ * under its OWNER's Zapier identity, so we read each inbox with the owner's SDK
+ * (reading a teammate's inbox with the requester's SDK 403s). One SDK is resolved
+ * per distinct owner and cached; an un-connected owner or a per-inbox failure
+ * degrades to an empty entry rather than failing the whole view. Entries come
+ * back sorted highest-priority first.
  */
-export async function getWorkspaceInbox(
-  userId: string,
-): Promise<{ entries: WorkspaceInboxEntry[] }> {
+export async function getWorkspaceInbox(userId: string): Promise<WorkspaceInboxResult> {
   const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const digest = workspaceId
+    ? ((await store.getLatestDigest(workspaceId)) as AutomationDigest | null)
+    : null;
   const automations = await store.listAutomations(workspaceId);
   const withInbox = automations.filter((a): a is AutomationRow & { trigger_inbox_id: string } =>
     Boolean(a.trigger_inbox_id),
   );
-  if (withInbox.length === 0) return { entries: [] };
+  if (withInbox.length === 0) return { entries: [], digest };
 
   // Resolve one experimental SDK per distinct owner (cached; null = can't read).
   const sdkByOwner = new Map<string, Promise<ExperimentalZapierSdk | null>>();
@@ -209,7 +218,7 @@ export async function getWorkspaceInbox(
   // Rank: most-needs-attention first. Stable for equal scores (Array.sort keeps
   // the listAutomations updated_at order on ties).
   entries.sort((x, y) => y.priority.score - x.priority.score);
-  return { entries };
+  return { entries, digest };
 }
 
 export interface RunResult {
