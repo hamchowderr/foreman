@@ -109,6 +109,29 @@ describe("dispatchMessage", () => {
       expect.objectContaining({ status: "failed" }),
     );
   });
+
+  it("skips a possible-duplicate event without claiming when the flag is on (foreman-b8k2)", async () => {
+    process.env.FOREMAN_SKIP_POSSIBLE_DUPLICATES = "true";
+    try {
+      const dup = msg("m1");
+      dup.message_attributes.possible_duplicate_data = true;
+      const out = await dispatchMessage({ sdk: {} as never, automation, message: dup });
+      expect(out).toBe("skipped");
+      expect(store.claimInboxMessage).not.toHaveBeenCalled();
+      expect(triggerAutomation).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.FOREMAN_SKIP_POSSIBLE_DUPLICATES;
+    }
+  });
+
+  it("still fires a possible-duplicate event when the flag is off (default)", async () => {
+    const dup = msg("m1");
+    dup.message_attributes.possible_duplicate_data = true;
+    vi.mocked(store.claimInboxMessage).mockResolvedValueOnce("run_dup");
+    const out = await dispatchMessage({ sdk: {} as never, automation, message: dup });
+    expect(out).toBe("processed");
+    expect(triggerAutomation).toHaveBeenCalled();
+  });
 });
 
 describe("runInboxCycleForAutomation", () => {

@@ -31,9 +31,21 @@ function inboxSpecOf(automation: AutomationRow): InboxTriggerSpec | null {
 export type DispatchOutcome = "processed" | "skipped" | "failed";
 
 /**
+ * Opt-in event-level dedup (foreman-b8k2). Off by default: `possible_duplicate_data`
+ * is Zapier's HEURISTIC that the underlying event may be a re-delivery under a NEW
+ * message id (which our message-id claim can't catch), so skipping it risks dropping
+ * a real event. Flip this on for a known-flaky trigger; regardless, the inbox view
+ * always badges these messages so an operator can spot the pattern first.
+ */
+function skipPossibleDuplicates(): boolean {
+  return process.env.FOREMAN_SKIP_POSSIBLE_DUPLICATES === "true";
+}
+
+/**
  * Claim (dedup) a single leased message and, if fresh, fire the durable and record
- * the run. Returns "skipped" when the message was already claimed (redelivery),
- * "failed" when the trigger errored (caller releases it for retry).
+ * the run. Returns "skipped" when the message was already claimed (redelivery) or
+ * dropped as a possible duplicate event (b8k2), "failed" when the trigger errored
+ * (caller releases it for retry).
  */
 export async function dispatchMessage(opts: {
   sdk: Sdk;
@@ -41,6 +53,12 @@ export async function dispatchMessage(opts: {
   message: LeasedMessage;
 }): Promise<DispatchOutcome> {
   const { sdk, automation, message } = opts;
+
+  // Drop possible-duplicate events before claiming so they're acked, not re-run
+  // (foreman-b8k2). Only when explicitly enabled — see skipPossibleDuplicates().
+  if (skipPossibleDuplicates() && message.message_attributes.possible_duplicate_data) {
+    return "skipped";
+  }
 
   const runId = await store.claimInboxMessage({
     automationId: automation.id,
