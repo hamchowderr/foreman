@@ -115,8 +115,22 @@ jobs:
           # rate limit exceeded", foreman-fjl3). Bump deliberately when needed.
           version: 2.107.0
       - run: npm ci
-      - name: Start local Supabase
-        run: npx supabase start
+      - name: Start local Supabase (retry on ECR pull rate-limit)
+        # `supabase start` pulls images (postgres-meta et al.) from
+        # public.ecr.aws unauthenticated; shared runners intermittently hit
+        # AWS ECR's anonymous rate limit ("toomanyrequests", exit 125), which
+        # leaves the stack partway up and yields empty type output → a false
+        # diff failure (foreman-x8rj). Authenticating the pull would need AWS
+        # creds we deliberately don't carry, so retry with backoff — a re-run
+        # reliably clears it. Reset partial state with `stop` between attempts.
+        run: |
+          for attempt in 1 2 3; do
+            if npx supabase start; then exit 0; fi
+            echo "::warning::supabase start failed (attempt $attempt/3) — likely an ECR pull rate-limit; retrying after backoff"
+            npx supabase stop --no-backup || true
+            sleep $((attempt * 30))
+          done
+          echo "::error::supabase start failed after 3 attempts"; exit 1
       - name: Verify generated types match migrations
         # The latest supabase CLI checks for an access token *before* it will run
         # local type-gen in CI; the value is never used (--local introspects the
