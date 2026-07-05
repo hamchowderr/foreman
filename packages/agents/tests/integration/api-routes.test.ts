@@ -386,7 +386,7 @@ describe("API route integration tests", () => {
 
   // ── Dashboards (snapshot reads) ───────────────────────────────────────
 
-  describe("GET /dashboards/snapshots/:appKey", () => {
+  describe("GET /apps/snapshots/:appKey", () => {
     const snapshotRow = {
       id: "snap-1",
       app_key: "hubspot",
@@ -410,13 +410,13 @@ describe("API route integration tests", () => {
     });
 
     it("returns 401 without auth", async () => {
-      const res = await app.request("/dashboards/snapshots/hubspot");
+      const res = await app.request("/apps/snapshots/hubspot");
       expect(res.status).toBe(401);
     });
 
     it("returns the latest snapshot with auth", async () => {
       withSnapshotData(snapshotRow);
-      const res = await app.request("/dashboards/snapshots/hubspot", {
+      const res = await app.request("/apps/snapshots/hubspot", {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
@@ -432,7 +432,7 @@ describe("API route integration tests", () => {
 
     it("returns 404 when the user has no snapshot for the app", async () => {
       // default mock builder resolves to data: null → getLatestSnapshot → null
-      const res = await app.request("/dashboards/snapshots/hubspot", {
+      const res = await app.request("/apps/snapshots/hubspot", {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(404);
@@ -440,7 +440,7 @@ describe("API route integration tests", () => {
 
     it("returns the history series with ?history=true", async () => {
       withSnapshotData([snapshotRow, snapshotRow]);
-      const res = await app.request("/dashboards/snapshots/hubspot?history=true", {
+      const res = await app.request("/apps/snapshots/hubspot?history=true", {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
@@ -450,7 +450,7 @@ describe("API route integration tests", () => {
     });
 
     it("returns 400 for an invalid since timestamp", async () => {
-      const res = await app.request("/dashboards/snapshots/hubspot?history=true&since=notadate", {
+      const res = await app.request("/apps/snapshots/hubspot?history=true&since=notadate", {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(400);
@@ -459,7 +459,7 @@ describe("API route integration tests", () => {
     });
 
     it("returns 400 for a non-numeric limit", async () => {
-      const res = await app.request("/dashboards/snapshots/hubspot?history=true&limit=abc", {
+      const res = await app.request("/apps/snapshots/hubspot?history=true&limit=abc", {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(400);
@@ -468,9 +468,9 @@ describe("API route integration tests", () => {
     });
   });
 
-  // ── Dashboards: public sharing (Phase 3) ──────────────────────────────
+  // ── Apps (dashboards): public sharing (Phase 3) ───────────────────────
 
-  describe("dashboards public sharing", () => {
+  describe("apps public sharing", () => {
     const VALID_SPEC = {
       title: "Leads",
       blocks: [{ type: "kpi", label: "Total", agg: "count" }],
@@ -496,24 +496,24 @@ describe("API route integration tests", () => {
       mockSupabase.from.mockImplementation(defaultFrom);
     });
 
-    it("GET /dashboards/public/:token returns 200 WITHOUT auth (token is the grant)", async () => {
+    it("GET /apps/public/:token returns 200 WITHOUT auth (token is the grant)", async () => {
       withTables({ dashboard_share: shareRow, artifact: artifactRow });
       // Deliberately NO Authorization header — the public carve-out must allow it.
-      const res = await app.request("/dashboards/public/sometoken");
+      const res = await app.request("/apps/public/sometoken");
       expect(res.status).toBe(200);
       const body = (await res.json()) as { spec: { title: string } };
       expect(body).toMatchObject({ id: "art-1", title: "Leads", records: [] });
       expect(body.spec.title).toBe("Leads");
     });
 
-    it("GET /dashboards/public/:token returns 404 for an unknown token", async () => {
+    it("GET /apps/public/:token returns 404 for an unknown token", async () => {
       // default builder → dashboard_share lookup is null → getSharedArtifact null
-      const res = await app.request("/dashboards/public/nope");
+      const res = await app.request("/apps/public/nope");
       expect(res.status).toBe(404);
     });
 
-    it("POST /dashboards/artifacts/:id/share still requires auth (401)", async () => {
-      const res = await app.request("/dashboards/artifacts/art-1/share", { method: "POST" });
+    it("POST /apps/artifacts/:id/share still requires auth (401)", async () => {
+      const res = await app.request("/apps/artifacts/art-1/share", { method: "POST" });
       expect(res.status).toBe(401);
     });
   });
