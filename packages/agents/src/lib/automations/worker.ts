@@ -8,6 +8,7 @@ import {
 } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
 import { buildDigest, type DigestInputRun } from "./digest";
+import { narrateDigest } from "./digest-narrator";
 import { isDigestTrigger, isScheduleDue, scheduleOf } from "./schedule";
 import type { AutomationRow } from "./store";
 import * as store from "./store";
@@ -232,6 +233,8 @@ async function runDigestForAutomation(automation: AutomationRow, now: number): P
   }
 
   const digest = buildDigest(input, periodStart, periodEnd);
+  // Optional LLM prose summary (opt-in; null when disabled or on failure).
+  digest.narrative = await narrateDigest(digest);
   await store.recordRun({
     automationId: automation.id,
     workspaceId: automation.workspace_id,

@@ -71,8 +71,10 @@ async function main() {
     kind?: string;
     headline?: string;
     totals?: Record<string, number>;
+    narrative?: string | null;
   } | null;
   console.log(`getLatestDigest → ${latest ? `"${latest.headline}"` : "NULL"}`);
+  console.log(`narrative → ${latest?.narrative ? `"${latest.narrative}"` : "(none — layer off)"}`);
 
   const ok =
     mine?.fired === true &&

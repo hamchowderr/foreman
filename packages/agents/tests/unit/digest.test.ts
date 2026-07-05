@@ -3,7 +3,12 @@
  * no SDK, no DB.
  */
 import { describe, expect, it } from "vitest";
-import { buildDigest, DIGEST_KIND, type DigestInputRun } from "../../src/lib/automations/digest";
+import {
+  buildDigest,
+  buildDigestNarrativePrompt,
+  DIGEST_KIND,
+  type DigestInputRun,
+} from "../../src/lib/automations/digest";
 
 const START = "2026-07-04T12:00:00Z";
 const END = "2026-07-05T12:00:00Z";
@@ -83,5 +88,27 @@ describe("buildDigest", () => {
   it("singularizes the run count", () => {
     const d = buildDigest([run({ status: "finished" })], START, END);
     expect(d.headline).toBe("1 run · 1 ok");
+  });
+
+  it("leaves narrative null (the LLM layer is opt-in)", () => {
+    expect(buildDigest([], START, END).narrative).toBeNull();
+  });
+});
+
+describe("buildDigestNarrativePrompt", () => {
+  it("compacts the structured digest into a prompt naming automations + errors", () => {
+    const d = buildDigest(
+      [
+        run({ status: "failed", automationName: "Sync", error: { message: "boom" } }),
+        run({ status: "waiting", automationName: "Approve me" }),
+      ],
+      START,
+      END,
+    );
+    const prompt = buildDigestNarrativePrompt(d);
+    expect(prompt).toContain("totals");
+    expect(prompt).toContain("Sync");
+    expect(prompt).toContain("boom");
+    expect(prompt).toContain("Approve me");
   });
 });

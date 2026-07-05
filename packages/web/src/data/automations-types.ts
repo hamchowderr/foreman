@@ -133,6 +133,8 @@ export interface AutomationDigest {
   waiting: DigestRunRef[];
   retrying: DigestRunRef[];
   headline: string;
+  /** Optional LLM prose summary; null when the narrative layer is off. */
+  narrative?: string | null;
 }
 
 export interface WorkspaceInbox {

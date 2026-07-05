@@ -129,7 +129,14 @@ function DigestCard({ digest }: { digest: AutomationDigest }) {
         <h2 className="font-semibold text-sm text-foreground">Daily digest</h2>
         <span className="text-muted-foreground text-xs">{when}</span>
       </div>
-      <p className="font-medium text-foreground text-sm">{digest.headline}</p>
+      {digest.narrative && (
+        <p className="text-foreground text-sm leading-relaxed">{digest.narrative}</p>
+      )}
+      <p
+        className={`text-sm ${digest.narrative ? "mt-1 text-muted-foreground" : "font-medium text-foreground"}`}
+      >
+        {digest.headline}
+      </p>
       {totals.total > 0 && (failures.length > 0 || waiting.length > 0) && (
         <ul className="mt-3 space-y-1.5 text-sm">
           {failures.map((f) => (

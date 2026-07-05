@@ -45,6 +45,8 @@ export interface AutomationDigest {
   waiting: DigestRunRef[];
   retrying: DigestRunRef[];
   headline: string;
+  /** Optional LLM prose summary (foreman-ufo3, opt-in). Null when disabled or on failure. */
+  narrative: string | null;
 }
 
 /** Pull a short error string out of a run's `error` json (a {message} or a DurableRunDetail). */
@@ -117,5 +119,29 @@ export function buildDigest(
     waiting,
     retrying,
     headline,
+    narrative: null,
   };
+}
+
+/** Instructions for the digest narrator LLM — kept next to the shape it summarizes. */
+export const DIGEST_NARRATOR_INSTRUCTIONS =
+  "You write a short daily digest for a user's automation activity. Given a JSON " +
+  "summary of the last day's automation runs, write 1–3 plain sentences a busy " +
+  "operator can skim: lead with what needs attention (failures, then approvals " +
+  "waiting, then retries), then a one-line reassurance about what ran fine. Name " +
+  "specific automations and error reasons when present. Be concrete and calm — no " +
+  "preamble, no bullet lists, no markdown, no emojis. If nothing ran, say so in one line.";
+
+/**
+ * The prompt fed to the narrator LLM — a compact JSON view of the structured
+ * digest. Pure + deterministic so it's unit-testable and the LLM call stays thin.
+ */
+export function buildDigestNarrativePrompt(digest: AutomationDigest): string {
+  const compact = {
+    totals: digest.totals,
+    failures: digest.failures.map((f) => ({ automation: f.automationName, error: f.error })),
+    waiting: digest.waiting.map((w) => ({ automation: w.automationName })),
+    retrying: digest.retrying.map((r) => ({ automation: r.automationName })),
+  };
+  return `Summarize this automation activity for the last day:\n${JSON.stringify(compact, null, 2)}`;
 }
