@@ -12,6 +12,7 @@ import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
@@ -21,6 +22,11 @@ import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { PreviewInlineChip } from "./preview-panel";
 import { Weather } from "./weather";
+
+// Live preview build advances through these stages (preview-app.ts). Map each
+// to a cumulative % so the streamed feed can show one real progress bar
+// (foreman-97mv). `fix` is an in-place retry during the build phase.
+const PREVIEW_STAGE_PCT: Record<string, number> = { design: 25, build: 60, fix: 75, ready: 100 };
 
 const MessageAvatar = ({
   isUser,
@@ -259,6 +265,11 @@ const PurePreviewMessage = ({
     { text: "", isStreaming: false, rendered: false },
   ) ?? { text: "", isStreaming: false, rendered: false };
 
+  // Index of the newest preview-build step so only it carries the progress bar
+  // (earlier steps stay as plain ✓ lines rather than stacking bars).
+  const lastPreviewProgressIdx =
+    message.parts?.reduce((acc, p, i) => (p.type === "data-preview-progress" ? i : acc), -1) ?? -1;
+
   const parts = message.parts?.map((part: any, index: number) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
@@ -297,12 +308,17 @@ const PurePreviewMessage = ({
 
     if (type === "data-preview-progress") {
       const d = (part.data ?? {}) as { stage?: string; label?: string };
+      const pct = d.stage ? PREVIEW_STAGE_PCT[d.stage] : undefined;
+      const showBar = index === lastPreviewProgressIdx && pct !== undefined;
       return (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm" key={key}>
-          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
-            <Check className="size-3" />
-          </span>
-          <span>{d.label ?? "Working…"}</span>
+        <div className="flex w-[min(100%,360px)] flex-col gap-1.5" key={key}>
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+              <Check className="size-3" />
+            </span>
+            <span>{d.label ?? "Working…"}</span>
+          </div>
+          {showBar && <Progress className="h-1.5" value={pct} />}
         </div>
       );
     }

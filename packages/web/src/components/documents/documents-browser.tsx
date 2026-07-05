@@ -1,10 +1,16 @@
 "use client";
 
-import { FileTextIcon, UploadIcon } from "lucide-react";
+import { CopyIcon, FileTextIcon, UploadIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type DocumentMeta,
@@ -44,8 +51,21 @@ export function DocumentsBrowser() {
   const [open, setOpen] = useState<{ path: string; title: string } | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
   const [importErr, setImportErr] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  // The import is a single request with no byte-level progress, so ease a bar
+  // toward ~90% while it's in flight; onPickFile snaps it to 100 on success
+  // (foreman-97mv).
+  useEffect(() => {
+    if (!importing) return;
+    setImportProgress((p) => (p < 10 ? 10 : p));
+    const id = setInterval(() => {
+      setImportProgress((p) => (p < 90 ? p + Math.max(1, (90 - p) * 0.12) : p));
+    }, 200);
+    return () => clearInterval(id);
+  }, [importing]);
 
   function load() {
     setLoading(true);
@@ -77,10 +97,12 @@ export function DocumentsBrowser() {
       setImportErr("That file is too large (max ~1MB of text).");
       return;
     }
+    setImportProgress(0);
     setImporting(true);
     try {
       const text = await file.text();
       await importDocument(file.name, text);
+      setImportProgress(100);
       load();
     } catch {
       setImportErr("Couldn't import that file. Make sure it's a text or markdown file.");
@@ -90,19 +112,22 @@ export function DocumentsBrowser() {
   }
 
   const importControls = (
-    <div className="mb-3 flex items-center gap-3">
-      <Button disabled={importing} onClick={() => fileInput.current?.click()} size="sm">
-        <UploadIcon className="size-4" />
-        {importing ? "Importing…" : "Import file"}
-      </Button>
-      <span className="text-muted-foreground text-xs">Markdown or text files (.md, .txt)</span>
-      <input
-        accept=".md,.markdown,.txt,.text,text/markdown,text/plain"
-        className="hidden"
-        onChange={onPickFile}
-        ref={fileInput}
-        type="file"
-      />
+    <div className="mb-3 flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <Button disabled={importing} onClick={() => fileInput.current?.click()} size="sm">
+          <UploadIcon className="size-4" />
+          {importing ? "Importing…" : "Import file"}
+        </Button>
+        <span className="text-muted-foreground text-xs">Markdown or text files (.md, .txt)</span>
+        <input
+          accept=".md,.markdown,.txt,.text,text/markdown,text/plain"
+          className="hidden"
+          onChange={onPickFile}
+          ref={fileInput}
+          type="file"
+        />
+      </div>
+      {importing && <Progress className="h-1.5 max-w-xs" value={importProgress} />}
     </div>
   );
 
@@ -143,20 +168,36 @@ export function DocumentsBrowser() {
       {importErr && <p className="mb-3 text-destructive text-sm">{importErr}</p>}
       <div className="flex flex-col gap-1">
         {docs.map((doc) => (
-          <button
-            className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent"
-            key={doc.path}
-            onClick={() => openDoc(doc)}
-            type="button"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="truncate font-medium">{docTitle(doc.name)}</span>
-            </span>
-            <Badge variant={spaceOfPath(doc.path) === "personal" ? "outline" : "secondary"}>
-              {spaceOfPath(doc.path) === "personal" ? "Private" : "Shared"}
-            </Badge>
-          </button>
+          <ContextMenu key={doc.path}>
+            <ContextMenuTrigger asChild>
+              <button
+                className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent"
+                onClick={() => openDoc(doc)}
+                type="button"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate font-medium">{docTitle(doc.name)}</span>
+                </span>
+                <Badge variant={spaceOfPath(doc.path) === "personal" ? "outline" : "secondary"}>
+                  {spaceOfPath(doc.path) === "personal" ? "Private" : "Shared"}
+                </Badge>
+              </button>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-40">
+              <ContextMenuItem className="cursor-pointer" onSelect={() => openDoc(doc)}>
+                <FileTextIcon className="size-4" />
+                <span>Open</span>
+              </ContextMenuItem>
+              <ContextMenuItem
+                className="cursor-pointer"
+                onSelect={() => navigator.clipboard?.writeText(doc.path)}
+              >
+                <CopyIcon className="size-4" />
+                <span>Copy path</span>
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         ))}
       </div>
 
