@@ -2,16 +2,20 @@ import { createTool } from "@mastra/core/tools";
 import {
   createZapierSdk,
   ZapierActionError,
+  ZapierApiError,
   ZapierAppNotFoundError,
   ZapierApprovalError,
   ZapierAuthenticationError,
+  ZapierBundleError,
   ZapierConfigurationError,
+  ZapierConflictError,
   ZapierError,
   ZapierNotFoundError,
   ZapierRateLimitError,
   ZapierRelayError,
   ZapierResourceNotFoundError,
   ZapierTimeoutError,
+  ZapierUnknownError,
   ZapierValidationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
@@ -538,6 +542,59 @@ export function handleSdkError(
         ? `${methodName} needs your approval on Zapier before it can run. Open this link to approve, then try again: ${ae.approvalUrl}`
         : `${methodName} needs approval on Zapier before it can run (status: ${ae.approvalStatus ?? "pending"}). No approval URL was returned — try again shortly.`,
       code: "APPROVAL_REQUIRED",
+      retryable: false,
+    };
+  }
+
+  // Conflicting state (409) — e.g. creating a named resource that already
+  // exists, or acting on a resource in an incompatible state. Actionable:
+  // tell the user what conflicted so they can rename / pick another.
+  if (err instanceof ZapierConflictError) {
+    const ce = err as ZapierConflictError;
+    return {
+      error: `${methodName} conflicts with existing state${
+        ce.resourceType ? ` (${ce.resourceType})` : ""
+      }: ${(err as Error).message}. It may already exist or be in an incompatible state — use a different name or check the current state, then try again.`,
+      code: "CONFLICT",
+      retryable: false,
+    };
+  }
+
+  // Generic API-request failure. Base ZapierError carries an optional
+  // statusCode; surface it when present. Not retryable by default (unlike
+  // rate-limit/timeout/relay, which have their own branches above).
+  if (err instanceof ZapierApiError) {
+    const ape = err as ZapierApiError;
+    return {
+      error: `Zapier API error for ${methodName}${
+        ape.statusCode ? ` (HTTP ${ape.statusCode})` : ""
+      }: ${(err as Error).message}`,
+      code: "API_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Code bundling / compilation failure — carries per-error build details.
+  if (err instanceof ZapierBundleError) {
+    const be = err as ZapierBundleError;
+    const detail =
+      be.buildErrors && be.buildErrors.length > 0
+        ? be.buildErrors.join("; ")
+        : (err as Error).message;
+    return {
+      error: `${methodName} failed to build: ${detail}`,
+      code: "BUNDLE_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Fallback the SDK produces for non-Error throws it normalized. No extra
+  // structure to extract — surface the message. Must precede the ZapierError
+  // catch-all (it extends ZapierError).
+  if (err instanceof ZapierUnknownError) {
+    return {
+      error: `${methodName} failed: ${(err as Error).message}`,
+      code: "UNKNOWN_ERROR",
       retryable: false,
     };
   }

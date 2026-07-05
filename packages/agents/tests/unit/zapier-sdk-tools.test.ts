@@ -2,7 +2,13 @@
  * Unit tests for zapier-sdk-tools.ts — tool generation logic.
  * No API calls. Verifies tools are generated with correct metadata.
  */
-import { ZapierApprovalError } from "@zapier/zapier-sdk";
+import {
+  ZapierApiError,
+  ZapierApprovalError,
+  ZapierBundleError,
+  ZapierConflictError,
+  ZapierUnknownError,
+} from "@zapier/zapier-sdk";
 import { beforeAll, describe, expect, it } from "vitest";
 import { generateZapierTools, handleSdkError } from "../../src/lib/zapier-sdk-tools";
 
@@ -27,6 +33,46 @@ describe("handleSdkError — Zapier approval flow (foreman-elyi)", () => {
   it("falls back gracefully when no approval URL is present", () => {
     const result = handleSdkError(new ZapierApprovalError("Approval required"), "run-action");
     expect(result.code).toBe("APPROVAL_REQUIRED");
+    expect(result.error).not.toContain("undefined");
+  });
+});
+
+describe("handleSdkError — newly-covered error classes (foreman-3due)", () => {
+  it("maps ZapierConflictError (409) to CONFLICT and surfaces resourceType", () => {
+    const result = handleSdkError(
+      new ZapierConflictError("name already taken", { resourceType: "table" }),
+      "create-table",
+    );
+    expect(result.code).toBe("CONFLICT");
+    expect(result.retryable).toBe(false);
+    expect(result.error).toContain("table");
+    expect(result.error).toContain("name already taken");
+  });
+
+  it("maps ZapierApiError to API_ERROR and surfaces the HTTP status when present", () => {
+    const err = new ZapierApiError("upstream 500");
+    (err as { statusCode?: number }).statusCode = 500;
+    const result = handleSdkError(err, "run-action");
+    expect(result.code).toBe("API_ERROR");
+    expect(result.retryable).toBe(false);
+    expect(result.error).toContain("500");
+  });
+
+  it("maps ZapierBundleError to BUNDLE_ERROR and joins buildErrors", () => {
+    const result = handleSdkError(
+      new ZapierBundleError("build failed", { buildErrors: ["missing import", "syntax error"] }),
+      "deploy-automation",
+    );
+    expect(result.code).toBe("BUNDLE_ERROR");
+    expect(result.error).toContain("missing import");
+    expect(result.error).toContain("syntax error");
+  });
+
+  it("maps ZapierUnknownError to UNKNOWN_ERROR without leaking 'undefined'", () => {
+    const result = handleSdkError(new ZapierUnknownError("something odd"), "run-action");
+    expect(result.code).toBe("UNKNOWN_ERROR");
+    expect(result.retryable).toBe(false);
+    expect(result.error).toContain("something odd");
     expect(result.error).not.toContain("undefined");
   });
 });
