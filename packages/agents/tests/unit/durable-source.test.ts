@@ -3,7 +3,7 @@
  * Pure string generation — no SDK, no network.
  */
 import { describe, expect, it } from "vitest";
-import { AGED_DURABLE_DEPS, buildDurableSource } from "../../src/lib/durable";
+import { AGED_DURABLE_DEPS, buildDurableSource, humanApprovalGate } from "../../src/lib/durable";
 
 describe("buildDurableSource", () => {
   const source = buildDurableSource({
@@ -58,5 +58,29 @@ describe("buildDurableSource", () => {
     expect(AGED_DURABLE_DEPS.sdk).toMatch(/^\d+\.\d+\.\d+$/);
     expect(AGED_DURABLE_DEPS.durable).toMatch(/^\d+\.\d+\.\d+$/);
     expect(AGED_DURABLE_DEPS.zod).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+});
+
+describe("humanApprovalGate (foreman-zfnj)", () => {
+  it("creates the gate, reports its URL+name via a step, and awaits the decision", () => {
+    const gate = humanApprovalGate("approve");
+    expect(gate).toContain(
+      'const [approveApproval, approveUrl] = await ctx.createCallback("approve");',
+    );
+    // The report step is what resolveCallbackUrl reads to find the URL.
+    expect(gate).toContain('ctx.step("__report_callback_url_approve"');
+    expect(gate).toContain("callbackUrl: approveUrl");
+    expect(gate).toContain('callbackName: "approve"');
+    expect(gate).toContain("const approveDecision = await approveApproval;");
+  });
+
+  it("sanitizes a non-identifier name into safe variable names", () => {
+    const gate = humanApprovalGate("needs-sign-off");
+    // createCallback + callbackName keep the original name…
+    expect(gate).toContain('ctx.createCallback("needs-sign-off")');
+    expect(gate).toContain('callbackName: "needs-sign-off"');
+    // …but the JS variables are sanitized.
+    expect(gate).toContain("needs_sign_offApproval");
+    expect(gate).toContain("needs_sign_offUrl");
   });
 });

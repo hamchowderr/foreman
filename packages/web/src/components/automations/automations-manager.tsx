@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
@@ -44,6 +45,7 @@ import {
   getAutomation,
   getAutomations,
   getInboxState,
+  respondToCallback,
   runAutomation,
   setAutomationEnabled,
 } from "@/data/automations";
@@ -355,20 +357,53 @@ export function AutomationsManager() {
                                 {r.durable_run_id ? shortId(r.durable_run_id) : "—"}
                               </TableCell>
                               <TableCell className="text-right">
-                                {NON_TERMINAL_RUN.has(r.status) && (
-                                  <Button
-                                    aria-label="Cancel run"
-                                    className="size-7 text-muted-foreground hover:text-destructive"
-                                    disabled={pending}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      act(() => cancelRun(r.id));
-                                    }}
-                                    size="icon"
-                                    variant="ghost"
-                                  >
-                                    <XIcon className="size-4" />
-                                  </Button>
+                                {r.status === "waiting" ? (
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                      aria-label="Approve"
+                                      className="h-7 px-2 text-muted-foreground hover:text-primary"
+                                      disabled={pending}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        act(() =>
+                                          respondToCallback(r.id, { payload: { approved: true } }),
+                                        );
+                                      }}
+                                      size="sm"
+                                      variant="ghost"
+                                    >
+                                      <CheckIcon className="size-4" /> Approve
+                                    </Button>
+                                    <Button
+                                      aria-label="Deny"
+                                      className="size-7 text-muted-foreground hover:text-destructive"
+                                      disabled={pending}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        act(() => respondToCallback(r.id, { cancel: true }));
+                                      }}
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <XIcon className="size-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  NON_TERMINAL_RUN.has(r.status) && (
+                                    <Button
+                                      aria-label="Cancel run"
+                                      className="size-7 text-muted-foreground hover:text-destructive"
+                                      disabled={pending}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        act(() => cancelRun(r.id));
+                                      }}
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <XIcon className="size-4" />
+                                    </Button>
+                                  )
                                 )}
                               </TableCell>
                             </TableRow>

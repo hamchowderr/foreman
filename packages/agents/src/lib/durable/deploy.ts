@@ -255,6 +255,69 @@ export async function cancelDurableRun(sdk: Sdk, runId: string): Promise<string>
   return r.data.status;
 }
 
+export interface ResolvedCallback {
+  /** The callback endpoint to POST the approval/rejection payload to. A PUBLIC bearer URL — never expose to a browser. */
+  url: string;
+  /** The gate's name (the `ctx.createCallback` name). */
+  name: string;
+  payloadSchema?: unknown;
+}
+
+/**
+ * Resolve a durable's human-approval callback URL from OUTSIDE, on demand
+ * (foreman-zfnj). `getDurableRun` does NOT expose the URL on the callback op — it
+ * is minted inside the durable and only surfaces if the durable REPORTS it via a
+ * step whose result carries `{ callbackUrl, callbackName }` (Foreman's authoring
+ * convention — see `buildApprovalDurableSource`). Reads the run's execution and
+ * returns the URL for the named (or sole) still-pending callback, or null if the
+ * run isn't waiting on that gate / never reported a URL. Resolved fresh each time
+ * and never persisted, so the bearer URL never lands in Foreman's DB or the UI.
+ */
+export async function resolveCallbackUrl(
+  sdk: Sdk,
+  durableRunId: string,
+  callbackName?: string,
+): Promise<ResolvedCallback | null> {
+  const r = await sdk.getDurableRun({ run: durableRunId });
+  const execution = r.data.execution;
+  if (!execution) return null;
+  const ops = (execution.operations ?? []) as Array<{
+    name: string;
+    status: string;
+    callback_token?: string | null;
+    payload_schema?: unknown;
+    result?: unknown;
+  }>;
+
+  // A callback gate is still open only while its op is pending/waiting.
+  const pending = ops.filter(
+    (o) => o.callback_token != null && (o.status === "pending" || o.status === "waiting"),
+  );
+  const gate = callbackName ? pending.find((o) => o.name === callbackName) : pending[0];
+  if (!gate) return null;
+
+  // The URL comes from the step the durable authored to report it.
+  const reported = ops
+    .map((o) => o.result as { callbackUrl?: string; callbackName?: string } | undefined)
+    .find((res) => res?.callbackUrl && (!res.callbackName || res.callbackName === gate.name));
+  if (!reported?.callbackUrl) return null;
+
+  return { url: reported.callbackUrl, name: gate.name, payloadSchema: gate.payload_schema };
+}
+
+/** POST an approval/rejection payload to a durable callback URL (foreman-zfnj). */
+export async function postCallback(
+  url: string,
+  payload: unknown,
+): Promise<{ ok: boolean; status: number }> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload ?? {}),
+  });
+  return { ok: res.ok, status: res.status };
+}
+
 export async function getTriggerRunStatus(
   sdk: Sdk,
   triggerId: string,

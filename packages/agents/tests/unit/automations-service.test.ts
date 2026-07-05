@@ -28,6 +28,8 @@ vi.mock("@/lib/durable", () => ({
   setAutomationEnabled: vi.fn(async () => false),
   deleteAutomation: vi.fn(async () => {}),
   cancelDurableRun: vi.fn(async () => "cancelled"),
+  resolveCallbackUrl: vi.fn(),
+  postCallback: vi.fn(async () => ({ ok: true, status: 200 })),
 }));
 vi.mock("@/lib/automations/store", () => ({
   createAutomation: vi.fn(async () => "auto_1"),
@@ -45,6 +47,7 @@ import {
   cancelRunForUser,
   provisionAutomation,
   removeAutomationForUser,
+  respondToCallbackForUser,
   runAutomationById,
 } from "@/lib/automations/service";
 import * as store from "@/lib/automations/store";
@@ -52,6 +55,8 @@ import {
   cancelDurableRun,
   deleteAutomation as deleteZapierWorkflow,
   deployAutomation,
+  postCallback,
+  resolveCallbackUrl,
 } from "@/lib/durable";
 
 describe("provisionAutomation", () => {
@@ -178,6 +183,66 @@ describe("cancelRunForUser (foreman-y4kc)", () => {
     expect(result).toEqual({ cancelled: true, status: "cancelled" });
     expect(cancelDurableRun).not.toHaveBeenCalled();
     expect(store.updateRun).toHaveBeenCalledWith("run_1", { status: "cancelled" });
+  });
+});
+
+describe("respondToCallbackForUser (foreman-zfnj)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns null when the run isn't in the workspace", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce(null);
+    expect(await respondToCallbackForUser("user-1", "missing", {})).toBeNull();
+  });
+
+  it("no-ops (action=none) when the run isn't waiting", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "started",
+      durable_run_id: "dr_1",
+    } as never);
+    const r = await respondToCallbackForUser("user-1", "run_1", { payload: { approved: true } });
+    expect(r).toMatchObject({ ok: false, action: "none" });
+    expect(resolveCallbackUrl).not.toHaveBeenCalled();
+  });
+
+  it("approve → resolves the URL server-side + POSTs the payload", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "waiting",
+      durable_run_id: "dr_1",
+    } as never);
+    vi.mocked(resolveCallbackUrl).mockResolvedValueOnce({
+      url: "https://cb.example/abc",
+      name: "approve",
+    } as never);
+    const r = await respondToCallbackForUser("user-1", "run_1", { payload: { approved: true } });
+    expect(r).toEqual({ ok: true, action: "resumed", status: 200 });
+    expect(postCallback).toHaveBeenCalledWith("https://cb.example/abc", { approved: true });
+  });
+
+  it("approve but no reported URL → action=none (nothing POSTed)", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "waiting",
+      durable_run_id: "dr_1",
+    } as never);
+    vi.mocked(resolveCallbackUrl).mockResolvedValueOnce(null);
+    const r = await respondToCallbackForUser("user-1", "run_1", { payload: { approved: true } });
+    expect(r).toMatchObject({ ok: false, action: "none" });
+    expect(postCallback).not.toHaveBeenCalled();
+  });
+
+  it("deny (cancel) → cancels the durable run, no callback POST", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "waiting",
+      durable_run_id: "dr_1",
+    } as never);
+    const r = await respondToCallbackForUser("user-1", "run_1", { cancel: true });
+    expect(r).toEqual({ ok: true, action: "cancelled" });
+    expect(cancelDurableRun).toHaveBeenCalledWith(expect.anything(), "dr_1");
+    expect(store.updateRun).toHaveBeenCalledWith("run_1", { status: "cancelled" });
+    expect(postCallback).not.toHaveBeenCalled();
   });
 });
 

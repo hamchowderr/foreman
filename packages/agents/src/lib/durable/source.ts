@@ -9,6 +9,24 @@ import type { AutomationSpec } from "./types";
  * schemas, loops, waits, branches, cross-step references) the agent authors the
  * source directly — this generator only covers static linear chains.
  */
+/**
+ * Canonical human-approval gate for durable source (foreman-zfnj). `ctx.createCallback`
+ * mints a callback URL that `getDurableRun` does NOT expose; Foreman resolves it
+ * (`resolveCallbackUrl`) from a step the durable authors to REPORT it. Any durable with
+ * an approval gate MUST emit this pattern so the /automations Approve/Deny action can
+ * POST to the URL. Returns source lines that: create the gate, report its `{ callbackUrl,
+ * callbackName }` via a step, and await the decision into `<id>Decision`.
+ */
+export function humanApprovalGate(name: string): string {
+  const q = (v: unknown) => JSON.stringify(v);
+  const id = name.replace(/[^a-zA-Z0-9_$]/g, "_").replace(/^([0-9])/, "_$1");
+  return [
+    `  const [${id}Approval, ${id}Url] = await ctx.createCallback(${q(name)});`,
+    `  await ctx.step(${q(`__report_callback_url_${name}`)}, async () => ({ callbackUrl: ${id}Url, callbackName: ${q(name)} }));`,
+    `  const ${id}Decision = await ${id}Approval;`,
+  ].join("\n");
+}
+
 export function buildDurableSource(spec: AutomationSpec): string {
   const q = (v: unknown) => JSON.stringify(v);
 

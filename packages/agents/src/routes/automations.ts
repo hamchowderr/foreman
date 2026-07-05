@@ -7,6 +7,7 @@ import {
   listForUser,
   provisionAutomation,
   removeAutomationForUser,
+  respondToCallbackForUser,
   runAutomationById,
   updateAutomationForUser,
 } from "../lib/automations/service";
@@ -26,7 +27,8 @@ import type { AppEnv } from "./types";
  *   GET    /automations/:id        → automation + recent runs
  *   PATCH  /automations/:id        → rename / describe / enable-disable
  *   POST   /automations/:id/run    → manually fire it
- *   POST   /automations/runs/:runId/cancel → cancel a running durable run
+ *   POST   /automations/runs/:runId/cancel   → cancel a running durable run
+ *   POST   /automations/runs/:runId/callback → approve/deny a human-approval gate
  *   DELETE /automations/:id        → remove (row + best-effort Zapier workflow)
  */
 const automations = new Hono<AppEnv>();
@@ -56,6 +58,34 @@ automations.post("/runs/:runId/cancel", async (c) => {
   const result = await cancelRunForUser(userId, runId);
   if (!result) {
     return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(result);
+});
+
+// Respond to a durable human-approval gate (foreman-zfnj): approve = resume with a
+// payload; deny (cancel:true) = cancel the run. The callback URL is resolved
+// server-side and never returned to the client.
+automations.post("/runs/:runId/callback", async (c) => {
+  const userId = c.get("userId");
+  const runId = validateParam(c.req.param("runId"), "runId");
+  if (!runId) {
+    return c.json({ error: "Invalid runId" }, 400);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as {
+    payload?: unknown;
+    cancel?: unknown;
+    callbackName?: unknown;
+  };
+  const result = await respondToCallbackForUser(userId, runId, {
+    payload: body.payload,
+    cancel: body.cancel === true,
+    callbackName: typeof body.callbackName === "string" ? body.callbackName : undefined,
+  });
+  if (!result) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  if (!result.ok && result.action === "none") {
+    return c.json(result, 409);
   }
   return c.json(result);
 });

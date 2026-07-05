@@ -3,6 +3,8 @@ import {
   deleteAutomation as deleteZapierWorkflow,
   deployAutomation,
   getTriggerRunStatus,
+  postCallback,
+  resolveCallbackUrl,
   setAutomationEnabled,
   triggerAutomation,
 } from "../durable";
@@ -233,6 +235,59 @@ export async function cancelRunForUser(
   const status = await cancelDurableRun(sdk, run.durable_run_id);
   await store.updateRun(run.id, { status });
   return { cancelled: status === "cancelled", status };
+}
+
+export interface CallbackResponseInput {
+  /** Payload to POST to the gate — resumes the durable (approve). */
+  payload?: unknown;
+  /** Cancel the whole run instead of resuming (hard deny). */
+  cancel?: boolean;
+  /** Which gate, when the durable has more than one open callback. */
+  callbackName?: string;
+}
+
+export interface CallbackResponseResult {
+  ok: boolean;
+  action: "resumed" | "cancelled" | "none";
+  /** HTTP status of the callback POST (resume only). */
+  status?: number;
+  /** Why it couldn't act, when ok=false. */
+  reason?: string;
+}
+
+/**
+ * Respond to a durable's human-approval gate (foreman-zfnj). Approve = POST the
+ * payload to the callback URL (resolved server-side and never exposed to the
+ * client); hard-deny = cancel the run. The run stays "waiting" in Foreman until
+ * reconcile advances it (the durable leaves "waiting" once the callback lands).
+ * Returns null if the run isn't in the caller's workspace.
+ */
+export async function respondToCallbackForUser(
+  userId: string,
+  runId: string,
+  input: CallbackResponseInput,
+): Promise<CallbackResponseResult | null> {
+  const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const run = await store.getRun(workspaceId, runId);
+  if (!run) return null;
+  if (run.status !== "waiting" || !run.durable_run_id) {
+    return { ok: false, action: "none", reason: "run is not waiting on a callback" };
+  }
+
+  const sdk = await getExperimentalSdkForUser(userId);
+
+  if (input.cancel) {
+    const status = await cancelDurableRun(sdk, run.durable_run_id);
+    await store.updateRun(run.id, { status });
+    return { ok: status === "cancelled", action: "cancelled" };
+  }
+
+  const cb = await resolveCallbackUrl(sdk, run.durable_run_id, input.callbackName);
+  if (!cb) {
+    return { ok: false, action: "none", reason: "no open callback URL for this run" };
+  }
+  const res = await postCallback(cb.url, input.payload ?? {});
+  return { ok: res.ok, action: "resumed", status: res.status };
 }
 
 export interface UpdateInput {

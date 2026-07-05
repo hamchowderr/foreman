@@ -18,10 +18,13 @@ export {
   getTriggerRunStatus,
   inspectAutomation,
   listAutomations,
+  postCallback,
+  type ResolvedCallback,
+  resolveCallbackUrl,
   runAutomationOnce,
   setAutomationEnabled,
   triggerAutomation,
 } from "./deploy";
 export { AGED_DURABLE_DEPS } from "./deps";
-export { buildDurableSource } from "./source";
+export { buildDurableSource, humanApprovalGate } from "./source";
 export type { ActionType, AutomationSpec, AutomationStep, AutomationTrigger } from "./types";

@@ -130,6 +130,77 @@ describe("cancelDurableRun (foreman-y4kc)", () => {
   });
 });
 
+describe("resolveCallbackUrl + postCallback (foreman-zfnj)", () => {
+  const runWith = (operations: unknown[]) => ({
+    data: { id: "r", status: "started", output: null, error: null, execution: { operations } },
+  });
+
+  it("returns the URL a step reported for a still-pending callback", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () =>
+        runWith([
+          {
+            name: "approve",
+            type: "callback",
+            status: "pending",
+            callback_token: "tok_1",
+            payload_schema: { type: "object" },
+          },
+          {
+            name: "__report_callback_url_approve",
+            type: "step",
+            status: "completed",
+            result: { callbackUrl: "https://cb.example/abc", callbackName: "approve" },
+          },
+        ]),
+      ),
+    });
+    const { resolveCallbackUrl } = await import("../../src/lib/durable");
+    const cb = await resolveCallbackUrl(sdk, "dr_1");
+    expect(cb).toEqual({
+      url: "https://cb.example/abc",
+      name: "approve",
+      payloadSchema: { type: "object" },
+    });
+  });
+
+  it("returns null when the callback op is no longer pending", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () =>
+        runWith([
+          { name: "approve", type: "callback", status: "completed", callback_token: "tok_1" },
+          { name: "x", type: "step", status: "completed", result: { callbackUrl: "https://x" } },
+        ]),
+      ),
+    });
+    const { resolveCallbackUrl } = await import("../../src/lib/durable");
+    expect(await resolveCallbackUrl(sdk, "dr_1")).toBeNull();
+  });
+
+  it("returns null when no step reported a URL", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () =>
+        runWith([{ name: "approve", type: "callback", status: "pending", callback_token: "t" }]),
+      ),
+    });
+    const { resolveCallbackUrl } = await import("../../src/lib/durable");
+    expect(await resolveCallbackUrl(sdk, "dr_1")).toBeNull();
+  });
+
+  it("postCallback POSTs JSON and returns ok/status", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }) as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
+    const { postCallback } = await import("../../src/lib/durable");
+    const res = await postCallback("https://cb.example/abc", { approved: true });
+    expect(res).toEqual({ ok: true, status: 200 });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://cb.example/abc",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ approved: true }) }),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("getDurableRunStatus — execution detail (foreman-jc12)", () => {
   const runData = (execution: unknown, status = "started") => ({
     data: { id: "r", status, output: null, error: null, execution },

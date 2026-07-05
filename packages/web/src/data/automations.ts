@@ -88,3 +88,12 @@ export async function deleteAutomation(id: string): Promise<void> {
 export async function cancelRun(runId: string): Promise<{ cancelled: boolean; status: string }> {
   return agent(`/automations/runs/${runId}/cancel`, { method: "POST", body: {} });
 }
+
+/** Approve/deny a durable human-approval gate (foreman-zfnj). Approve resumes with a
+ * payload; deny (cancel:true) cancels the run. */
+export async function respondToCallback(
+  runId: string,
+  input: { payload?: unknown; cancel?: boolean; callbackName?: string },
+): Promise<{ ok: boolean; action: string; status?: number; reason?: string }> {
+  return agent(`/automations/runs/${runId}/callback`, { method: "POST", body: input });
+}
