@@ -1,10 +1,13 @@
-import { RequestContext } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { docPath as physicalDocPath } from "../../lib/documents/spaces";
 import { recordVersion } from "../../lib/documents/versions";
 import { requestUserContext } from "../../lib/request-user-context";
-import { foremanWorkspace } from "../agents/workspace";
+import {
+  indexSharedDoc,
+  resolveWorkspaceFilesystem,
+  resolveWorkspaceTenantKey,
+} from "../agents/workspace";
 
 /**
  * save_document (foreman-aqjx) — the write side of the knowledge layer. Persists
@@ -61,20 +64,15 @@ export const saveDocumentTool = createTool({
     };
   },
   execute: async ({ title, content, space }, context) => {
-    const entries: Array<[string, string]> = [];
-    const wsId = context?.requestContext?.get("workspaceId") as string | undefined;
-    if (wsId) entries.push(["workspaceId", wsId]);
-    // Empty entries → the workspace resolver falls back to the ALS userId
-    // (channels), so this works on every surface.
-    const fs = await foremanWorkspace.resolveFilesystem({
-      requestContext: new RequestContext(entries),
-    });
+    // The real RequestContext already carries workspaceId/userId (web); on
+    // channels the resolver falls back to the ALS userId — works on every surface.
+    const rc = context?.requestContext;
+    const fs = await resolveWorkspaceFilesystem(rc);
     if (!fs) throw new Error("save_document: workspace filesystem unavailable");
 
     // userId is needed for the per-user PERSONAL space path (foreman-5e4f).
     const userId =
-      (context?.requestContext?.get("userId") as string | undefined) ??
-      requestUserContext.getStore()?.userId;
+      (rc?.get("userId") as string | undefined) ?? requestUserContext.getStore()?.userId;
     // A personal save needs a userId to scope the path; without one, fall back to
     // the shared space rather than failing the save.
     const resolvedSpace = space === "personal" && userId ? "personal" : "shared";
@@ -89,6 +87,18 @@ export const saveDocumentTool = createTool({
       await recordVersion(fs, path, { title, content });
     } catch (err) {
       console.error("save_document: recordVersion failed (doc still saved)", err);
+    }
+    // Index SHARED docs for semantic search (foreman-aqjx). Best-effort: the doc
+    // is already saved; a failed embed must not fail the save. Personal docs are
+    // deliberately NOT indexed — they'd become searchable by teammates in the
+    // shared per-workspace index (personal search is a per-user-index follow-up).
+    if (resolvedSpace === "shared") {
+      try {
+        const tenantKey = await resolveWorkspaceTenantKey(rc);
+        await indexSharedDoc({ tenantKey, path, content, title });
+      } catch (err) {
+        console.error("save_document: knowledge index failed (doc still saved)", err);
+      }
     }
     return { path, title, space: resolvedSpace };
   },

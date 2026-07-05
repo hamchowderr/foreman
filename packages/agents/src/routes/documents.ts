@@ -19,7 +19,7 @@ import {
   recordVersion,
   restoreVersion,
 } from "../lib/documents/versions";
-import { foremanWorkspace } from "../mastra/agents/workspace";
+import { resolveWorkspaceFilesystem } from "../mastra/agents/workspace";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -30,14 +30,16 @@ import type { AppEnv } from "./types";
  *
  * A "document" is just a file under `documents/` in the caller's workspace
  * filesystem. The agent creates/edits them with its existing approval-gated
- * Workspace file tools, and `Workspace.search` (bm25) gives doc-RAG for free —
- * so this route only needs to LIST and READ them for the web viewer (the
- * KnowledgePanel, which mirrors the live-preview side panel).
+ * Workspace file tools, and shared docs are embedded into the workspace's
+ * `knowledge_<ws>` vector index on save (save_document → indexSharedDoc) so the
+ * agent gets semantic doc-RAG via `mastra_workspace_search`. This route only
+ * needs to LIST and READ them for the web viewer (the KnowledgePanel, which
+ * mirrors the live-preview side panel).
  *
  *   GET /documents                       → list documents (files under documents/)
  *   GET /documents/content?path=documents/foo.md → read one document
  *
- * Resolving through `foremanWorkspace.resolveFilesystem` (not node fs) keeps the
+ * Resolving through `resolveWorkspaceFilesystem` (not node fs) keeps the
  * containment guarantees and means the route works unchanged when jgme later
  * swaps LocalFilesystem for S3/AgentFS on cloud deploys.
  *
@@ -56,7 +58,7 @@ documents.use("*", (c, next) =>
 function resolveFs(workspaceId: string | undefined) {
   const entries: Array<[string, string]> = [];
   if (workspaceId) entries.push(["workspaceId", workspaceId]);
-  return foremanWorkspace.resolveFilesystem({ requestContext: new RequestContext(entries) });
+  return resolveWorkspaceFilesystem(new RequestContext(entries));
 }
 
 // GET /documents — list knowledge documents in the caller's workspace: the

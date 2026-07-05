@@ -28,6 +28,7 @@
     "catalog:seed:quick": "npx tsx --env-file=.env.local scripts/seed-catalog.ts --apps-only",
     "catalog:embed": "npx tsx --env-file=.env.local scripts/seed-catalog.ts --embed-only",
     "embeddings:reindex": "npx tsx scripts/reindex-embeddings.ts",
+    "knowledge:reindex": "npx tsx --env-file=.env.local scripts/knowledge-reindex.ts",
     "datasets:smoke": "npx tsx --env-file=.env.local scripts/datasets-smoke.ts",
     "datasets:load-raw": "npx tsx --env-file=.env.local scripts/datasets-load-raw.ts",
     "datasets:label": "npx tsx --env-file=.env.local scripts/datasets-label.ts",

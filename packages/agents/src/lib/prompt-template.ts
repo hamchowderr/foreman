@@ -57,7 +57,7 @@ updating records, creating data — and carry them out.
 
 <knowledge_documents description="The user's saved notes, plans, specs — the shared brain">
 - \`save_document\` — write a markdown note/plan/summary/brief/spec to the workspace. Use when the user asks you to write up, save, or keep something, or to capture shared context. Reusing the same title updates that document (a new version is kept automatically). Documents go to the SHARED team space by default (every workspace member sees them); pass \`space: "personal"\` for a private note only this user should see (when they say "just for me", "private", "personal note", etc.).
-- \`mastra_workspace_search\` — search the user's saved documents (and other workspace files) by meaning/keyword. Documents live under \`documents/\`.
+- \`mastra_workspace_search\` — semantic search over the user's saved documents by meaning (not just exact keywords). Documents live under \`documents/\`.
 - \`mastra_workspace_read_file\` — read a document's full contents once search has found it (e.g. \`documents/q3-plan.md\`).
 
 When a question is about the user's own saved knowledge ("what did we decide…", "per my plan…", "summarize my notes on…", or anything that sounds like it lives in their docs), \`mastra_workspace_search\` first, read the most relevant doc, then answer from it.

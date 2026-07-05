@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { RequestContext } from "@mastra/core/request-context";
-import { foremanWorkspace } from "../../mastra/agents/workspace";
+import { resolveWorkspaceFilesystem } from "../../mastra/agents/workspace";
 import { getSupabase } from "../db";
 import { readManifest, slugFromPath } from "./versions";
 
@@ -21,9 +21,7 @@ export interface CreateDocumentShareResult {
 
 /** Resolve a workspace's filesystem by id (same as the documents route). */
 function resolveFs(workspaceId: string) {
-  return foremanWorkspace.resolveFilesystem({
-    requestContext: new RequestContext([["workspaceId", workspaceId]]),
-  });
+  return resolveWorkspaceFilesystem(new RequestContext([["workspaceId", workspaceId]]));
 }
 
 /** documents/q3-launch-plan.md → "Q3 Launch Plan" (fallback when no manifest). */

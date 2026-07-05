@@ -30,7 +30,7 @@ import { forkConversationTool } from "../tools/fork-conversation";
 import { previewAppTool } from "../tools/preview-app";
 import { saveDocumentTool } from "../tools/save-document";
 import { searchHistoryTool } from "../tools/search-history";
-import { foremanWorkspace } from "./workspace";
+import { buildForemanWorkspace } from "./workspace";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -183,7 +183,7 @@ export function createForemanAgent(databaseUrl: string) {
     },
     inputProcessors: () => buildForemanInputProcessors(),
     outputProcessors: [piiRedactor],
-    workspace: foremanWorkspace,
+    workspace: buildForemanWorkspace,
     memory: new Memory({
       storage: new PostgresStore({
         id: "foreman-memory",
