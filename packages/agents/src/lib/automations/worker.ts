@@ -253,7 +253,10 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
       }
 
       const dr = await getDurableRunStatus(sdk, durableRunId);
-      const terminal = dr.status === "finished" || dr.status === "failed";
+      // "cancelled" is terminal too (foreman-y4kc) — otherwise reconcile would flip a
+      // just-cancelled durable back to "started".
+      const terminal =
+        dr.status === "finished" || dr.status === "failed" || dr.status === "cancelled";
 
       // Resolve the run's next status + the payload we surface as `error`:
       //   terminal  → finished/failed, with the durable's own output/error

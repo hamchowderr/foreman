@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  cancelRunForUser,
   getInboxView,
   getWorkspaceInbox,
   inspectForUser,
@@ -25,6 +26,7 @@ import type { AppEnv } from "./types";
  *   GET    /automations/:id        → automation + recent runs
  *   PATCH  /automations/:id        → rename / describe / enable-disable
  *   POST   /automations/:id/run    → manually fire it
+ *   POST   /automations/runs/:runId/cancel → cancel a running durable run
  *   DELETE /automations/:id        → remove (row + best-effort Zapier workflow)
  */
 const automations = new Hono<AppEnv>();
@@ -41,6 +43,21 @@ automations.get("/", async (c) => {
 automations.get("/inbox", async (c) => {
   const userId = c.get("userId");
   return c.json(await getWorkspaceInbox(userId));
+});
+
+// Cancel a running durable run (foreman-y4kc). The "runs/" prefix keeps it clear of
+// the "/:id" automation routes.
+automations.post("/runs/:runId/cancel", async (c) => {
+  const userId = c.get("userId");
+  const runId = validateParam(c.req.param("runId"), "runId");
+  if (!runId) {
+    return c.json({ error: "Invalid runId" }, 400);
+  }
+  const result = await cancelRunForUser(userId, runId);
+  if (!result) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(result);
 });
 
 automations.post("/", async (c) => {

@@ -8,6 +8,7 @@ import {
   PlayIcon,
   RefreshCwIcon,
   Trash2Icon,
+  XIcon,
   ZapIcon,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  cancelRun,
   deleteAutomation,
   getAutomation,
   getAutomations,
@@ -69,7 +71,7 @@ function runStatusVariant(status: string): "default" | "secondary" | "destructiv
   if (status === "failed") return "destructive";
   if (status === "finished") return "default";
   if (status === "retrying") return "outline"; // mid-retry — surfaced, not yet failed
-  return "secondary"; // initialized / started — in flight
+  return "secondary"; // initialized / started / cancelled
 }
 
 function prettyJson(value: unknown): string {
@@ -317,6 +319,7 @@ export function AutomationsManager() {
                         <TableHead>When</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Durable run</TableHead>
+                        <TableHead className="w-16" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -351,10 +354,27 @@ export function AutomationsManager() {
                               <TableCell className="font-mono text-xs">
                                 {r.durable_run_id ? shortId(r.durable_run_id) : "—"}
                               </TableCell>
+                              <TableCell className="text-right">
+                                {NON_TERMINAL_RUN.has(r.status) && (
+                                  <Button
+                                    aria-label="Cancel run"
+                                    className="size-7 text-muted-foreground hover:text-destructive"
+                                    disabled={pending}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      act(() => cancelRun(r.id));
+                                    }}
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <XIcon className="size-4" />
+                                  </Button>
+                                )}
+                              </TableCell>
                             </TableRow>
                             {expanded && detailJson != null && (
                               <TableRow className="hover:bg-transparent">
-                                <TableCell className="p-0" colSpan={4}>
+                                <TableCell className="p-0" colSpan={5}>
                                   <div className="px-3 pb-3">
                                     <p className="mb-1 text-muted-foreground text-xs">
                                       {r.status === "retrying"

@@ -5,6 +5,7 @@
 
 export {
   type AutomationSummary,
+  cancelDurableRun,
   type DeployAutomationOptions,
   type DeployResult,
   type DurableOpDetail,

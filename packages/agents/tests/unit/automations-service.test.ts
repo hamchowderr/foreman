@@ -27,24 +27,32 @@ vi.mock("@/lib/durable", () => ({
   })),
   setAutomationEnabled: vi.fn(async () => false),
   deleteAutomation: vi.fn(async () => {}),
+  cancelDurableRun: vi.fn(async () => "cancelled"),
 }));
 vi.mock("@/lib/automations/store", () => ({
   createAutomation: vi.fn(async () => "auto_1"),
   getAutomation: vi.fn(),
   listAutomations: vi.fn(async () => [{ id: "auto_1" }]),
   listRuns: vi.fn(async () => []),
+  getRun: vi.fn(),
   recordRun: vi.fn(async () => "run_1"),
+  updateRun: vi.fn(async () => {}),
   deleteAutomation: vi.fn(),
   updateAutomation: vi.fn(async () => true),
 }));
 
 import {
+  cancelRunForUser,
   provisionAutomation,
   removeAutomationForUser,
   runAutomationById,
 } from "@/lib/automations/service";
 import * as store from "@/lib/automations/store";
-import { deleteAutomation as deleteZapierWorkflow, deployAutomation } from "@/lib/durable";
+import {
+  cancelDurableRun,
+  deleteAutomation as deleteZapierWorkflow,
+  deployAutomation,
+} from "@/lib/durable";
 
 describe("provisionAutomation", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -122,6 +130,54 @@ describe("runAutomationById", () => {
         durableRunId: "dr_1",
       }),
     );
+  });
+});
+
+describe("cancelRunForUser (foreman-y4kc)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns null when the run isn't in the workspace", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce(null);
+    expect(await cancelRunForUser("user-1", "missing")).toBeNull();
+    expect(cancelDurableRun).not.toHaveBeenCalled();
+  });
+
+  it("no-ops on an already-terminal run", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "finished",
+      durable_run_id: "dr_1",
+    } as never);
+    expect(await cancelRunForUser("user-1", "run_1")).toEqual({
+      cancelled: false,
+      status: "finished",
+    });
+    expect(cancelDurableRun).not.toHaveBeenCalled();
+    expect(store.updateRun).not.toHaveBeenCalled();
+  });
+
+  it("cancels the durable and records the status for a running run", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "started",
+      durable_run_id: "dr_1",
+    } as never);
+    const result = await cancelRunForUser("user-1", "run_1");
+    expect(result).toEqual({ cancelled: true, status: "cancelled" });
+    expect(cancelDurableRun).toHaveBeenCalledWith(expect.anything(), "dr_1");
+    expect(store.updateRun).toHaveBeenCalledWith("run_1", { status: "cancelled" });
+  });
+
+  it("cancels locally (no SDK) when the durable hasn't linked yet", async () => {
+    vi.mocked(store.getRun).mockResolvedValueOnce({
+      id: "run_1",
+      status: "started",
+      durable_run_id: null,
+    } as never);
+    const result = await cancelRunForUser("user-1", "run_1");
+    expect(result).toEqual({ cancelled: true, status: "cancelled" });
+    expect(cancelDurableRun).not.toHaveBeenCalled();
+    expect(store.updateRun).toHaveBeenCalledWith("run_1", { status: "cancelled" });
   });
 });
 

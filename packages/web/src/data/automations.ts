@@ -83,3 +83,8 @@ export async function runAutomation(id: string): Promise<RunResult> {
 export async function deleteAutomation(id: string): Promise<void> {
   await agent(`/automations/${id}`, { method: "DELETE" });
 }
+
+/** Cancel a running durable run (foreman-y4kc). */
+export async function cancelRun(runId: string): Promise<{ cancelled: boolean; status: string }> {
+  return agent(`/automations/runs/${runId}/cancel`, { method: "POST", body: {} });
+}

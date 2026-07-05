@@ -1,4 +1,5 @@
 import {
+  cancelDurableRun,
   deleteAutomation as deleteZapierWorkflow,
   deployAutomation,
   getTriggerRunStatus,
@@ -198,6 +199,40 @@ export async function runAutomationById(
   });
 
   return { runId, triggerId, status: run.status, durableRunId: run.durableRunId };
+}
+
+const TERMINAL_RUN = new Set(["finished", "failed", "cancelled"]);
+
+export interface CancelRunResult {
+  cancelled: boolean;
+  status: string;
+}
+
+/**
+ * Cancel a running automation run (foreman-y4kc). Workspace-scoped: returns null if
+ * the run isn't in the caller's workspace. Already-terminal runs are a no-op. A run
+ * that hasn't linked its durable yet is cancelled locally (so reconcile stops
+ * chasing it); otherwise cancelDurableRun stops it on Zapier and we record the
+ * resulting status.
+ */
+export async function cancelRunForUser(
+  userId: string,
+  runId: string,
+): Promise<CancelRunResult | null> {
+  const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const run = await store.getRun(workspaceId, runId);
+  if (!run) return null;
+  if (TERMINAL_RUN.has(run.status)) return { cancelled: false, status: run.status };
+
+  if (!run.durable_run_id) {
+    await store.updateRun(run.id, { status: "cancelled" });
+    return { cancelled: true, status: "cancelled" };
+  }
+
+  const sdk = await getExperimentalSdkForUser(userId);
+  const status = await cancelDurableRun(sdk, run.durable_run_id);
+  await store.updateRun(run.id, { status });
+  return { cancelled: status === "cancelled", status };
 }
 
 export interface UpdateInput {

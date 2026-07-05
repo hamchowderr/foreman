@@ -5,6 +5,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   AGED_DURABLE_DEPS,
+  cancelDurableRun,
   deployAutomation,
   getDurableRunStatus,
   inspectAutomation,
@@ -115,6 +116,17 @@ describe("triggerAutomation", () => {
     const res = await triggerAutomation({ sdk, workflowId: "wf_1", input: { x: 1 } });
     expect(res).toEqual({ triggerId: "trig_1" });
     expect(sdk.triggerWorkflow).toHaveBeenCalledWith({ workflow: "wf_1", input: { x: 1 } });
+  });
+});
+
+describe("cancelDurableRun (foreman-y4kc)", () => {
+  it("cancels a run and returns the resulting status", async () => {
+    const sdk = fakeSdk({
+      cancelDurableRun: vi.fn(async () => ({ data: { id: "dr_1", status: "cancelled" } })),
+    });
+    const status = await cancelDurableRun(sdk, "dr_1");
+    expect(status).toBe("cancelled");
+    expect(sdk.cancelDurableRun).toHaveBeenCalledWith({ run: "dr_1" });
   });
 });
 

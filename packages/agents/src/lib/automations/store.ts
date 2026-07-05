@@ -303,6 +303,22 @@ export async function updateRun(id: string, patch: RunPatch): Promise<void> {
   if (error) throw new Error(`updateRun failed: ${error.message}`);
 }
 
+/** Fetch a single run, workspace-scoped (the cancel route's authorization read). */
+export async function getRun(
+  workspaceId: string | undefined,
+  runId: string,
+): Promise<AutomationRunRow | null> {
+  if (!workspaceId) return null;
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("automation_run")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", runId)
+    .maybeSingle();
+  return (data as unknown as AutomationRunRow) ?? null;
+}
+
 export async function listRuns(
   workspaceId: string | undefined,
   automationId: string,
@@ -331,8 +347,9 @@ export async function listRuns(
  *                 Non-terminal — reconcile keeps polling until it clears/finishes.
  *   finished    → durable completed (reconcile)
  *   failed      → durable failed, or a dispatch error (reconcile / dispatch catch)
+ *   cancelled   → user cancelled a running durable (foreman-y4kc). Terminal.
  */
-export const TERMINAL_RUN_STATUSES = ["finished", "failed"] as const;
+export const TERMINAL_RUN_STATUSES = ["finished", "failed", "cancelled"] as const;
 const NON_TERMINAL_RUN_STATUSES = ["initialized", "started", "retrying"];
 
 /**

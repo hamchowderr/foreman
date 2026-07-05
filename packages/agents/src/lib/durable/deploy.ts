@@ -208,6 +208,12 @@ export async function getDurableRunStatus(
   };
 }
 
+/** Cancel a running durable run. Returns the resulting status ("cancelled"). */
+export async function cancelDurableRun(sdk: Sdk, runId: string): Promise<string> {
+  const r = await sdk.cancelDurableRun({ run: runId });
+  return r.data.status;
+}
+
 export async function getTriggerRunStatus(
   sdk: Sdk,
   triggerId: string,
