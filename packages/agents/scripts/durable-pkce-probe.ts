@@ -21,8 +21,13 @@
  *   npx tsx scripts/durable-pkce-probe.ts
  */
 import { createHash, randomBytes } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createZapierSdk } from "@zapier/zapier-sdk/experimental";
+
+const URL_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), ".pkce-url.txt");
 
 // --- Mirrors src/lib/zapier/connect.ts exactly ---
 const ZAPIER_AUTHORIZE_URL = "https://zapier.com/oauth/authorize/";
@@ -98,6 +103,7 @@ async function mintUserJwt(): Promise<string> {
     code_challenge_method: "S256",
   });
   const authorizeUrl = `${ZAPIER_AUTHORIZE_URL}?${params.toString()}`;
+  writeFileSync(URL_FILE, authorizeUrl, "utf8"); // so the runner can hand it over immediately
 
   console.log("\n========================================================");
   console.log("ACTION REQUIRED — open this URL and authorize:\n");

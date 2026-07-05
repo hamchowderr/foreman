@@ -10,3 +10,4 @@ datasets/
 .env.local
 mastra-dev.log
 server.log
+scripts/.pkce-url.txt
