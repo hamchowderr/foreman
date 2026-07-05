@@ -6,7 +6,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/identity", () => ({ resolveActiveWorkspace: vi.fn(async () => "ws-1") }));
-vi.mock("@/lib/zapier/sdk", () => ({ getExperimentalSdkForUser: vi.fn(async () => ({})) }));
+vi.mock("@/lib/zapier/sdk", () => ({
+  getExperimentalSdkForUser: vi.fn(async (userId: string) => ({ __owner: userId })),
+}));
+vi.mock("@/lib/trigger-inbox", () => ({ getInbox: vi.fn(), listInboxMessages: vi.fn() }));
 vi.mock("@/lib/durable", () => ({
   deployAutomation: vi.fn(async () => ({
     workflowId: "wf_1",
@@ -45,6 +48,7 @@ vi.mock("@/lib/automations/store", () => ({
 
 import {
   cancelRunForUser,
+  getWorkspaceInbox,
   provisionAutomation,
   removeAutomationForUser,
   respondToCallbackForUser,
@@ -58,6 +62,8 @@ import {
   postCallback,
   resolveCallbackUrl,
 } from "@/lib/durable";
+import { getInbox, listInboxMessages } from "@/lib/trigger-inbox";
+import { getExperimentalSdkForUser } from "@/lib/zapier/sdk";
 
 describe("provisionAutomation", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -243,6 +249,77 @@ describe("respondToCallbackForUser (foreman-zfnj)", () => {
     expect(cancelDurableRun).toHaveBeenCalledWith(expect.anything(), "dr_1");
     expect(store.updateRun).toHaveBeenCalledWith("run_1", { status: "cancelled" });
     expect(postCallback).not.toHaveBeenCalled();
+  });
+});
+
+describe("getWorkspaceInbox (foreman-6r9y)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const automations = [
+    // teammate-owned, trigger broken → should rank highest
+    {
+      id: "auto_b",
+      user_id: "user-2",
+      name: "Teammate broken",
+      enabled: true,
+      status: "trigger_failed",
+      trigger: { app: "gmail", action: "new_email" },
+      trigger_inbox_id: "inbox-b",
+    },
+    // self-owned, quiet → low priority
+    {
+      id: "auto_a",
+      user_id: "user-1",
+      name: "My quiet automation",
+      enabled: true,
+      status: "active",
+      trigger: { app: "sheets", action: "new_row" },
+      trigger_inbox_id: "inbox-a",
+    },
+    // self-owned but no inbox → filtered out entirely
+    { id: "auto_c", user_id: "user-1", trigger_inbox_id: null },
+  ];
+
+  it("aggregates teammate inboxes with owner attribution and ranks by priority", async () => {
+    vi.mocked(store.listAutomations).mockResolvedValueOnce(automations as never);
+    vi.mocked(getInbox).mockResolvedValue({ status: "active", paused_reason: null } as never);
+    vi.mocked(listInboxMessages).mockResolvedValue([] as never);
+
+    const { entries } = await getWorkspaceInbox("user-1");
+
+    // auto_c has no inbox → dropped; the other two remain.
+    expect(entries.map((e) => e.automation.id)).toEqual(["auto_b", "auto_a"]);
+
+    // Highest-priority first: the teammate's broken trigger outranks the quiet one.
+    expect(entries[0].automation.id).toBe("auto_b");
+    expect(entries[0].priority.level).toBe("high");
+    expect(entries[0].owner).toEqual({ userId: "user-2", isSelf: false });
+
+    expect(entries[1].priority.level).toBe("low");
+    expect(entries[1].owner).toEqual({ userId: "user-1", isSelf: true });
+
+    // Each inbox is read with its OWNER's SDK, resolved once per distinct owner.
+    expect(getExperimentalSdkForUser).toHaveBeenCalledWith("user-1");
+    expect(getExperimentalSdkForUser).toHaveBeenCalledWith("user-2");
+    expect(getExperimentalSdkForUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("degrades an un-connected owner to an empty entry instead of failing", async () => {
+    vi.mocked(store.listAutomations).mockResolvedValueOnce([automations[1]] as never);
+    vi.mocked(getExperimentalSdkForUser).mockRejectedValueOnce(new Error("reauth required"));
+
+    const { entries } = await getWorkspaceInbox("user-1");
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].inbox).toBeNull();
+    expect(entries[0].messages).toEqual([]);
+    expect(getInbox).not.toHaveBeenCalled();
+  });
+
+  it("returns no entries when the workspace has no inbox-triggered automations", async () => {
+    vi.mocked(store.listAutomations).mockResolvedValueOnce([automations[2]] as never);
+    expect(await getWorkspaceInbox("user-1")).toEqual({ entries: [] });
+    expect(getExperimentalSdkForUser).not.toHaveBeenCalled();
   });
 });
 

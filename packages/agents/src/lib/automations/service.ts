@@ -11,7 +11,8 @@ import {
 import type { DeployResult } from "../durable/deploy";
 import { resolveActiveWorkspace } from "../identity";
 import { getInbox, listInboxMessages } from "../trigger-inbox";
-import { getExperimentalSdkForUser } from "../zapier/sdk";
+import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
+import { type InboxPriority, scoreInboxEntry } from "./inbox-priority";
 import type { AutomationRow, AutomationRunRow } from "./store";
 import * as store from "./store";
 import type { InboxTriggerSpec } from "./types";
@@ -127,16 +128,24 @@ export async function getInboxView(
 }
 
 export interface WorkspaceInboxEntry {
-  automation: Pick<AutomationRow, "id" | "name" | "enabled" | "trigger">;
+  automation: Pick<AutomationRow, "id" | "name" | "enabled" | "trigger" | "status">;
+  /** Which workspace member owns this automation (foreman-6r9y teammate aggregation). */
+  owner: { userId: string; isSelf: boolean };
   inbox: InboxView["inbox"];
   messages: InboxView["messages"];
+  /** Importance/urgency ranking for the "what needs attention" view (foreman-6r9y). */
+  priority: InboxPriority;
 }
 
 /**
  * Workspace-wide trigger inbox: every automation's live inbox + recent messages
- * in ONE call (the web /inbox page's source). Resolves the workspace + SDK once,
- * then fans out the per-inbox reads in parallel server-side, so the web makes a
- * single round-trip instead of N. Per-inbox failures degrade to an empty entry.
+ * in ONE call (the web /inbox page's source), ranked by how much attention each
+ * needs. Automations are a shared workspace resource, so this already spans every
+ * member — but each trigger inbox lives under its OWNER's Zapier identity, so we
+ * read each inbox with the owner's SDK (reading a teammate's inbox with the
+ * requester's SDK 403s). One SDK is resolved per distinct owner and cached; an
+ * un-connected owner or a per-inbox failure degrades to an empty entry rather
+ * than failing the whole view. Entries come back sorted highest-priority first.
  */
 export async function getWorkspaceInbox(
   userId: string,
@@ -148,21 +157,58 @@ export async function getWorkspaceInbox(
   );
   if (withInbox.length === 0) return { entries: [] };
 
-  const sdk = await getExperimentalSdkForUser(userId);
+  // Resolve one experimental SDK per distinct owner (cached; null = can't read).
+  const sdkByOwner = new Map<string, Promise<ExperimentalZapierSdk | null>>();
+  const sdkFor = (ownerId: string): Promise<ExperimentalZapierSdk | null> => {
+    let p = sdkByOwner.get(ownerId);
+    if (!p) {
+      p = getExperimentalSdkForUser(ownerId).catch(() => null);
+      sdkByOwner.set(ownerId, p);
+    }
+    return p;
+  };
+
   const entries = await Promise.all(
     withInbox.map(async (a): Promise<WorkspaceInboxEntry> => {
-      const automation = { id: a.id, name: a.name, enabled: a.enabled, trigger: a.trigger };
-      try {
-        const [inbox, messages] = await Promise.all([
-          getInbox(sdk, a.trigger_inbox_id),
-          listInboxMessages(sdk, a.trigger_inbox_id, 20),
-        ]);
-        return { automation, inbox, messages };
-      } catch {
-        return { automation, inbox: null, messages: [] };
+      const automation = {
+        id: a.id,
+        name: a.name,
+        enabled: a.enabled,
+        trigger: a.trigger,
+        status: a.status,
+      };
+      const owner = { userId: a.user_id, isSelf: a.user_id === userId };
+
+      let inbox: InboxView["inbox"] = null;
+      let messages: InboxView["messages"] = [];
+      const sdk = await sdkFor(a.user_id);
+      if (sdk) {
+        try {
+          [inbox, messages] = await Promise.all([
+            getInbox(sdk, a.trigger_inbox_id),
+            listInboxMessages(sdk, a.trigger_inbox_id, 20),
+          ]);
+        } catch {
+          inbox = null;
+          messages = [];
+        }
       }
+
+      const priority = scoreInboxEntry({
+        automationStatus: a.status,
+        enabled: a.enabled,
+        inboxStatus: inbox?.status ?? null,
+        inboxPausedReason: inbox?.paused_reason ?? null,
+        messages,
+      });
+
+      return { automation, owner, inbox, messages, priority };
     }),
   );
+
+  // Rank: most-needs-attention first. Stable for equal scores (Array.sort keeps
+  // the listAutomations updated_at order on ties).
+  entries.sort((x, y) => y.priority.score - x.priority.score);
   return { entries };
 }
 

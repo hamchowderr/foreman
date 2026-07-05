@@ -75,16 +75,29 @@ export interface InboxState {
   messages: InboxMessage[];
 }
 
+export type InboxPriorityLevel = "high" | "medium" | "low";
+
+/** Importance/urgency ranking for an inbox entry (foreman-6r9y). */
+export interface InboxPriority {
+  score: number;
+  level: InboxPriorityLevel;
+  reasons: string[];
+}
+
 /** One automation's inbox within the workspace-wide aggregate (`/automations/inbox`). */
 export interface WorkspaceInboxEntry {
   automation: {
     id: string;
     name: string;
     enabled: boolean;
+    status: string;
     trigger: AutomationTriggerSpec | null;
   };
+  /** Which workspace member owns this automation (teammate aggregation). */
+  owner: { userId: string; isSelf: boolean };
   inbox: InboxState["inbox"];
   messages: InboxMessage[];
+  priority: InboxPriority;
 }
 
 export interface WorkspaceInbox {
