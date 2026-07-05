@@ -270,6 +270,33 @@ describe("reconcilePendingRuns", () => {
     );
   });
 
+  it("flips a run to 'waiting' when the durable pauses on a callback (foreman-rm8z)", async () => {
+    vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
+      { ...pendingRun, durable_run_id: "dr_9" },
+    ] as never);
+    vi.mocked(store.getAutomationsByIds).mockResolvedValueOnce([
+      { id: "auto_1", user_id: "user-1" },
+    ] as never);
+    const detail = {
+      retrying: [],
+      waiting: true,
+      callbacks: [{ name: "approve", status: "waiting", callbackToken: "cb_1" }],
+    };
+    vi.mocked(getDurableRunStatus).mockResolvedValueOnce({
+      status: "started",
+      output: null,
+      error: null,
+      detail,
+    } as never);
+
+    const res = await reconcilePendingRuns();
+    expect(res).toEqual({ checked: 1, updated: 0 });
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_1",
+      expect.objectContaining({ status: "waiting", error: detail }),
+    );
+  });
+
   it("returns a recovered run to 'started' and clears the retry detail (foreman-jc12)", async () => {
     vi.mocked(store.listPendingRuns).mockResolvedValueOnce([
       {

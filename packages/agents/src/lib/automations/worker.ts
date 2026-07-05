@@ -259,16 +259,21 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
         dr.status === "finished" || dr.status === "failed" || dr.status === "cancelled";
 
       // Resolve the run's next status + the payload we surface as `error`:
-      //   terminal  → finished/failed, with the durable's own output/error
+      //   terminal  → finished/failed/cancelled, with the durable's own output/error
+      //   waiting   → paused on a human-approval callback (foreman-rm8z); surface the
+      //               callback gate(s) so the UI shows "waiting for approval"
       //   retrying  → a step is mid-retry (foreman-jc12): top-level status is still
       //               "started" but execution.detail carries last_error + the ops;
       //               surface that so the run doesn't look like a stalled "started"
-      //   started   → executing cleanly; clear any stale retry detail
+      //   started   → executing cleanly; clear any stale detail
       let status: string;
       let nextError: unknown;
       if (terminal) {
         status = dr.status;
         nextError = dr.error ?? null;
+      } else if (dr.detail?.waiting) {
+        status = "waiting";
+        nextError = dr.detail;
       } else if (dr.detail) {
         status = "retrying";
         nextError = dr.detail;

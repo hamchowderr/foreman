@@ -163,22 +163,45 @@ export interface DurableOpDetail {
 }
 
 /**
- * Compact in-flight failure/retry view distilled from `getDurableRun.execution`
- * (foreman-jc12). The top-level run status stays "started" while a step RETRIES,
- * so the real signal lives here: `execution.summary.last_error` and the ops that
- * are retrying/failed. Null when the run is executing cleanly (nothing to surface).
+ * A human-approval callback gate the durable is paused on (foreman-rm8z). Surfaced
+ * so the /automations UI can show "waiting for approval" + what payload is expected.
+ * NOTE: the callback URL is minted INSIDE the durable by `ctx.createCallback` and is
+ * not exposed here — `getDurableRun` only returns the token/schema — so resuming
+ * (the approve/deny POST) is a separate, still-blocked capability (see the rm8z
+ * follow-up). This is the read-only half.
+ */
+export interface DurableCallback {
+  name: string;
+  status: string;
+  callbackToken?: string | null;
+  payloadSchema?: unknown;
+  /** When Zapier will auto-resume/expire the gate, if a deadline was set (ISO). */
+  resumeAt?: string;
+  expiresAt?: string;
+}
+
+/**
+ * Compact in-flight view distilled from `getDurableRun.execution` (foreman-jc12 +
+ * rm8z). The top-level run status stays "started" while a step RETRIES or the run
+ * WAITS on a human callback, so the real signal lives here: `summary.last_error`,
+ * the retrying/failed ops, and any pending approval gate. Null when the run is
+ * executing cleanly (nothing to surface).
  */
 export interface DurableRunDetail {
   totalAttempts?: number;
   lastError?: { code: string; title: string; detail?: string | null } | null;
   retrying: DurableOpDetail[];
+  /** True when the durable is paused on a human-approval callback (execution.status = waiting). */
+  waiting?: boolean;
+  callbacks?: DurableCallback[];
 }
 
 type DurableExecution = NonNullable<Awaited<ReturnType<Sdk["getDurableRun"]>>["data"]["execution"]>;
 
 function extractRunDetail(execution: DurableExecution | null): DurableRunDetail | null {
   if (!execution) return null;
-  const retrying: DurableOpDetail[] = (execution.operations ?? [])
+  const ops = execution.operations ?? [];
+  const retrying: DurableOpDetail[] = ops
     .filter((o) => o.retry_count > 0 || o.status === "failed" || o.status === "retrying")
     .map((o) => ({
       name: o.name,
@@ -189,10 +212,28 @@ function extractRunDetail(execution: DurableExecution | null): DurableRunDetail 
       nextRetryAt: o.next_retry_at,
       error: o.error,
     }));
+  // Approval gates: ops carrying a callback_token are createCallback pauses.
+  const callbacks: DurableCallback[] = ops
+    .filter((o) => o.callback_token != null)
+    .map((o) => ({
+      name: o.name,
+      status: o.status,
+      callbackToken: o.callback_token,
+      payloadSchema: o.payload_schema,
+      resumeAt: o.resume_at,
+      expiresAt: o.expires_at,
+    }));
+  const waiting = execution.status === "waiting";
   const lastError = execution.summary?.last_error ?? null;
   // Nothing actionable — a clean, still-running execution.
-  if (!lastError && retrying.length === 0) return null;
-  return { totalAttempts: execution.summary?.total_attempts, lastError, retrying };
+  if (!lastError && retrying.length === 0 && !waiting && callbacks.length === 0) return null;
+  return {
+    totalAttempts: execution.summary?.total_attempts,
+    lastError,
+    retrying,
+    ...(waiting ? { waiting } : {}),
+    ...(callbacks.length ? { callbacks } : {}),
+  };
 }
 
 export async function getDurableRunStatus(

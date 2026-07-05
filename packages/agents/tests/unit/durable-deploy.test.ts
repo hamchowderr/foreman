@@ -220,6 +220,47 @@ describe("getDurableRunStatus — execution detail (foreman-jc12)", () => {
     });
   });
 
+  it("surfaces the waiting-on-callback gate (foreman-rm8z)", async () => {
+    const sdk = fakeSdk({
+      getDurableRun: vi.fn(async () =>
+        runData({
+          id: "e",
+          name: "n",
+          status: "waiting",
+          input: null,
+          created_at: "t",
+          summary: { total_attempts: 1 },
+          operations: [
+            {
+              id: "o1",
+              execution_id: "e",
+              name: "approve-refund",
+              type: "callback",
+              status: "waiting",
+              retry_count: 0,
+              created_at: "t",
+              callback_token: "cb_abc",
+              payload_schema: { type: "object" },
+              expires_at: "2026-07-06T00:00:00Z",
+            },
+          ],
+        }),
+      ),
+    });
+    const res = await getDurableRunStatus(sdk, "r");
+    expect(res.detail?.waiting).toBe(true);
+    expect(res.detail?.callbacks).toEqual([
+      {
+        name: "approve-refund",
+        status: "waiting",
+        callbackToken: "cb_abc",
+        payloadSchema: { type: "object" },
+        resumeAt: undefined,
+        expiresAt: "2026-07-06T00:00:00Z",
+      },
+    ]);
+  });
+
   it("returns null detail when there is no execution", async () => {
     const sdk = fakeSdk({
       getDurableRun: vi.fn(async () => ({

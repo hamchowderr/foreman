@@ -345,12 +345,14 @@ export async function listRuns(
  *   retrying    → a step is mid-retry (foreman-jc12); top-level durable status is
  *                 still "started" but execution.detail carries last_error + the ops.
  *                 Non-terminal — reconcile keeps polling until it clears/finishes.
+ *   waiting     → paused on a human-approval callback (foreman-rm8z; execution.status
+ *                 = waiting). Non-terminal — resumes when the callback is delivered.
  *   finished    → durable completed (reconcile)
  *   failed      → durable failed, or a dispatch error (reconcile / dispatch catch)
  *   cancelled   → user cancelled a running durable (foreman-y4kc). Terminal.
  */
 export const TERMINAL_RUN_STATUSES = ["finished", "failed", "cancelled"] as const;
-const NON_TERMINAL_RUN_STATUSES = ["initialized", "started", "retrying"];
+const NON_TERMINAL_RUN_STATUSES = ["initialized", "started", "retrying", "waiting"];
 
 /**
  * Non-terminal runs across all automations — the reconcile work list

@@ -8,6 +8,7 @@ export {
   cancelDurableRun,
   type DeployAutomationOptions,
   type DeployResult,
+  type DurableCallback,
   type DurableOpDetail,
   type DurableRunDetail,
   deleteAutomation,

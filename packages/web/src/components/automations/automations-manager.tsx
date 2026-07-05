@@ -62,7 +62,7 @@ function shortId(id: string): string {
 }
 
 /** Run statuses the reconcile worker may still advance — drives live polling. */
-const NON_TERMINAL_RUN = new Set(["initialized", "started", "retrying"]);
+const NON_TERMINAL_RUN = new Set(["initialized", "started", "retrying", "waiting"]);
 const RUNS_PER_PAGE = 10;
 /** Poll cadence while a run is in flight. DB-cheap (getAutomation reads Postgres, not Zapier). */
 const RUN_POLL_MS = 3500;
@@ -70,7 +70,7 @@ const RUN_POLL_MS = 3500;
 function runStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   if (status === "failed") return "destructive";
   if (status === "finished") return "default";
-  if (status === "retrying") return "outline"; // mid-retry — surfaced, not yet failed
+  if (status === "retrying" || status === "waiting") return "outline"; // surfaced, not failed
   return "secondary"; // initialized / started / cancelled
 }
 
@@ -377,11 +377,13 @@ export function AutomationsManager() {
                                 <TableCell className="p-0" colSpan={5}>
                                   <div className="px-3 pb-3">
                                     <p className="mb-1 text-muted-foreground text-xs">
-                                      {r.status === "retrying"
-                                        ? "Retry detail"
-                                        : r.error != null
-                                          ? "Error"
-                                          : "Output"}
+                                      {r.status === "waiting"
+                                        ? "Waiting for approval"
+                                        : r.status === "retrying"
+                                          ? "Retry detail"
+                                          : r.error != null
+                                            ? "Error"
+                                            : "Output"}
                                     </p>
                                     <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
                                       {prettyJson(detailJson)}
