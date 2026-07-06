@@ -49,7 +49,7 @@
     "@mastra/deployer-vercel": "1.1.37-alpha.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.12",
+    "@biomejs/biome": "2.4.16",
     "@copilotkit/aimock": "^1.14.3",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
