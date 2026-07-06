@@ -1,5 +1,7 @@
 # Durable-Workflow Spike — Findings (foreman-8bh9)
 
+> **⏳ Historical (2026-06-11 spike).** Superseded by SDK 0.81.0 — durable now authenticates for accounts on Zapier's **early-access allowlist** (apply for access; **not GA**). See [`zapier-sdk-capability-map.md`](zapier-sdk-capability-map.md). The "blocked on auth" status below reflects 0.69.3.
+
 > Quick probe of `@zapier/zapier-sdk/experimental`'s durable-workflow API
 > (`runDurable` / `publishWorkflowVersion`), unlocked by the 0.69.3 bump.
 > Snapshot: 2026-06-11, `@zapier/zapier-sdk@0.69.3`. Status: **blocked on auth (see below).**
@@ -74,7 +76,7 @@ script, mints a **real per-user JWT**, and calls `runDurable` with it. Result:
 
 ```
 userJwt minted: len=3192, prefix="eyJhbG…", scope="external credentials offline_access"
-profile OK: admin@otakusolutions.io
+profile OK: you@example.com
 runDurable threw: None of the security schemes (userJwt) successfully authenticated this request.  (HTTP 403)
 ```
 

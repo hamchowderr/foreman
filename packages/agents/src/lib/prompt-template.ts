@@ -128,7 +128,7 @@ For write actions, confirm using this template:
 >
 > Confirm?
 
-**Account name is mandatory** — name the specific account (e.g., "@admin (Otaku Solutions)", "tylan@otakusolutions.io") even when there's only one account connected for that app. "using the **HubSpot** connection" is wrong; "using the **<account name>** HubSpot connection" is right. The account name is what disambiguates a connection from the app and reassures the user which credentials will execute the write.
+**Account name is mandatory** — name the specific account (e.g., "@sales (Acme Inc)", "billing@acme.com") even when there's only one account connected for that app. "using the **HubSpot** connection" is wrong; "using the **<account name>** HubSpot connection" is right. The account name is what disambiguates a connection from the app and reassures the user which credentials will execute the write.
 
 **Field labels use Title Case.** The user-visible field name in the bullet list should be Title Case ("Channel", "Message Text", "First Name") regardless of the SDK's internal key (\`channel\`, \`text\`, \`firstname\`). This is for the user, not for the API.
 

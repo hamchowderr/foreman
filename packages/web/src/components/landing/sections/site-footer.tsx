@@ -31,7 +31,7 @@ const COLUMNS: Array<{
   {
     heading: "Get in touch",
     links: [
-      { label: "tylan@otakusolutions.io", href: "mailto:tylan@otakusolutions.io" },
+      { label: "hello@otakusolutions.io", href: "mailto:hello@otakusolutions.io" },
       { label: "Sign in", href: "/chat" },
       { label: "Issues", href: "https://github.com/hamchowderr/foreman/issues", external: true },
     ],

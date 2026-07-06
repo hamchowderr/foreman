@@ -1,6 +1,6 @@
 # Durable Execution — Questions for Zapier Engineers
 
-> ## ✅ UPDATE 2026-07-05 (SDK 0.81.0) — durables now WORK; questions narrowed
+> ## ✅ UPDATE 2026-07-05 (SDK 0.81.0) — durables now WORK for accounts on Zapier's early-access allowlist (apply for access; not GA); questions narrowed
 >
 > The two original blockers below are **RESOLVED** on `@zapier/zapier-sdk@0.81.0`:
 > - **Auth:** a live re-probe (`scripts/durable-endpoints-probe.ts`, app-level **client-credentials**) returns **0/18 durable methods walled** — `runDurable` / `createWorkflow` / `listWorkflows` all `2xx`. The `internal`-scope `userJwt` wall is gone for the client-creds token.
@@ -17,7 +17,7 @@
 
 ---
 
-**From:** Foreman team (admin@otakusolutions.io)
+**From:** Foreman team (you@example.com)
 **Re:** `@zapier/zapier-sdk/experimental` durable-workflow API (`runDurable` / `publishWorkflowVersion`)
 **Date of findings:** 2026-06-11 (SDK `0.69.3`); re-confirmed 2026-06-16 on `0.70.4`, and again 2026-06-22 on the current `0.76.0` — both credential types, identical 403; `defineDurable` still a "not callable — Phase 2" stub on 0.76.0
 **Status:** Blocked — durable is unreachable with every credential a public SDK client can mint.
@@ -80,7 +80,7 @@ HTTP 403
 
 Returned identically for:
 - App-level **client-credentials**, and
-- A **real per-user PKCE user JWT** that we minted with our production `connect.ts` flow and validated against `getProfile` (resolved to `admin@otakusolutions.io`).
+- A **real per-user PKCE user JWT** that we minted with our production `connect.ts` flow and validated against `getProfile` (resolved to `you@example.com`).
 
 ---
 
@@ -357,7 +357,7 @@ Original run (2026-06-11, SDK `0.69.3`):
 
 ```
 userJwt minted: len=3192, prefix="eyJhbG…", scope="external credentials offline_access"
-profile OK: admin@otakusolutions.io
+profile OK: you@example.com
 runDurable threw: None of the security schemes (userJwt) successfully authenticated this request.
 HTTP 403
 ```
@@ -366,7 +366,7 @@ Re-confirmation (2026-06-16, latest SDK `0.70.4`):
 
 ```
 userJwt minted: len=3199, prefix="eyJhbG…", scope="external credentials offline_access"
-profile OK: admin@otakusolutions.io
+profile OK: you@example.com
 runDurable threw: None of the security schemes (userJwt) successfully authenticated this request.
 statusCode: 403
 ```
@@ -379,7 +379,7 @@ A companion script (`scripts/durable-endpoints-probe.ts`) calls every durable/wo
 
 ```
 === Durable endpoint sweep — auth: client-credentials ===
-sanity getProfile -> OK: admin@otakusolutions.io
+sanity getProfile -> OK: you@example.com
 runDurable, listDurableRuns, getDurableRun, cancelDurableRun, createWorkflow,
 listWorkflows, getWorkflow, updateWorkflow, deleteWorkflow, enableWorkflow,
 disableWorkflow, publishWorkflowVersion, getWorkflowVersion, listWorkflowVersions,
@@ -389,7 +389,7 @@ SUMMARY (client-credentials): 18/18 walled by userJwt-403, 0/18 authenticated.
 
 === Durable endpoint sweep — auth: public-PKCE userJwt ===
 userJwt minted: len=3199, scope="external credentials offline_access"
-sanity getProfile -> OK: admin@otakusolutions.io
+sanity getProfile -> OK: you@example.com
   → every one: 403 "None of the security schemes (userJwt) successfully authenticated this request."
 SUMMARY (public-PKCE userJwt): 18/18 walled by userJwt-403, 0/18 authenticated.
 ```

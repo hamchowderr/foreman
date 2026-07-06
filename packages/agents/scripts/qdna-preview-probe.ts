@@ -8,7 +8,7 @@
  * Writes the output to the preview-template's generated.tsx and runs the same
  * typecheckPreview() the preview_app self-heal loop uses. Does NOT spawn Vite.
  *
- * Run:  infisical run --projectId e56e0da5-6460-4bab-bdd6-2fd12ac5447b --env dev \
+ * Run:  infisical run --env dev \
  *         --recursive --silent -- npx tsx scripts/qdna-preview-probe.ts
  */
 import { writeFile } from "node:fs/promises";

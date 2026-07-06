@@ -56,7 +56,7 @@ hand-rolling idempotency keys.
 
 `npx tsx --env-file=.env.local scripts/trigger-inbox-spike.ts`
 
-- **Auth:** client credentials (`ZAPIER_CLIENT_ID`/`SECRET`) → `getProfile` OK (`admin@otakusolutions.io`).
+- **Auth:** client credentials (`ZAPIER_CLIENT_ID`/`SECRET`) → `getProfile` OK (`you@example.com`).
 - **`listTriggers({app:'github'})` → 23 triggers**, incl. `issue_v2` (New Issue), `pull` (New Pull Request), `comment`, `release`, etc. (`issue` is the Legacy variant.)
 - **`getTriggerInputFieldsSchema`** for `issue_v2` → a JSON Schema (`$schema`, `type`, `properties`, `required`).
 - **`listTriggerInboxes` → 0** existing inboxes (clean slate).

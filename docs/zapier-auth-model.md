@@ -37,14 +37,16 @@ redirecting to one of a fixed set of localhost ports Zapier allow-lists for it.
 |---|---|---|---|
 | `runAction`, discovery, `apps.*`, tables | ✅ | ✅ | The everyday action layer — any user auth works |
 | Trigger inboxes (`/experimental`) | ✅ | ✅ | `ensureTriggerInbox` / `lease` / `ack` all accept client-creds |
-| **Durable / workflow** (all 18 endpoints, `/experimental`) | ✅ (v0.81.0) | ✅ (v0.81.0) | Both **403 through 0.79.0**, then **OPEN on 0.81.0** (foreman-eln1): client-creds 0/18 walled; per-user PKCE `runDurable`→finished. Still `external`-scope — durable relaxed to accept it. |
+| **Durable / workflow** (all 18 endpoints, `/experimental`) | ✅ (v0.81.0) | ✅ (v0.81.0) | **Early-access allowlist only — apply; not GA.** Both **403 through 0.79.0**, then **OPEN on 0.81.0** for allowlisted accounts (foreman-eln1): client-creds 0/18 walled; per-user PKCE `runDurable`→finished. Still `external`-scope — durable relaxed to accept it. |
 
-**Durable is walled for every token a public SDK client can produce.** Proven
-2026-06-11 by `packages/agents/scripts/durable-pkce-probe.ts`: it mints a *real*
+**(Historical — pre-0.81.0; superseded by the table above.)** Through 0.79.0, durable
+was walled for every token a public SDK client could produce. Shown
+2026-06-11 by `packages/agents/scripts/durable-pkce-probe.ts`: it minted a *real*
 per-user PKCE JWT (Foreman's exact `connect.ts` flow, validated against `getProfile`
-as `admin@otakusolutions.io`) and `runDurable` still returns **HTTP 403 "None of the
+as `you@example.com`) and `runDurable` returned **HTTP 403 "None of the
 security schemes (userJwt) successfully authenticated this request."** — identical to
-client-credentials.
+client-credentials. As of 0.81.0 this is resolved **for accounts on Zapier's early-access
+allowlist** (apply for access — it is **not GA**).
 
 **The tell:** the PKCE flow *requests* scope `internal credentials offline_access` but
 Zapier *grants* `external credentials offline_access`. Durable's `userJwt` scheme
