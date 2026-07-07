@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { toast } from "sonner";
 import { useArtifact } from "@/hooks/use-artifact";
+import { Button } from "../ui/button";
 import type { ArtifactKind } from "./artifact";
 import { FileIcon, LoaderIcon, MessageIcon, PencilEditIcon } from "./icons";
 
@@ -30,8 +31,8 @@ function PureDocumentToolResult({ type, result, isReadonly }: DocumentToolResult
   const { setArtifact } = useArtifact();
 
   return (
-    <button
-      className="flex w-fit cursor-pointer flex-row items-center gap-2 rounded-xl border bg-background px-3 py-2"
+    <Button
+      className="h-auto w-fit cursor-pointer flex-row items-center gap-2 rounded-xl border bg-background px-3 py-2"
       onClick={(event) => {
         if (isReadonly) {
           toast.error("Viewing files in shared chats is currently not supported.");
@@ -58,6 +59,7 @@ function PureDocumentToolResult({ type, result, isReadonly }: DocumentToolResult
         }));
       }}
       type="button"
+      variant="ghost"
     >
       <div className="text-muted-foreground">
         {type === "create" ? (
@@ -69,7 +71,7 @@ function PureDocumentToolResult({ type, result, isReadonly }: DocumentToolResult
         ) : null}
       </div>
       <div className="text-left">{`${getActionText(type, "past")} "${result.title}"`}</div>
-    </button>
+    </Button>
   );
 }
 
@@ -88,8 +90,8 @@ function PureDocumentToolCall({ type, args, isReadonly }: DocumentToolCallProps)
   const { setArtifact } = useArtifact();
 
   return (
-    <button
-      className="cursor pointer flex w-fit flex-row items-start justify-between gap-3 rounded-xl border px-3 py-2"
+    <Button
+      className="h-auto w-fit cursor-pointer flex-row items-start justify-between gap-3 rounded-xl border px-3 py-2"
       onClick={(event) => {
         if (isReadonly) {
           toast.error("Viewing files in shared chats is currently not supported.");
@@ -112,6 +114,7 @@ function PureDocumentToolCall({ type, args, isReadonly }: DocumentToolCallProps)
         }));
       }}
       type="button"
+      variant="ghost"
     >
       <div className="flex flex-row items-start gap-3">
         <div className="mt-1 text-neutral-500">
@@ -138,7 +141,7 @@ function PureDocumentToolCall({ type, args, isReadonly }: DocumentToolCallProps)
       </div>
 
       <div className="mt-1 animate-spin">{<LoaderIcon />}</div>
-    </button>
+    </Button>
   );
 }
 

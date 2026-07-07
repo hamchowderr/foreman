@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
-import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
+import { fastembed } from "@mastra/fastembed";
 import { PgVector } from "@mastra/pg";
 import { embedMany } from "ai";
 import { getEnv } from "../env";
 
 const INDEX_NAME = "catalog_vectors";
-const EMBEDDING_MODEL = "openai/text-embedding-3-small";
-const EMBEDDING_DIMENSION = 1536;
+// Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed,
+// matching the agent-memory embedder so local dev is fully self-contained.
+const EMBEDDING_DIMENSION = 384;
 
 let _vector: PgVector | undefined;
 
@@ -21,19 +22,28 @@ function getVector(): PgVector {
 }
 
 function getEmbedder() {
-  return new ModelRouterEmbeddingModel(EMBEDDING_MODEL);
+  return fastembed;
 }
 
 export async function ensureCatalogIndex(): Promise<void> {
   const vector = getVector();
   try {
     const indexes = await vector.listIndexes();
-    if (!indexes.includes(INDEX_NAME)) {
-      await vector.createIndex({
-        indexName: INDEX_NAME,
-        dimension: EMBEDDING_DIMENSION,
-      });
+    if (indexes.includes(INDEX_NAME)) {
+      // Dimension guard (foreman-hcim): an index built before the 1536->384
+      // embedder switch silently rejects 384-d upserts. Drop a wrong-dimension
+      // index so it recreates; the catalog must then be re-seeded (catalog:seed).
+      const stats = await vector.describeIndex({ indexName: INDEX_NAME }).catch(() => undefined);
+      if (!stats || stats.dimension === EMBEDDING_DIMENSION) return;
+      console.warn(
+        `[catalog] ${INDEX_NAME} index is ${stats.dimension}-d but embedder is ${EMBEDDING_DIMENSION}-d — dropping & recreating (re-seed required).`,
+      );
+      await vector.deleteIndex({ indexName: INDEX_NAME });
     }
+    await vector.createIndex({
+      indexName: INDEX_NAME,
+      dimension: EMBEDDING_DIMENSION,
+    });
   } catch {
     // Index creation may fail if tables already exist in a different format.
     // The upsert call will create the index implicitly if needed.

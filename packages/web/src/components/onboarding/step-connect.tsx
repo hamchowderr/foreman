@@ -2,6 +2,8 @@
 
 import { AlertCircle, ArrowRight, CheckCircle, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/client";
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
@@ -84,16 +86,18 @@ export function StepConnect({ uses, zapierJustConnected, onNext }: Props) {
           style={{ backgroundColor: "#201515", border: "1px solid #3A2525" }}
         >
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ backgroundColor: "#FF4F00" }}
-            >
-              <Zap className="h-5 w-5 text-white" />
-            </div>
+            {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+            <img
+              alt="Zapier"
+              className="h-10 w-10 rounded-xl bg-white object-contain p-1.5"
+              height={40}
+              src="/zapier.svg"
+              width={40}
+            />
             <div>
               <p className="font-semibold text-white">Zapier</p>
               <p className="text-xs" style={{ color: "#FFBF6E" }}>
-                6,000+ app integrations
+                10,000+ app integrations
               </p>
             </div>
           </div>
@@ -119,34 +123,31 @@ export function StepConnect({ uses, zapierJustConnected, onNext }: Props) {
           </div>
 
           {error && (
-            <div
-              className="flex items-center gap-2 text-sm rounded-lg px-3 py-2"
-              style={{ backgroundColor: "#3A2020", color: "#FF8080" }}
-            >
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          <button
+          <Button
             type="button"
             onClick={handleConnect}
             disabled={connecting}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition-all"
+            className="w-full rounded-xl py-3 text-sm font-semibold text-white"
             style={{ backgroundColor: connecting ? "#CC3F00" : "#FF4F00" }}
           >
             <Zap className="h-4 w-4" />
             {connecting ? "Redirecting to Zapier…" : "Connect Zapier"}
-          </button>
+          </Button>
         </div>
       )}
 
       <div className="flex justify-end pt-2">
-        <button
+        <Button
           type="button"
           onClick={onNext}
           disabled={!connected}
-          className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all"
+          className="rounded-lg px-6 py-2.5 text-sm font-semibold text-white"
           style={{
             backgroundColor: connected ? "#FF4F00" : "#FFBF6E",
             cursor: connected ? "pointer" : "not-allowed",
@@ -154,7 +155,7 @@ export function StepConnect({ uses, zapierJustConnected, onNext }: Props) {
         >
           Continue
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );

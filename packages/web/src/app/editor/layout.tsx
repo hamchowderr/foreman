@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { Toaster } from "sonner";
+import { AppShell } from "@/components/app-shell";
 import { EditorShell } from "@/components/editor/editor-shell";
 import { auth } from "@/lib/auth";
 
@@ -10,18 +10,11 @@ export const metadata = {
 
 export default function EditorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <Toaster
-        position="top-center"
-        theme="system"
-        toastOptions={{
-          className: "!bg-card !text-foreground !border-border/50",
-        }}
-      />
-      <Suspense fallback={<div className="h-dvh bg-background" />}>
+    <AppShell fullBleed>
+      <Suspense fallback={<div className="h-full bg-background" />}>
         <EditorAuthGate>{children}</EditorAuthGate>
       </Suspense>
-    </>
+    </AppShell>
   );
 }
 

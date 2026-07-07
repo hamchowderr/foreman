@@ -5,15 +5,18 @@ import { handleSlackOAuth } from "../slack/oauth";
 import { handleSlackWebhook } from "../slack/webhook";
 import { handleTelegramWebhook } from "../telegram/webhook";
 import apiKeys from "./api-keys";
+import apps from "./apps";
+import automations from "./automations";
 import capabilities from "./capabilities";
 import channelLinks from "./channel-links";
 import conversations from "./conversations";
+import documents from "./documents";
 import guardrails from "./guardrails";
 import proposals from "./proposals";
 import storedAgents from "./stored-agents";
 import voice from "./voice";
 import webhooks from "./webhooks";
-import workflows from "./workflows";
+import workspaces from "./workspaces";
 import zapierConnect, { handleOAuthCallback } from "./zapier-connect";
 
 /**
@@ -38,7 +41,8 @@ app.use(
 );
 app.route("/conversations", conversations);
 app.route("/proposals", proposals);
-app.route("/workflows", workflows);
+app.route("/apps", apps);
+app.route("/documents", documents);
 app.route("/stored/agents", storedAgents);
 app.route("/zapier", zapierConnect);
 app.get("/oauth", handleOAuthCallback);
@@ -48,6 +52,8 @@ app.route("/guardrails", guardrails);
 app.route("/voice", voice);
 app.route("/api-keys", apiKeys);
 app.route("/channel-links", channelLinks);
+app.route("/workspaces", workspaces);
+app.route("/automations", automations);
 app.post("/telegram/webhook", handleTelegramWebhook);
 app.post("/slack/webhook", handleSlackWebhook);
 app.get("/slack/oauth", handleSlackOAuth);

@@ -39,9 +39,9 @@ const TEST_CASES = [
         expected_tools: [
           "find-unique-connection",
           "list-actions",
-          "get-input-fields-schema",
-          "list-input-field-choices",
-          "get-input-fields-schema",
+          "get-action-input-fields-schema",
+          "list-action-input-field-choices",
+          "get-action-input-fields-schema",
         ],
         forbidden_tools: ["run-action[app=zapier-tables]"],
         expected_behavior:

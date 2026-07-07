@@ -234,7 +234,7 @@ describe("SDK Read Tests", () => {
   );
 
   it(
-    "get-input-fields-schema — gets input schema for an action",
+    "get-action-input-fields-schema — gets input schema for an action",
     async () => {
       if (!firstApp) {
         console.log("  SKIP: no connected app");
@@ -250,13 +250,13 @@ describe("SDK Read Tests", () => {
       const actionKey = items[0].key ?? items[0].id;
       const actionType = items[0].action_type ?? items[0].actionType;
       // getInputFieldsSchema uses: app, actionType, action
-      const result = await exec("get-input-fields-schema", {
+      const result = await exec("get-action-input-fields-schema", {
         app: firstApp,
         actionType: actionType ?? "read",
         action: actionKey,
       });
-      log("get-input-fields-schema", result);
-      assertNotValidationError(result, "get-input-fields-schema");
+      log("get-action-input-fields-schema", result);
+      assertNotValidationError(result, "get-action-input-fields-schema");
       expect(result).toBeDefined();
     },
     TIMEOUT,
@@ -296,7 +296,7 @@ describe("SDK Read Tests", () => {
   );
 
   it(
-    "list-input-field-choices — gets enum options for an action field",
+    "list-action-input-field-choices — gets enum options for an action field",
     async () => {
       if (!firstApp) {
         console.log("  SKIP: no connected app");
@@ -313,12 +313,12 @@ describe("SDK Read Tests", () => {
       const actionType = items[0].action_type ?? items[0].actionType ?? "read";
 
       // Get schema to find a field name
-      const schema = await exec("get-input-fields-schema", {
+      const schema = await exec("get-action-input-fields-schema", {
         app: firstApp,
         actionType,
         action: actionKey,
       });
-      assertNotValidationError(schema, "get-input-fields-schema (for choices)");
+      assertNotValidationError(schema, "get-action-input-fields-schema (for choices)");
       // JSON Schema response: { type: "object", properties: { fieldKey: {...} }, ... }
       const fieldKeys = Object.keys(schema.properties ?? {});
       if (fieldKeys.length === 0) {
@@ -328,14 +328,14 @@ describe("SDK Read Tests", () => {
       const fieldKey = fieldKeys[0];
       console.log(`  Fetching choices for field: ${fieldKey}`);
       // listInputFieldChoices uses: app, actionType, action, inputField
-      const result = await exec("list-input-field-choices", {
+      const result = await exec("list-action-input-field-choices", {
         app: firstApp,
         actionType,
         action: actionKey,
         inputField: fieldKey,
       });
-      log("list-input-field-choices", result);
-      assertNotValidationError(result, "list-input-field-choices");
+      log("list-action-input-field-choices", result);
+      assertNotValidationError(result, "list-action-input-field-choices");
       expect(result).toBeDefined();
     },
     TIMEOUT,
@@ -429,8 +429,8 @@ describe("SDK Error Handling", () => {
       "list-actions",
       "get-action",
       "get-app",
-      "get-input-fields-schema",
-      "list-input-field-choices",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
       "run-action",
       "fetch",
       "find-first-connection",
@@ -491,7 +491,9 @@ describe("SDK Write Tests", () => {
     // 3. List fields to verify
     const listFields = await exec("list-table-fields", { table: createdTableId });
     assertNotValidationError(listFields, "list-table-fields");
-    const fields = listFields?.data ?? listFields;
+    // SDK 0.79.0 returns the paginated envelope `{ items, count }`; older
+    // shapes used `.data` or a bare array — accept all three.
+    const fields = listFields?.items ?? listFields?.data ?? listFields;
     expect(Array.isArray(fields)).toBe(true);
     console.log(`  Table has ${fields.length} field(s)`);
 
@@ -511,7 +513,8 @@ describe("SDK Write Tests", () => {
     // 5. List records to verify
     const listRecords = await exec("list-table-records", { table: createdTableId });
     assertNotValidationError(listRecords, "list-table-records");
-    const records = listRecords?.data ?? listRecords;
+    // SDK 0.79.0 paginated envelope `{ items, count }` (see list-table-fields above).
+    const records = listRecords?.items ?? listRecords?.data ?? listRecords;
     expect(Array.isArray(records)).toBe(true);
     expect(records.length).toBeGreaterThanOrEqual(3);
     console.log(`  Found ${records.length} record(s)`);

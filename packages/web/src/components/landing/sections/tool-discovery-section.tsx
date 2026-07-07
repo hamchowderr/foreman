@@ -8,7 +8,7 @@ const BULLETS = [
   "Execute actions, search data, manage tables",
   "Discover and connect apps on the fly",
   "Authenticated HTTP requests via Zapier Relay",
-  "Works across all 9,000+ Zapier apps",
+  "Works across all 10,000+ Zapier apps",
 ];
 
 export function ToolDiscoverySection() {
@@ -26,13 +26,13 @@ export function ToolDiscoverySection() {
             <p className="text-muted-foreground mt-4 text-base sm:text-lg leading-relaxed">
               Actions, Zapier Tables, authenticated HTTP, connection discovery — 33 SDK tools in
               all. Foreman searches and loads only what a request needs, so it stays fast across
-              9,000+ apps.
+              10,000+ apps.
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
               {BULLETS.map((line) => (
                 <li key={line} className="flex items-center gap-2.5">
-                  <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-                    <Check className="h-3 w-3 text-accent" />
+                  <div className="h-5 w-5 rounded-full bg-accent flex items-center justify-center shrink-0">
+                    <Check className="h-3 w-3 text-accent-foreground" />
                   </div>
                   <span>{line}</span>
                 </li>

@@ -4,16 +4,19 @@ import { PanelLeftIcon } from "lucide-react";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { ShareButton } from "./share-button";
 import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
 
 function PureChatHeader({
   chatId,
+  title,
   selectedVisibilityType,
-  isReadonly,
+  isOwner,
 }: {
   chatId: string;
+  title: string | null;
   selectedVisibilityType: VisibilityType;
-  isReadonly: boolean;
+  isOwner: boolean;
 }) {
   const { state, toggleSidebar, isMobile } = useSidebar();
 
@@ -22,13 +25,20 @@ function PureChatHeader({
   }
 
   return (
-    <header className="sticky top-0 flex h-14 items-center gap-2 bg-sidebar px-3">
+    <header className="flex h-12 items-center gap-2 border-b border-border/50 px-3">
       <Button className="md:hidden" onClick={toggleSidebar} size="icon-sm" variant="ghost">
         <PanelLeftIcon className="size-4" />
       </Button>
 
-      {!isReadonly && (
-        <VisibilitySelector chatId={chatId} selectedVisibilityType={selectedVisibilityType} />
+      <h1 className="min-w-0 flex-1 truncate font-medium text-foreground/80 text-sm">
+        {title || "New chat"}
+      </h1>
+
+      {isOwner && (
+        <>
+          <ShareButton chatId={chatId} />
+          <VisibilitySelector chatId={chatId} selectedVisibilityType={selectedVisibilityType} />
+        </>
       )}
     </header>
   );
@@ -37,7 +47,8 @@ function PureChatHeader({
 export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
   return (
     prevProps.chatId === nextProps.chatId &&
+    prevProps.title === nextProps.title &&
     prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
-    prevProps.isReadonly === nextProps.isReadonly
+    prevProps.isOwner === nextProps.isOwner
   );
 });

@@ -194,6 +194,53 @@ export type Database = {
         };
         Relationships: [];
       };
+      app_data_snapshot: {
+        Row: {
+          app_key: string;
+          created_at: string;
+          id: string;
+          records: string;
+          refreshed_at: string;
+          row_count: number;
+          source_config: string;
+          trigger_id: string | null;
+          user_id: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          app_key: string;
+          created_at: string;
+          id: string;
+          records: string;
+          refreshed_at: string;
+          row_count?: number;
+          source_config: string;
+          trigger_id?: string | null;
+          user_id: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          app_key?: string;
+          created_at?: string;
+          id?: string;
+          records?: string;
+          refreshed_at?: string;
+          row_count?: number;
+          source_config?: string;
+          trigger_id?: string | null;
+          user_id?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_data_snapshot_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       app_settings: {
         Row: {
           id: boolean;
@@ -211,6 +258,190 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      artifact: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: string;
+          snapshot_id: string | null;
+          source_config: string | null;
+          spec: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+          version: number;
+          visibility: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          created_at: string;
+          id: string;
+          kind?: string;
+          snapshot_id?: string | null;
+          source_config?: string | null;
+          spec: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+          version?: number;
+          visibility?: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          snapshot_id?: string | null;
+          source_config?: string | null;
+          spec?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+          visibility?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "artifact_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      automation: {
+        Row: {
+          connections: Json;
+          created_at: string;
+          description: string | null;
+          editor_url: string | null;
+          enabled: boolean;
+          id: string;
+          name: string;
+          source: string;
+          status: string;
+          trigger: Json | null;
+          trigger_inbox_id: string | null;
+          trigger_url: string | null;
+          updated_at: string;
+          user_id: string;
+          workspace_id: string | null;
+          zapier_version_id: string | null;
+          zapier_workflow_id: string;
+        };
+        Insert: {
+          connections?: Json;
+          created_at: string;
+          description?: string | null;
+          editor_url?: string | null;
+          enabled?: boolean;
+          id: string;
+          name: string;
+          source: string;
+          status?: string;
+          trigger?: Json | null;
+          trigger_inbox_id?: string | null;
+          trigger_url?: string | null;
+          updated_at: string;
+          user_id: string;
+          workspace_id?: string | null;
+          zapier_version_id?: string | null;
+          zapier_workflow_id: string;
+        };
+        Update: {
+          connections?: Json;
+          created_at?: string;
+          description?: string | null;
+          editor_url?: string | null;
+          enabled?: boolean;
+          id?: string;
+          name?: string;
+          source?: string;
+          status?: string;
+          trigger?: Json | null;
+          trigger_inbox_id?: string | null;
+          trigger_url?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string | null;
+          zapier_version_id?: string | null;
+          zapier_workflow_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      automation_run: {
+        Row: {
+          automation_id: string;
+          created_at: string;
+          durable_run_id: string | null;
+          error: Json | null;
+          id: string;
+          inbox_message_id: string | null;
+          input: Json | null;
+          output: Json | null;
+          status: string;
+          trigger_id: string | null;
+          updated_at: string;
+          workflow_version_id: string | null;
+          workspace_id: string | null;
+        };
+        Insert: {
+          automation_id: string;
+          created_at: string;
+          durable_run_id?: string | null;
+          error?: Json | null;
+          id: string;
+          inbox_message_id?: string | null;
+          input?: Json | null;
+          output?: Json | null;
+          status?: string;
+          trigger_id?: string | null;
+          updated_at: string;
+          workflow_version_id?: string | null;
+          workspace_id?: string | null;
+        };
+        Update: {
+          automation_id?: string;
+          created_at?: string;
+          durable_run_id?: string | null;
+          error?: Json | null;
+          id?: string;
+          inbox_message_id?: string | null;
+          input?: Json | null;
+          output?: Json | null;
+          status?: string;
+          trigger_id?: string | null;
+          updated_at?: string;
+          workflow_version_id?: string | null;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_run_automation_id_fk";
+            columns: ["automation_id"];
+            isOneToOne: false;
+            referencedRelation: "automation";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_run_workspace_id_fk";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       billing_customers: {
         Row: {
@@ -781,30 +1012,36 @@ export type Database = {
       };
       conversation: {
         Row: {
+          archived_at: string | null;
           created_at: string;
           id: string;
           mastra_thread_id: string | null;
           title: string | null;
           updated_at: string;
           user_id: string;
+          visibility: string;
           workspace_id: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           created_at: string;
           id: string;
           mastra_thread_id?: string | null;
           title?: string | null;
           updated_at: string;
           user_id: string;
+          visibility?: string;
           workspace_id?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           created_at?: string;
           id?: string;
           mastra_thread_id?: string | null;
           title?: string | null;
           updated_at?: string;
           user_id?: string;
+          visibility?: string;
           workspace_id?: string | null;
         };
         Relationships: [
@@ -824,585 +1061,129 @@ export type Database = {
           },
         ];
       };
-      marketing_author_profiles: {
+      conversation_share: {
         Row: {
-          avatar_url: string | null;
-          bio: string | null;
+          conversation_id: string;
           created_at: string;
-          display_name: string;
-          github_handle: string | null;
+          expires_at: string | null;
           id: string;
-          slug: string;
-          twitter_handle: string | null;
-          user_id: string | null;
-          website_url: string | null;
-        };
-        Insert: {
-          avatar_url?: string | null;
-          bio?: string | null;
-          created_at?: string;
-          display_name: string;
-          github_handle?: string | null;
-          id?: string;
-          slug: string;
-          twitter_handle?: string | null;
-          user_id?: string | null;
-          website_url?: string | null;
-        };
-        Update: {
-          avatar_url?: string | null;
-          bio?: string | null;
-          created_at?: string;
-          display_name?: string;
-          github_handle?: string | null;
-          id?: string;
-          slug?: string;
-          twitter_handle?: string | null;
-          user_id?: string | null;
-          website_url?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_author_profiles_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_blog_author_posts: {
-        Row: {
-          author_id: string;
-          blog_post_id: string;
-        };
-        Insert: {
-          author_id: string;
-          blog_post_id: string;
-        };
-        Update: {
-          author_id?: string;
-          blog_post_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_blog_author_posts_author_id_fkey";
-            columns: ["author_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_author_profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_blog_author_posts_blog_post_id_fkey";
-            columns: ["blog_post_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_blog_posts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_blog_post_tags_relationship: {
-        Row: {
-          blog_post_id: string;
-          tag_id: string;
-        };
-        Insert: {
-          blog_post_id: string;
-          tag_id: string;
-        };
-        Update: {
-          blog_post_id?: string;
-          tag_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_blog_post_tags_relationship_blog_post_id_fkey";
-            columns: ["blog_post_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_blog_posts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_blog_post_tags_relationship_tag_id_fkey";
-            columns: ["tag_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_tags";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_blog_posts: {
-        Row: {
-          content: string | null;
-          cover_image: string | null;
-          created_at: string;
-          id: string;
-          is_featured: boolean;
-          json_content: Json | null;
-          media_type: string | null;
-          published_at: string | null;
-          seo_data: Json | null;
-          slug: string;
-          status: Database["public"]["Enums"]["marketing_blog_post_status"];
-          summary: string | null;
-          title: string;
-          updated_at: string;
-        };
-        Insert: {
-          content?: string | null;
-          cover_image?: string | null;
-          created_at?: string;
-          id?: string;
-          is_featured?: boolean;
-          json_content?: Json | null;
-          media_type?: string | null;
-          published_at?: string | null;
-          seo_data?: Json | null;
-          slug: string;
-          status?: Database["public"]["Enums"]["marketing_blog_post_status"];
-          summary?: string | null;
-          title: string;
-          updated_at?: string;
-        };
-        Update: {
-          content?: string | null;
-          cover_image?: string | null;
-          created_at?: string;
-          id?: string;
-          is_featured?: boolean;
-          json_content?: Json | null;
-          media_type?: string | null;
-          published_at?: string | null;
-          seo_data?: Json | null;
-          slug?: string;
-          status?: Database["public"]["Enums"]["marketing_blog_post_status"];
-          summary?: string | null;
-          title?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      marketing_changelog: {
-        Row: {
-          content: string | null;
-          cover_image: string | null;
-          created_at: string;
-          id: string;
-          json_content: Json | null;
-          media_alt: string | null;
-          media_type: string | null;
-          media_url: string | null;
-          published_at: string | null;
-          status: Database["public"]["Enums"]["marketing_changelog_status"];
-          tags: string[] | null;
-          technical_details: string | null;
-          title: string;
-          updated_at: string;
-          version: string | null;
-          video_poster: string | null;
-        };
-        Insert: {
-          content?: string | null;
-          cover_image?: string | null;
-          created_at?: string;
-          id?: string;
-          json_content?: Json | null;
-          media_alt?: string | null;
-          media_type?: string | null;
-          media_url?: string | null;
-          published_at?: string | null;
-          status?: Database["public"]["Enums"]["marketing_changelog_status"];
-          tags?: string[] | null;
-          technical_details?: string | null;
-          title: string;
-          updated_at?: string;
-          version?: string | null;
-          video_poster?: string | null;
-        };
-        Update: {
-          content?: string | null;
-          cover_image?: string | null;
-          created_at?: string;
-          id?: string;
-          json_content?: Json | null;
-          media_alt?: string | null;
-          media_type?: string | null;
-          media_url?: string | null;
-          published_at?: string | null;
-          status?: Database["public"]["Enums"]["marketing_changelog_status"];
-          tags?: string[] | null;
-          technical_details?: string | null;
-          title?: string;
-          updated_at?: string;
-          version?: string | null;
-          video_poster?: string | null;
-        };
-        Relationships: [];
-      };
-      marketing_changelog_author_relationship: {
-        Row: {
-          author_id: string;
-          changelog_id: string;
-        };
-        Insert: {
-          author_id: string;
-          changelog_id: string;
-        };
-        Update: {
-          author_id?: string;
-          changelog_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_changelog_author_relationship_author_id_fkey";
-            columns: ["author_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_author_profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_changelog_author_relationship_changelog_id_fkey";
-            columns: ["changelog_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_changelog";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_feedback_board_subscriptions: {
-        Row: {
-          board_id: string;
-          created_at: string;
-          id: string;
+          share_token: string;
           user_id: string;
+          workspace_id: string | null;
         };
         Insert: {
-          board_id: string;
-          created_at?: string;
-          id?: string;
+          conversation_id: string;
+          created_at: string;
+          expires_at?: string | null;
+          id: string;
+          share_token: string;
           user_id: string;
+          workspace_id?: string | null;
         };
         Update: {
-          board_id?: string;
+          conversation_id?: string;
           created_at?: string;
+          expires_at?: string | null;
           id?: string;
+          share_token?: string;
           user_id?: string;
+          workspace_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "marketing_feedback_board_subscriptions_board_id_fkey";
-            columns: ["board_id"];
+            foreignKeyName: "conversation_share_conversation_id_fk";
+            columns: ["conversation_id"];
             isOneToOne: false;
-            referencedRelation: "marketing_feedback_boards";
+            referencedRelation: "conversation";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "marketing_feedback_board_subscriptions_user_id_fkey";
-            columns: ["user_id"];
+            foreignKeyName: "conversation_share_workspace_id_fk";
+            columns: ["workspace_id"];
             isOneToOne: false;
-            referencedRelation: "user_profiles";
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
       };
-      marketing_feedback_boards: {
+      dashboard_share: {
         Row: {
-          color: string | null;
+          artifact_id: string;
           created_at: string;
-          created_by: string;
-          description: string | null;
+          expires_at: string | null;
           id: string;
-          is_active: boolean;
-          settings: Json;
-          slug: string;
-          title: string;
-          updated_at: string;
+          share_token: string;
+          user_id: string;
+          workspace_id: string | null;
         };
         Insert: {
-          color?: string | null;
-          created_at?: string;
-          created_by: string;
-          description?: string | null;
-          id?: string;
-          is_active?: boolean;
-          settings?: Json;
-          slug: string;
-          title: string;
-          updated_at?: string;
-        };
-        Update: {
-          color?: string | null;
-          created_at?: string;
-          created_by?: string;
-          description?: string | null;
-          id?: string;
-          is_active?: boolean;
-          settings?: Json;
-          slug?: string;
-          title?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_feedback_boards_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_feedback_comment_reactions: {
-        Row: {
-          comment_id: string;
+          artifact_id: string;
           created_at: string;
+          expires_at?: string | null;
           id: string;
-          reaction_type: Database["public"]["Enums"]["marketing_feedback_reaction_type"];
+          share_token: string;
           user_id: string;
-        };
-        Insert: {
-          comment_id: string;
-          created_at?: string;
-          id?: string;
-          reaction_type: Database["public"]["Enums"]["marketing_feedback_reaction_type"];
-          user_id: string;
+          workspace_id?: string | null;
         };
         Update: {
-          comment_id?: string;
+          artifact_id?: string;
           created_at?: string;
+          expires_at?: string | null;
           id?: string;
-          reaction_type?: Database["public"]["Enums"]["marketing_feedback_reaction_type"];
+          share_token?: string;
           user_id?: string;
+          workspace_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "marketing_feedback_comment_reactions_comment_id_fkey";
-            columns: ["comment_id"];
+            foreignKeyName: "dashboard_share_workspace_id_fk";
+            columns: ["workspace_id"];
             isOneToOne: false;
-            referencedRelation: "marketing_feedback_comments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_feedback_comment_reactions_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
       };
-      marketing_feedback_comments: {
+      document_share: {
         Row: {
-          content: string;
           created_at: string;
+          doc_path: string;
+          expires_at: string | null;
           id: string;
-          is_publicly_visible: boolean;
-          thread_id: string;
-          updated_at: string;
+          share_token: string;
+          title: string | null;
           user_id: string;
+          workspace_id: string | null;
         };
         Insert: {
-          content: string;
-          created_at?: string;
-          id?: string;
-          is_publicly_visible?: boolean;
-          thread_id: string;
-          updated_at?: string;
+          created_at: string;
+          doc_path: string;
+          expires_at?: string | null;
+          id: string;
+          share_token: string;
+          title?: string | null;
           user_id: string;
+          workspace_id?: string | null;
         };
         Update: {
-          content?: string;
           created_at?: string;
+          doc_path?: string;
+          expires_at?: string | null;
           id?: string;
-          is_publicly_visible?: boolean;
-          thread_id?: string;
-          updated_at?: string;
+          share_token?: string;
+          title?: string | null;
           user_id?: string;
+          workspace_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "marketing_feedback_comments_thread_id_fkey";
-            columns: ["thread_id"];
+            foreignKeyName: "document_share_workspace_id_fk";
+            columns: ["workspace_id"];
             isOneToOne: false;
-            referencedRelation: "marketing_feedback_threads";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_feedback_comments_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
-      };
-      marketing_feedback_thread_reactions: {
-        Row: {
-          created_at: string;
-          id: string;
-          reaction_type: Database["public"]["Enums"]["marketing_feedback_reaction_type"];
-          thread_id: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          reaction_type: Database["public"]["Enums"]["marketing_feedback_reaction_type"];
-          thread_id: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          reaction_type?: Database["public"]["Enums"]["marketing_feedback_reaction_type"];
-          thread_id?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_feedback_thread_reactions_thread_id_fkey";
-            columns: ["thread_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_feedback_threads";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_feedback_thread_reactions_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_feedback_thread_subscriptions: {
-        Row: {
-          created_at: string;
-          id: string;
-          thread_id: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          thread_id: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          thread_id?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_feedback_thread_subscriptions_thread_id_fkey";
-            columns: ["thread_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_feedback_threads";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_feedback_thread_subscriptions_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_feedback_threads: {
-        Row: {
-          added_to_roadmap: boolean;
-          board_id: string | null;
-          content: string | null;
-          created_at: string;
-          id: string;
-          is_publicly_visible: boolean;
-          moderator_hold_category:
-            | Database["public"]["Enums"]["marketing_feedback_moderator_hold_category"]
-            | null;
-          open_for_public_discussion: boolean;
-          priority: Database["public"]["Enums"]["marketing_feedback_thread_priority"];
-          status: Database["public"]["Enums"]["marketing_feedback_thread_status"];
-          title: string;
-          type: Database["public"]["Enums"]["marketing_feedback_thread_type"];
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          added_to_roadmap?: boolean;
-          board_id?: string | null;
-          content?: string | null;
-          created_at?: string;
-          id?: string;
-          is_publicly_visible?: boolean;
-          moderator_hold_category?:
-            | Database["public"]["Enums"]["marketing_feedback_moderator_hold_category"]
-            | null;
-          open_for_public_discussion?: boolean;
-          priority?: Database["public"]["Enums"]["marketing_feedback_thread_priority"];
-          status?: Database["public"]["Enums"]["marketing_feedback_thread_status"];
-          title: string;
-          type?: Database["public"]["Enums"]["marketing_feedback_thread_type"];
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          added_to_roadmap?: boolean;
-          board_id?: string | null;
-          content?: string | null;
-          created_at?: string;
-          id?: string;
-          is_publicly_visible?: boolean;
-          moderator_hold_category?:
-            | Database["public"]["Enums"]["marketing_feedback_moderator_hold_category"]
-            | null;
-          open_for_public_discussion?: boolean;
-          priority?: Database["public"]["Enums"]["marketing_feedback_thread_priority"];
-          status?: Database["public"]["Enums"]["marketing_feedback_thread_status"];
-          title?: string;
-          type?: Database["public"]["Enums"]["marketing_feedback_thread_type"];
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "marketing_feedback_threads_board_id_fkey";
-            columns: ["board_id"];
-            isOneToOne: false;
-            referencedRelation: "marketing_feedback_boards";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "marketing_feedback_threads_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      marketing_tags: {
-        Row: {
-          created_at: string;
-          id: string;
-          name: string;
-          slug: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          name: string;
-          slug: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          name?: string;
-          slug?: string;
-        };
-        Relationships: [];
       };
       mastra_agent_versions: {
         Row: {
@@ -3126,6 +2907,7 @@ export type Database = {
           name: string;
           updated_at: string;
           user_id: string;
+          workspace_id: string | null;
         };
         Insert: {
           created_at: string;
@@ -3135,6 +2917,7 @@ export type Database = {
           name: string;
           updated_at: string;
           user_id: string;
+          workspace_id?: string | null;
         };
         Update: {
           created_at?: string;
@@ -3144,6 +2927,7 @@ export type Database = {
           name?: string;
           updated_at?: string;
           user_id?: string;
+          workspace_id?: string | null;
         };
         Relationships: [
           {
@@ -3158,6 +2942,13 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "user";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stored_agent_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
@@ -3209,6 +3000,7 @@ export type Database = {
       user: {
         Row: {
           createdAt: string;
+          default_workspace_id: string | null;
           email: string;
           emailVerified: boolean;
           id: string;
@@ -3218,6 +3010,7 @@ export type Database = {
         };
         Insert: {
           createdAt: string;
+          default_workspace_id?: string | null;
           email: string;
           emailVerified: boolean;
           id: string;
@@ -3227,6 +3020,7 @@ export type Database = {
         };
         Update: {
           createdAt?: string;
+          default_workspace_id?: string | null;
           email?: string;
           emailVerified?: boolean;
           id?: string;
@@ -3234,7 +3028,15 @@ export type Database = {
           name?: string;
           updatedAt?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "user_default_workspace_id_fkey";
+            columns: ["default_workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_application_settings: {
         Row: {
@@ -3370,174 +3172,6 @@ export type Database = {
             columns: ["id"];
             isOneToOne: true;
             referencedRelation: "user_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      workflow: {
-        Row: {
-          cloned_from: string | null;
-          created_at: string;
-          id: string;
-          is_template: boolean;
-          name: string;
-          parameters: string;
-          source_conversation_id: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          cloned_from?: string | null;
-          created_at: string;
-          id: string;
-          is_template?: boolean;
-          name: string;
-          parameters: string;
-          source_conversation_id?: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Update: {
-          cloned_from?: string | null;
-          created_at?: string;
-          id?: string;
-          is_template?: boolean;
-          name?: string;
-          parameters?: string;
-          source_conversation_id?: string | null;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "workflow_source_conversation_id_conversation_id_fk";
-            columns: ["source_conversation_id"];
-            isOneToOne: false;
-            referencedRelation: "conversation";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "workflow_user_id_user_id_fk";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "user";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      workflow_run: {
-        Row: {
-          completed_at: string | null;
-          created_at: string;
-          error_message: string | null;
-          fired_by: string | null;
-          id: string;
-          inputs: string;
-          status: string;
-          trigger_id: string | null;
-          workflow_id: string;
-        };
-        Insert: {
-          completed_at?: string | null;
-          created_at: string;
-          error_message?: string | null;
-          fired_by?: string | null;
-          id: string;
-          inputs: string;
-          status: string;
-          trigger_id?: string | null;
-          workflow_id: string;
-        };
-        Update: {
-          completed_at?: string | null;
-          created_at?: string;
-          error_message?: string | null;
-          fired_by?: string | null;
-          id?: string;
-          inputs?: string;
-          status?: string;
-          trigger_id?: string | null;
-          workflow_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "workflow_run_workflow_id_workflow_id_fk";
-            columns: ["workflow_id"];
-            isOneToOne: false;
-            referencedRelation: "workflow";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      workflow_step: {
-        Row: {
-          id: string;
-          order: number;
-          proposal_template: string;
-          workflow_id: string;
-        };
-        Insert: {
-          id: string;
-          order: number;
-          proposal_template: string;
-          workflow_id: string;
-        };
-        Update: {
-          id?: string;
-          order?: number;
-          proposal_template?: string;
-          workflow_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "workflow_step_workflow_id_workflow_id_fk";
-            columns: ["workflow_id"];
-            isOneToOne: false;
-            referencedRelation: "workflow";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      workflow_trigger: {
-        Row: {
-          config: string;
-          created_at: string;
-          enabled: boolean;
-          id: string;
-          last_dedupe_key: string | null;
-          last_fired_at: string | null;
-          type: string;
-          updated_at: string;
-          workflow_id: string;
-        };
-        Insert: {
-          config: string;
-          created_at: string;
-          enabled?: boolean;
-          id: string;
-          last_dedupe_key?: string | null;
-          last_fired_at?: string | null;
-          type: string;
-          updated_at: string;
-          workflow_id: string;
-        };
-        Update: {
-          config?: string;
-          created_at?: string;
-          enabled?: boolean;
-          id?: string;
-          last_dedupe_key?: string | null;
-          last_fired_at?: string | null;
-          type?: string;
-          updated_at?: string;
-          workflow_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "workflow_trigger_workflow_id_fk";
-            columns: ["workflow_id"];
-            isOneToOne: false;
-            referencedRelation: "workflow";
             referencedColumns: ["id"];
           },
         ];
@@ -3760,14 +3394,17 @@ export type Database = {
         Row: {
           updated_at: string;
           workspace_id: string;
+          zapier_connection_mode: string;
         };
         Insert: {
           updated_at?: string;
           workspace_id: string;
+          zapier_connection_mode?: string;
         };
         Update: {
           updated_at?: string;
           workspace_id?: string;
+          zapier_connection_mode?: string;
         };
         Relationships: [
           {
@@ -3921,29 +3558,6 @@ export type Database = {
     };
     Enums: {
       app_role: "admin" | "user";
-      marketing_blog_post_status: "draft" | "published" | "archived";
-      marketing_changelog_status: "draft" | "published" | "archived";
-      marketing_feedback_moderator_hold_category:
-        | "spam"
-        | "duplicate"
-        | "off_topic"
-        | "inappropriate"
-        | "other";
-      marketing_feedback_reaction_type: "like" | "heart" | "celebrate" | "upvote";
-      marketing_feedback_thread_priority: "low" | "medium" | "high" | "urgent";
-      marketing_feedback_thread_status:
-        | "open"
-        | "under_review"
-        | "planned"
-        | "in_progress"
-        | "completed"
-        | "closed";
-      marketing_feedback_thread_type:
-        | "feature_request"
-        | "bug"
-        | "improvement"
-        | "question"
-        | "other";
       pricing_plan_interval: "day" | "week" | "month" | "year";
       subscription_status:
         | "trialing"
@@ -4087,32 +3701,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      marketing_blog_post_status: ["draft", "published", "archived"],
-      marketing_changelog_status: ["draft", "published", "archived"],
-      marketing_feedback_moderator_hold_category: [
-        "spam",
-        "duplicate",
-        "off_topic",
-        "inappropriate",
-        "other",
-      ],
-      marketing_feedback_reaction_type: ["like", "heart", "celebrate", "upvote"],
-      marketing_feedback_thread_priority: ["low", "medium", "high", "urgent"],
-      marketing_feedback_thread_status: [
-        "open",
-        "under_review",
-        "planned",
-        "in_progress",
-        "completed",
-        "closed",
-      ],
-      marketing_feedback_thread_type: [
-        "feature_request",
-        "bug",
-        "improvement",
-        "question",
-        "other",
-      ],
       pricing_plan_interval: ["day", "week", "month", "year"],
       subscription_status: [
         "trialing",

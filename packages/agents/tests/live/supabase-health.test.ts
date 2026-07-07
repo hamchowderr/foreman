@@ -62,9 +62,9 @@ describe("Supabase live integration", () => {
       expect(error).toBeNull();
     });
 
-    it("can query workflow table", async ({ skip }) => {
+    it("can query automation table", async ({ skip }) => {
       if (!reachable) skip();
-      const { error } = await supabase.from("workflow").select("*").limit(1);
+      const { error } = await supabase.from("automation").select("*").limit(1);
       expect(error).toBeNull();
     });
   });

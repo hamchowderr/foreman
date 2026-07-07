@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { checkCapability } from "@/lib/capabilities";
-import { speechToText } from "@/lib/voice";
+import { checkCapability } from "../lib/capabilities";
+import { speechToText } from "../lib/voice";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

@@ -16,11 +16,11 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: ThemePreset[] = [
   { name: "Foreman (Default)", value: "default", swatch: "#ff4a00" },
-  { name: "Underground", value: "underground", swatch: "oklch(0.5315 0.0694 156.19)" },
+  { name: "Underground", value: "underground", swatch: "oklch(0.53 0.15 156.19)" },
   { name: "Rose Garden", value: "rose-garden", swatch: "oklch(0.5827 0.2418 12.23)" },
-  { name: "Lake View", value: "lake-view", swatch: "oklch(0.765 0.177 163.22)" },
+  { name: "Lake View", value: "lake-view", swatch: "oklch(0.62 0.17 163.22)" },
   { name: "Sunset Glow", value: "sunset-glow", swatch: "oklch(0.5591 0.1882 25.33)" },
-  { name: "Forest Whisper", value: "forest-whisper", swatch: "oklch(0.5276 0.1072 182.22)" },
+  { name: "Forest Whisper", value: "forest-whisper", swatch: "oklch(0.53 0.15 182.22)" },
   { name: "Ocean Breeze", value: "ocean-breeze", swatch: "oklch(0.5461 0.2152 262.88)" },
   { name: "Lavender Dream", value: "lavender-dream", swatch: "oklch(0.5709 0.1808 306.89)" },
 ];

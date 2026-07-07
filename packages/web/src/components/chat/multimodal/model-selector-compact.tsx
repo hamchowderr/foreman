@@ -2,7 +2,6 @@
 
 import { BrainIcon, EyeIcon, LockIcon, WrenchIcon } from "lucide-react";
 import { memo, useState } from "react";
-import useSWR from "swr";
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -18,7 +17,7 @@ import {
   type ChatModel,
   chatModels,
   DEFAULT_CHAT_MODEL,
-  type ModelCapabilities,
+  MODEL_CAPABILITIES,
 } from "@/lib/ai/models";
 import { cn } from "@/lib/utils";
 import { Button } from "../../ui/button";
@@ -37,22 +36,19 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: modelsData } = useSWR(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false, dedupingInterval: 3_600_000 },
-  );
 
-  const capabilities: Record<string, ModelCapabilities> | undefined =
-    modelsData?.capabilities ?? modelsData;
-  const dynamicModels: ChatModel[] | undefined = modelsData?.models;
-  const activeModels = dynamicModels ?? chatModels;
+  // Capabilities + model list are static frontend config (models.ts); there is
+  // no /api/models endpoint, so read them directly.
+  const capabilities = MODEL_CAPABILITIES;
+  const activeModels = chatModels;
 
   const selectedModel =
     activeModels.find((m: ChatModel) => m.id === selectedModelId) ??
     activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
     activeModels[0];
-  const [provider] = selectedModel.id.split("/");
+  // Logo is keyed by the real provider (e.g. "anthropic" → models.dev/logos/anthropic.svg),
+  // NOT the model id ("foreman", which 404s and caused a hydration mismatch).
+  const provider = selectedModel.provider;
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
@@ -66,14 +62,12 @@ function PureModelSelectorCompact({
           <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
-      <ModelSelectorContent>
+      <ModelSelectorContent className="w-[320px] p-1.5">
         <ModelSelectorInput placeholder="Search models..." />
         <ModelSelectorList>
           {(() => {
             const curatedIds = new Set(chatModels.map((m) => m.id));
-            const allModels = dynamicModels
-              ? [...chatModels, ...dynamicModels.filter((m) => !curatedIds.has(m.id))]
-              : chatModels;
+            const allModels = chatModels;
 
             const grouped: Record<string, { model: ChatModel; curated: boolean }[]> = {};
             for (const model of allModels) {
@@ -121,17 +115,19 @@ function PureModelSelectorCompact({
 
             return sortedKeys.map((key) => (
               <ModelSelectorGroup
+                className="[&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1"
                 heading={key === "_available" ? "Available" : (providerNames[key] ?? key)}
                 key={key}
               >
                 {grouped[key].map(({ model, curated }) => {
-                  const logoProvider = model.id.split("/")[0];
+                  const logoProvider = model.provider;
                   return (
                     <ModelSelectorItem
                       className={cn(
-                        "flex w-full",
-                        model.id === selectedModel.id &&
-                          "border-b border-dashed border-foreground/50",
+                        "flex w-full items-center gap-2.5 rounded-lg border border-border/50 px-2.5 py-2",
+                        model.id === selectedModel.id
+                          ? "border-accent/50 bg-accent/60"
+                          : "bg-card/40",
                         !curated && "opacity-40 cursor-default",
                       )}
                       key={model.id}
@@ -150,9 +146,16 @@ function PureModelSelectorCompact({
                       }}
                       value={model.id}
                     >
-                      <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
-                      <div className="ml-auto flex items-center gap-2 text-foreground/70">
+                      <ModelSelectorLogo className="shrink-0" provider={logoProvider} />
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <ModelSelectorName className="font-medium">{model.name}</ModelSelectorName>
+                        {model.description && (
+                          <span className="truncate text-[11px] leading-tight text-muted-foreground">
+                            {model.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="ml-auto flex shrink-0 items-center gap-1.5 text-foreground/60">
                         {capabilities?.[model.id]?.tools && <WrenchIcon className="size-3.5" />}
                         {capabilities?.[model.id]?.vision && <EyeIcon className="size-3.5" />}
                         {capabilities?.[model.id]?.reasoning && <BrainIcon className="size-3.5" />}

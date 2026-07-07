@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CopyButton } from "@/components/copy-button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/client";
 
 interface Props {
@@ -33,25 +36,6 @@ function formatSecondsLeft(ms: number) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${m}:${sec.toString().padStart(2, "0")}`;
-}
-
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = useCallback(() => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [text]);
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      className="text-xs px-2 py-1 rounded transition-colors"
-      style={{ backgroundColor: "#FFF3E6", color: copied ? "#065f46" : "#FF4F00" }}
-    >
-      {copied ? "Copied!" : label}
-    </button>
-  );
 }
 
 export function ChannelConnectPage({
@@ -224,35 +208,31 @@ export function ChannelConnectPage({
 
       {/* Bot connected banner */}
       {botConnected && (
-        <div
-          className="rounded-lg px-4 py-3 text-sm"
-          style={{ backgroundColor: "#d1fae5", border: "1.5px solid #6ee7b7", color: "#065f46" }}
-        >
-          ✓ {displayName} bot connected to your workspace. Now complete step 2 below to link your
-          personal account.
-        </div>
+        <Alert>
+          <AlertDescription>
+            ✓ {displayName} bot connected to your workspace. Now complete step 2 below to link your
+            personal account.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Bot link */}
       {botLink ? (
-        <a
-          href={botLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "#201515" }}
-        >
-          {botLinkLabel} ↗
-        </a>
+        <Button asChild>
+          <a href={botLink} target="_blank" rel="noopener noreferrer">
+            {botLinkLabel} ↗
+          </a>
+        </Button>
       ) : (
-        <div
-          className="rounded-lg px-4 py-3 text-sm"
-          style={{ backgroundColor: "#fff7ed", border: "1.5px solid #FFBF6E", color: "#92400e" }}
-        >
-          {displayName} bot not configured. Set{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_{channel.toUpperCase()}_INSTALL_URL</code>{" "}
-          to enable the install link.
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            {displayName} bot not configured. Set{" "}
+            <code className="font-mono text-xs">
+              NEXT_PUBLIC_{channel.toUpperCase()}_INSTALL_URL
+            </code>{" "}
+            to enable the install link.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Steps */}
@@ -288,15 +268,9 @@ export function ChannelConnectPage({
         </h2>
 
         {!code ? (
-          <button
-            type="button"
-            onClick={generateCode}
-            disabled={generating}
-            className="rounded-lg px-5 py-2.5 text-sm font-medium text-white disabled:opacity-60 transition-opacity"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
+          <Button type="button" onClick={generateCode} disabled={generating}>
             {generating ? "Generating…" : "Generate Link Code"}
-          </button>
+          </Button>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-3 flex-wrap">
@@ -306,7 +280,7 @@ export function ChannelConnectPage({
               >
                 {code}
               </span>
-              <CopyButton text={`${linkCommand} ${code}`} label="Copy command" />
+              <CopyButton value={`${linkCommand} ${code}`} label="Copy command" />
             </div>
             <p className="text-xs" style={{ color: "#888" }}>
               Copy the command above, then open the Foreman bot in {displayName} and paste it.{" "}
@@ -321,18 +295,19 @@ export function ChannelConnectPage({
                 Waiting for confirmation…
               </p>
             )}
-            <button
+            <Button
               type="button"
+              variant="link"
+              size="xs"
+              className="px-0 text-muted-foreground"
               onClick={() => {
                 setCode(null);
                 setExpiresAt(null);
                 stopPolling();
               }}
-              className="text-xs underline"
-              style={{ color: "#aaa" }}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         )}
       </div>

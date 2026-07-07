@@ -13,6 +13,7 @@ const COLUMNS: Array<{
       { label: "How it works", href: "#how" },
       { label: "Channels", href: "#channels" },
       { label: "Pricing", href: "#hosting" },
+      { label: "vs Zapier Shared Brain", href: "/compare/zapier-shared-brain" },
     ],
   },
   {
@@ -45,13 +46,23 @@ export function SiteFooter() {
           {/* Brand column */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground text-[11px] font-bold">
-                F
-              </span>
+              {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+              <img
+                alt="Foreman"
+                className="h-6 w-6 object-contain"
+                height={24}
+                src="/zapier.svg"
+                width={24}
+              />
               <span className="font-semibold text-foreground">Foreman</span>
             </div>
             <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-[220px]">
-              A chat driver for your Zapier account. Drive 9,000+ app connections you already built.
+              A chat driver for your Zapier account. Drive 10,000+ app connections you already
+              built.
+            </p>
+            <p className="text-[11px] text-muted-foreground/70 mt-3 leading-relaxed max-w-[240px]">
+              Not affiliated with, endorsed by, or sponsored by Zapier. Foreman is an independent
+              product built on the Zapier SDK. Zapier is a trademark of Zapier, Inc.
             </p>
           </div>
 
@@ -104,13 +115,7 @@ export function SiteFooter() {
             </Suspense>{" "}
             Otaku Solutions. MIT-licensed.
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-              Alpha
-            </span>
-            Built with Mastra.
-          </span>
+          <span>Built with Mastra.</span>
         </div>
       </div>
     </footer>

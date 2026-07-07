@@ -9,7 +9,7 @@ describe("PII Redactor", () => {
         part,
         index: 0,
       } as any);
-      return result?.payload?.text ?? text;
+      return result?.type === "text-delta" ? result.payload.text : text;
     }
 
     it("does NOT redact email addresses (user-provided data)", async () => {
@@ -72,6 +72,7 @@ describe("PII Redactor", () => {
         index: 0,
       } as any);
       // When no redaction needed, returns the original part unchanged
+      if (result?.type !== "text-delta") throw new Error("expected a text-delta chunk");
       expect(result.payload.text).toBe(clean);
     });
 
@@ -109,7 +110,10 @@ describe("PII Redactor", () => {
         messages,
       } as any);
 
-      expect(result[0].content.parts[0].text).toBe("Your email is user@example.com");
+      if (!Array.isArray(result)) throw new Error("expected a messages array");
+      const part = result[0].content.parts[0];
+      if (part.type !== "text") throw new Error("expected a text part");
+      expect(part.text).toBe("Your email is user@example.com");
     });
 
     it("does not modify user messages", async () => {
@@ -126,7 +130,10 @@ describe("PII Redactor", () => {
         messages,
       } as any);
 
-      expect(result[0].content.parts[0].text).toBe("My email is user@example.com");
+      if (!Array.isArray(result)) throw new Error("expected a messages array");
+      const part = result[0].content.parts[0];
+      if (part.type !== "text") throw new Error("expected a text part");
+      expect(part.text).toBe("My email is user@example.com");
     });
 
     it("handles messages without parts gracefully", async () => {
@@ -136,6 +143,7 @@ describe("PII Redactor", () => {
         messages,
       } as any);
 
+      if (!Array.isArray(result)) throw new Error("expected a messages array");
       expect(result[0].content).toBe("plain string content");
     });
   });

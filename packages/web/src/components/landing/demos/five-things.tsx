@@ -202,6 +202,7 @@ export function FiveThingsReplay() {
             <button
               key={s.id}
               type="button"
+              aria-pressed={selected}
               onClick={() => setActiveId(s.id)}
               className={`w-full text-left px-4 py-3.5 flex items-start gap-3 border-b border-border last:border-b-0 transition-colors min-h-[44px] ${
                 selected ? "bg-accent/5" : "hover:bg-background"
@@ -291,9 +292,14 @@ export function FiveThingsReplay() {
                   )}
                   {msg.role === "thinking" && (
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
-                        F
-                      </div>
+                      {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+                      <img
+                        alt="Foreman"
+                        className="h-7 w-7 object-contain"
+                        height={28}
+                        src="/zapier.svg"
+                        width={28}
+                      />
                       <div className="rounded-2xl rounded-bl-sm bg-background border border-border px-4 py-2.5 flex items-center gap-1">
                         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
                         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-muted" />
@@ -343,9 +349,14 @@ export function FiveThingsReplay() {
                   )}
                   {msg.role === "sent" && (
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-bold">
-                        F
-                      </div>
+                      {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+                      <img
+                        alt="Foreman"
+                        className="h-7 w-7 object-contain"
+                        height={28}
+                        src="/zapier.svg"
+                        width={28}
+                      />
                       <div className="rounded-2xl rounded-bl-sm bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20 px-4 py-2 text-sm flex items-center gap-2">
                         <Check className="h-4 w-4" />
                         {msg.text}

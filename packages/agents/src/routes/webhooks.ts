@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getMastra } from "@/mastra";
-import type { WebhookPayload } from "@/workflows/webhook-handler";
+import { getMastra } from "../mastra";
+import type { WebhookPayload } from "../workflows/webhook-handler";
 
 const webhooks = new Hono();
 
@@ -39,15 +39,17 @@ webhooks.post("/zapier", async (c) => {
   const mastra = getMastra();
   const workflow = mastra.getWorkflow("webhookHandler");
 
-  workflow
-    .createRun()
-    .start({ inputData: payload })
-    .then((result) => {
+  // createRun() is async in this Mastra version — await the run before start().
+  // Kept fire-and-forget (not awaited) so the webhook still returns 200 at once.
+  void (async () => {
+    try {
+      const run = await workflow.createRun();
+      const result = await run.start({ inputData: payload });
       console.log(`[Webhook] Workflow completed:`, JSON.stringify(result));
-    })
-    .catch((err) => {
+    } catch (err) {
       console.error(`[Webhook] Workflow failed:`, err);
-    });
+    }
+  })();
 
   return c.json({ received: true }, 200);
 });

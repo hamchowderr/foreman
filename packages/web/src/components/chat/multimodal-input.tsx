@@ -17,6 +17,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+import { getContextWindow } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +27,8 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "../ai-elements/prompt-input";
+import { Button } from "../ui/button";
+import { ContextUsage, type TokenUsage } from "./context-usage";
 import { AttachmentsButton } from "./multimodal/attachments-button";
 import { AttachmentsPreview } from "./multimodal/attachments-preview";
 import { useFileUpload } from "./multimodal/file-upload";
@@ -182,21 +185,35 @@ function PureMultimodalInput({
     chatId,
   ]);
 
+  // Most recent assistant turn's token usage (attached server-side as message
+  // metadata); drives the composer's context-usage gauge.
+  const latestUsage: TokenUsage | null = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i] as { role?: string; metadata?: { usage?: TokenUsage } };
+      if (m.role === "assistant" && m.metadata?.usage) {
+        return m.metadata.usage;
+      }
+    }
+    return null;
+  })();
+
   return (
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {editingMessage && onCancelEdit && (
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
           <span>Editing message</span>
-          <button
-            className="rounded px-1.5 py-0.5 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
+          <Button
+            className="text-[12px] text-muted-foreground/50 hover:text-foreground"
             onMouseDown={(e) => {
               e.preventDefault();
               onCancelEdit();
             }}
+            size="sm"
             type="button"
+            variant="ghost"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       )}
 
@@ -233,7 +250,7 @@ function PureMultimodalInput({
       </div>
 
       <PromptInput
-        className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
+        className="[&>div]:rounded-3xl [&>div]:border [&>div]:border-border/60 [&>div]:bg-card/80 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:border-border [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
         onSubmit={() => {
           if (input.startsWith("/")) {
             const query = input.slice(1).trim();
@@ -312,6 +329,7 @@ function PureMultimodalInput({
               onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
             />
             <ModelSelectorCompact onModelChange={onModelChange} selectedModelId={selectedModelId} />
+            <ContextUsage maxTokens={getContextWindow(selectedModelId)} usage={latestUsage} />
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -320,12 +338,12 @@ function PureMultimodalInput({
             <PromptInputSubmit
               className={cn(
                 "h-7 w-7 rounded-xl transition-all duration-200",
-                input.trim()
-                  ? "bg-foreground text-background hover:opacity-85 active:scale-95"
+                input.trim() || attachments.length > 0
+                  ? "bg-primary text-primary-foreground hover:opacity-85 active:scale-95"
                   : "bg-muted text-muted-foreground/25 cursor-not-allowed",
               )}
               data-testid="send-button"
-              disabled={!input.trim() || uploadQueue.length > 0}
+              disabled={(!input.trim() && attachments.length === 0) || uploadQueue.length > 0}
               status={status}
               variant="secondary"
             >

@@ -56,6 +56,8 @@ export const AGENT_MODELS = {
   execution: chain(process.env.EXECUTION_MODEL, MODELS.default),
   supervisor: chain(process.env.SUPERVISOR_MODEL, MODELS.default),
   history: chain(process.env.HISTORY_MODEL, MODELS.fast),
+  // Narrates the daily digest (foreman-bhb5) — a small model is plenty.
+  digest: chain(process.env.DIGEST_MODEL, MODELS.fast),
 } as const;
 
 export type AgentName = keyof typeof AGENT_MODELS;

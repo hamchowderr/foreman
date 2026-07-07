@@ -17,7 +17,9 @@
       "!**/dist",
       "!**/drizzle",
       "!**/*.min.js",
-      "!packages/web/components.json"
+      "!packages/web/components.json",
+      "!**/package-lock.json",
+      "!**/.fallowrc.json"
     ]
   },
   "formatter": {

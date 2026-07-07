@@ -30,7 +30,7 @@ const SCENES: Scene[] = [
       { tool: "search-history", args: '"priya email"', result: "priya@acme.com", elapsedMs: 140 },
       { tool: "search-actions", args: '"email"', result: "gmail · send-email", elapsedMs: 96 },
       {
-        tool: "list-input-fields",
+        tool: "list-action-input-fields",
         args: "send-email",
         result: "to · cc · subject · body · attachment",
         elapsedMs: 71,
@@ -62,19 +62,19 @@ const SCENES: Scene[] = [
         elapsedMs: 88,
       },
       {
-        tool: "list-input-fields",
+        tool: "list-action-input-fields",
         args: "create-card",
         result: "board · list · name · description",
         elapsedMs: 60,
       },
       {
-        tool: "list-input-field-choices",
+        tool: "list-action-input-field-choices",
         args: "board",
         result: "Personal · Engineering · Roadmap",
         elapsedMs: 134,
       },
       {
-        tool: "list-input-field-choices",
+        tool: "list-action-input-field-choices",
         args: 'list (board="Engineering")',
         result: "Inbox · In Progress · Done",
         elapsedMs: 102,
@@ -96,7 +96,7 @@ const SCENES: Scene[] = [
         elapsedMs: 312,
       },
       {
-        tool: "list-input-field-choices",
+        tool: "list-action-input-field-choices",
         args: "expand",
         result: "line_items (2), customer, charge",
         elapsedMs: 68,

@@ -1,13 +1,14 @@
 import { memo } from "react";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
+import { Button } from "../ui/button";
 import { CrossIcon } from "./icons";
 
 function PureArtifactCloseButton() {
   const { setArtifact } = useArtifact();
 
   return (
-    <button
-      className="group flex size-8 items-center justify-center rounded-lg border border-transparent text-muted-foreground transition-all duration-150 hover:border-border hover:bg-muted hover:text-foreground active:scale-95"
+    <Button
+      className="group rounded-lg border-transparent text-muted-foreground hover:border-border active:scale-95"
       data-testid="artifact-close-button"
       onClick={() => {
         setArtifact((currentArtifact) =>
@@ -19,10 +20,12 @@ function PureArtifactCloseButton() {
             : { ...initialArtifactData, status: "idle" },
         );
       }}
+      size="icon-sm"
       type="button"
+      variant="ghost"
     >
       <CrossIcon size={16} />
-    </button>
+    </Button>
   );
 }
 

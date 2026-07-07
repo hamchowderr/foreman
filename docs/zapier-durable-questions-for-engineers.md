@@ -1,8 +1,25 @@
 # Durable Execution — Questions for Zapier Engineers
 
+> ## ✅ UPDATE 2026-07-05 (SDK 0.81.0) — durables now WORK; questions narrowed
+>
+> The two original blockers below are **RESOLVED** on `@zapier/zapier-sdk@0.81.0`:
+> - **Auth:** a live re-probe (`scripts/durable-endpoints-probe.ts`, app-level **client-credentials**) returns **0/18 durable methods walled** — `runDurable` / `createWorkflow` / `listWorkflows` all `2xx`. The `internal`-scope `userJwt` wall is gone for the client-creds token.
+> - **Source-file contract:** `defineDurable(...)` + `ctx.step` / `ctx.wait` / `ctx.createCallback` deploy and run end-to-end. Verified live: ephemeral `runDurable` → finished; `createWorkflow`+`publishWorkflowVersion` → `triggerWorkflow` → finished; a `createCallback` gate parks in `execution.status="waiting"` and resumes on a POST.
+>
+> **The remaining questions (evidence-backed, 2026-07-05):**
+>
+> 1. **Is durable GA / permanent now?** On 0.81.0 durable is open for us on **both** auth paths we tested: app **client-credentials** (0/18 endpoints walled) AND a real **per-user PKCE user-JWT** (`runDurable` → run **finished**). Both were **403 in June**. One tell: the PKCE token is **still granted only `external`** scope (unchanged) — durable's `userJwt` scheme now simply **accepts `external`** where it previously required `internal`. **Is that intentional and generally available for public-SDK clients, or an early-access state that could re-close?** The wall opened silently between 0.79.0 and 0.81.0 (no changelog note), so before we hard-depend on it — running every end-user's automations on durable — we need to know it's permanent.
+> 2. **Human-approval callback URL is not obtainable from outside.** `getDurableRun.execution.operations[]` exposes a callback op's `callback_token`, `payload_schema`, `expires_at` — but **not the callback URL**. The real URL is `https://code-substrate-runner.zapier.com/api/v0/callbacks/<opaque-id>`, and `<opaque-id>` is **different** from `callback_token`, so it can't be reconstructed. Today an external orchestrator can only obtain the URL by having the durable **self-report it** via a step output. **Will you expose the callback URL (or add a resume-by-token endpoint / `resumeDurableRun({ run, operation, payload })`) on `getDurableRun`** so the self-report convention isn't required? There is no `resumeDurableRun`/`postCallback` in the SDK today (only `resumeTriggerInbox`, which is inbox-not-durable).
+> 3. **Callback security model.** The callback URL is a **public, unauthenticated bearer endpoint** — a `POST {json}` with no auth header returns `200 {"ok":true}` and resumes the run. Is that the intended model (possession = capability)? Any plans for a **signed / account-authenticated** resume, and what are the **expiry / single-use** semantics? (We observed `expires_at` ~30 days.)
+> 4. **`payload_schema` enforcement.** Is the POSTed callback payload validated against the callback's `payloadSchema` **server-side**, or passed through to the durable unchecked? (We POSTed arbitrary JSON and it was accepted + delivered.)
+>
+> Everything below is the **original (now-resolved) auth/contract report**, kept for history.
+
+---
+
 **From:** Foreman team (admin@otakusolutions.io)
 **Re:** `@zapier/zapier-sdk/experimental` durable-workflow API (`runDurable` / `publishWorkflowVersion`)
-**Date of findings:** 2026-06-11 (SDK `0.69.3`); re-confirmed 2026-06-16 on the latest SDK `0.70.4`
+**Date of findings:** 2026-06-11 (SDK `0.69.3`); re-confirmed 2026-06-16 on `0.70.4`, and again 2026-06-22 on the current `0.76.0` — both credential types, identical 403; `defineDurable` still a "not callable — Phase 2" stub on 0.76.0
 **Status:** Blocked — durable is unreachable with every credential a public SDK client can mint.
 
 ---
@@ -24,13 +41,13 @@ A complete, self-contained reproduction script is included at the end — it nee
 
 | Package | Version |
 |---|---|
-| `@zapier/zapier-sdk` | `0.70.4` (latest; originally found on `0.69.3`, reproduced identically on `0.70.4`) |
+| `@zapier/zapier-sdk` | `0.76.0` (current latest; found on `0.69.3`, reproduced identically on `0.70.4` and `0.76.0`) |
 | `@zapier/zapier-sdk-cli` | `0.54.3` |
 | `@zapier/zapier-durable` | referenced from npm at `0.5.4` (not installed as a repo dep) |
 | `zod` | `4.4.3` |
 | Node | 22 |
 
-We reviewed the full `0.70.0`–`0.70.4` changelog: every durable-touching change is response-schema / field-parity / streaming work — **no auth, scope, or security-scheme changes** — consistent with the 403 being a server-side OAuth wall rather than an SDK artifact. We then re-ran the reproduction (below) on `0.70.4` and got the identical 403.
+We reviewed the full `0.70.0`–`0.70.4` changelog: every durable-touching change is response-schema / field-parity / streaming work — **no auth, scope, or security-scheme changes** — consistent with the 403 being a server-side OAuth wall rather than an SDK artifact. We then re-ran the reproduction (below) on `0.70.4` and got the identical 403. We re-ran it again on the current `0.76.0` (2026-06-22): 18/18 endpoints walled under client-credentials, and a freshly-minted PKCE user JWT still 403s with scope downgraded `internal`→`external` — unchanged. (The `0.71`–`0.76` changes are connection-creation, telemetry headers, camelCase param aliases, and workflow field-parity — none touch durable's auth or scope.)
 
 OAuth client used (the SDK's **public** PKCE client — the same one `zapier-sdk login` uses):
 `grwWZD5hUWGvb4V8ODBuOtXer3h0DBEZ2HR8aay6`, redirecting to one of the localhost ports Zapier allow-lists for it: `49505, 50575, 52804, 55981, 61010, 63851`.

@@ -5,7 +5,6 @@ import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
-import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ gchat: ReturnType<typeof createGoogleChatAdapter> }> | undefined;
 let _gchatAdapter: ReturnType<typeof createGoogleChatAdapter> | undefined;
@@ -58,14 +57,6 @@ export async function getGoogleChatBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     try {
-      const fired = await matchAndFireChannelTriggers({
-        channel: "gchat",
-        text: message.text,
-        from: message.author.userId,
-        dedupeKey: message.id,
-        room: thread.channelId,
-      });
-      if (fired > 0) return;
       console.log("[gchat] DM from", message.author.userId, ":", message.text);
       await thread.startTyping().catch(() => {});
       const reply = await generateReply(
@@ -85,14 +76,6 @@ export async function getGoogleChatBot() {
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
     try {
-      const fired = await matchAndFireChannelTriggers({
-        channel: "gchat",
-        text: message.text,
-        from: message.author.userId,
-        dedupeKey: message.id,
-        room: thread.id,
-      });
-      if (fired > 0) return;
       console.log("[gchat] Mention from", message.author.userId, ":", message.text);
       await thread.subscribe();
       await thread.startTyping().catch(() => {});

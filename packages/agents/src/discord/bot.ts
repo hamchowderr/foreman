@@ -5,7 +5,6 @@ import { Chat } from "chat";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { getMastra } from "../mastra";
-import { matchAndFireChannelTriggers } from "../workflows/channel-trigger";
 
 let _bot: Chat<{ discord: ReturnType<typeof createDiscordAdapter> }> | undefined;
 let _discordAdapter: ReturnType<typeof createDiscordAdapter> | undefined;
@@ -92,7 +91,7 @@ export async function getDiscordBot() {
         );
         if (result.ok) {
           await thread.post(
-            "Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 9,000+ apps for you.",
+            "Your Discord account is now linked to Foreman! 🎉 Try sending me a message — I can take actions across 10,000+ apps for you.",
           );
         } else if (result.error === "expired") {
           await thread.post(
@@ -119,14 +118,6 @@ export async function getDiscordBot() {
   bot.onDirectMessage(async (thread, message) => {
     if (!message.text) return;
     if (message.text.trim().startsWith("/link")) return;
-    const fired = await matchAndFireChannelTriggers({
-      channel: "discord",
-      text: message.text,
-      from: message.author.userId,
-      dedupeKey: message.id,
-      room: thread.channelId,
-    });
-    if (fired > 0) return;
     await thread.startTyping().catch(() => {});
     const reply = await generateStreamedReply(
       thread,
@@ -141,14 +132,6 @@ export async function getDiscordBot() {
   // Handle @-mentions in channels
   bot.onNewMention(async (thread, message) => {
     if (!message.text) return;
-    const fired = await matchAndFireChannelTriggers({
-      channel: "discord",
-      text: message.text,
-      from: message.author.userId,
-      dedupeKey: message.id,
-      room: thread.id,
-    });
-    if (fired > 0) return;
     await thread.subscribe();
     await thread.startTyping().catch(() => {});
     try {

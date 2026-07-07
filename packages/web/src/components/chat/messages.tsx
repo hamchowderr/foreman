@@ -1,4 +1,5 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { useSessionUser } from "@/hooks/use-session-user";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import {
@@ -40,6 +41,7 @@ function PureMessages({
   onEditMessage,
 }: MessagesProps) {
   useDataStream();
+  const sessionUser = useSessionUser();
 
   return (
     // key={chatId} resets the stick-to-bottom scroll state when switching chats.
@@ -63,6 +65,8 @@ function PureMessages({
             regenerate={regenerate}
             requiresScrollPadding={false}
             setMessages={setMessages}
+            userEmail={sessionUser?.email}
+            userImage={sessionUser?.image}
             vote={votes ? votes.find((vote) => vote.messageId === message.id) : undefined}
           />
         ))}

@@ -13,9 +13,6 @@ ALTER TABLE public.capability_flag ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.channel_identity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.connection_alias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.zapier_identity ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow_run ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow_step ENABLE ROW LEVEL SECURITY;
 
 -- App catalog: read-only reference data; allow authenticated users to query directly
 -- (used by the frontend to show available Zapier apps)

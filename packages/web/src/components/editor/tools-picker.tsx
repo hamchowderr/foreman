@@ -1,9 +1,11 @@
 "use client";
 
-import { SearchIcon, ShieldAlertIcon, ShieldCheckIcon, WrenchIcon } from "lucide-react";
+import { SearchIcon, ShieldAlertIcon, ShieldCheckIcon, WrenchIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/client";
 import { type CatalogTool, storedAgentsApi } from "@/lib/stored-agents-client";
@@ -129,16 +131,18 @@ export function ToolsPicker({ selected, onChange, disabled }: ToolsPickerProps) 
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {orphans.map((id) => (
-                    <button
+                    <Button
                       key={id}
                       type="button"
+                      variant="outline"
+                      size="xs"
                       onClick={() => toggle(id)}
                       disabled={disabled}
-                      className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs hover:border-destructive hover:text-destructive disabled:opacity-50"
+                      className="hover:border-destructive hover:text-destructive"
                     >
                       {id}
-                      <span aria-hidden>×</span>
-                    </button>
+                      <XIcon aria-hidden />
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -189,18 +193,19 @@ function Group({
           return (
             <li key={t.id}>
               <label
+                htmlFor={`tool-${t.id}`}
                 className={cn(
                   "flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors",
                   checked ? "bg-accent/5" : "hover:bg-surface",
                   disabled && "cursor-not-allowed opacity-60",
                 )}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
+                  id={`tool-${t.id}`}
                   checked={checked}
                   disabled={disabled}
-                  onChange={() => onToggle(t.id)}
-                  className="mt-0.5 size-3.5 accent-accent"
+                  onCheckedChange={() => onToggle(t.id)}
+                  className="mt-0.5"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">

@@ -5,15 +5,32 @@ import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
-import { CheckCircle, ChevronLeftIcon, ChevronRightIcon, Copy, ExternalLink } from "lucide-react";
-import type { ComponentProps, HTMLAttributes, JSX, ReactElement } from "react";
+import {
+  ArrowUpRightIcon,
+  CheckCircle,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Copy,
+  ExternalLink,
+  FileTextIcon,
+} from "lucide-react";
+import type { ComponentProps, HTMLAttributes, JSX, ReactElement, ReactNode } from "react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { LinkSafetyConfig, LinkSafetyModalProps } from "streamdown";
 import { Streamdown } from "streamdown";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
+import { HoverCardTrigger } from "@/components/ui/hover-card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useKnowledgePanel } from "@/hooks/use-knowledge-panel";
 import { cn } from "@/lib/utils";
+import {
+  InlineCitation,
+  InlineCitationCard,
+  InlineCitationCardBody,
+  InlineCitationSource,
+  InlineCitationText,
+} from "./inline-citation";
 
 type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -271,21 +288,88 @@ type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
-// Custom link renderer — breaks long URLs, adds hover transition
+/**
+ * Inline citation to a saved knowledge document (foreman-ugu3). The agent cites
+ * a doc with a plain markdown link using the `doc:` scheme —
+ * `[cited text](doc:documents/<slug>.md "Title")` — so it streams through
+ * Streamdown like any link, and we render the AI Elements InlineCitation here.
+ * Clicking the badge (or "Open document") opens the KnowledgePanel side panel;
+ * it is a button, not an anchor, so it never triggers link-safety/navigation.
+ */
+const DocCitation = ({
+  path,
+  title,
+  children,
+}: {
+  path: string;
+  title: string;
+  children?: ReactNode;
+}) => {
+  const { open } = useKnowledgePanel();
+  const handleOpen = () => open({ path, title });
+
+  return (
+    <InlineCitation>
+      <InlineCitationText className="rounded-[3px] decoration-primary/30 underline-offset-2 group-hover:bg-primary/10">
+        {children}
+      </InlineCitationText>
+      <InlineCitationCard>
+        <HoverCardTrigger asChild>
+          <button
+            aria-label={`Cited document: ${title}`}
+            className="ml-1 inline-flex size-[18px] translate-y-[-1px] items-center justify-center rounded-full bg-primary/10 align-middle text-primary transition-colors hover:bg-primary/20"
+            onClick={handleOpen}
+            type="button"
+          >
+            <FileTextIcon className="size-3" />
+          </button>
+        </HoverCardTrigger>
+        <InlineCitationCardBody>
+          <div className="space-y-2 p-3">
+            <InlineCitationSource description="Saved knowledge document" title={title} />
+            <button
+              className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+              onClick={handleOpen}
+              type="button"
+            >
+              Open document
+              <ArrowUpRightIcon className="size-3" />
+            </button>
+          </div>
+        </InlineCitationCardBody>
+      </InlineCitationCard>
+    </InlineCitation>
+  );
+};
+
+// Custom link renderer — breaks long URLs, adds hover transition. A `doc:` href
+// is a knowledge-document citation (see DocCitation), not a real link.
 const StreamdownLink = ({
   href,
+  title,
   children,
   node: _node,
   ...props
-}: JSX.IntrinsicElements["a"] & { node?: unknown }) => (
-  <a
-    href={href}
-    className="break-all cursor-pointer text-primary underline underline-offset-2 decoration-primary/40 transition-[text-decoration-color] hover:decoration-primary"
-    {...props}
-  >
-    {children}
-  </a>
-);
+}: JSX.IntrinsicElements["a"] & { node?: unknown }) => {
+  if (typeof href === "string" && href.startsWith("doc:")) {
+    const path = href.slice("doc:".length);
+    return (
+      <DocCitation path={path} title={typeof title === "string" && title ? title : "Document"}>
+        {children}
+      </DocCitation>
+    );
+  }
+  return (
+    <a
+      href={href}
+      title={title}
+      className="break-all cursor-pointer text-primary underline underline-offset-2 decoration-primary/40 transition-[text-decoration-color] hover:decoration-primary"
+      {...props}
+    >
+      {children}
+    </a>
+  );
+};
 
 // iOS-style action sheet for link safety confirmation
 const StreamdownLinkModal = ({ isOpen, onClose, onConfirm, url }: LinkSafetyModalProps) => {

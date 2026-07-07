@@ -5,7 +5,6 @@ import { getGitHubBot } from "./github/bot";
 import { getiMessageBot } from "./imessage/bot";
 import { getLinearBot } from "./linear/bot";
 import { getMastra } from "./mastra";
-import { channelTriggerProvider } from "./mastra/signals/channel-trigger-provider";
 import { getSlackBot } from "./slack/bot";
 import { getTeamsBot } from "./teams/bot";
 import { getTelegramBot } from "./telegram/bot";
@@ -52,7 +51,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/telegram/webhook" && req.method === "POST") {
-      const bot = getTelegramBot();
+      const bot = await getTelegramBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -70,7 +69,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/teams/webhook" && req.method === "POST") {
-      const bot = getTeamsBot();
+      const bot = await getTeamsBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -88,7 +87,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/gchat/webhook" && req.method === "POST") {
-      const bot = getGoogleChatBot();
+      const bot = await getGoogleChatBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -106,7 +105,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/whatsapp/webhook" && (req.method === "POST" || req.method === "GET")) {
-      const bot = getWhatsAppBot();
+      const bot = await getWhatsAppBot();
       const request = new Request(url, {
         method: req.method!,
         headers: Object.fromEntries(
@@ -124,7 +123,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/github/webhook" && req.method === "POST") {
-      const bot = getGitHubBot();
+      const bot = await getGitHubBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -142,7 +141,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/linear/webhook" && req.method === "POST") {
-      const bot = getLinearBot();
+      const bot = await getLinearBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -178,7 +177,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/imessage/webhook" && req.method === "POST") {
-      const bot = getiMessageBot();
+      const bot = await getiMessageBot();
       const request = new Request(url, {
         method: "POST",
         headers: Object.fromEntries(
@@ -235,12 +234,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, () => {
   console.log(`Webhook server running on port ${port}`);
 
-  // Build the foreman agent up front so the channel SignalProvider is connected
-  // before the first inbound message — otherwise matchAndFireChannelTriggers
-  // runs before any generateReply() has lazily built the agent, and the
-  // channel notify() is a no-op for trigger-only messages. (foreman notify-wiring)
+  // Pre-build the foreman agent so the first inbound message doesn't pay the
+  // lazy Mastra construction cost.
   getMastra();
-  console.log(`[webhook] channel provider connected: ${channelTriggerProvider.isConnected}`);
 
   // Initialize Slack bot — getSlackBot() handles init + rehydration internally
   if (process.env.SLACK_SIGNING_SECRET) {

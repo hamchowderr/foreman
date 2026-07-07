@@ -1,11 +1,11 @@
 import { Agent } from "@mastra/core/agent";
 import { ToolSearchProcessor } from "@mastra/core/processors";
-import { LocalFilesystem, LocalSandbox, Workspace } from "@mastra/core/workspace";
 import { createAnswerRelevancyScorer, createToxicityScorer } from "@mastra/evals/scorers/prebuilt";
+import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
-import { OpenAIVoice } from "@mastra/voice-openai";
 import { stepCountIs } from "ai";
+import { backgroundToolsConfig } from "../../lib/background";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import { buildSystemPrompt, type PromptContext } from "../../lib/prompt-template";
 import {
@@ -16,21 +16,21 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { sanitizeToolSchemas } from "../../lib/tool-schema-sanitizer";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
-import { channelTriggerProvider } from "../signals/channel-trigger-provider";
-import { zapierPollProvider } from "../signals/zapier-poll-provider";
-import { attachTriggerTool } from "../tools/attach-trigger";
+import {
+  createAutomationTool,
+  inspectAutomationTool,
+  listAutomationsTool,
+  runAutomationTool,
+} from "../tools/automations";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { deleteWorkflowTool } from "../tools/delete-workflow";
-import { detachTriggerTool } from "../tools/detach-trigger";
+import { createDashboardTool } from "../tools/create-dashboard";
 import { forkConversationTool } from "../tools/fork-conversation";
-import { getWorkflowTool } from "../tools/get-workflow";
-import { listWorkflowTriggersTool } from "../tools/list-workflow-triggers";
-import { listWorkflowsTool } from "../tools/list-workflows";
-import { runWorkflowTool } from "../tools/run-workflow";
-import { saveWorkflowTool } from "../tools/save-workflow";
+import { previewAppTool } from "../tools/preview-app";
+import { saveDocumentTool } from "../tools/save-document";
 import { searchHistoryTool } from "../tools/search-history";
-import { updateWorkflowTool } from "../tools/update-workflow";
+import { buildForemanWorkspace } from "./workspace";
 
 export { buildSystemPrompt, type PromptContext };
 
@@ -51,8 +51,8 @@ const CORE_TOOL_NAMES = [
   // Action discovery + execution
   "list-actions",
   "get-action",
-  "get-input-fields-schema",
-  "list-input-field-choices",
+  "get-action-input-fields-schema",
+  "list-action-input-field-choices",
   "run-action",
   // Zapier Tables (SDK-level, not run-action)
   "list-tables",
@@ -99,21 +99,24 @@ function buildForemanTools() {
   for (const name of CORE_TOOL_NAMES) {
     if (sdkTools[name]) coreTools[name] = sdkTools[name];
   }
-  _foremanToolsCache = toolsWithCacheControl("foreman", {
-    search_history: searchHistoryTool,
-    fork_conversation: forkConversationTool,
-    connect_zapier: connectZapierTool,
-    save_workflow: saveWorkflowTool,
-    list_workflows: listWorkflowsTool,
-    get_workflow: getWorkflowTool,
-    run_workflow: runWorkflowTool,
-    update_workflow: updateWorkflowTool,
-    delete_workflow: deleteWorkflowTool,
-    attach_trigger: attachTriggerTool,
-    list_workflow_triggers: listWorkflowTriggersTool,
-    detach_trigger: detachTriggerTool,
-    ...coreTools,
-  });
+  _foremanToolsCache = sanitizeToolSchemas(
+    toolsWithCacheControl("foreman", {
+      search_history: searchHistoryTool,
+      fork_conversation: forkConversationTool,
+      connect_zapier: connectZapierTool,
+      create_dashboard: createDashboardTool,
+      // Live, code-built previews in the sandbox (foreman-qq4x spike).
+      preview_app: previewAppTool,
+      // Knowledge documents (foreman-aqjx) — save markdown to the workspace.
+      save_document: saveDocumentTool,
+      // Durable automations (foreman-l7xq) — author/deploy/run/inspect from chat.
+      create_automation: createAutomationTool,
+      run_automation: runAutomationTool,
+      list_automations: listAutomationsTool,
+      inspect_automation: inspectAutomationTool,
+      ...coreTools,
+    }),
+  );
   return _foremanToolsCache;
 }
 
@@ -142,31 +145,10 @@ function buildForemanInputProcessors() {
 }
 
 export function createForemanAgent(databaseUrl: string) {
-  const workspacePath = "./data/workspace";
-
-  const workspace = new Workspace({
-    id: "foreman-workspace",
-    name: "Foreman Workspace",
-    filesystem: new LocalFilesystem({
-      basePath: workspacePath,
-      contained: true,
-    }),
-    sandbox: new LocalSandbox({
-      workingDirectory: workspacePath,
-    }),
-    bm25: true,
-    tools: {
-      mastra_workspace_write_file: { requireApproval: true },
-      mastra_workspace_edit_file: { requireApproval: true },
-      mastra_workspace_delete: { requireApproval: true },
-      mastra_workspace_execute_command: { requireApproval: true },
-    },
-  });
-
   return new Agent({
     id: "foreman",
     name: "Foreman",
-    description: "AI assistant that helps users take actions across 9000+ apps via Zapier",
+    description: "AI assistant that helps users take actions across 10,000+ apps via Zapier",
     instructions: systemPromptFor("foreman", buildSystemPrompt()),
     model: AGENT_MODELS.foreman,
     defaultOptions: {
@@ -179,13 +161,16 @@ export function createForemanAgent(databaseUrl: string) {
       stopWhen: stepCountIs(40),
     },
     tools: () => buildForemanTools(),
-    // Triggers run as Mastra SignalProviders hosted on this agent (agent-hosted
-    // gives them notify() → events land in the user's thread). Neither sets a
-    // pollInterval: the poll provider is driven by cron-driver-server on a
-    // single tick (so it doesn't auto-poll in every process the agent is built
-    // in); the channel provider is event-driven via the webhook handlers.
-    signals: [zapierPollProvider, channelTriggerProvider],
-    voice: process.env.OPENAI_API_KEY ? new OpenAIVoice() : undefined,
+    // Run read-only tools (Zapier reads + search_history) as Mastra background
+    // tasks so a slow read doesn't block chat; results fold in via /chat's
+    // streamUntilIdle. Agent-level opt-in (not tool-level) is what actually
+    // dispatches under the lazy tools resolver — see lib/background.ts (foreman-7am4).
+    backgroundTasks: backgroundToolsConfig(),
+    // NOTE: no `voice:` here. Foreman's STT/TTS runs through lib/voice.ts (its own
+    // OpenAIVoice instance) behind the /voice route — nothing reads agent.voice.
+    // Wiring it here also can't type-check: @mastra/voice-openai vendors its own
+    // copy of the @internal/voice MastraVoice class, so OpenAIVoice's base is
+    // nominally distinct (private-field brand) from @mastra/core's MastraVoice.
     scorers: {
       relevancy: {
         scorer: createAnswerRelevancyScorer({ model: MODELS.fast }),
@@ -198,7 +183,7 @@ export function createForemanAgent(databaseUrl: string) {
     },
     inputProcessors: () => buildForemanInputProcessors(),
     outputProcessors: [piiRedactor],
-    workspace,
+    workspace: buildForemanWorkspace,
     memory: new Memory({
       storage: new PostgresStore({
         id: "foreman-memory",
@@ -208,12 +193,16 @@ export function createForemanAgent(databaseUrl: string) {
         id: "foreman-memory-vector",
         connectionString: databaseUrl,
       }),
-      embedder: "openai/text-embedding-3-small",
+      // Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed.
+      embedder: fastembed,
       options: {
         lastMessages: 20,
         generateTitle: {
           model: MODELS.fast,
-          instructions: "Generate a concise 3-6 word title for this conversation.",
+          instructions:
+            "Generate a concise 3-6 word title summarizing the user's request in this conversation. " +
+            "Output ONLY the plain title text — no markdown, no surrounding quotes, no 'Title:' label, " +
+            "and no trailing punctuation. Do not answer or react to the conversation; just title it.",
         },
         workingMemory: { enabled: true },
         semanticRecall: {

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { getSupabase } from "@/lib/db";
-import type { Database } from "@/lib/db/database.types";
-import { getToolCatalog } from "@/lib/tool-catalog";
-import { validateParam } from "@/lib/validation";
+import { getSupabase } from "../lib/db";
+import type { Database } from "../lib/db/database.types";
+import { getToolCatalog } from "../lib/tool-catalog";
+import { validateParam } from "../lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 
@@ -51,13 +51,16 @@ function serializeVersion(v: any) {
   };
 }
 
-async function loadAgent(id: string, userId: string): Promise<any | null> {
+// Agents are a SHARED workspace resource: any member of the workspace can load
+// and edit them (user_id is kept on the row only for creator attribution).
+async function loadAgent(id: string, workspaceId: string | undefined): Promise<any | null> {
+  if (!workspaceId) return null;
   const supabase = getSupabase();
   const { data } = await supabase
     .from("stored_agent")
     .select("*")
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .limit(1)
     .maybeSingle();
   return data ?? null;
@@ -102,6 +105,8 @@ storedAgents.get("/tools", async (c) => {
 // POST / — create agent and its initial v1 draft
 storedAgents.post("/", async (c) => {
   const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
+  if (!workspaceId) return c.json({ error: "No active workspace" }, 403);
   const supabase = getSupabase();
 
   let body: any;
@@ -139,6 +144,7 @@ storedAgents.post("/", async (c) => {
   await supabase.from("stored_agent").insert({
     id: agentId,
     user_id: userId,
+    workspace_id: workspaceId,
     name: name.trim(),
     description: description ?? null,
     current_version_id: null,
@@ -158,20 +164,21 @@ storedAgents.post("/", async (c) => {
     created_at: now,
   });
 
-  const agent = await loadAgent(agentId, userId);
+  const agent = await loadAgent(agentId, workspaceId);
   const latest = await getLatestVersion(agentId);
   return c.json(serializeAgent(agent!, latest), 201);
 });
 
 // GET / — list agents for current user
 storedAgents.get("/", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
+  if (!workspaceId) return c.json([]);
   const supabase = getSupabase();
 
   const { data: agents } = await supabase
     .from("stored_agent")
     .select("*")
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("updated_at", { ascending: false });
 
   const results = await Promise.all(
@@ -186,11 +193,11 @@ storedAgents.get("/", async (c) => {
 
 // GET /:id — detail with latest version
 storedAgents.get("/:id", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
 
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
   const latest = await getLatestVersion(id);
   return c.json(serializeAgent(agent, latest));
@@ -198,7 +205,7 @@ storedAgents.get("/:id", async (c) => {
 
 // PATCH /:id — update metadata (name, description)
 storedAgents.patch("/:id", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
 
@@ -210,7 +217,7 @@ storedAgents.patch("/:id", async (c) => {
   }
 
   const supabase = getSupabase();
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   const patch: Database["public"]["Tables"]["stored_agent"]["Update"] = {};
@@ -239,19 +246,19 @@ storedAgents.patch("/:id", async (c) => {
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id);
 
-  const updated = await loadAgent(id, userId);
+  const updated = await loadAgent(id, workspaceId);
   const latest = await getLatestVersion(id);
   return c.json(serializeAgent(updated!, latest));
 });
 
 // DELETE /:id — cascade via FK on version table
 storedAgents.delete("/:id", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
   const supabase = getSupabase();
 
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   // Null out current_version_id first to avoid FK conflicts
@@ -265,12 +272,12 @@ storedAgents.delete("/:id", async (c) => {
 
 // GET /:id/versions — all versions, newest first
 storedAgents.get("/:id/versions", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
   const supabase = getSupabase();
 
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   const { data: versions } = await supabase
@@ -284,13 +291,13 @@ storedAgents.get("/:id/versions", async (c) => {
 
 // GET /:id/versions/:versionId
 storedAgents.get("/:id/versions/:versionId", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   const versionId = validateParam(c.req.param("versionId"), "versionId");
   if (!id || !versionId) return c.json({ error: "Invalid id" }, 400);
   const supabase = getSupabase();
 
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   const { data: v } = await supabase
@@ -306,7 +313,7 @@ storedAgents.get("/:id/versions/:versionId", async (c) => {
 
 // POST /:id/versions — create a new draft
 storedAgents.post("/:id/versions", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   if (!id) return c.json({ error: "Invalid agent id" }, 400);
 
@@ -316,7 +323,7 @@ storedAgents.post("/:id/versions", async (c) => {
   } catch {}
 
   const supabase = getSupabase();
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   const latest = await getLatestVersion(id);
@@ -367,7 +374,7 @@ storedAgents.post("/:id/versions", async (c) => {
 
 // PATCH /:id/versions/:versionId — edit draft content
 storedAgents.patch("/:id/versions/:versionId", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   const versionId = validateParam(c.req.param("versionId"), "versionId");
   if (!id || !versionId) return c.json({ error: "Invalid id" }, 400);
@@ -380,7 +387,7 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
   }
 
   const supabase = getSupabase();
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   const { data: v } = await supabase
@@ -443,13 +450,13 @@ storedAgents.patch("/:id/versions/:versionId", async (c) => {
 
 // POST /:id/versions/:versionId/publish
 storedAgents.post("/:id/versions/:versionId/publish", async (c) => {
-  const userId = c.get("userId");
+  const workspaceId = c.get("workspaceId");
   const id = validateParam(c.req.param("id"), "id");
   const versionId = validateParam(c.req.param("versionId"), "versionId");
   if (!id || !versionId) return c.json({ error: "Invalid id" }, 400);
   const supabase = getSupabase();
 
-  const agent = await loadAgent(id, userId);
+  const agent = await loadAgent(id, workspaceId);
   if (!agent) return c.json({ error: "Not found" }, 404);
 
   const { data: v } = await supabase
@@ -476,7 +483,7 @@ storedAgents.post("/:id/versions/:versionId/publish", async (c) => {
     .eq("id", versionId)
     .limit(1)
     .single();
-  const updatedAgent = await loadAgent(id, userId);
+  const updatedAgent = await loadAgent(id, workspaceId);
   return c.json({
     agent: serializeAgent(updatedAgent!, updatedVersion),
     version: serializeVersion(updatedVersion),

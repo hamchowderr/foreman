@@ -1,6 +1,8 @@
 import { createTool } from "@mastra/core/tools";
 import { createZapierSdk } from "@zapier/zapier-sdk";
 import { z } from "zod";
+import { onZapierSdkEvent } from "../../lib/zapier/deprecation";
+import { getSdkForUser } from "../../lib/zapier/sdk";
 
 const ZAPIER_CONNECTIONS_PAGE = "https://zapier.com/app/connections";
 
@@ -8,9 +10,50 @@ const ZAPIER_CONNECTIONS_PAGE = "https://zapier.com/app/connections";
  * Build the deep-link URL that opens Zapier's OAuth flow for a specific app.
  * Uses the SDK's `implementation_id` (e.g. "GoogleMailV2CLIAPI@2.8.3") which
  * is Zapier's internal app identifier.
+ *
+ * This is the fallback path. When the user already has a Zapier identity, we
+ * prefer the SDK's `getConnectionStartUrl` (signed, account-bound, expiring)
+ * instead — see `signedConnectUrl` below.
  */
 function authStartUrl(implementationId: string): string {
   return `https://zapier.com/engine/auth/start/${implementationId}/`;
+}
+
+type AppMatch = { key?: string; slug?: string; title?: string; implementation_id?: string };
+
+/**
+ * Mint Zapier's official signed connection-start URL for a connected user
+ * (SDK >= 0.71 `getConnectionStartUrl`). The URL is bound to the user's Zapier
+ * account and signed, so it drops the user straight into connecting this app —
+ * no generic "find the app yourself" page. Returns undefined when there's no
+ * userId in context or the user isn't connected yet (caller falls back to the
+ * generic engine deep-link).
+ */
+async function signedConnectUrl(
+  context: { requestContext?: { get(key: string): unknown } } | undefined,
+  app: AppMatch,
+  appSlug: string,
+) {
+  const userId = context?.requestContext?.get("userId") as string | undefined;
+  if (!userId) return undefined;
+  try {
+    const sdk = await getSdkForUser(userId);
+    const appKey = app.key ?? app.slug ?? appSlug;
+    const { data } = await sdk.getConnectionStartUrl({ app: appKey });
+    if (!data?.url) return undefined;
+    const name = app.title ?? app.slug ?? appSlug;
+    return {
+      connectUrl: data.url,
+      appName: name,
+      expiresAt: data.expiresAt,
+      message:
+        `Click the link to connect ${name} on Zapier — it's a secure link tied to your ` +
+        "account and expires in a few minutes. Once connected, come back and I'll complete your request.",
+    };
+  } catch {
+    // ZapierNotConnected (no account linked yet) or any SDK error → fall back.
+    return undefined;
+  }
 }
 
 /**
@@ -37,7 +80,6 @@ function pickExactApp<T extends { slug?: string; key?: string; title?: string }>
 
 export const connectZapierTool = createTool({
   id: "connect_zapier",
-  strict: true,
   description:
     "Generate a URL the user can click to connect an app on Zapier. " +
     "If appSlug is provided (e.g. 'gmail', 'slack', 'notion'), returns the " +
@@ -87,18 +129,24 @@ export const connectZapierTool = createTool({
     });
 
     try {
-      const sdk = createZapierSdk();
+      const sdk = createZapierSdk({ onEvent: onZapierSdkEvent });
       // Pull a wider candidate set — Zapier's search uses substring matching
       // and can bury exact-name apps (e.g. "gmail" returns "Acelle Mail" in
       // the first 10 results, with the actual Gmail beyond position 10).
       const { data: apps } = await sdk.listApps({ search: appSlug, maxItems: 50 });
       const app = pickExactApp(apps ?? [], appSlug);
-      if (app?.implementation_id) {
-        return {
-          connectUrl: authStartUrl(app.implementation_id),
-          appName: app.title ?? app.slug ?? appSlug,
-          message: `Click the link to connect ${app.title ?? app.slug ?? appSlug} on Zapier. Once connected, come back and I'll complete your request.`,
-        };
+      if (app) {
+        // Prefer the SDK's signed, account-bound connect URL for connected users.
+        const signed = await signedConnectUrl(context, app, appSlug);
+        if (signed) return signed;
+        // Fall back to the generic engine deep-link (works without a linked account).
+        if (app.implementation_id) {
+          return {
+            connectUrl: authStartUrl(app.implementation_id),
+            appName: app.title ?? app.slug ?? appSlug,
+            message: `Click the link to connect ${app.title ?? app.slug ?? appSlug} on Zapier. Once connected, come back and I'll complete your request.`,
+          };
+        }
       }
     } catch {
       // Fall through to the generic page below.

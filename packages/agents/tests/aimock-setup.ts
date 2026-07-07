@@ -32,7 +32,7 @@ export default async function setup() {
   if (config.llm?.fixtures && !path.isAbsolute(config.llm.fixtures)) {
     config.llm.fixtures = path.resolve(PACKAGE_ROOT, config.llm.fixtures);
   }
-  const { aimock: instance, url } = await startFromConfig(config, { port: 0 });
+  const { llmock: instance, url } = await startFromConfig(config, { port: 0 });
   aimock = instance;
 
   process.env.ANTHROPIC_BASE_URL = `${url}/v1`;

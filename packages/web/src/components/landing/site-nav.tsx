@@ -10,6 +10,7 @@ import { createClient } from "@/lib/client";
 export function SiteNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     createClient()
@@ -19,17 +20,36 @@ export function SiteNav() {
       });
   }, []);
 
+  // Transparent over the hero; fade in a blurred bar once the page scrolls.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Keep a readable backdrop whenever the mobile menu is open, regardless of scroll.
+  const solid = scrolled || mobileOpen;
+
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+    <nav
+      className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+        solid
+          ? "border-border/60 bg-background/80 backdrop-blur-xl"
+          : "border-transparent bg-transparent"
+      }`}
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground text-xs font-bold">
-            F
-          </span>
+          {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+          <img
+            alt="Foreman"
+            className="h-6 w-6 object-contain"
+            height={24}
+            src="/zapier.svg"
+            width={24}
+          />
           <span className="text-[15px]">Foreman</span>
-          <span className="hidden sm:inline text-[10px] font-medium text-accent border border-accent/30 rounded-full px-2 py-0.5 ml-0.5 uppercase tracking-wider">
-            Alpha
-          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -77,7 +97,7 @@ export function SiteNav() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-background px-6 py-4 space-y-3 animate-fade-in">
+        <div className="md:hidden border-t border-border bg-background px-4 sm:px-6 py-4 space-y-3 animate-fade-in">
           <a
             href="#features"
             className="block text-sm text-muted-foreground hover:text-foreground"

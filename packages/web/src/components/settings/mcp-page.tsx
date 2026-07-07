@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CopyButton } from "@/components/copy-button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/client";
 
 interface ApiKey {
@@ -17,24 +24,6 @@ interface Props {
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:4111";
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
-      className="text-xs px-2 py-1 rounded transition-colors"
-      style={{ backgroundColor: "#FFF3E6", color: "#FF4F00" }}
-    >
-      {copied ? "Copied!" : "Copy"}
-    </button>
-  );
-}
-
 function CodeBlock({ code }: { code: string }) {
   return (
     <div
@@ -43,7 +32,7 @@ function CodeBlock({ code }: { code: string }) {
     >
       <pre>{code}</pre>
       <div className="absolute top-2 right-2">
-        <CopyButton text={code} />
+        <CopyButton value={code} />
       </div>
     </div>
   );
@@ -56,6 +45,7 @@ export function McpPage({ mcpUrl }: Props) {
   const [creating, setCreating] = useState(false);
   const [revealedKey, setRevealedKey] = useState<{ id: string; key: string } | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function getToken() {
     const supabase = createClient();
@@ -87,6 +77,7 @@ export function McpPage({ mcpUrl }: Props) {
     const name = newKeyName.trim();
     if (!name) return;
     setCreating(true);
+    setError(null);
     try {
       const token = await getToken();
       const res = await fetch(`${AGENT_URL}/api-keys`, {
@@ -94,7 +85,10 @@ export function McpPage({ mcpUrl }: Props) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setError("Couldn't create the API key. Please try again.");
+        return;
+      }
       const data = await res.json();
       setRevealedKey({ id: data.id, key: data.key });
       setKeys((k) => [
@@ -108,6 +102,8 @@ export function McpPage({ mcpUrl }: Props) {
         ...k,
       ]);
       setNewKeyName("");
+    } catch {
+      setError("Couldn't create the API key. Please try again.");
     } finally {
       setCreating(false);
     }
@@ -115,14 +111,21 @@ export function McpPage({ mcpUrl }: Props) {
 
   async function revokeKey(id: string) {
     setRevoking(id);
+    setError(null);
     try {
       const token = await getToken();
-      await fetch(`${AGENT_URL}/api-keys/${id}`, {
+      const res = await fetch(`${AGENT_URL}/api-keys/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) {
+        setError("Couldn't revoke the API key. Please try again.");
+        return;
+      }
       setKeys((k) => k.filter((key) => key.id !== id));
       if (revealedKey?.id === id) setRevealedKey(null);
+    } catch {
+      setError("Couldn't revoke the API key. Please try again.");
     } finally {
       setRevoking(null);
     }
@@ -179,7 +182,7 @@ export function McpPage({ mcpUrl }: Props) {
           <span className="flex-1 font-mono text-sm truncate" style={{ color: "#201515" }}>
             {mcpUrl}
           </span>
-          <CopyButton text={mcpUrl} />
+          <CopyButton value={mcpUrl} />
         </div>
       </div>
 
@@ -190,26 +193,30 @@ export function McpPage({ mcpUrl }: Props) {
         </h2>
 
         {/* Create form */}
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Key name (e.g. Claude Desktop)"
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && createKey()}
-            className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
-            style={{ border: "1.5px solid #FFF3E6", backgroundColor: "#fff", color: "#201515" }}
-          />
-          <button
-            type="button"
-            onClick={createKey}
-            disabled={creating || !newKeyName.trim()}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 transition-opacity"
-            style={{ backgroundColor: "#FF4F00" }}
-          >
+        <div className="flex items-end gap-2 mb-4">
+          <Field className="flex-1">
+            <FieldLabel htmlFor="new-key-name">Key name</FieldLabel>
+            <Input
+              id="new-key-name"
+              type="text"
+              placeholder="Key name (e.g. Claude Desktop)"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createKey()}
+            />
+          </Field>
+          <Button type="button" onClick={createKey} disabled={creating || !newKeyName.trim()}>
             {creating ? "Creating…" : "Create Key"}
-          </button>
+          </Button>
         </div>
+
+        {/* Error */}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Something went wrong</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Revealed key banner */}
         {revealedKey && (
@@ -224,7 +231,7 @@ export function McpPage({ mcpUrl }: Props) {
               <code className="flex-1 font-mono text-sm break-all" style={{ color: "#201515" }}>
                 {revealedKey.key}
               </code>
-              <CopyButton text={revealedKey.key} />
+              <CopyButton value={revealedKey.key} />
             </div>
           </div>
         )}
@@ -232,14 +239,21 @@ export function McpPage({ mcpUrl }: Props) {
         {/* Key list */}
         <div className="space-y-2">
           {loading && (
-            <p className="text-sm py-4 text-center" style={{ color: "#aaa" }}>
-              Loading…
-            </p>
+            <>
+              <Skeleton className="h-[60px] w-full rounded-lg" />
+              <Skeleton className="h-[60px] w-full rounded-lg" />
+              <Skeleton className="h-[60px] w-full rounded-lg" />
+            </>
           )}
           {!loading && keys.length === 0 && (
-            <p className="text-sm py-4 text-center" style={{ color: "#aaa" }}>
-              No API keys yet.
-            </p>
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No API keys yet</EmptyTitle>
+                <EmptyDescription>
+                  Create a key above to connect an MCP client to Foreman.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
           {keys.map((k) => (
             <div
@@ -258,15 +272,15 @@ export function McpPage({ mcpUrl }: Props) {
                     : " · Never used"}
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="destructive"
+                size="sm"
                 onClick={() => revokeKey(k.id)}
                 disabled={revoking === k.id}
-                className="text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                style={{ backgroundColor: "#fee2e2", color: "#dc2626" }}
               >
                 {revoking === k.id ? "Revoking…" : "Revoke"}
-              </button>
+              </Button>
             </div>
           ))}
         </div>

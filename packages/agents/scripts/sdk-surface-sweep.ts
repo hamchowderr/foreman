@@ -23,7 +23,7 @@
  * local. Run from packages/agents:
  *   npx tsx scripts/sdk-surface-sweep.ts
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 // ---- Foreman's own categorization (mirror of zapier-sdk-tools.ts) ----
 const APPROVAL_REQUIRED = new Set([
@@ -113,10 +113,16 @@ function methodNames(obj: any): string[] {
 
 async function main() {
   // 1) Installed version straight off disk (exports map blocks require()).
-  const pkgPath = new URL(
+  //    The package may be deduped to the workspace root, so try the nested
+  //    copy first, then the hoisted root node_modules.
+  const pkgCandidates = [
     "../node_modules/@zapier/zapier-sdk/package.json",
-    import.meta.url,
-  ).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+    "../../../node_modules/@zapier/zapier-sdk/package.json",
+  ].map((p) => new URL(p, import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+  const pkgPath = pkgCandidates.find((p) => existsSync(p));
+  if (!pkgPath) {
+    throw new Error(`@zapier/zapier-sdk/package.json not found in: ${pkgCandidates.join(", ")}`);
+  }
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   h(`@zapier/zapier-sdk SURFACE SWEEP — installed v${pkg.version}`);
   console.log("dependencies:", JSON.stringify(pkg.dependencies));
@@ -183,7 +189,6 @@ async function main() {
       try {
         const reg = sdk.getRegistry(v);
         const fns = reg?.functions ?? [];
-        const names = fns.map((f: any) => f.name).sort();
         console.log(
           `  [${label}] getRegistry(${v ? JSON.stringify(v) : "undefined"}) -> ${fns.length} functions`,
         );

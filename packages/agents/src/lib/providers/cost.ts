@@ -144,8 +144,26 @@ function getCostCounter() {
  * and records the OpenTelemetry counter when OTEL_ENABLED=true.
  */
 export function onFinishCostLogger(agent: AgentName) {
-  return (event: { totalUsage?: UsageTokens }): void => {
-    const model = primary(AGENT_MODELS[agent]);
+  return (event: {
+    totalUsage?: UsageTokens;
+    response?: { modelId?: string };
+    modelId?: string;
+    model?: string | { modelId?: string };
+  }): void => {
+    // Prefer the model that ACTUALLY ran this call (per-request override from
+    // the composer's model selector) over the agent's static default. AI SDK v6
+    // exposes it on the finish event's response metadata. The router gives Mastra
+    // a bare provider model id (e.g. "claude-haiku-4-5-20251001"), so re-attach
+    // the "anthropic/" prefix to match the MODEL_PRICING keys.
+    const rawModel =
+      event?.response?.modelId ??
+      event?.modelId ??
+      (typeof event?.model === "string" ? event.model : event?.model?.modelId);
+    const model = rawModel
+      ? rawModel.includes("/")
+        ? rawModel
+        : `anthropic/${rawModel}`
+      : primary(AGENT_MODELS[agent]);
     const usage = event?.totalUsage ?? { inputTokens: 0, outputTokens: 0 };
     const breakdown = calculateCost(model, usage);
 

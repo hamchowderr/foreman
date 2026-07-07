@@ -2,20 +2,25 @@ import { createTool } from "@mastra/core/tools";
 import {
   createZapierSdk,
   ZapierActionError,
+  ZapierApiError,
   ZapierAppNotFoundError,
   ZapierApprovalError,
   ZapierAuthenticationError,
+  ZapierBundleError,
   ZapierConfigurationError,
+  ZapierConflictError,
   ZapierError,
   ZapierNotFoundError,
   ZapierRateLimitError,
   ZapierRelayError,
   ZapierResourceNotFoundError,
   ZapierTimeoutError,
+  ZapierUnknownError,
   ZapierValidationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
 import { requestUserContext } from "./request-user-context";
+import { onZapierSdkEvent } from "./zapier/deprecation";
 import { getSdkForUser } from "./zapier/sdk";
 
 /**
@@ -60,8 +65,9 @@ const READ_ONLY = new Set([
   "findFirstConnection",
   "findUniqueConnection",
   "getConnection",
-  "getInputFieldsSchema",
-  "listInputFieldChoices",
+  "getActionInputFieldsSchema",
+  "listActionInputFields",
+  "listActionInputFieldChoices",
   "listTables",
   "getTable",
   "listTableFields",
@@ -86,18 +92,45 @@ const EXCLUDED_METHODS = new Set([
   "findUniqueAuthentication",
   "getAuthentication",
   "request",
-  // Legacy duplicate of getInputFieldsSchema
+  // Deprecated input-field aliases — canonical surfaced instead:
+  // getActionInputFieldsSchema / listActionInputFields / listActionInputFieldChoices
   "listInputFields",
+  "getInputFieldsSchema",
+  "listInputFieldChoices",
   // Connect Builder OAuth client credentials — Foreman doesn't expose this
   "createClientCredentials",
   "deleteClientCredentials",
   "listClientCredentials",
+  // In-flow connection helpers (added to the main mcp registry in SDK 0.71).
+  // Excluded from auto-generation for two reasons:
+  //   1. `createConnection` / `waitForNewConnection` BLOCK up to 5 minutes
+  //      waiting for the user to finish connecting — wrong for Mastra's
+  //      synchronous tool loop (would stall a request/stream).
+  //   2. Foreman already owns the connection UX via the `connect_zapier`
+  //      custom tool + the `/zapier/*` OAuth callback route; exposing these
+  //      would give the agent competing, overlapping ways to connect an app.
+  // Deliberate adoption of `createConnection` (as a proper async/background
+  // custom tool) is tracked in foreman-mcwn.
+  "createConnection",
+  "getConnectionStartUrl",
+  "waitForNewConnection",
 ]);
 
 /** Convert camelCase to kebab-case (matching MCP server convention). */
 function toKebab(name: string): string {
   return name.replace(/([A-Z])/g, "-$1").toLowerCase();
 }
+
+/**
+ * Tool IDs (kebab-case) of the read-only Zapier tools — the safe, no-approval
+ * reads. Used to opt them into Mastra background execution at the AGENT level
+ * (foreman-7am4): tool-level `background` config doesn't dispatch under Foreman's
+ * lazy `tools: () => …` resolver, but the agent-level `backgroundTasks.tools`
+ * map does. Write/destructive tools are intentionally excluded (stay synchronous
+ * so the proposal/approval flow is undisturbed). Computed from static metadata —
+ * no SDK init, safe to import at module load.
+ */
+export const READ_ONLY_TOOL_IDS: string[] = Array.from(READ_ONLY, toKebab);
 
 /**
  * List methods that return paginated results.
@@ -110,12 +143,85 @@ const PAGINATED_METHODS = new Set([
   "listTables",
   "listTableRecords",
   "listTableFields",
-  "listInputFieldChoices",
+  "listActionInputFieldChoices",
   "runAction", // search/read actions return paginated results
 ]);
 
 /** Default max items to collect when auto-paginating. */
 const DEFAULT_MAX_ITEMS = 100;
+
+/**
+ * Stringified-open-object coercion (the nested-in-array gap).
+ *
+ * A few Zapier tools take an "open bag" param — dynamic keys, `additionalProperties`
+ * — *nested inside an array*: table-record `data`, table-field `options`/`config`.
+ * Models (weak ones reliably, strong ones sometimes) emit such a bag as a JSON
+ * *string*. Mastra's built-in coercion (`coerceStringifiedJsonValues`) only fixes
+ * TOP-LEVEL bags, not ones nested in an array, so these fail validation before the
+ * tool runs.
+ *
+ * We override just these tools' input schemas — rebuilt in *our* zod so the
+ * field-level coercion actually runs during Mastra's `~standard` validation. (A
+ * `z.preprocess` wrapper around the SDK's own schema gets bypassed because it
+ * crosses zod copies.) The model-facing JSON schema is unchanged: the bag still
+ * advertises as an `object`; we just also accept and parse the stringified form.
+ */
+const jsonObjectParam = (desc: string) =>
+  z.preprocess((v: unknown) => {
+    if (typeof v === "string") {
+      try {
+        return JSON.parse(v);
+      } catch {
+        return v; // leave as-is; validation surfaces the real problem
+      }
+    }
+    return v;
+  }, z.record(z.string(), z.any()).describe(desc));
+
+const SCHEMA_OVERRIDES: Record<string, z.ZodTypeAny> = {
+  createTableRecords: z.object({
+    table: z.string().describe("The unique identifier of the table"),
+    records: z
+      .array(
+        z.object({
+          data: jsonObjectParam("Field values for the record, keyed by field name or id"),
+        }),
+      )
+      .min(1)
+      .describe("Records to create (max 100)"),
+    keyMode: z
+      .enum(["names", "ids"])
+      .optional()
+      .describe('How to interpret field keys: "names" (default, human-readable) or "ids"'),
+  }),
+  updateTableRecords: z.object({
+    table: z.string().describe("The unique identifier of the table"),
+    records: z
+      .array(
+        z.object({
+          id: z.string().describe("The record id to update"),
+          data: jsonObjectParam("Updated field values, keyed by field name or id"),
+        }),
+      )
+      .min(1)
+      .describe("Records to update"),
+    keyMode: z.enum(["names", "ids"]).optional(),
+  }),
+  createTableFields: z.object({
+    table: z.string().describe("The unique identifier of the table"),
+    fields: z
+      .array(
+        z.object({
+          name: z.string().describe("Field (column) name"),
+          type: z.string().describe("Field type, e.g. string, number, date, email, bool"),
+          options: jsonObjectParam("Optional field options (type-specific)").optional(),
+          config: jsonObjectParam("Optional field config (type-specific)").optional(),
+        }),
+      )
+      .min(1)
+      .describe("Fields (columns) to create"),
+  }),
+};
 
 /**
  * Resolve SDK credentials based on environment.
@@ -125,7 +231,7 @@ const DEFAULT_MAX_ITEMS = 100;
  */
 function resolveCredentials(
   explicit?: string | (() => Promise<string>),
-): Parameters<typeof createZapierSdk>[0]["credentials"] {
+): NonNullable<Parameters<typeof createZapierSdk>[0]>["credentials"] {
   if (explicit) return explicit;
   const isDev = process.env.FOREMAN_MODE === "dev";
   if (!isDev) {
@@ -186,6 +292,7 @@ export function generateZapierTools(
     maxNetworkRetries: 3,
     maxNetworkRetryDelayMs: 30000,
     canDeleteTables: true,
+    onEvent: onZapierSdkEvent,
   });
 
   const registry = sdk.getRegistry({ package: "mcp" });
@@ -224,7 +331,7 @@ export function generateZapierTools(
       tools[toolName] = createTool({
         id: toolName,
         description,
-        inputSchema: unwrapped as unknown as z.ZodObject<any>,
+        inputSchema: (SCHEMA_OVERRIDES[fn.name] ?? unwrapped) as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
         execute: async (input) => {
@@ -435,6 +542,59 @@ export function handleSdkError(
         ? `${methodName} needs your approval on Zapier before it can run. Open this link to approve, then try again: ${ae.approvalUrl}`
         : `${methodName} needs approval on Zapier before it can run (status: ${ae.approvalStatus ?? "pending"}). No approval URL was returned — try again shortly.`,
       code: "APPROVAL_REQUIRED",
+      retryable: false,
+    };
+  }
+
+  // Conflicting state (409) — e.g. creating a named resource that already
+  // exists, or acting on a resource in an incompatible state. Actionable:
+  // tell the user what conflicted so they can rename / pick another.
+  if (err instanceof ZapierConflictError) {
+    const ce = err as ZapierConflictError;
+    return {
+      error: `${methodName} conflicts with existing state${
+        ce.resourceType ? ` (${ce.resourceType})` : ""
+      }: ${(err as Error).message}. It may already exist or be in an incompatible state — use a different name or check the current state, then try again.`,
+      code: "CONFLICT",
+      retryable: false,
+    };
+  }
+
+  // Generic API-request failure. Base ZapierError carries an optional
+  // statusCode; surface it when present. Not retryable by default (unlike
+  // rate-limit/timeout/relay, which have their own branches above).
+  if (err instanceof ZapierApiError) {
+    const ape = err as ZapierApiError;
+    return {
+      error: `Zapier API error for ${methodName}${
+        ape.statusCode ? ` (HTTP ${ape.statusCode})` : ""
+      }: ${(err as Error).message}`,
+      code: "API_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Code bundling / compilation failure — carries per-error build details.
+  if (err instanceof ZapierBundleError) {
+    const be = err as ZapierBundleError;
+    const detail =
+      be.buildErrors && be.buildErrors.length > 0
+        ? be.buildErrors.join("; ")
+        : (err as Error).message;
+    return {
+      error: `${methodName} failed to build: ${detail}`,
+      code: "BUNDLE_ERROR",
+      retryable: false,
+    };
+  }
+
+  // Fallback the SDK produces for non-Error throws it normalized. No extra
+  // structure to extract — surface the message. Must precede the ZapierError
+  // catch-all (it extends ZapierError).
+  if (err instanceof ZapierUnknownError) {
+    return {
+      error: `${methodName} failed: ${(err as Error).message}`,
+      code: "UNKNOWN_ERROR",
       retryable: false,
     };
   }

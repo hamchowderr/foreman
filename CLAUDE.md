@@ -1,5 +1,11 @@
 @AGENTS.md
 
+<!-- Project coding rules (imperative conventions; see rules/index.md). -->
+@rules/index.md
+@rules/zapier-sdk.md
+@rules/mastra.md
+@rules/testing-and-db.md
+
 ## Monorepo Layout
 
 ```
@@ -13,11 +19,15 @@ packages/web/      → Next.js 16 frontend (port 3000)
 
 | Agent             | File                                     | Model      | Tools                                                   |
 | ----------------- | ---------------------------------------- | ---------- | ------------------------------------------------------- |
-| Foreman (primary) | `agents/src/mastra/agents/foreman.ts`    | sonnet 4.6 | All SDK tools (via ToolSearchProcessor), 3 custom tools |
+| Foreman (primary) | `agents/src/mastra/agents/foreman.ts`    | sonnet 4.6 | All SDK tools (via ToolSearchProcessor) + 7 custom-tool modules |
 | Supervisor        | `agents/src/mastra/agents/supervisor.ts` | sonnet 4.6 | Routes to discovery/execution/history agents            |
-| Discovery         | `agents/src/mastra/agents/discovery.ts`  | haiku 4.5  | 9 read-only SDK tools                                   |
-| Execution         | `agents/src/mastra/agents/execution.ts`  | sonnet 4.6 | run-action, fetch, request, connect_zapier              |
+| Discovery         | `agents/src/mastra/agents/discovery.ts`  | haiku 4.5  | 8 read-only SDK tools (`DISCOVERY_TOOL_NAMES`)          |
+| Execution         | `agents/src/mastra/agents/execution.ts`  | sonnet 4.6 | run-action, fetch, connect_zapier                       |
 | History           | `agents/src/mastra/agents/history.ts`    | haiku 4.5  | search_history                                          |
+
+Models are centralized in `agents/src/lib/providers/models.ts` (`AGENT_MODELS`) and are
+env-overridable (`FOREMAN_MODEL`, `DISCOVERY_MODEL`, `EXECUTION_MODEL`, …). Tier defaults:
+`default` = `claude-sonnet-4-6`, `fast` = `claude-haiku-4-5-20251001`, `heavy` = `claude-opus-4-6`.
 
 Mastra instance + server config: `agents/src/mastra/index.ts`
 
@@ -29,35 +39,45 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
   - Table operations use `table` (not `tableId`)
   - Record creation uses `{ data: {...} }` wrapper per record
 - `APPROVAL_REQUIRED` set: 9 write/delete tools need human approval
-- `READ_ONLY` set: 17 discovery tools
-- `DEPRECATED_METHODS` set: 5 excluded (request, listAuthentications, etc.)
-- `zapier-mcp.ts` — old MCP stdio approach, deprecated but still in tree
+- `READ_ONLY` set: 17 discovery tools (used for MCP annotations + agent-level background execution)
+- `EXCLUDED_METHODS` set: 14 methods skipped during tool generation — deprecated wrappers (`request`, the `*Authentication` duplicates of the `connection`-prefixed methods, the `*InputField*` aliases) plus surfaces Foreman doesn't expose (Connect-Builder OAuth client-credentials; the blocking `createConnection`/`getConnectionStartUrl`/`waitForNewConnection` helpers)
 - **Auth model** — which auth (client-creds vs per-user userJwt) works on which SDK surface, and why durable is internal-scope-walled: [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md)
 
 ### Custom Tools
 
-| Tool              | File                                           |
-| ----------------- | ---------------------------------------------- |
-| connect_zapier    | `agents/src/mastra/tools/connect-zapier.ts`    |
-| search_history    | `agents/src/mastra/tools/search-history.ts`    |
-| fork_conversation | `agents/src/mastra/tools/fork-conversation.ts` |
+| Tool                            | File                                           |
+| ------------------------------- | ---------------------------------------------- |
+| connect_zapier                  | `agents/src/mastra/tools/connect-zapier.ts`    |
+| search_history                  | `agents/src/mastra/tools/search-history.ts`    |
+| fork_conversation               | `agents/src/mastra/tools/fork-conversation.ts` |
+| create_dashboard                | `agents/src/mastra/tools/create-dashboard.ts`  |
+| preview_app                     | `agents/src/mastra/tools/preview-app.ts`       |
+| save_document                   | `agents/src/mastra/tools/save-document.ts`     |
+| create/run/inspect/list_automation | `agents/src/mastra/tools/automations.ts`   |
 
 ### API Routes
 
 All custom routes: `agents/src/routes/index.ts` (Hono, mounted as Mastra middleware)
 
-| Route               | File                       | Purpose                       |
-| ------------------- | -------------------------- | ----------------------------- |
-| `/conversations/*`  | `routes/conversations.ts`  | CRUD + SSE message streaming  |
-| `/proposals/*`      | `routes/proposals.ts`      | Approve/decline/field-choices |
-| `/workflows/*`      | `routes/workflows.ts`      | Workflow CRUD + SSE run       |
-| `/zapier/*`         | `routes/zapier-connect.ts` | OAuth callback flow           |
-| `/capabilities`     | `routes/capabilities.ts`   | Per-user feature flags        |
-| `/guardrails`       | `routes/guardrails.ts`     | Safety settings               |
-| `/voice`            | `routes/voice.ts`          | STT/TTS endpoints             |
-| `/telegram/webhook` | `telegram/webhook.ts`      | Telegram bot                  |
-| `/slack/webhook`    | `slack/webhook.ts`         | Slack bot                     |
-| `/discord/webhook`  | `discord/webhook.ts`       | Discord bot                   |
+| Route               | File                       | Purpose                          |
+| ------------------- | -------------------------- | -------------------------------- |
+| `/conversations/*`  | `routes/conversations.ts`  | CRUD + SSE message streaming     |
+| `/proposals/*`      | `routes/proposals.ts`      | Approve/decline/field-choices    |
+| `/automations/*`    | `routes/automations.ts`    | Durable automation CRUD + run    |
+| `/apps/*`           | `routes/apps.ts`           | App catalog/search + pulled data |
+| `/documents/*`      | `routes/documents.ts`      | Document CRUD + import           |
+| `/workspaces/*`     | `routes/workspaces.ts`     | Workspace CRUD + settings        |
+| `/stored/agents/*`  | `routes/stored-agents.ts`  | Saved/preview agents             |
+| `/zapier/*` `/oauth`| `routes/zapier-connect.ts` | OAuth connect + callback flow    |
+| `/webhooks/*`       | `routes/webhooks.ts`       | Inbound webhook ingestion        |
+| `/capabilities`     | `routes/capabilities.ts`   | Per-user feature flags           |
+| `/guardrails`       | `routes/guardrails.ts`     | Safety settings                  |
+| `/api-keys/*`       | `routes/api-keys.ts`       | `fmn_` API key CRUD              |
+| `/channel-links/*`  | `routes/channel-links.ts`  | Channel pairing/link codes       |
+| `/voice`            | `routes/voice.ts`          | STT/TTS endpoints                |
+| `/telegram/webhook` | `telegram/webhook.ts`      | Telegram bot                     |
+| `/slack/webhook` `/slack/oauth` | `slack/webhook.ts` | Slack bot + OAuth              |
+| `/discord/webhook`  | `discord/webhook.ts`       | Discord bot                      |
 
 Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 
@@ -65,13 +85,13 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 
 - **Middleware**: `agents/src/routes/middleware.ts` — Supabase JWT validation via `getSupabase().auth.getUser(token)`
 - **Identity resolution**: `agents/src/lib/identity.ts` — maps channel users to Foreman users; validates web JWTs via `resolveFromSupabaseJwt`
-- **API auth**: `agents/src/lib/api-auth.ts` — JWT + API key (`fmn_` prefix)
+- **API auth**: `agents/src/lib/identity.ts` — `resolveFromRequest` handles JWT + API key (`fmn_` prefix, via `resolveFromApiKey`/`createApiKey`); key CRUD lives in `routes/api-keys.ts`
 - **Web auth**: `@supabase/ssr` — `lib/server.ts` (server components), `lib/client.ts` (browser), `lib/middleware.ts` (session refresh)
 - **Auth pages**: `/auth/login`, `/auth/sign-up`, `/auth/forgot-password`, `/auth/update-password`
 
 ### Database
 
-- **Schema**: `agents/src/lib/db/schema.ts` — plain TypeScript interfaces (snake_case, mirrors DB columns)
+- **Schema / types**: `agents/src/lib/db/database.types.ts` — the typed DB schema, codegen'd from the live local DB (snake_case, mirrors columns). There is no hand-written `schema.ts`; see the **Generated types** note below for the regen workflow.
 - **Client**: `agents/src/lib/db/index.ts` — `getSupabase()` returns supabase-js service_role client
 - **Mastra storage**: `PostgresStore` from `@mastra/pg` (direct `DATABASE_URL` connection, separate from supabase-js)
 - **Vector**: `PgVector` from `@mastra/pg`
@@ -81,9 +101,10 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
   - Postgres: 127.0.0.1:54422 (user: `postgres`, pass: `postgres`, db: `postgres`)
   - Studio: http://127.0.0.1:54423
   - `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54422/postgres`
-  - `supabase/config.toml` disables unused services (storage, auth, realtime, inbucket, analytics, edge_runtime) — they fail health checks on Windows and Foreman doesn't use them
+  - Mailpit/Inbucket: http://127.0.0.1:54424 (local email testing — **enabled**)
+  - `supabase/config.toml` disables the services Foreman doesn't use (storage, realtime, analytics, edge_runtime) — they fail health checks on Windows. **auth and inbucket stay enabled** (Foreman uses Supabase auth + local email).
 - **Generated types**: `agents/src/lib/db/database.types.ts` is codegen'd from the live local DB. Regenerate with `cd packages/agents && npm run db:types`; CI diffs it via `db:types:check` (the `db types fresh` job). Both run `supabase gen types --local --workdir ../..`. The **`--workdir ../..` is required**: the scripts run from `packages/agents` but `supabase/config.toml` is at the repo root, so plain `--local` can't find the stack and silently falls back to the cloud/token path (`"Access token not provided"`, empty output). Do **NOT** swap in `--db-url`: newer CLIs introspect via a `postgres-meta` container that can't reach the host's `127.0.0.1` in CI (works on Windows Docker, fails on Linux). Run `npx supabase start` first.
-- Tables: user, zapier_identity, conversation, action_proposal, action_run, workflow, workflow_step, workflow_run, capability_flag, channel_identity, api_key
+- Tables (~90 in `public` — see `database.types.ts` for the authoritative list): core Foreman — `user`, `workspaces`, `zapier_identity`, `connection_alias`, `conversation`, `conversation_share`, `action_proposal`, `action_run`, `automation`, `automation_run`, `app_catalog`, `app_data_snapshot`, `app_settings`, `artifact`, `stored_agent`, `capability_flag`, `channel_identity`, `channel_link_code`, `api_key`; plus `billing_*` (Stripe) and Mastra system tables (`mastra_*`). The former `workflow`/`workflow_step`/`workflow_run` tables are gone — superseded by `automation`/`automation_run`.
 
 ### Key Lib Files
 
@@ -99,17 +120,19 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 | `lib/validation.ts`      | Shared Zod schemas                               |
 | `lib/voice.ts`           | STT (Whisper) + TTS (ElevenLabs/OpenAI)          |
 | `lib/guardrails.ts`      | Rate limiting, risk assessment                   |
-| `lib/workflows/`         | Daily summary, health check workflows            |
+| `lib/providers/`         | Central model registry (`AGENT_MODELS`), cost, capabilities, params |
+| `lib/zapier/`            | SDK client factory, connection-alias resolution, deprecation relay |
+| `lib/automations/` + `lib/trigger-inbox/` | Durable automations: store, worker, lease/ack inbox layer |
 
 ### Frontend
 
 | What           | Where                                                                    |
 | -------------- | ------------------------------------------------------------------------ |
-| App layout     | `web/src/app/layout.tsx`                                                 |
-| Chat UI        | `web/src/components/chat-shell.tsx`, `chat-pane.tsx`, `chat-message.tsx` |
-| Approval cards | `web/src/components/approval-card.tsx`                                   |
-| API client     | `web/src/lib/api-client.ts` — all agent server calls                     |
-| Workflows page | `web/src/app/workflows/`                                                 |
+| App layout     | `web/src/app/layout.tsx`; app shell `web/src/components/app-shell.tsx`   |
+| Chat UI        | `web/src/components/chat/` — `shell.tsx`, `messages.tsx`, `message.tsx`, `chat-header.tsx` (artifacts/preview panel alongside) |
+| Approval / tool UI | rendered inline in the message stream via `web/src/components/ai-elements/tool.tsx` (no standalone approval-card) |
+| API client     | domain clients `web/src/lib/{conversations,apps,documents,stored-agents}-client.ts` + `web/src/app/api/*` proxy routes (hit `NEXT_PUBLIC_AGENT_SERVER_URL`) |
+| Key pages      | `web/src/app/{chat,apps,automations,documents,workspaces,inbox,editor,settings}/` (the old `workflows/` page is now `automations/`) |
 
 ## Evaluation pipeline
 
@@ -128,20 +151,60 @@ Foreman uses Mastra's Datasets API to score the agent against a labeled set of r
 
 ## CI
 
-`.github/workflows/test.yml` runs four jobs on every push to `main` and every PR:
+`.github/workflows/test.yml` runs six jobs on every push to `main` and every PR:
 
 | Job | What |
 |---|---|
 | **agents** | `npm test` — vitest workspace projects. AIMock starts in-process via `tests/aimock-setup.ts` globalSetup. |
+| **typecheck** | `tsc` over `packages/agents` (no emit). |
 | **web** | `next build` for `packages/web` (also type-checks). |
-| **lint** | `npm run lint` — Biome. |
+| **lint** | Biome check (lint + format). |
 | **deps** | `npm ci` — postinstall runs `scripts/check-dep-uniqueness.mjs`. |
+| **db-types** | `db:types:check` — diffs `database.types.ts` against a fresh `supabase gen types` (starts the local stack first). |
 
 Real provider keys are deliberately absent from CI. Anything that leaks into a non-mocked path fails loudly.
 
 ## Dev runbook
 
 For requirements, full quick-start, env vars, ngrok, deployment, and the testing tier table — see [README.md](README.md). This file is for navigating the codebase; the README is for running it.
+
+## Gotchas (hard-won — read before debugging the agent server)
+
+- **Run the agents server through Infisical.** Secrets (incl. `ANTHROPIC_API_KEY`)
+  live in Infisical (`otaku-internal`/`dev`), **not** in `agents/.env.local`
+  (those keys are commented out). Start with:
+  `cd packages/agents && infisical run --projectId e56e0da5-6460-4bab-bdd6-2fd12ac5447b --env dev --recursive --silent -- npm run dev`.
+  Plain `npm run dev` → no Anthropic key → every chat 500s with `invalid x-api-key`.
+  Local infra (`DATABASE_URL`, local `SUPABASE_URL`) stays in `.env.local` and is
+  baked in by `mastra dev`, so Infisical's cloud values don't clobber it.
+- **Keep `@mastra/core`, `@mastra/deployer`, `@mastra/server` on the SAME version.**
+  Only core has a root override; deployer/server are transitive (the `mastra` CLI
+  pulls them via `^`) and float UP to the latest minor. When they drift ahead of
+  core, the server calls APIs core lacks — e.g. deployer `1.43.0` called
+  `mastra.getStudio()` while core was `1.42.0-alpha.3`, throwing in route-auth so
+  **every authed HTTP route 500'd while agents still worked in-process** (cost a
+  whole session). The **entire `@mastra/*` set** is pinned to exact versions in root
+  `overrides` for reproducibility (so unpinned transitive alphas can't float either),
+  and `scripts/check-dep-uniqueness.mjs` fails the install if core/deployer/server
+  diverge. To intentionally bump the Mastra alpha: update every `@mastra/*` pin in
+  `overrides` together, then `rm -rf node_modules package-lock.json && npm install`.
+- **Mastra swallows route errors.** Its default handler returns a bare
+  `{"error":"Internal Server Error"}` and logs the real error as `{}` (mangled
+  pino). `index.ts` wires `server.onError` to `console.error` the real stack — keep
+  it. When a route 500s with no detail, that log (server console, not the pino
+  line) is where the truth is.
+- **Don't set `strict: true` on `createTool`.** It forces Anthropic's
+  grammar-constrained tool mode, which rejects `additionalProperties: object`,
+  `propertyNames`, and caps aggregate optional params at 24. The custom tools used
+  to set it and broke Foreman entirely.
+- **`server.middleware` must not consume the request body.** A Web `Request` body
+  is a single-read stream and `.clone()` shares it. `customMiddleware` only
+  pre-routes paths the custom Hono app owns (prefix list in `index.ts`); everything
+  else falls straight through to Mastra with the body intact. Don't revert it to a
+  fetch-everything fall-through — that 500s `POST /chat/:agentId` before the handler.
+- **Inline images need an explicit `mediaType`.** The `/chat` route splits the data
+  URL and forwards `{ type: "image", image: <base64>, mediaType }`; without the
+  media type the AI SDK defaults to `image/jpeg` and Anthropic rejects PNGs.
 
 ## Versioning & Tagging
 

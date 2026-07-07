@@ -48,7 +48,7 @@ export function DocsBanner() {
           filter: "saturate(2)",
         }}
       />
-      Foreman is in alpha — self-hostable today, cloud in beta.
+      Foreman is self-hostable today — cloud hosting in beta.
       <button
         type="button"
         aria-label="Dismiss banner"

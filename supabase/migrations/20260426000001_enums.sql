@@ -30,31 +30,3 @@ CREATE TYPE public.subscription_status AS ENUM (
 );
 
 CREATE TYPE public.pricing_plan_interval AS ENUM ('day', 'week', 'month', 'year');
-
--- Marketing feedback
-CREATE TYPE public.marketing_blog_post_status AS ENUM ('draft', 'published', 'archived');
-CREATE TYPE public.marketing_changelog_status AS ENUM ('draft', 'published', 'archived');
-CREATE TYPE public.marketing_feedback_thread_priority AS ENUM ('low', 'medium', 'high', 'urgent');
-CREATE TYPE public.marketing_feedback_thread_status AS ENUM (
-  'open',
-  'under_review',
-  'planned',
-  'in_progress',
-  'completed',
-  'closed'
-);
-CREATE TYPE public.marketing_feedback_thread_type AS ENUM (
-  'feature_request',
-  'bug',
-  'improvement',
-  'question',
-  'other'
-);
-CREATE TYPE public.marketing_feedback_moderator_hold_category AS ENUM (
-  'spam',
-  'duplicate',
-  'off_topic',
-  'inappropriate',
-  'other'
-);
-CREATE TYPE public.marketing_feedback_reaction_type AS ENUM ('like', 'heart', 'celebrate', 'upvote');

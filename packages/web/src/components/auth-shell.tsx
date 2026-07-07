@@ -36,13 +36,15 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className="relative z-10">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#ff4a00] text-white text-sm font-bold">
-              F
-            </span>
+            {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+            <img
+              alt="Foreman"
+              className="h-7 w-7 object-contain"
+              height={28}
+              src="/zapier.svg"
+              width={28}
+            />
             <span className="text-white text-[15px] font-semibold tracking-tight">Foreman</span>
-            <span className="text-[10px] font-medium text-[#ff4a00] border border-[#ff4a00]/30 rounded-full px-2 py-0.5 uppercase tracking-wider">
-              Alpha
-            </span>
           </Link>
         </div>
 
@@ -75,9 +77,14 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         <div className="w-full max-w-md space-y-8 px-4">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#ff4a00] text-white text-xs font-bold">
-              F
-            </span>
+            {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+            <img
+              alt="Foreman"
+              className="h-6 w-6 object-contain"
+              height={24}
+              src="/zapier.svg"
+              width={24}
+            />
             <span className="text-foreground text-sm font-semibold tracking-tight">Foreman</span>
           </div>
 

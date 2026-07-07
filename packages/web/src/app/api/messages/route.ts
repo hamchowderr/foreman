@@ -30,9 +30,19 @@ export async function GET(request: Request) {
     return NextResponse.json({
       messages: data.messages || [],
       visibility: data.conversation?.visibility || "private",
+      title: data.conversation?.title ?? null,
+      // Collaborative writing (foreman-whkr): a teammate who can open a
+      // workspace-shared chat may also continue it, so it's not read-only.
+      // is_owner still gates owner-only controls (visibility, public share).
       isReadonly: false,
+      isOwner: data.conversation?.is_owner !== false,
     });
   } catch {
-    return NextResponse.json({ messages: [], visibility: "private", isReadonly: false });
+    return NextResponse.json({
+      messages: [],
+      visibility: "private",
+      isReadonly: false,
+      isOwner: true,
+    });
   }
 }

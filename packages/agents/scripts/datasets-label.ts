@@ -45,52 +45,52 @@ interface RawGroundTruth {
 
 const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
   "one-shot-action": (_req) => ({
-    expected_behavior: `Single-app action. Foreman should run the 5-phase action_flow: find-unique-connection → list-actions(actionType: "write" or "search") → get-input-fields-schema (first pass) → list-input-field-choices for selectors → get-input-fields-schema (second pass) → confirm using the structured template ("I'll run **<action>** on **<app>** using the **<account>** connection with: …Confirm?") → run-action on user confirmation. Should NOT proceed with the write before confirming. Read/search actions skip confirmation.`,
+    expected_behavior: `Single-app action. Foreman should run the 5-phase action_flow: find-unique-connection → list-actions(actionType: "write" or "search") → get-action-input-fields-schema (first pass) → list-action-input-field-choices for selectors → get-action-input-fields-schema (second pass) → confirm using the structured template ("I'll run **<action>** on **<app>** using the **<account>** connection with: …Confirm?") → run-action on user confirmation. Should NOT proceed with the write before confirming. Read/search actions skip confirmation.`,
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]", "create-table"],
   }),
 
   "save-as-workflow": (_req) => ({
-    expected_behavior: `Multi-step recurring shape (no explicit time/event trigger). Foreman should walk through the multi-step flow once via run-action, then in Phase 5 ask: "Want me to save this as a workflow you can re-run later?" If user agrees, the conversation becomes saveable via saveWorkflowFromConversation.`,
+    expected_behavior: `Multi-step recurring shape (no explicit time/event trigger). Foreman should walk through the multi-step flow once via run-action. Saving/replaying a conversation as a reusable workflow is NOT available yet — Foreman runs the steps now and, if the user wants to repeat them, says plainly that saved/reusable workflows aren't available yet (never redirect to zapier.com).`,
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]"],
   }),
 
   "scheduled-workflow": (_req) => ({
-    expected_behavior: `Time-based recurring automation (e.g., "every Monday 9am"). Foreman should walk through the action shape, then in Phase 5 offer to save as a workflow with a schedule. The Mastra workflow scheduling primitive is what handles the cron — Foreman should not invent a different mechanism. If timing is ambiguous, ask one clear question (when exactly?).`,
+    expected_behavior: `Time-based recurring request (e.g., "every Monday 9am"). Foreman should run the action shape once now via run-action, then tell the user plainly that scheduled/recurring runs aren't available yet — it must NOT claim to have scheduled anything and must NOT redirect to zapier.com. It may ask one clarifying question about timing, but cannot actually schedule.`,
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]"],
   }),
 
   "channel-triggered-workflow": (_req) => ({
-    expected_behavior: `Event-triggered recurring automation (e.g., "when X happens, do Y"). Foreman should walk through the action shape that runs once per trigger event, then in Phase 5 offer to save as a workflow that fires on the relevant channel webhook (Discord/Slack/Telegram/etc.) or via a Zapier-side trigger. Should NOT redirect the user to zapier.com — Foreman handles this end-to-end.`,
+    expected_behavior: `Event-triggered recurring request (e.g., "when X happens, do Y"). Foreman should run the action shape once now via run-action, then tell the user plainly that event-triggered automation isn't available yet — it must NOT claim to have set up a trigger and must NOT redirect to zapier.com.`,
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
-      "list-input-field-choices",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
+      "list-action-input-field-choices",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: ["run-action[app=zapier-tables]"],
@@ -107,7 +107,7 @@ const TEMPLATES: Record<string, (req: string) => ExpectedBehavior> = {
     expected_tools: [
       "find-unique-connection",
       "list-actions",
-      "get-input-fields-schema",
+      "get-action-input-fields-schema",
       "run-action",
     ],
     forbidden_tools: [],

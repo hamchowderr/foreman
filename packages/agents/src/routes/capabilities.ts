@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { CAPABILITIES, getCapabilities, setCapability } from "@/lib/capabilities";
+import { CAPABILITIES, getCapabilities, setCapability } from "../lib/capabilities";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
 

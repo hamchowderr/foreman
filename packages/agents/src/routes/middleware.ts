@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from "hono";
-import { resolveFromRequest } from "@/lib/identity";
+import { resolveFromRequest } from "../lib/identity";
 import type { AppEnv } from "./types";
 
 /**
@@ -19,6 +19,9 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   }
 
   c.set("userId", identity.userId);
+  if (identity.workspaceId) {
+    c.set("workspaceId", identity.workspaceId);
+  }
   if (identity.orgId) {
     c.set("orgId", identity.orgId);
   }

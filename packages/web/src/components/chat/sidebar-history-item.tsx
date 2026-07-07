@@ -1,3 +1,4 @@
+import { ArchiveIcon, ArchiveRestoreIcon } from "lucide-react";
 import Link from "next/link";
 import { memo, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
@@ -5,6 +6,16 @@ import { unstable_serialize } from "swr/infinite";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { createClient } from "@/lib/client";
 import type { Chat } from "@/lib/db/schema";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuPortal,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +26,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { Input } from "../ui/input";
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 import {
   CheckCircleFillIcon,
@@ -31,13 +43,16 @@ const PureChatItem = ({
   chat,
   isActive,
   onDelete,
+  onArchiveToggle,
   setOpenMobile,
 }: {
   chat: Chat;
   isActive: boolean;
   onDelete: (chatId: string) => void;
+  onArchiveToggle?: (chatId: string, nextArchived: boolean) => void;
   setOpenMobile: (open: boolean) => void;
 }) => {
+  const isArchived = chat.archivedAt != null;
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId: chat.id,
     initialVisibilityType: chat.visibility,
@@ -79,8 +94,9 @@ const PureChatItem = ({
   if (isRenaming) {
     return (
       <SidebarMenuItem>
-        <input
-          className="h-8 w-full rounded-none border-b border-dashed border-sidebar-foreground/50 bg-transparent px-2 text-[13px] text-sidebar-foreground outline-none"
+        <Input
+          aria-label="Rename chat"
+          className="h-8 rounded-none border-0 border-b border-dashed border-sidebar-foreground/50 bg-transparent px-2 text-[13px] text-sidebar-foreground focus-visible:border-sidebar-foreground/50 focus-visible:ring-0"
           onBlur={handleRename}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
@@ -99,15 +115,68 @@ const PureChatItem = ({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        className="h-8 rounded-none text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-transparent hover:text-sidebar-foreground data-active:bg-transparent data-active:font-normal data-active:text-sidebar-foreground/50 data-[active=true]:text-sidebar-foreground data-[active=true]:font-medium data-[active=true]:border-b data-[active=true]:border-dashed data-[active=true]:border-sidebar-foreground/50"
-        isActive={isActive}
-      >
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
-          <span className="truncate">{title}</span>
-        </Link>
-      </SidebarMenuButton>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <SidebarMenuButton
+            asChild
+            className="h-8 rounded-md text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground data-active:bg-transparent data-active:font-normal data-active:text-sidebar-foreground/50 data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
+            isActive={isActive}
+          >
+            <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
+              <span className="truncate">{title}</span>
+            </Link>
+          </SidebarMenuButton>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-44">
+          <ContextMenuItem className="cursor-pointer" onSelect={() => setIsRenaming(true)}>
+            <PencilEditIcon size={12} />
+            <span>Rename</span>
+          </ContextMenuItem>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger className="cursor-pointer">
+              <ShareIcon />
+              <span>Share</span>
+            </ContextMenuSubTrigger>
+            <ContextMenuPortal>
+              <ContextMenuSubContent>
+                <ContextMenuItem
+                  className="cursor-pointer flex-row justify-between"
+                  onClick={() => setVisibilityType("private")}
+                >
+                  <div className="flex flex-row items-center gap-2">
+                    <LockIcon size={12} />
+                    <span>Private</span>
+                  </div>
+                  {visibilityType === "private" ? <CheckCircleFillIcon /> : null}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  className="cursor-pointer flex-row justify-between"
+                  onClick={() => setVisibilityType("public")}
+                >
+                  <div className="flex flex-row items-center gap-2">
+                    <GlobeIcon />
+                    <span>Public</span>
+                  </div>
+                  {visibilityType === "public" ? <CheckCircleFillIcon /> : null}
+                </ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuPortal>
+          </ContextMenuSub>
+          {onArchiveToggle && (
+            <ContextMenuItem
+              className="cursor-pointer"
+              onSelect={() => onArchiveToggle(chat.id, !isArchived)}
+            >
+              {isArchived ? <ArchiveRestoreIcon size={14} /> : <ArchiveIcon size={14} />}
+              <span>{isArchived ? "Unarchive" : "Archive"}</span>
+            </ContextMenuItem>
+          )}
+          <ContextMenuItem onSelect={() => onDelete(chat.id)} variant="destructive">
+            <TrashIcon />
+            <span>Delete</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
@@ -166,6 +235,16 @@ const PureChatItem = ({
             </DropdownMenuPortal>
           </DropdownMenuSub>
 
+          {onArchiveToggle && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={() => onArchiveToggle(chat.id, !isArchived)}
+            >
+              {isArchived ? <ArchiveRestoreIcon size={14} /> : <ArchiveIcon size={14} />}
+              <span>{isArchived ? "Unarchive" : "Archive"}</span>
+            </DropdownMenuItem>
+          )}
+
           <DropdownMenuItem onSelect={() => onDelete(chat.id)} variant="destructive">
             <TrashIcon />
             <span>Delete</span>
@@ -179,5 +258,6 @@ const PureChatItem = ({
 export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
   if (prevProps.isActive !== nextProps.isActive) return false;
   if (prevProps.chat.title !== nextProps.chat.title) return false;
+  if (prevProps.chat.archivedAt !== nextProps.chat.archivedAt) return false;
   return true;
 });

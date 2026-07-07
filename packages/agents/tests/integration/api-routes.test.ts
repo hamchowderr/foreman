@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Module mocks (must be before imports) ───
 
@@ -22,7 +22,7 @@ vi.mock("@/discord/webhook", () => ({
   handleDiscordWebhook: vi.fn((c: any) => c.json({ ok: true })),
 }));
 
-// Mock stream utilities used by conversations/workflows
+// Mock stream utilities used by conversations
 vi.mock("@/lib/stream/transformer", () => ({
   createChunkTransformer: vi.fn(),
 }));
@@ -115,8 +115,16 @@ function createQueryBuilder(data: any = null) {
   return builder;
 }
 
+// Authed requests resolve an active workspace from public.user.default_workspace_id
+// (lib/identity resolveActiveWorkspace). Default the principal row so the
+// workspace-scoped routes (dashboards, stored agents) have a workspace in tests.
+function defaultFrom(table: string) {
+  if (table === "user") return createQueryBuilder({ default_workspace_id: "test-ws-1" });
+  return createQueryBuilder();
+}
+
 const mockSupabase = {
-  from: vi.fn(() => createQueryBuilder()),
+  from: vi.fn(defaultFrom),
   auth: {
     getUser: vi.fn().mockImplementation((token: string) => {
       try {
@@ -216,7 +224,7 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { capabilities: Record<string, boolean> };
       expect(body).toHaveProperty("capabilities");
       expect(body.capabilities).toHaveProperty("search", true);
       expect(body.capabilities).toHaveProperty("voice", true);
@@ -259,7 +267,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({ enabled: true }),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("Unknown capability");
     });
 
@@ -273,7 +281,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({ value: true }),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("enabled");
     });
   });
@@ -291,7 +299,11 @@ describe("API route integration tests", () => {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as {
+        rateLimit: { allowed: boolean; limits: { perMinute: number; perHour: number } };
+        appAccess: Record<string, { allowed: boolean; apps: string[] }>;
+        config: { requireApprovalForWrites: boolean; maxBulkItems: number };
+      };
 
       // Rate limit section
       expect(body).toHaveProperty("rateLimit");
@@ -353,7 +365,7 @@ describe("API route integration tests", () => {
         body: JSON.stringify({ enabled: true }),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("not a sensitive app");
     });
 
@@ -367,27 +379,142 @@ describe("API route integration tests", () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = (await res.json()) as { error: string };
       expect(body.error).toContain("enabled");
     });
   });
 
-  // ── Workflows ─────────────────────────────────────────────────────────
+  // ── Dashboards (snapshot reads) ───────────────────────────────────────
 
-  describe("GET /workflows", () => {
+  describe("GET /apps/snapshots/:appKey", () => {
+    const snapshotRow = {
+      id: "snap-1",
+      app_key: "hubspot",
+      source_config: JSON.stringify({ app: "hubspot" }),
+      records: JSON.stringify([{ id: "1", name: "Acme" }]),
+      row_count: 1,
+      refreshed_at: "2026-06-19T12:00:00.000Z",
+    };
+
+    // The auth middleware calls from("user") (ensureUserExists) before the
+    // handler runs, so we can't use mockReturnValueOnce — it'd be consumed by
+    // auth. Target the snapshot table by name instead, and restore the default
+    // builder after each test so nothing leaks.
+    function withSnapshotData(data: any) {
+      mockSupabase.from.mockImplementation((t: string) =>
+        t === "app_data_snapshot" ? createQueryBuilder(data) : defaultFrom(t),
+      );
+    }
+    afterEach(() => {
+      mockSupabase.from.mockImplementation(defaultFrom);
+    });
+
     it("returns 401 without auth", async () => {
-      const res = await app.request("/workflows");
+      const res = await app.request("/apps/snapshots/hubspot");
       expect(res.status).toBe(401);
     });
 
-    it("returns empty array for a user with no workflows", async () => {
-      // mockDb.select already returns empty rows by default
-      const res = await app.request("/workflows", {
+    it("returns the latest snapshot with auth", async () => {
+      withSnapshotData(snapshotRow);
+      const res = await app.request("/apps/snapshots/hubspot", {
         headers: { Authorization: AUTH_HEADER },
       });
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body).toEqual([]);
+      expect(body).toMatchObject({
+        id: "snap-1",
+        appKey: "hubspot",
+        rowCount: 1,
+        records: [{ id: "1", name: "Acme" }],
+        sourceConfig: { app: "hubspot" },
+      });
+    });
+
+    it("returns 404 when the user has no snapshot for the app", async () => {
+      // default mock builder resolves to data: null → getLatestSnapshot → null
+      const res = await app.request("/apps/snapshots/hubspot", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it("returns the history series with ?history=true", async () => {
+      withSnapshotData([snapshotRow, snapshotRow]);
+      const res = await app.request("/apps/snapshots/hubspot?history=true", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { appKey: string; count: number; snapshots: unknown[] };
+      expect(body).toMatchObject({ appKey: "hubspot", count: 2 });
+      expect(Array.isArray(body.snapshots)).toBe(true);
+    });
+
+    it("returns 400 for an invalid since timestamp", async () => {
+      const res = await app.request("/apps/snapshots/hubspot?history=true&since=notadate", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain("since");
+    });
+
+    it("returns 400 for a non-numeric limit", async () => {
+      const res = await app.request("/apps/snapshots/hubspot?history=true&limit=abc", {
+        headers: { Authorization: AUTH_HEADER },
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain("limit");
+    });
+  });
+
+  // ── Apps (dashboards): public sharing (Phase 3) ───────────────────────
+
+  describe("apps public sharing", () => {
+    const VALID_SPEC = {
+      title: "Leads",
+      blocks: [{ type: "kpi", label: "Total", agg: "count" }],
+    };
+    const shareRow = { artifact_id: "art-1", workspace_id: "test-ws-1", expires_at: null };
+    const artifactRow = {
+      id: "art-1",
+      kind: "dashboard",
+      title: "Leads",
+      spec: JSON.stringify(VALID_SPEC),
+      snapshot_id: null, // no snapshot → records default to []
+      updated_at: "2026-06-20T00:00:00.000Z",
+    };
+
+    // Resolve from() per-table so getSharedArtifact reads the share row then the
+    // artifact row. Default (unset tables) → null builder.
+    function withTables(map: Record<string, any>) {
+      mockSupabase.from.mockImplementation((t: string) =>
+        map[t] !== undefined ? createQueryBuilder(map[t]) : defaultFrom(t),
+      );
+    }
+    afterEach(() => {
+      mockSupabase.from.mockImplementation(defaultFrom);
+    });
+
+    it("GET /apps/public/:token returns 200 WITHOUT auth (token is the grant)", async () => {
+      withTables({ dashboard_share: shareRow, artifact: artifactRow });
+      // Deliberately NO Authorization header — the public carve-out must allow it.
+      const res = await app.request("/apps/public/sometoken");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { spec: { title: string } };
+      expect(body).toMatchObject({ id: "art-1", title: "Leads", records: [] });
+      expect(body.spec.title).toBe("Leads");
+    });
+
+    it("GET /apps/public/:token returns 404 for an unknown token", async () => {
+      // default builder → dashboard_share lookup is null → getSharedArtifact null
+      const res = await app.request("/apps/public/nope");
+      expect(res.status).toBe(404);
+    });
+
+    it("POST /apps/artifacts/:id/share still requires auth (401)", async () => {
+      const res = await app.request("/apps/artifacts/art-1/share", { method: "POST" });
+      expect(res.status).toBe(401);
     });
   });
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "../../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 
 interface MicButtonProps {
   onTranscript: (text: string) => void;
@@ -23,9 +24,14 @@ function getSR(): (new () => AnyRecognition) | undefined {
 
 export function MicButton({ onTranscript, disabled }: MicButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
+  // Feature detection depends on `window`, which differs between SSR and the
+  // client. Gate on a post-mount flag so the server and the first client render
+  // agree (both render nothing) — otherwise the toolbar's button order mismatches
+  // and React throws a hydration error.
+  const [mounted, setMounted] = useState(false);
   const recognitionRef = useRef<AnyRecognition>(null);
 
-  const isSupported = !!getSR();
+  const isSupported = mounted && !!getSR();
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop();
@@ -66,6 +72,7 @@ export function MicButton({ onTranscript, disabled }: MicButtonProps) {
   }, [onTranscript]);
 
   useEffect(() => {
+    setMounted(true);
     return () => {
       recognitionRef.current?.stop();
     };
@@ -74,24 +81,28 @@ export function MicButton({ onTranscript, disabled }: MicButtonProps) {
   if (!isSupported) return null;
 
   return (
-    <Button
-      className={cn(
-        "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
-        isRecording
-          ? "border-red-500/40 bg-red-500/10 text-red-500 animate-pulse hover:bg-red-500/20"
-          : "text-muted-foreground/50 hover:border-border hover:text-foreground",
-      )}
-      disabled={disabled}
-      onClick={isRecording ? stop : start}
-      title={isRecording ? "Stop recording" : "Voice input"}
-      type="button"
-      variant="ghost"
-    >
-      {isRecording ? (
-        <MicOffIcon style={{ width: 14, height: 14 }} />
-      ) : (
-        <MicIcon style={{ width: 14, height: 14 }} />
-      )}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          className={cn(
+            "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
+            isRecording
+              ? "border-red-500/40 bg-red-500/10 text-red-500 animate-pulse hover:bg-red-500/20"
+              : "text-muted-foreground/50 hover:border-border hover:text-foreground",
+          )}
+          disabled={disabled}
+          onClick={isRecording ? stop : start}
+          type="button"
+          variant="ghost"
+        >
+          {isRecording ? (
+            <MicOffIcon style={{ width: 14, height: 14 }} />
+          ) : (
+            <MicIcon style={{ width: 14, height: 14 }} />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{isRecording ? "Stop recording" : "Voice input"}</TooltipContent>
+    </Tooltip>
   );
 }

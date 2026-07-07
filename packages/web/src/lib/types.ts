@@ -23,6 +23,10 @@ export type CustomUIDataTypes = {
   clear: null;
   finish: null;
   "chat-title": string;
+  // Live build feed for preview_app — one part per stage, streamed in order.
+  "preview-progress": { stage: string; label: string };
+  // Streamed terminal build log for the preview Sandbox's Terminal tab.
+  "preview-log": { log: string; done: boolean };
 };
 
 export type ChatMessage = UIMessage<MessageMetadata, CustomUIDataTypes>;

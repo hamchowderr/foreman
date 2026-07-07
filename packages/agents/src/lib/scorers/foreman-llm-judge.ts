@@ -78,7 +78,7 @@ function extractActualToolNames(output: unknown): string[] {
 }
 
 const JUDGE_INSTRUCTIONS = `You are a quality judge for the Foreman AI agent — an automation assistant
-that executes actions across 9,000+ apps via Zapier.
+that executes actions across 10,000+ apps via Zapier.
 
 You will be given:
   1. The user's request

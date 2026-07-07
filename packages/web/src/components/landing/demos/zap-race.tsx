@@ -57,7 +57,11 @@ const SCENES: Scene[] = [
         result: "all 5 connected",
       },
       { tool: "search-actions", args: '"add row"', result: "sheets · create-spreadsheet-row" },
-      { tool: "list-input-fields", args: "add-subscriber", result: "email · merge_fields · tags" },
+      {
+        tool: "list-action-input-fields",
+        args: "add-subscriber",
+        result: "email · merge_fields · tags",
+      },
       { tool: "search-actions", args: '"draft email"', result: "gmail · create-draft" },
       { tool: "search-history", args: '"#new-signups channel"', result: "slack · #new-signups" },
     ],
@@ -178,10 +182,14 @@ const SCENES: Scene[] = [
     ],
     trace: [
       { tool: "search-actions", args: '"enrich person"', result: "clearbit · enrich-person" },
-      { tool: "list-input-fields", args: "enrich-person", result: "email · company · score" },
+      {
+        tool: "list-action-input-fields",
+        args: "enrich-person",
+        result: "email · company · score",
+      },
       { tool: "search-actions", args: '"create deal"', result: "pipedrive · create-deal" },
       {
-        tool: "list-input-field-choices",
+        tool: "list-action-input-field-choices",
         args: "pipeline",
         result: "Inbound · Outbound · Partner",
       },
@@ -304,10 +312,14 @@ const SCENES: Scene[] = [
     trace: [
       { tool: "search-actions", args: '"github issue"', result: "github · find-issue" },
       { tool: "search-actions", args: '"linear create"', result: "linear · create-issue" },
-      { tool: "list-input-field-choices", args: "linear.team", result: "Eng · Web · Mobile" },
+      {
+        tool: "list-action-input-field-choices",
+        args: "linear.team",
+        result: "Eng · Web · Mobile",
+      },
       { tool: "search-history", args: '"#bugs slack channel"', result: "slack · #bugs" },
       {
-        tool: "list-input-fields",
+        tool: "list-action-input-fields",
         args: "pagerduty.create-incident",
         result: "service · urgency · title",
       },

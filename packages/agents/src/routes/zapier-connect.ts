@@ -1,13 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
-import { getSupabase } from "@/lib/db";
-import { ensureUserExists, resolveFromSupabaseJwt } from "@/lib/identity";
+import { getSupabase } from "../lib/db";
+import { ensureUserExists, resolveFromSupabaseJwt } from "../lib/identity";
 import {
   buildAuthorizeUrl,
   consumeConnectToken,
   exchangeCodeAndStore,
   webConnectStateMap,
-} from "@/lib/zapier/connect";
+} from "../lib/zapier/connect";
 
 const zapierConnect = new Hono();
 

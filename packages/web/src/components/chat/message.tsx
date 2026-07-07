@@ -1,25 +1,69 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { Bot, User } from "lucide-react";
+import { Bot, Check, User } from "lucide-react";
 import { useEffect } from "react";
+import { initialsFrom, seedToGradient } from "@/lib/avatar";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
+import { DashboardRenderer } from "../dashboard/dashboard-renderer";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
+import { DocumentInlineChip } from "./knowledge-panel";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
+import { PreviewInlineChip } from "./preview-panel";
 import { Weather } from "./weather";
 
-const MessageAvatar = ({ isUser }: { isUser: boolean }) => (
-  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-    {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
-  </div>
-);
+// Live preview build advances through these stages (preview-app.ts). Map each
+// to a cumulative % so the streamed feed can show one real progress bar
+// (foreman-97mv). `fix` is an in-place retry during the build phase.
+const PREVIEW_STAGE_PCT: Record<string, number> = { design: 25, build: 60, fix: 75, ready: 100 };
+
+const MessageAvatar = ({
+  isUser,
+  userImage,
+  userEmail,
+}: {
+  isUser: boolean;
+  userImage?: string | null;
+  userEmail?: string;
+}) => {
+  // Assistant: Foreman's bot mark. User: real avatar image when available,
+  // otherwise initials on an email-seeded gradient (foreman-3f1v).
+  if (!isUser) {
+    return (
+      <Avatar className="size-7 shrink-0">
+        <AvatarFallback className="bg-secondary text-muted-foreground">
+          <Bot className="size-4" />
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+  const email = userEmail ?? "";
+  return (
+    <Avatar className="size-7 shrink-0">
+      {userImage ? <AvatarImage alt="" src={userImage} /> : null}
+      <AvatarFallback
+        className={cn(
+          "text-[11px] font-medium",
+          email ? "text-white" : "bg-secondary text-muted-foreground",
+        )}
+        style={email ? { background: seedToGradient(email) } : undefined}
+      >
+        {email ? initialsFrom(email) : <User className="size-4" />}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
 
 function getAlwaysAllowedTools(): Set<string> {
   try {
@@ -51,8 +95,7 @@ const ApprovalButtons = ({
     <span className="flex-1 text-[12px] text-muted-foreground">
       This action needs your approval before it runs.
     </span>
-    <button
-      className="rounded-md px-3 py-1 text-[13px] text-destructive transition-colors hover:bg-destructive/10"
+    <Button
       onClick={() => {
         addToolApprovalResponse({
           id: approvalId,
@@ -60,29 +103,33 @@ const ApprovalButtons = ({
           reason: "User denied this action",
         });
       }}
+      size="sm"
       type="button"
+      variant="destructive"
     >
       Decline
-    </button>
-    <button
-      className="rounded-md px-3 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-muted"
+    </Button>
+    <Button
       onClick={() => {
         addAlwaysAllowedTool(toolName);
         addToolApprovalResponse({ id: approvalId, approved: true });
       }}
+      size="sm"
       type="button"
+      variant="ghost"
     >
       Always Allow
-    </button>
-    <button
-      className="rounded-md bg-primary px-3 py-1 text-[13px] text-primary-foreground transition-colors hover:bg-primary/80"
+    </Button>
+    <Button
       onClick={() => {
         addToolApprovalResponse({ id: approvalId, approved: true });
       }}
+      size="sm"
       type="button"
+      variant="default"
     >
       Approve
-    </button>
+    </Button>
   </div>
 );
 
@@ -158,6 +205,8 @@ const PurePreviewMessage = ({
   isReadonly,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
+  userImage,
+  userEmail,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -169,6 +218,8 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
+  userImage?: string | null;
+  userEmail?: string;
 }) => {
   const attachmentsFromMessage = message.parts.filter((part) => part.type === "file");
 
@@ -214,6 +265,11 @@ const PurePreviewMessage = ({
     { text: "", isStreaming: false, rendered: false },
   ) ?? { text: "", isStreaming: false, rendered: false };
 
+  // Index of the newest preview-build step so only it carries the progress bar
+  // (earlier steps stay as plain ✓ lines rather than stacking bars).
+  const lastPreviewProgressIdx =
+    message.parts?.reduce((acc, p, i) => (p.type === "data-preview-progress" ? i : acc), -1) ?? -1;
+
   const parts = message.parts?.map((part: any, index: number) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
@@ -237,16 +293,141 @@ const PurePreviewMessage = ({
       return (
         <MessageContent
           className={cn(
-            "text-[15px] leading-[1.5] text-foreground",
+            "text-[15px] leading-[1.5]",
             isUserMsg
-              ? "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-lg bg-secondary px-4 py-2.5"
-              : "w-full max-w-full overflow-hidden break-words",
+              ? "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-lg bg-primary px-4 py-2.5 text-primary-foreground"
+              : "w-full max-w-full overflow-hidden break-words text-foreground",
           )}
           data-testid="message-content"
           key={key}
         >
           <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
         </MessageContent>
+      );
+    }
+
+    if (type === "data-preview-progress") {
+      const d = (part.data ?? {}) as { stage?: string; label?: string };
+      const pct = d.stage ? PREVIEW_STAGE_PCT[d.stage] : undefined;
+      const showBar = index === lastPreviewProgressIdx && pct !== undefined;
+      return (
+        <div className="flex w-[min(100%,360px)] flex-col gap-1.5" key={key}>
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+              <Check className="size-3" />
+            </span>
+            <span>{d.label ?? "Working…"}</span>
+          </div>
+          {showBar && <Progress className="h-1.5" value={pct} />}
+        </div>
+      );
+    }
+
+    if (type === "tool-create_dashboard") {
+      const { toolCallId, state } = part;
+
+      if (state === "output-available" && part.output && !("error" in part.output)) {
+        const out = part.output as {
+          title: string;
+          url: string;
+          rowCount: number;
+          spec: Parameters<typeof DashboardRenderer>[0]["spec"];
+          records: Parameters<typeof DashboardRenderer>[0]["data"];
+        };
+        return (
+          <div className="w-full max-w-full" key={toolCallId}>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-foreground">{out.title}</span>
+              <a
+                className="shrink-0 text-xs font-medium hover:underline"
+                href={out.url}
+                rel="noreferrer"
+                style={{ color: "#FF4F00" }}
+                target="_blank"
+              >
+                Open full →
+              </a>
+            </div>
+            <DashboardRenderer data={out.records} spec={out.spec} />
+          </div>
+        );
+      }
+
+      if (state === "output-error" || (part.output && "error" in part.output)) {
+        return (
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Couldn't build app:{" "}
+              {String(
+                part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
+              )}
+            </AlertDescription>
+          </Alert>
+        );
+      }
+
+      return (
+        <div className="text-muted-foreground text-sm" key={toolCallId}>
+          Building app…
+        </div>
+      );
+    }
+
+    if (type === "tool-save_document") {
+      const { toolCallId, state } = part;
+
+      if (state === "output-available" && part.output && !("error" in part.output)) {
+        const out = part.output as { path: string; title?: string };
+        return (
+          <div className="w-full max-w-full" key={toolCallId}>
+            <DocumentInlineChip path={out.path} title={out.title ?? "Document"} />
+          </div>
+        );
+      }
+    }
+
+    if (type === "tool-preview_app") {
+      const { toolCallId, state } = part;
+
+      if (state === "output-available" && part.output && !("error" in part.output)) {
+        const out = part.output as {
+          url: string;
+          title?: string;
+          source?: string;
+          log?: string;
+          ok?: boolean;
+        };
+        // Render in the side panel (auto-opened by the chip); the chat keeps a
+        // compact re-open chip instead of an inline iframe.
+        return (
+          <div className="w-full max-w-full" key={toolCallId}>
+            <PreviewInlineChip
+              log={out.log}
+              source={out.source}
+              title={out.title ?? "Preview"}
+              url={out.url}
+            />
+          </div>
+        );
+      }
+
+      if (state === "output-error" || (part.output && "error" in part.output)) {
+        return (
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Couldn't build the live preview:{" "}
+              {String(
+                part.errorText ?? (part.output as { error?: unknown })?.error ?? "unknown error",
+              )}
+            </AlertDescription>
+          </Alert>
+        );
+      }
+
+      return (
+        <div className="text-muted-foreground text-sm" key={toolCallId}>
+          Building live preview…
+        </div>
       );
     }
 
@@ -321,12 +502,11 @@ const PurePreviewMessage = ({
 
       if (part.output && "error" in part.output) {
         return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Error creating document: {String(part.output.error)}
-          </div>
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Error creating document: {String(part.output.error)}
+            </AlertDescription>
+          </Alert>
         );
       }
 
@@ -338,12 +518,11 @@ const PurePreviewMessage = ({
 
       if (part.output && "error" in part.output) {
         return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Error updating document: {String(part.output.error)}
-          </div>
+          <Alert key={toolCallId} variant="destructive">
+            <AlertDescription>
+              Error updating document: {String(part.output.error)}
+            </AlertDescription>
+          </Alert>
         );
       }
 
@@ -446,7 +625,7 @@ const PurePreviewMessage = ({
       data-testid={`message-${message.role}`}
     >
       <div className={cn("flex items-start gap-2.5", isUser && "flex-row-reverse")}>
-        <MessageAvatar isUser={isUser} />
+        <MessageAvatar isUser={isUser} userEmail={userEmail} userImage={userImage} />
         <div
           className={cn(
             "flex min-w-0 flex-1 flex-col gap-1.5",

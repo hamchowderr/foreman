@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/client";
 
 export function ForgotPasswordForm() {
@@ -62,10 +63,10 @@ export function ForgotPasswordForm() {
       </div>
 
       <form onSubmit={handleForgotPassword} className="space-y-5">
-        <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-sm font-medium">
+        <Field>
+          <FieldLabel htmlFor="email" className="text-sm font-medium">
             Email
-          </Label>
+          </FieldLabel>
           <Input
             id="email"
             type="email"
@@ -76,12 +77,12 @@ export function ForgotPasswordForm() {
             onChange={(e) => setEmail(e.target.value)}
             className="h-10 rounded-md"
           />
-        </div>
+        </Field>
 
         {error && (
-          <p className="text-sm text-red-500 bg-red-500/5 border border-red-500/20 rounded-md px-3 py-2">
-            {error}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <Button

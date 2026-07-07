@@ -1,21 +1,22 @@
 "use client";
 
 import {
-  MessageSquareIcon,
+  FileTextIcon,
+  InboxIcon,
+  LayoutDashboardIcon,
+  type LucideIcon,
   PanelLeftIcon,
   PenSquareIcon,
-  Settings2Icon,
-  TrashIcon,
-  WorkflowIcon,
+  SearchIcon,
+  UsersIcon,
+  ZapIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useSWRConfig } from "swr";
-import { unstable_serialize } from "swr/infinite";
-import { getChatHistoryPaginationKey, SidebarHistory } from "@/components/chat/sidebar-history";
+import { usePathname, useRouter } from "next/navigation";
+import { SidebarHistory } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
+import { CommandPalette, OPEN_COMMAND_PALETTE_EVENT } from "@/components/command-palette";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Sidebar,
   SidebarContent,
@@ -30,41 +31,26 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { WorkspaceSwitcher } from "@/components/workspaces/workspace-switcher";
 import type { SessionUser as User } from "@/lib/auth";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+
+const NAV: Array<{ href: string; label: string; Icon: LucideIcon }> = [
+  { href: "/automations", label: "Automations", Icon: ZapIcon },
+  { href: "/inbox", label: "Inbox", Icon: InboxIcon },
+  { href: "/apps", label: "Apps", Icon: LayoutDashboardIcon },
+  { href: "/documents", label: "Documents", Icon: FileTextIcon },
+  { href: "/workspaces", label: "Workspaces", Icon: UsersIcon },
+];
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { setOpenMobile, toggleSidebar } = useSidebar();
-  const { mutate } = useSWRConfig();
-  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
-
-  const handleDeleteAll = () => {
-    setShowDeleteAllDialog(false);
-    router.replace("/");
-    mutate(unstable_serialize(getChatHistoryPaginationKey), [], {
-      revalidate: false,
-    });
-
-    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`, {
-      method: "DELETE",
-    });
-
-    toast.success("All chats deleted");
-  };
 
   return (
     <>
+      <CommandPalette />
       <Sidebar collapsible="icon">
         <SidebarHeader className="pb-0 pt-3">
           <SidebarMenu>
@@ -73,10 +59,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <SidebarMenuButton
                   asChild
                   className="size-8 !px-0 items-center justify-center group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                  tooltip="Chatbot"
+                  tooltip="Foreman"
                 >
                   <Link href="/" onClick={() => setOpenMobile(false)}>
-                    <MessageSquareIcon className="size-4 text-sidebar-foreground/50" />
+                    {/* biome-ignore lint/performance/noImgElement: small static brand asset, next/image is overkill */}
+                    <img
+                      alt="Zapier"
+                      className="size-5 object-contain group-data-[collapsible=icon]:size-4"
+                      height={20}
+                      src="/zapier.svg"
+                      width={20}
+                    />
                   </Link>
                 </SidebarMenuButton>
                 <Tooltip>
@@ -98,90 +91,67 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               </div>
             </SidebarMenuItem>
           </SidebarMenu>
+          <WorkspaceSwitcher />
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup className="pt-1">
+          <SidebarGroup className="pt-2">
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    className="h-8 rounded-lg text-[13px] font-medium text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     onClick={() => {
                       setOpenMobile(false);
-                      router.push("/");
+                      router.push("/chat");
                     }}
                     tooltip="New Chat"
                   >
                     <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
+                    <span>New chat</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      asChild
-                      className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                      tooltip="Workflows"
+                      className="h-8 rounded-lg text-[13px] text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      onClick={() => {
+                        setOpenMobile(false);
+                        window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT));
+                      }}
+                      tooltip="Search (⌘K)"
                     >
-                      <Link href="/workflows" onClick={() => setOpenMobile(false)}>
-                        <WorkflowIcon className="size-4" />
-                        <span className="text-[13px]">Workflows</span>
-                      </Link>
+                      <SearchIcon className="size-4" />
+                      <span>Search</span>
+                      <Kbd className="ml-auto group-data-[collapsible=icon]:hidden">⌘K</Kbd>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
-                {user && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className="rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                      tooltip="Settings"
-                    >
-                      <Link href="/settings/integrations" onClick={() => setOpenMobile(false)}>
-                        <Settings2Icon className="size-4" />
-                        <span className="text-[13px]">Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                {user && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setShowDeleteAllDialog(true)}
-                      tooltip="Delete All Chats"
-                    >
-                      <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
+                {user &&
+                  NAV.map(({ href, label, Icon }) => (
+                    <SidebarMenuItem key={href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith(href)}
+                        className="h-8 rounded-lg text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                        tooltip={label}
+                      >
+                        <Link href={href} onClick={() => setOpenMobile(false)}>
+                          <Icon className="size-4" />
+                          <span className="text-[13px]">{label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
           <SidebarHistory user={user} />
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
+        <SidebarFooter className="border-t border-sidebar-border pt-2 pb-5">
           {user && <SidebarUserNav user={user} />}
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
-
-      <AlertDialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all your chats and remove
-              them from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAll}>Delete All</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
