@@ -79,3 +79,6 @@ preview-auth.json
 # Personal Claude Code local settings — machine-specific permission allowlist.
 # The shared project config is .claude/settings.json (tracked); this one is per-machine.
 .claude/settings.local.json
+
+# Beads export (disposable; kept fresh via export.auto). Source of truth = Dolt DB. cp-uif3.1
+.beads/issues.jsonl
