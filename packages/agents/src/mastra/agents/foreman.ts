@@ -4,7 +4,6 @@ import { createAnswerRelevancyScorer, createToxicityScorer } from "@mastra/evals
 import { fastembed } from "@mastra/fastembed";
 import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
-import { stepCountIs } from "ai";
 import { backgroundToolsConfig } from "../../lib/background";
 import { contextInjector, piiRedactor } from "../../lib/processors";
 import { buildSystemPrompt, type PromptContext } from "../../lib/prompt-template";
@@ -16,6 +15,7 @@ import {
   systemPromptFor,
   toolsWithCacheControl,
 } from "../../lib/providers";
+import { stepCountIs } from "../../lib/stop-conditions";
 import { sanitizeToolSchemas } from "../../lib/tool-schema-sanitizer";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import {

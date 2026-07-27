@@ -11,7 +11,7 @@
     "test:e2e": "npx playwright test"
   },
   "dependencies": {
-    "@ai-sdk/react": "^3.0.118",
+    "@ai-sdk/react": "^4.0.40",
     "@base-ui/react": "^1.4.1",
     "@codemirror/lang-python": "^6.1.6",
     "@codemirror/state": "^6.5.0",
@@ -27,7 +27,7 @@
     "@streamdown/mermaid": "^1.0.2",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.1",
-    "ai": "^6.0.168",
+    "ai": "^7.0.37",
     "ansi-to-react": "6.1.6",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",

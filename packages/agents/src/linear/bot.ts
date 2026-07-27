@@ -1,9 +1,9 @@
 import { createLinearAdapter } from "@chat-adapter/linear";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { stepCountIs } from "../lib/stop-conditions";
 import { getMastra } from "../mastra";
 
 let _bot: Chat<{ linear: ReturnType<typeof createLinearAdapter> }> | undefined;
