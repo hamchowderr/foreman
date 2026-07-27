@@ -49,7 +49,7 @@
     "@mastra/deployer-vercel": "1.1.37-alpha.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
+    "@biomejs/biome": "2.5.4",
     "@copilotkit/aimock": "^1.14.3",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
@@ -60,7 +60,7 @@
     "@types/react-dom": "^19",
     "@types/supertest": "^7.2.0",
     "@vitest/ui": "^4.1.4",
-    "@zapier/zapier-sdk-cli": "^0.62.0",
+    "@zapier/zapier-sdk-cli": "^0.67.4",
     "autoprefixer": "^10.5.0",
     "drizzle-kit": "^0.31.10",
     "jsdom": "^29.0.2",

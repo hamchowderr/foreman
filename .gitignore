@@ -82,3 +82,5 @@ preview-auth.json
 
 # Beads export (disposable; kept fresh via export.auto). Source of truth = Dolt DB. cp-uif3.1
 .beads/issues.jsonl
+.beads/dolt-backup.json
+.beads/dolt-backup-state.json
