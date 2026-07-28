@@ -408,7 +408,20 @@ Foreman is **deploy-anywhere by design.** It's a Mastra app, so `DEPLOY_TARGET` 
 | **Mastra Cloud** | Full | Mastra's hosted platform (Observe / Server / Studio) — purpose-built for Mastra agents. |
 | **VPS / container** (Coolify, Docker, Fly, Render…) | Full | A long-running container. Cloud or self-hosted Postgres; the durable-automation worker runs continuously. The traditional full-stack target. |
 
-> The provider-swap layer is still being finished — some parts are already env-selectable (Postgres), others are in progress (cloud filesystem, an env-selectable embedder, Redis pub/sub, hosted sandbox, webhook-native channels). The web frontend is a standard Next.js app (Vercel by default). A **one-click deploy** is on the roadmap.
+> The provider-swap layer is still being finished — some parts are already env-selectable (Postgres, the workspace sandbox), others are in progress (cloud filesystem, an env-selectable embedder, Redis pub/sub, hosted sandbox, webhook-native channels). The web frontend is a standard Next.js app (Vercel by default). A **one-click deploy** is on the roadmap.
+
+### Sandbox isolation
+
+The agent can run commands in a per-tenant workspace sandbox. Two env vars control it:
+
+| Var | Default | What it does |
+|---|---|---|
+| `SANDBOX_PROVIDER` | `local` | Which sandbox backend to build. `local` is wired today; `docker` / `e2b` / `daytona` are recognized and error clearly until the provider package lands. |
+| `FOREMAN_SANDBOX_ISOLATION` | `auto` | OS-level isolation. `auto` uses the platform's backend when one exists, `require` insists on one, `off` opts out explicitly. |
+
+**Isolation is on by default, and production fails closed.** On `auto`, if no isolation backend is available Foreman refuses to start the sandbox when `NODE_ENV=production`, and warns (but continues) in dev and test. `Dockerfile.agents` installs `bubblewrap` so the container always has a backend.
+
+Backend by platform: **Linux** → `bwrap` (bubblewrap, installed in the image) · **macOS** → `seatbelt` (built in) · **Windows** → none. Windows dev therefore runs sandbox commands unisolated with a warning; that's a gap in Mastra's sandbox library rather than in Windows itself (which has AppContainer), tracked upstream at [mastra-ai/mastra#20304](https://github.com/mastra-ai/mastra/issues/20304).
 
 **Live:** [foreman.otakusolutions.io](https://foreman.otakusolutions.io) (web) · [foreman-agents.otakusolutions.io](https://foreman-agents.otakusolutions.io) (agents, currently on a VPS)
 

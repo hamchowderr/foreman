@@ -21,6 +21,16 @@ FROM node:24-slim
 
 WORKDIR /app
 
+# bubblewrap is the isolation backend for the workspace sandbox (foreman-zlru).
+# LocalSandbox defaults to isolation:'none' — commands would otherwise run
+# directly on the container's host namespaces. lib/providers/sandbox.ts REFUSES
+# to start unisolated when NODE_ENV=production, so this package is required, not
+# optional: without it the agent server fails closed at the first sandbox build.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bubblewrap \
+  && rm -rf /var/lib/apt/lists/* \
+  && bwrap --version
+
 # Copy built output and package files
 COPY --from=builder /app/packages/agents/.mastra/output/ .mastra/output/
 COPY --from=builder /app/packages/agents/package.json ./
