@@ -12,6 +12,12 @@
  *
  * Run:  npx tsx scripts/durable-filesystem-spike.ts
  * No credentials required.
+ *
+ * STABILITY: the package README states it is pre-1.0 and that MINOR versions are
+ * breaking until 1.0, and it ships one roughly every 1-2 weeks (0.5.2 -> 0.11.0
+ * between 2026-06-02 and 2026-07-27). The `^0.11.0` range is deliberate: npm
+ * caret on a 0.x version allows patches only (`^0.11.0` rejects 0.12.0), so it
+ * pins us below the next breaking minor. Re-run this spike on every minor bump.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
