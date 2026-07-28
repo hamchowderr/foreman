@@ -1,11 +1,15 @@
 import path from "node:path";
-import { LocalFilesystem, LocalSandbox, Workspace } from "@mastra/core/workspace";
+import { Workspace, type WorkspaceFilesystem } from "@mastra/core/workspace";
 import { resolveActiveWorkspace } from "../../lib/identity";
 import {
   getKnowledgeVector,
   knowledgeEmbedder,
   knowledgeIndexName,
 } from "../../lib/knowledge/vector";
+import {
+  resolveWorkspaceFilesystem as resolveFsProvider,
+  resolveSandbox,
+} from "../../lib/providers/sandbox";
 import { requestUserContext } from "../../lib/request-user-context";
 
 /**
@@ -73,11 +77,8 @@ async function resolveWorkspaceDir(requestContext?: {
  */
 export async function resolveWorkspaceFilesystem(requestContext?: {
   get(key: string): unknown;
-}): Promise<LocalFilesystem> {
-  return new LocalFilesystem({
-    basePath: await resolveWorkspaceDir(requestContext),
-    contained: true,
-  });
+}): Promise<WorkspaceFilesystem> {
+  return resolveFsProvider(await resolveWorkspaceDir(requestContext));
 }
 
 /**
@@ -100,8 +101,8 @@ export async function buildForemanWorkspace({
   return new Workspace({
     id: `foreman-workspace-${tenantKey}`,
     name: "Foreman Workspace",
-    filesystem: new LocalFilesystem({ basePath: dir, contained: true }),
-    sandbox: new LocalSandbox({ workingDirectory: dir }),
+    filesystem: resolveFsProvider(dir),
+    sandbox: resolveSandbox({ workingDirectory: dir, tenantKey }),
     vectorStore: getKnowledgeVector(),
     embedder: knowledgeEmbedder,
     searchIndexName: knowledgeIndexName(tenantKey),
@@ -127,7 +128,7 @@ export function buildTenantKnowledgeWorkspace(tenantKey: string): Workspace {
   const dir = path.join(WORKSPACE_PATH, tenantKey);
   return new Workspace({
     id: `foreman-knowledge-${knowledgeIndexName(tenantKey)}`,
-    filesystem: new LocalFilesystem({ basePath: dir, contained: true }),
+    filesystem: resolveFsProvider(dir),
     vectorStore: getKnowledgeVector(),
     embedder: knowledgeEmbedder,
     searchIndexName: knowledgeIndexName(tenantKey),

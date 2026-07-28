@@ -11,6 +11,12 @@ const envSchema = z.object({
   DEV_ZAPIER_OVERRIDE: z.string().optional(),
   FOREMAN_MODE: z.enum(["dev", "self_hosted"]).optional().default("dev"),
   DEPLOY_TARGET: z.enum(["vps", "vercel", "cloudflare"]).optional().default("vps"),
+  // Workspace sandbox (foreman-zlru). `local` is the only wired provider today;
+  // the others are reserved so config can be staged ahead of the computesdk bump.
+  SANDBOX_PROVIDER: z.enum(["local", "docker", "e2b", "daytona"]).optional().default("local"),
+  // OS-level isolation for sandbox commands. `auto` = use the platform backend
+  // when one exists; refuse to run unisolated in production, warn in dev/test.
+  FOREMAN_SANDBOX_ISOLATION: z.enum(["auto", "off", "require"]).optional().default("auto"),
   PORT: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET_TOKEN: z.string().optional(),
