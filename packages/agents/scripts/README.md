@@ -47,6 +47,23 @@ The Mastra Datasets pipeline that scores the agent against a labeled set (see th
 
 `show-logs.mjs` reads `DATABASE_URL` (falls back to the local Supabase default).
 
+## Dev seed SQL
+
+Hand-run against the local Supabase Postgres to populate UI surfaces that need data
+before they render anything worth looking at. Pipe them in with:
+
+```bash
+docker exec -i supabase_db_foreman psql -U postgres -d postgres < scripts/<file>.sql
+```
+
+| File | Purpose |
+|---|---|
+| `seed-automations-verify.sql` | One automation + finished/failed/started runs for verifying `/automations` polling and drill-down. Self-contained (creates its own workspace + user). |
+| `seed-automations-verify-down.sql` | Teardown for the above |
+| `seed-dashboard-snapshot.sql` | One `app_data_snapshot` so `/dashboards` renders; attaches to the oldest `user` row |
+
+These are dev-only fixtures — never run them against a shared or deployed database.
+
 ## Zapier durable / trigger-inbox probes (standalone)
 
 Manual harness + probes for the Zapier experimental durable-workflow and
