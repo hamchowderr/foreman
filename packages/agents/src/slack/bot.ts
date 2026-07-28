@@ -1,11 +1,11 @@
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { decryptToken } from "../lib/crypto";
 import { getSupabase } from "../lib/db";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { stepCountIs } from "../lib/stop-conditions";
 import { getMastra } from "../mastra";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;

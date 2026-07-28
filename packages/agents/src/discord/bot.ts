@@ -1,9 +1,9 @@
 import { createDiscordAdapter } from "@chat-adapter/discord";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { stepCountIs } from "ai";
 import { Chat } from "chat";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
+import { stepCountIs } from "../lib/stop-conditions";
 import { getMastra } from "../mastra";
 
 let _bot: Chat<{ discord: ReturnType<typeof createDiscordAdapter> }> | undefined;

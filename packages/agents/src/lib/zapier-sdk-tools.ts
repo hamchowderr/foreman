@@ -290,7 +290,7 @@ export function generateZapierTools(
     ...(hasConnections ? { manifest: { connections } } : {}),
     debug: isDebug,
     maxNetworkRetries: 3,
-    maxNetworkRetryDelayMs: 30000,
+    maxNetworkRetryDelaySeconds: 30,
     canDeleteTables: true,
     onEvent: onZapierSdkEvent,
   });
@@ -341,7 +341,20 @@ export function generateZapierTools(
             // user context is available — e.g., during channel webhook processing.
             const userCtx = requestUserContext.getStore();
             const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
-            const activeMethod = (activeSdk as any)[fn.name] as (args: any) => Promise<any>;
+            const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
+
+            // Positional-projection methods (only `fetch` today) take SPREAD
+            // arguments, not the canonical single bag — the surface is
+            // `(...args) => canonicalValue(pack(args))`, so handing it one
+            // object binds that whole object to the first positional key.
+            // SDK 0.86 replaced the old `inputParameters` metadata (objects
+            // carrying `.name`) with `positional`: an ordered list of input
+            // KEYS to project onto arguments. Every registry entry now also
+            // has an `inputSchema`, so this can no longer be a sibling branch.
+            if (fn.positional) {
+              const args = fn.positional.map((key) => (input as any)[key]);
+              return summarize(await activeMethod.call(activeSdk, ...args));
+            }
 
             if (PAGINATED_METHODS.has(fn.name)) {
               const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
@@ -349,45 +362,6 @@ export function generateZapierTools(
               return summarize(result);
             }
             return summarize(await activeMethod.call(activeSdk, input));
-          } catch (err) {
-            return handleSdkError(err, fn.name);
-          }
-        },
-      });
-    } else if (fn.inputParameters) {
-      // Positional-params function (fetch)
-      const _sdkFn = (sdk as any)[fn.name] as (...args: any[]) => Promise<any>;
-
-      // Build a Zod schema from input parameters.
-      // fetch has url (required) and init (optional).
-      const shape: Record<string, z.ZodTypeAny> = {};
-      for (const param of fn.inputParameters) {
-        // url is always required for fetch; init is optional
-        const isRequired = param.name === "url";
-        if (isRequired) {
-          shape[param.name] = z.any().describe((param as any).description || param.name);
-        } else {
-          shape[param.name] = z
-            .any()
-            .optional()
-            .describe((param as any).description || param.name);
-        }
-      }
-
-      const summarizeFetch = createSummarizer(fn.name);
-      tools[toolName] = createTool({
-        id: toolName,
-        description,
-        inputSchema: z.object(shape).describe(description),
-        ...(isDestructive ? { requireApproval: true } : {}),
-        ...mcpAnnotations,
-        execute: async (input) => {
-          try {
-            const userCtx = requestUserContext.getStore();
-            const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
-            const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
-            const args = fn.inputParameters!.map((p: any) => input[p.name]);
-            return summarizeFetch(await activeMethod.call(activeSdk, ...args));
           } catch (err) {
             return handleSdkError(err, fn.name);
           }

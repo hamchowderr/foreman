@@ -91,7 +91,7 @@ export async function runAction(
       actionType: actionType as ActionType,
       action,
       inputs,
-      timeoutMs: 180000,
+      timeoutSeconds: 180,
       ...(resolvedConnection ? { connection: resolvedConnection } : {}),
     });
     return result;
