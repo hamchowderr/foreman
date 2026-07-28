@@ -23,6 +23,24 @@
  */
 import { createZapierSdk } from "@zapier/zapier-sdk/experimental";
 
+/**
+ * Minimal shapes for the two experimental list endpoints this probe reads. The
+ * SDK reaches them through `as any` (they aren't on the typed surface), so
+ * `Array.fromAsync` would otherwise yield `unknown[]`. Only the fields this
+ * script prints are declared — this is a probe, not a typing of the API.
+ */
+type ProbeTrigger = { key: string; title: string; action_type: string };
+type ProbeInbox = {
+  id: string;
+  status: string;
+  subscription?: {
+    app_key?: string;
+    action_key?: string;
+    connection_id?: string;
+    inputs?: Record<string, unknown>;
+  };
+};
+
 type Args = {
   app: string;
   action?: string;
@@ -93,7 +111,7 @@ async function main() {
 
   // --- Discovery: list triggers for the app (read-only) ---
   hr(`TRIGGERS for ${args.app}`);
-  const triggers = await Array.fromAsync(
+  const triggers = await Array.fromAsync<ProbeTrigger>(
     (sdk as any).listTriggers({ app: args.app, maxItems: 200 }).items(),
   );
   log(`${triggers.length} triggers`);
@@ -103,10 +121,10 @@ async function main() {
 
   // Pick a trigger: explicit --action, else prefer one mentioning "issue"/"new", else first.
   const pick =
-    triggers.find((t: any) => t.key === args.action) ??
-    triggers.find((t: any) => /issue/i.test(t.key) && !/legacy/i.test(t.title)) ??
-    triggers.find((t: any) => /issue/i.test(t.key)) ??
-    triggers.find((t: any) => /new/i.test(t.key)) ??
+    triggers.find((t) => t.key === args.action) ??
+    triggers.find((t) => /issue/i.test(t.key) && !/legacy/i.test(t.title)) ??
+    triggers.find((t) => /issue/i.test(t.key)) ??
+    triggers.find((t) => /new/i.test(t.key)) ??
     triggers[0];
   if (!pick) {
     log(
@@ -131,7 +149,9 @@ async function main() {
 
   // --- Existing inboxes (read-only) ---
   hr("EXISTING INBOXES");
-  const inboxes = await Array.fromAsync((sdk as any).listTriggerInboxes({ maxItems: 50 }).items());
+  const inboxes = await Array.fromAsync<ProbeInbox>(
+    (sdk as any).listTriggerInboxes({ maxItems: 50 }).items(),
+  );
   log(`${inboxes.length} existing inbox(es)`);
   for (const i of inboxes.slice(0, 20)) {
     log(`  ${i.id}  status=${i.status}  ${i.subscription?.app_key}/${i.subscription?.action_key}`);

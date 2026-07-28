@@ -96,10 +96,14 @@ async function main() {
   });
   console.log("registered schedule; waiting for a fire…");
 
-  let digest: { kind?: string; headline?: string; totals?: Record<string, number> } | null = null;
+  type Digest = { kind?: string; headline?: string; totals?: Record<string, number> };
+  let digest: Digest | null = null;
   for (let i = 0; i < 27; i++) {
     await new Promise((r) => setTimeout(r, 5000));
-    digest = (await getLatestDigest(workspaceId)) as typeof digest;
+    // NB: cast to the named type, not `typeof digest` — at this point control-flow
+    // analysis has already narrowed `digest` to `null`, so `as typeof digest`
+    // silently asserted `null` and made every field read below dead (foreman-40ab).
+    digest = (await getLatestDigest(workspaceId)) as Digest | null;
     if (digest?.kind === "automation_digest") break;
   }
 

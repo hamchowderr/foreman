@@ -93,6 +93,7 @@
   "devDependencies": {
     "@copilotkit/aimock": "^1.14.3",
     "@types/node": "^24",
+    "@types/pg": "^8.20.0",
     "@zapier/zapier-sdk-cli": "^0.67.4",
     "mastra": "1.20.2",
     "typescript": "^5",

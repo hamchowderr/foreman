@@ -144,7 +144,7 @@ async function main() {
     const keys = Object.keys(mod).sort();
     console.log(`(${keys.length} named exports)`);
     for (const k of keys) {
-      let kind = typeof mod[k];
+      let kind: string = typeof mod[k];
       // distinguish error classes / constructors
       if (kind === "function" && /^[A-Z]/.test(k)) {
         const isErr = mod[k]?.prototype instanceof Error;

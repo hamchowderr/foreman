@@ -49,7 +49,10 @@ jobs:
           cache: npm
       - run: npm ci
       # `mastra build` / vitest transpile with esbuild (no type-checking), so
-      # type errors never gated before — this runs `tsc --noEmit` over src + tests.
+      # type errors never gated before — this runs `tsc --noEmit` over src,
+      # tests, and scripts. scripts/ is included deliberately (foreman-40ab):
+      # it holds live probes that create/delete real cloud resources, where a
+      # silently-ignored wrong option key is most expensive.
       - name: Typecheck agents
         run: cd packages/agents && npm run typecheck
 

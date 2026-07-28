@@ -232,3 +232,8 @@ main().catch((err) => {
   console.error("FAILED:", err);
   process.exit(1);
 });
+
+// This file only uses dynamic `import()`, so tsc would otherwise treat it as a
+// global script rather than a module — colliding top-level names across scripts/
+// and rejecting top-level `await`. See foreman-40ab.
+export {};
