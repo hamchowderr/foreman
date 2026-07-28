@@ -11,6 +11,14 @@ const envSchema = z.object({
   DEV_ZAPIER_OVERRIDE: z.string().optional(),
   FOREMAN_MODE: z.enum(["dev", "self_hosted"]).optional().default("dev"),
   DEPLOY_TARGET: z.enum(["vps", "vercel", "cloudflare"]).optional().default("vps"),
+  // Which runtime durables execute on (foreman-2qbk). Defaults to `zapier` —
+  // deliberately NOT @zapier/zapier-durable's own `filesystem` default, which
+  // would silently repoint production at an empty local store. Validated here so
+  // a typo fails at boot rather than falling back to Zapier at the first run.
+  ZAPIER_DURABLE_ADAPTER: z.enum(["zapier", "filesystem"]).optional().default("zapier"),
+  // Single documented override letting local durable execution proceed without
+  // OS isolation, for single-tenant boxes (foreman-3uje).
+  FOREMAN_DURABLE_ALLOW_UNISOLATED: z.enum(["0", "1"]).optional(),
   // Workspace sandbox (foreman-zlru). `local` is the only wired provider today;
   // the others are reserved so config can be staged ahead of the computesdk bump.
   SANDBOX_PROVIDER: z.enum(["local", "docker", "e2b", "daytona"]).optional().default("local"),
