@@ -19,7 +19,12 @@
       "!**/*.min.js",
       "!packages/web/components.json",
       "!**/package-lock.json",
-      "!**/.fallowrc.json"
+      "!**/.fallowrc.json",
+      "!**/*.db",
+      "!**/*.sqlite",
+      "!**/*.sqlite3",
+      "!**/.dolt",
+      "!**/.git"
     ]
   },
   "formatter": {
