@@ -163,6 +163,22 @@ export interface ResolveSandboxOptions {
   workingDirectory: string;
   /** Sanitized workspace id, used to give the sandbox a stable per-tenant id. */
   tenantKey: string;
+  /**
+   * Extra paths the sandboxed process may READ. Under `bwrap`/`seatbelt` only
+   * the working directory is reachable by default, so anything the process must
+   * resolve from outside it — notably `node_modules` for a durable runner —
+   * has to be named here. Read-only on purpose: this widens what code can be
+   * loaded, never what it can modify.
+   */
+  readOnlyPaths?: string[];
+  /**
+   * Whether the sandboxed process may reach the network. Off by default, which
+   * is the useful default for running untrusted code; callers that genuinely
+   * need egress (a durable calling the Zapier API) opt in explicitly.
+   */
+  allowNetwork?: boolean;
+  /** Distinguishes sandboxes built for different purposes within one tenant. */
+  idSuffix?: string;
 }
 
 /**
@@ -188,10 +204,17 @@ export function resolveSandbox(options: ResolveSandboxOptions): WorkspaceSandbox
   }
 
   const { backend } = resolveIsolation();
+  const id = options.idSuffix
+    ? `foreman-sandbox-${options.tenantKey}-${options.idSuffix}`
+    : `foreman-sandbox-${options.tenantKey}`;
   return new LocalSandbox({
-    id: `foreman-sandbox-${options.tenantKey}`,
+    id,
     workingDirectory: options.workingDirectory,
     isolation: backend,
+    nativeSandbox: {
+      allowNetwork: options.allowNetwork ?? false,
+      ...(options.readOnlyPaths?.length ? { readOnlyPaths: options.readOnlyPaths } : {}),
+    },
   });
 }
 

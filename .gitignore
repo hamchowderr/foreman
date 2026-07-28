@@ -84,3 +84,6 @@ preview-auth.json
 .beads/issues.jsonl
 .beads/dolt-backup.json
 .beads/dolt-backup-state.json
+
+# Scratch workspace created by tests/unit/durable-runner.test.ts
+packages/agents/.tmp-durable-runner-test/

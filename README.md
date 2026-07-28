@@ -423,6 +423,12 @@ The agent can run commands in a per-tenant workspace sandbox. Two env vars contr
 
 Backend by platform: **Linux** → `bwrap` (bubblewrap, installed in the image) · **macOS** → `seatbelt` (built in) · **Windows** → none. Windows dev therefore runs sandbox commands unisolated with a warning; that's a gap in Mastra's sandbox library rather than in Windows itself (which has AppContainer), tracked upstream at [mastra-ai/mastra#20304](https://github.com/mastra-ai/mastra/issues/20304).
 
+### Running automations locally
+
+`ZAPIER_DURABLE_ADAPTER=filesystem` runs automations on this machine instead of on Zapier — no early-access allowlist, no network. Because an automation's code is generated from your prompts, Foreman **refuses** to execute it locally without OS isolation, and the child process gets an environment *allowlist* (`PATH` plus what the caller explicitly passes) rather than this server's database URL and provider keys.
+
+On a single-tenant box where the only prompts are your own, `FOREMAN_DURABLE_ALLOW_UNISOLATED=1` overrides the refusal. Don't set it on a shared or multi-tenant deployment — that's exactly the case the boundary exists for.
+
 **Live:** [foreman.otakusolutions.io](https://foreman.otakusolutions.io) (web) · [foreman-agents.otakusolutions.io](https://foreman-agents.otakusolutions.io) (agents, currently on a VPS)
 
 ---
