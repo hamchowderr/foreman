@@ -14,6 +14,14 @@ directly with `npx tsx`.
 - A running local Supabase (`npx supabase start` from the repo root) for anything
   that touches Postgres.
 
+**These scripts are typechecked.** `scripts/**/*.ts` is in the agents `tsconfig.json`
+include, so `npm run typecheck` (and the CI `agents (tsc)` job) covers them alongside
+`src/` and `tests/`. That matters here more than anywhere else: several of these hit a
+real Zapier account, and a silently-ignored wrong option key already cost one incident
+(a `configureDurable` call wrote durable state into the developer's home directory —
+`foreman-40ab`). A script that only uses dynamic `import()` needs a trailing
+`export {};` so tsc treats it as a module rather than a global script.
+
 ## Evaluation / datasets
 
 The Mastra Datasets pipeline that scores the agent against a labeled set (see the
