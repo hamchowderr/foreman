@@ -15,7 +15,11 @@ vi.mock("@/lib/automations/schedules", () => ({
   unregisterAutomationSchedule: vi.fn(async () => {}),
   assertValidCron: vi.fn(),
 }));
-vi.mock("@/lib/durable", () => ({
+// Mocked one level down, at the module that actually owns these calls, so the
+// REAL delivery seam (`deliveryForActiveAdapter` → `zapierDelivery`) runs on
+// top of them (foreman-gk6k). Mocking `@/lib/durable` wholesale would stub out
+// the seam itself, and these assertions would stop proving the Zapier path.
+vi.mock("@/lib/durable/deploy", () => ({
   deployAutomation: vi.fn(async () => ({
     workflowId: "wf_1",
     versionId: "ver_1",
@@ -296,7 +300,9 @@ describe("respondToCallbackForUser (foreman-zfnj)", () => {
       durable_run_id: "dr_1",
     } as never);
     const r = await respondToCallbackForUser("user-1", "run_1", { cancel: true });
-    expect(r).toEqual({ ok: true, action: "cancelled" });
+    // `runStatus` carries what the adapter actually reported, so the caller
+    // persists the truth rather than assuming "cancelled" (foreman-gk6k).
+    expect(r).toEqual({ ok: true, action: "cancelled", runStatus: "cancelled" });
     expect(cancelDurableRun).toHaveBeenCalledWith(expect.anything(), "dr_1");
     expect(store.updateRun).toHaveBeenCalledWith("run_1", { status: "cancelled" });
     expect(postCallback).not.toHaveBeenCalled();
