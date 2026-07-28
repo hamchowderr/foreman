@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  activeDurableAdapter,
   deleteAutomation as deleteZapierWorkflow,
   deliveryForActiveAdapter,
   deployAutomation,
@@ -8,6 +9,7 @@ import {
   triggerAutomation,
 } from "../durable";
 import type { DeployResult } from "../durable/deploy";
+import { runDurableLocally } from "../durable/runner";
 import { resolveActiveWorkspace } from "../identity";
 import { getInbox, listInboxMessages } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
@@ -316,6 +318,31 @@ export async function runAutomationById(
   const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
   const automation = await store.getAutomation(workspaceId, automationId);
   if (!automation) return null;
+
+  // On the filesystem adapter there is no deployed workflow to trigger — the
+  // source lives in `automation.source` and Foreman executes it itself, sandboxed
+  // (foreman-3uje). A local run has no separate trigger, so the execution id
+  // stands in for both ids; `durable_run_id` is what Approve/Deny keys on and
+  // what `deliveryForActiveAdapter` resolves against the same state directory.
+  if (activeDurableAdapter() === "filesystem") {
+    const outcome = await runDurableLocally({
+      tenantKey: workspaceId ?? "_shared",
+      source: automation.source,
+      input: runInput,
+    });
+    const executionId = outcome.executionId ?? randomUUID();
+    const status = outcome.error ? "failed" : outcome.done ? "finished" : "running";
+
+    const runId = await store.recordRun({
+      automationId,
+      workspaceId: workspaceId ?? null,
+      triggerId: executionId,
+      durableRunId: outcome.executionId ?? null,
+      status,
+      input: runInput,
+    });
+    return { runId, triggerId: executionId, status, durableRunId: outcome.executionId ?? null };
+  }
 
   const sdk = await getExperimentalSdkForUser(userId);
   const { triggerId } = await triggerAutomation({

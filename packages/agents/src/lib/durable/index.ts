@@ -38,5 +38,13 @@ export {
   triggerAutomation,
 } from "./deploy";
 export { AGED_DURABLE_DEPS } from "./deps";
+export {
+  assertLocalDurableAllowed,
+  type LocalDurableResult,
+  LocalDurableUnavailableError,
+  type RunDurableLocallyOptions,
+  readLocalDurableSource,
+  runDurableLocally,
+} from "./runner";
 export { buildDurableSource, humanApprovalGate } from "./source";
 export type { ActionType, AutomationSpec, AutomationStep, AutomationTrigger } from "./types";
