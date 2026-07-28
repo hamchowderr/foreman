@@ -4,6 +4,18 @@
  */
 
 export {
+  activeDurableAdapter,
+  type DecisionDelivery,
+  type DecisionInput,
+  type DecisionResult,
+  type DurableAdapter,
+  deliveryForActiveAdapter,
+  filesystemDelivery,
+  findOpenLocalGate,
+  type LocalDurableStore,
+  zapierDelivery,
+} from "./delivery";
+export {
   type AutomationSummary,
   cancelDurableRun,
   type DeployAutomationOptions,

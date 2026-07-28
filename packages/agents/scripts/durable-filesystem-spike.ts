@@ -37,12 +37,15 @@ async function main() {
   //    default, so this proves the env-selected path Foreman would ship.
   process.env.ZAPIER_DURABLE_ADAPTER = "filesystem";
   process.env.ZAPIER_DURABLE_FS_DIR = stateDir;
-  configureDurable({ adapter: "filesystem", filesystem: { baseDir: stateDir } });
+  // The key is `fsDir`. An unknown key is silently ignored and `fsDir` falls
+  // back to ~/.config/zapier-sdk/durable — writing into the real home dir.
+  configureDurable({ adapter: "filesystem", fsDir: stateDir });
 
   log("[1] config");
   const cfg = getConfig();
   log("adapter:", cfg.adapter);
   log("stateDir:", stateDir);
+  if (cfg.fsDir !== stateDir) throw new Error(`fsDir did not take: ${cfg.fsDir}`);
 
   const client = createClient();
   log("client:", client.constructor.name);

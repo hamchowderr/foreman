@@ -1,3 +1,4 @@
+import { activeDurableAdapter, type DurableAdapter } from "./delivery";
 import type { AutomationSpec } from "./types";
 
 /**
@@ -17,9 +18,22 @@ import type { AutomationSpec } from "./types";
  * POST to the URL. Returns source lines that: create the gate, report its `{ callbackUrl,
  * callbackName }` via a step, and await the decision into `<id>Decision`.
  */
-export function humanApprovalGate(name: string): string {
+export function humanApprovalGate(name: string, adapter?: DurableAdapter): string {
   const q = (v: unknown) => JSON.stringify(v);
   const id = name.replace(/[^a-zA-Z0-9_$]/g, "_").replace(/^([0-9])/, "_$1");
+  const target = adapter ?? activeDurableAdapter();
+
+  // On the filesystem adapter the run is local, so Foreman reads the callback
+  // token straight off the execution's operations (`findOpenLocalGate`). The
+  // URL never has to cross a wire, so neither the binding nor the reporting
+  // step is emitted — one less step to journal and replay per approval.
+  if (target === "filesystem") {
+    return [
+      `  const [${id}Approval] = await ctx.createCallback(${q(name)});`,
+      `  const ${id}Decision = await ${id}Approval;`,
+    ].join("\n");
+  }
+
   return [
     `  const [${id}Approval, ${id}Url] = await ctx.createCallback(${q(name)});`,
     `  await ctx.step(${q(`__report_callback_url_${name}`)}, async () => ({ callbackUrl: ${id}Url, callbackName: ${q(name)} }));`,

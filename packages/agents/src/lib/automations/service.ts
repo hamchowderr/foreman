@@ -1,11 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
-  cancelDurableRun,
   deleteAutomation as deleteZapierWorkflow,
+  deliveryForActiveAdapter,
   deployAutomation,
   getTriggerRunStatus,
-  postCallback,
-  resolveCallbackUrl,
   setAutomationEnabled,
   triggerAutomation,
 } from "../durable";
@@ -367,10 +365,17 @@ export async function cancelRunForUser(
     return { cancelled: true, status: "cancelled" };
   }
 
-  const sdk = await getExperimentalSdkForUser(userId);
-  const status = await cancelDurableRun(sdk, run.durable_run_id);
-  await store.updateRun(run.id, { status });
-  return { cancelled: status === "cancelled", status };
+  // Same adapter-aware seam as the approval path (foreman-gk6k) — a local run
+  // has no Zapier client to cancel against.
+  const delivery = await deliveryForActiveAdapter(() => getExperimentalSdkForUser(userId), {
+    tenantKey: workspaceId,
+  });
+  const outcome = await delivery.deliver(run.durable_run_id, { cancel: true });
+  if (!outcome.runStatus) {
+    return { cancelled: false, status: run.status };
+  }
+  await store.updateRun(run.id, { status: outcome.runStatus });
+  return { cancelled: outcome.ok, status: outcome.runStatus };
 }
 
 export interface CallbackResponseInput {
@@ -410,20 +415,20 @@ export async function respondToCallbackForUser(
     return { ok: false, action: "none", reason: "run is not waiting on a callback" };
   }
 
-  const sdk = await getExperimentalSdkForUser(userId);
+  // Adapter-specific mechanics live behind `deliverDecision` (foreman-gk6k) —
+  // on Zapier this resolves + POSTs a callback URL, on the filesystem adapter
+  // there is no URL to POST to and it goes through the local store.
+  const delivery = await deliveryForActiveAdapter(() => getExperimentalSdkForUser(userId), {
+    tenantKey: workspaceId,
+  });
+  const outcome = await delivery.deliver(run.durable_run_id, input);
 
-  if (input.cancel) {
-    const status = await cancelDurableRun(sdk, run.durable_run_id);
-    await store.updateRun(run.id, { status });
-    return { ok: status === "cancelled", action: "cancelled" };
+  // Persist whatever status the adapter reported, not an assumed "cancelled" —
+  // a run can legitimately have finished before the cancel landed.
+  if (outcome.action === "cancelled" && outcome.runStatus) {
+    await store.updateRun(run.id, { status: outcome.runStatus });
   }
-
-  const cb = await resolveCallbackUrl(sdk, run.durable_run_id, input.callbackName);
-  if (!cb) {
-    return { ok: false, action: "none", reason: "no open callback URL for this run" };
-  }
-  const res = await postCallback(cb.url, input.payload ?? {});
-  return { ok: res.ok, action: "resumed", status: res.status };
+  return outcome;
 }
 
 export interface UpdateInput {
