@@ -52,7 +52,6 @@
     "@chat-adapter/teams": "^4.28.1",
     "@chat-adapter/telegram": "^4.28.1",
     "@chat-adapter/whatsapp": "^4.28.1",
-    "@hono/node-server": "^1.19.14",
     "@mastra/ai-sdk": "1.6.3",
     "@mastra/core": "1.53.0",
     "@mastra/editor": "0.13.8",
