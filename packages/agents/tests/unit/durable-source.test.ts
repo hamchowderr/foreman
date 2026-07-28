@@ -63,7 +63,7 @@ describe("buildDurableSource", () => {
 
 describe("humanApprovalGate (foreman-zfnj)", () => {
   it("creates the gate, reports its URL+name via a step, and awaits the decision", () => {
-    const gate = humanApprovalGate("approve");
+    const gate = humanApprovalGate("approve", "zapier");
     expect(gate).toContain(
       'const [approveApproval, approveUrl] = await ctx.createCallback("approve");',
     );
@@ -74,8 +74,25 @@ describe("humanApprovalGate (foreman-zfnj)", () => {
     expect(gate).toContain("const approveDecision = await approveApproval;");
   });
 
+  it("omits the report step on the filesystem adapter (foreman-2qbk)", () => {
+    const gate = humanApprovalGate("approve", "filesystem");
+    // The gate itself is identical…
+    expect(gate).toContain('await ctx.createCallback("approve")');
+    expect(gate).toContain("const approveDecision = await approveApproval;");
+    // …but the URL never crosses a wire locally, so nothing reports it and the
+    // URL is not even bound (an unused binding would be dead weight in the
+    // generated source). Foreman reads the token off the local operations.
+    expect(gate).not.toContain("__report_callback_url");
+    expect(gate).not.toContain("approveUrl");
+  });
+
+  it("defaults to the active adapter, which is zapier unless opted out", () => {
+    delete process.env.ZAPIER_DURABLE_ADAPTER;
+    expect(humanApprovalGate("approve")).toContain("__report_callback_url_approve");
+  });
+
   it("sanitizes a non-identifier name into safe variable names", () => {
-    const gate = humanApprovalGate("needs-sign-off");
+    const gate = humanApprovalGate("needs-sign-off", "zapier");
     // createCallback + callbackName keep the original name…
     expect(gate).toContain('ctx.createCallback("needs-sign-off")');
     expect(gate).toContain('callbackName: "needs-sign-off"');
