@@ -87,6 +87,22 @@ Run with `npx tsx --env-file=.env.local scripts/<name>.ts`.
 > These probes hit a real Zapier account and may create/delete cloud resources.
 > They self-clean, but run them against a non-sensitive test account.
 
+### Offline durable spike
+
+`durable-filesystem-spike.ts` is the exception — it needs **no credentials, no
+network, and no Zapier early-access allowlist**. It runs a Foreman-shaped durable
+(step → human-approval gate → resume) entirely in-process on the
+`@zapier/zapier-durable` filesystem adapter, into a temp dir it cleans up.
+
+```bash
+npx tsx scripts/durable-filesystem-spike.ts
+```
+
+It prints the measured `callbackUrl`. Note that on this adapter it is a `file://`
+URL and therefore **not** HTTP-POSTable — delivery goes through
+`client.callback(token, payload)`, where `token` is the last path segment. See
+`foreman-02lu` for the full finding.
+
 ## Root scripts (`/scripts`)
 
 | Command | Purpose |

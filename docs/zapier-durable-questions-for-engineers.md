@@ -1,5 +1,56 @@
 # Durable Execution — Questions for Zapier Engineers
 
+> ## 🧪 UPDATE 2026-07-28 (`@zapier/zapier-durable@0.11.0`) — filesystem adapter runs our durables offline; five new questions
+>
+> Following the direct steer from your team (2026-07-27) that `@zapier/zapier-durable`
+> ships three adapters and that the **filesystem** adapter is the recommended path for
+> running durables outside Zapier, we ran it. **It works.**
+>
+> Repro (no credentials, no network, no early-access allowlist):
+> `packages/agents/scripts/durable-filesystem-spike.ts` — a Foreman-shaped durable
+> (`ctx.step` → `ctx.createCallback` approval gate → suspend → deliver → resume → done)
+> completes in-process against `FilesystemClient`.
+>
+> **What this changes about question 2 below.** Q2 asks you to expose the callback URL
+> because an external orchestrator can't obtain it. In-process, `ctx.createCallback`
+> **does** return `[promise, callbackUrl]` directly — so the limitation is in the *wire
+> protocol* (`getDurableRun`), not in the SDK's design. Our `__report_callback_url_*`
+> self-report step exists purely to work around the wire gap, and it is unnecessary on
+> the filesystem adapter.
+>
+> **New, evidence-backed questions:**
+>
+> 1. **Is the filesystem adapter supported for production self-hosting, or is it a
+>    dev/test convenience?** Your team described custom adapters as "supported but
+>    undocumented" and the filesystem adapter as "not officially supported yet." We are
+>    considering running end-user automations on it, so we need to know which it is
+>    before we depend on it.
+> 2. **Will `getDurableRun` expose the callback URL (or gain a resume-by-token
+>    endpoint)?** Restating Q2 with the new evidence above: the SDK already has the URL
+>    locally; only the remote read path withholds it.
+> 3. **Is `client.callback(token, payload)` the intended programmatic delivery path for
+>    non-Zapier adapters?** On the filesystem adapter, `callbackBaseUrl` is a `file://`
+>    URL — we measured `file://<stateDir>/callbacks/<token>` — so `callbackUrl` is **not**
+>    POST-able and the only delivery route we found is the adapter client (or the
+>    `durable-callback` CLI). If so, is `callbackUrl` better understood as an opaque
+>    **token carrier** whose last path segment is the real identifier, rather than a URL?
+>    A host that treats it as a URL works on the Zapier adapter and silently breaks on
+>    filesystem.
+> 4. **`CallbackRequest` is typed `unknown`, and the payload is the raw body.** Passing
+>    `{ payload: {...} }` fails edge validation with
+>    `validation_failed` / `additionalProperties`. The README documents only CLI
+>    delivery, so there is no worked example of the programmatic shape. Worth one line
+>    in the README.
+> 5. **Why is `zod` pinned to exactly `4.2.1` rather than a range?** An exact pin in
+>    `dependencies` forces every consumer that already pins zod (we are on `4.4.3`
+>    repo-wide) into an override. `4.4.3` works fine in our end-to-end run, so a
+>    `^4.2.1` range would remove the friction.
+>
+> **Housekeeping:** `@zapier/zapier-durable` publishes no `repository`, `bugs`, or
+> `homepage` field, and `gitlab.com/zapier/zapier-sdk` is behind Zapier SAML SSO — so
+> there is no public tracker we can file any of this against. **Where would you like
+> bug reports for these packages to go?**
+
 > ## ✅ UPDATE 2026-07-05 (SDK 0.81.0) — durables now WORK for accounts on Zapier's early-access allowlist (apply for access; not GA); questions narrowed
 >
 > The two original blockers below are **RESOLVED** on `@zapier/zapier-sdk@0.81.0`:
