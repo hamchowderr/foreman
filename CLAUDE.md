@@ -173,7 +173,7 @@ For requirements, full quick-start, env vars, ngrok, deployment, and the testing
 - **Run the agents server through Infisical.** Secrets (incl. `ANTHROPIC_API_KEY`)
   live in Infisical (`otaku-internal`/`dev`), **not** in `agents/.env.local`
   (those keys are commented out). Start with:
-  `cd packages/agents && infisical run --env dev --recursive --silent -- npm run dev`.
+  `cd packages/agents && infisical run --projectId e56e0da5-6460-4bab-bdd6-2fd12ac5447b --env dev --recursive --silent -- npm run dev`.
   Plain `npm run dev` → no Anthropic key → every chat 500s with `invalid x-api-key`.
   Local infra (`DATABASE_URL`, local `SUPABASE_URL`) stays in `.env.local` and is
   baked in by `mastra dev`, so Infisical's cloud values don't clobber it.
