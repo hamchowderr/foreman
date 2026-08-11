@@ -83,6 +83,18 @@ const READ_ONLY = new Set([
   // -running run as `status: "waiting"` and a failed one as `status: "error"`
   // rather than throwing; the caller polls. Executes nothing itself.
   "getActionRun",
+  // Trigger discovery — the trigger-side mirror of the action discovery reads
+  // above, and needed for the same reason: the agent has to be able to see what
+  // a trigger accepts to build an automation against it (foreman-eadn).
+  "listTriggers",
+  "getTriggerInputFieldsSchema",
+  "listTriggerInputFields",
+  "listTriggerInputFieldChoices",
+  // Trigger-inbox reads. Inspecting an inbox and its queued messages is safe;
+  // the state-changing half of this surface is excluded below.
+  "listTriggerInboxes",
+  "getTriggerInbox",
+  "listTriggerInboxMessages",
 ]);
 
 /**
@@ -123,7 +135,43 @@ const EXCLUDED_METHODS = new Set([
   "createConnection",
   "getConnectionStartUrl",
   "waitForNewConnection",
+  // Trigger-inbox lifecycle + message delivery (foreman-eadn). Excluded for the
+  // same reason as the connection helpers: Foreman already owns this surface
+  // internally. `lib/trigger-inbox/` drives it by calling the SDK directly
+  // (`opts.sdk.ensureTriggerInbox` / `.leaseTriggerInboxMessages` / …), NOT
+  // through these generated tools, so excluding them costs the worker nothing.
+  //
+  // Exposing them would be actively harmful rather than merely redundant:
+  // lease/ack/release ARE the worker's at-least-once delivery guarantee, and an
+  // agent acking a message the worker has not processed drops that trigger for
+  // good. Gating them behind approval was the other option and is worse — these
+  // run on every worker tick, so the prompts would be constant and meaningless.
+  "createTriggerInbox",
+  "ensureTriggerInbox",
+  "updateTriggerInbox",
+  "deleteTriggerInbox",
+  "pauseTriggerInbox",
+  "resumeTriggerInbox",
+  "leaseTriggerInboxMessages",
+  "ackTriggerInboxMessages",
+  "releaseTriggerInboxMessages",
 ]);
+
+/**
+ * The three classification sets, exported so a test can assert the invariant
+ * that every method in the SDK's mcp registry lands in exactly one of them.
+ *
+ * That guard is the point. Tool generation fails OPEN: an unclassified method
+ * is not skipped (only EXCLUDED_METHODS skips) and gets no `requireApproval`
+ * (only APPROVAL_REQUIRED sets it), so forgetting to classify a method silently
+ * ships it as a no-approval agent tool. Sixteen `trigger*` methods drifted in
+ * exactly that way across several SDK bumps before anyone noticed (foreman-eadn).
+ */
+export const METHOD_CLASSIFICATION = {
+  APPROVAL_REQUIRED,
+  READ_ONLY,
+  EXCLUDED_METHODS,
+} as const;
 
 /** Convert camelCase to kebab-case (matching MCP server convention). */
 function toKebab(name: string): string {
