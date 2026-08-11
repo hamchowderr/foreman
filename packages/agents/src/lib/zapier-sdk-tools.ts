@@ -45,6 +45,11 @@ import { getSdkForUser } from "./zapier/sdk";
 /** Tools that execute real actions and should require user approval. */
 const APPROVAL_REQUIRED = new Set([
   "runAction",
+  // Non-blocking half of `runAction` (SDK 0.94.0). It starts a real action run
+  // and returns immediately instead of waiting — same blast radius as
+  // `runAction`, so it gates the same way. Not waiting for the result does not
+  // make it safe.
+  "createActionRun",
   "fetch",
   "createTable",
   "deleteTable",
@@ -74,6 +79,10 @@ const READ_ONLY = new Set([
   "listTableRecords",
   "getTableRecord",
   "getProfile",
+  // Point-in-time read of an action run's state (SDK 0.94.0). Reports a still
+  // -running run as `status: "waiting"` and a failed one as `status: "error"`
+  // rather than throwing; the caller polls. Executes nothing itself.
+  "getActionRun",
 ]);
 
 /**
