@@ -3,6 +3,7 @@
  * No API calls. Verifies tools are generated with correct metadata.
  */
 import {
+  createZapierSdk,
   ZapierApiError,
   ZapierApprovalError,
   ZapierBundleError,
@@ -10,7 +11,11 @@ import {
   ZapierUnknownError,
 } from "@zapier/zapier-sdk";
 import { beforeAll, describe, expect, it } from "vitest";
-import { generateZapierTools, handleSdkError } from "../../src/lib/zapier-sdk-tools";
+import {
+  generateZapierTools,
+  handleSdkError,
+  METHOD_CLASSIFICATION,
+} from "../../src/lib/zapier-sdk-tools";
 
 let tools: Record<string, any>;
 
@@ -190,5 +195,75 @@ describe("Tool generation", () => {
     if (bio) {
       expect(bio.length).toBeLessThanOrEqual(503); // 500 + "..."
     }
+  });
+});
+
+describe("registry classification coverage (foreman-eadn)", () => {
+  // rules/zapier-sdk.md: every method in the SDK's mcp registry must belong to
+  // exactly one of APPROVAL_REQUIRED / READ_ONLY / EXCLUDED_METHODS.
+  //
+  // This has teeth because generation fails OPEN — an unclassified method is
+  // still emitted as a tool, just without `requireApproval` and without a
+  // readOnly/destructive annotation. Sixteen `trigger*` methods shipped that way
+  // across several SDK bumps because nothing asserted this. When an SDK bump
+  // adds a method, this test fails and names it.
+  const { APPROVAL_REQUIRED, READ_ONLY, EXCLUDED_METHODS } = METHOD_CLASSIFICATION;
+
+  // Registry metadata is local to the SDK package — no network, no real
+  // credentials, so this is safe in CI where provider keys are absent.
+  const registryMethods = createZapierSdk({
+    credentials: { clientId: "classification-test", clientSecret: "classification-test" },
+  })
+    .getRegistry({ package: "mcp" })
+    .functions.map((f) => f.name);
+
+  const setsContaining = (name: string) =>
+    (
+      [
+        ["APPROVAL_REQUIRED", APPROVAL_REQUIRED],
+        ["READ_ONLY", READ_ONLY],
+        ["EXCLUDED_METHODS", EXCLUDED_METHODS],
+      ] as const
+    )
+      .filter(([, set]) => set.has(name))
+      .map(([label]) => label);
+
+  it("registry is non-empty (guards against a silently vacuous pass)", () => {
+    expect(registryMethods.length).toBeGreaterThan(0);
+  });
+
+  it("classifies every registry method into exactly one set", () => {
+    const unclassified = registryMethods.filter((n) => setsContaining(n).length === 0);
+    const overlapping = registryMethods
+      .filter((n) => setsContaining(n).length > 1)
+      .map((n) => `${n} (in ${setsContaining(n).join(" + ")})`);
+
+    expect(
+      { unclassified, overlapping },
+      "assign each new SDK method a set in zapier-sdk-tools.ts — an unclassified " +
+        "method becomes a no-approval agent tool (see rules/zapier-sdk.md)",
+    ).toEqual({ unclassified: [], overlapping: [] });
+  });
+
+  it("has no set members that no longer exist in the registry", () => {
+    const known = new Set(registryMethods);
+    const stale = [...APPROVAL_REQUIRED, ...READ_ONLY, ...EXCLUDED_METHODS].filter(
+      (n) => !known.has(n),
+    );
+    expect(stale, "these were removed from the SDK — drop them from the sets").toEqual([]);
+  });
+
+  it("never emits a tool for an excluded method", () => {
+    for (const name of EXCLUDED_METHODS) {
+      expect(tools[name.replace(/([A-Z])/g, "-$1").toLowerCase()]).toBeUndefined();
+    }
+  });
+
+  it("gates every approval-required method behind requireApproval", () => {
+    const ungated = [...APPROVAL_REQUIRED]
+      .map((name) => [name, tools[name.replace(/([A-Z])/g, "-$1").toLowerCase()]] as const)
+      .filter(([, tool]) => tool && tool.requireApproval !== true)
+      .map(([name]) => name);
+    expect(ungated).toEqual([]);
   });
 });
