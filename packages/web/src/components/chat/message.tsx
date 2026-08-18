@@ -2,12 +2,21 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { Bot, Check, User } from "lucide-react";
 import { useEffect } from "react";
+import { useBulkThreshold } from "@/hooks/use-bulk-threshold";
+import { describeActionScope } from "@/lib/action-scope";
 import { initialsFrom, seedToGradient } from "@/lib/avatar";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
-import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "../ai-elements/tool";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+  ToolScopeNotice,
+} from "../ai-elements/tool";
 import { DashboardRenderer } from "../dashboard/dashboard-renderer";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -149,13 +158,23 @@ const GenericToolCard = ({
     (state === "approval-responded" &&
       (part as { approval?: { approved?: boolean } }).approval?.approved === false);
 
+  const bulkThreshold = useBulkThreshold();
+  const scope = describeActionScope(toolName, part.input);
+  // A null count means the whole target (e.g. dropping a table) — bigger than
+  // any threshold by definition, so it never counts as routine.
+  const isOversized = !!scope && (scope.count === null || scope.count > bulkThreshold);
+
   useEffect(() => {
     if (state === "approval-requested" && approvalId) {
-      if (getAlwaysAllowedTools().has(toolName)) {
+      // "Always Allow" answers the prompt before it renders, which would make
+      // the size notice unreachable in exactly the case it exists for. An
+      // over-threshold action still stops here — not a second confirmation,
+      // just the first one not being skipped.
+      if (getAlwaysAllowedTools().has(toolName) && !isOversized) {
         addToolApprovalResponse({ id: approvalId, approved: true });
       }
     }
-  }, [state, approvalId, toolName, addToolApprovalResponse]);
+  }, [state, approvalId, toolName, isOversized, addToolApprovalResponse]);
 
   const needsApproval = state === "approval-requested" && !!approvalId;
 
@@ -164,6 +183,11 @@ const GenericToolCard = ({
       <Tool className="w-full" defaultOpen={needsApproval}>
         <ToolHeader state={state} toolName={toolName} type="dynamic-tool" />
         <ToolContent>
+          {/* Above the parameters on purpose — the size has to land before the
+              JSON does, not after you have already scrolled past it. */}
+          {scope && (state === "approval-requested" || state === "approval-responded") && (
+            <ToolScopeNotice oversized={isOversized} scope={scope} />
+          )}
           {(state === "input-available" ||
             state === "input-streaming" ||
             state === "approval-requested" ||

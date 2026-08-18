@@ -1,3 +1,16 @@
+/**
+ * The guardrails that actually run: per-user rate limiting and sensitive-app
+ * blocking, both enforced in the generated Zapier tools' execute path
+ * (`zapier-sdk-tools.ts`) and reported by `GET /guardrails/status`.
+ *
+ * This file used to be larger. `runGuardrails`, `assessActionRisk` and
+ * `needsBulkConfirmation` were removed with foreman-nz8b: their only caller was
+ * the deleted `lib/zapier/execution.ts`, so they had been scoring risk for a
+ * code path nothing executed, with unit tests that stayed green the whole time.
+ * The one job they were still claimed to do — warning about bulk writes — is
+ * now done where a warning can be read, on the approval prompt itself
+ * (`web/src/lib/action-scope.ts`), against the workspace's `max_bulk_items`.
+ */
 import { checkCapability } from "./capabilities";
 import { getSupabase } from "./db";
 import { GUARDRAIL_DEFAULTS } from "./guardrails-config";
@@ -64,98 +77,6 @@ export async function checkRateLimit(
   }
 
   return { allowed: true };
-}
-
-// ─── Action Risk Assessment ───
-
-export interface ActionRisk {
-  level: "low" | "medium" | "high" | "critical";
-  reason: string;
-  requiresConfirmation: boolean;
-}
-
-const MESSAGING_APPS = new Set([
-  "gmail",
-  "outlook",
-  "sendgrid",
-  "mailchimp",
-  "twilio",
-  "slack",
-  "discord",
-  "telegram",
-  "intercom",
-  "hubspot",
-  "mailgun",
-  "postmark",
-]);
-
-export function assessActionRisk(
-  actionType: string,
-  actionKey: string,
-  inputs: Record<string, unknown>,
-): ActionRisk {
-  const keyLower = actionKey.toLowerCase();
-
-  // Any action with "delete" in the key = critical
-  if (keyLower.includes("delete")) {
-    return {
-      level: "critical",
-      reason: `Destructive action: ${actionKey}`,
-      requiresConfirmation: true,
-    };
-  }
-
-  // raw_api calls = high
-  if (actionType === "raw_api" || actionType === "run") {
-    return {
-      level: "high",
-      reason: `Raw API / run action: ${actionKey}`,
-      requiresConfirmation: true,
-    };
-  }
-
-  // Write actions need more scrutiny
-  if (
-    actionType === "write" ||
-    actionType === "search_and_write" ||
-    actionType === "search_or_write"
-  ) {
-    // Check for bulk operations (arrays > 10 items)
-    for (const value of Object.values(inputs)) {
-      if (Array.isArray(value) && value.length > 10) {
-        return {
-          level: "high",
-          reason: `Bulk write: ${actionKey} with ${value.length} items`,
-          requiresConfirmation: true,
-        };
-      }
-    }
-
-    // Write to messaging/email apps = medium
-    // We extract the app from actionKey (format: "AppName.action_name")
-    const appPart = actionKey.split(".")[0]?.toLowerCase() ?? "";
-    if (MESSAGING_APPS.has(appPart)) {
-      return {
-        level: "medium",
-        reason: `Write to messaging app: ${actionKey}`,
-        requiresConfirmation: true,
-      };
-    }
-
-    // Generic write = medium (no extra confirmation beyond existing approval)
-    return {
-      level: "medium",
-      reason: `Write action: ${actionKey}`,
-      requiresConfirmation: false,
-    };
-  }
-
-  // search/read = low
-  return {
-    level: "low",
-    reason: `Read/search action: ${actionKey}`,
-    requiresConfirmation: false,
-  };
 }
 
 // ─── Sensitive App Access ───
@@ -231,68 +152,4 @@ async function checkSensitiveAppCapability(userId: string, capability: string): 
   // No row = disabled (opt-in for sensitive apps)
   if (!data) return false;
   return data.enabled;
-}
-
-// ─── Bulk Confirmation ───
-
-export function needsBulkConfirmation(
-  inputs: Record<string, unknown>,
-  threshold?: number,
-): boolean {
-  const max = threshold ?? 5;
-  for (const value of Object.values(inputs)) {
-    if (Array.isArray(value) && value.length > max) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// ─── Combined Guardrail Check ───
-
-export interface GuardrailResult {
-  allowed: boolean;
-  reason?: string;
-  risk?: ActionRisk;
-  requiresConfirmation: boolean;
-}
-
-export async function runGuardrails(
-  userId: string,
-  appKey: string,
-  actionType: string,
-  actionKey: string,
-  inputs: Record<string, unknown>,
-): Promise<GuardrailResult> {
-  // 1. Rate limit
-  const rateCheck = await checkRateLimit(userId);
-  if (!rateCheck.allowed) {
-    return {
-      allowed: false,
-      reason: `Rate limit exceeded. Retry after ${Math.ceil((rateCheck.retryAfterMs ?? 0) / 1000)}s.`,
-      requiresConfirmation: false,
-    };
-  }
-
-  // 2. App access (sensitive app blocking)
-  const appCheck = await checkAppAccess(userId, appKey);
-  if (!appCheck.allowed) {
-    return {
-      allowed: false,
-      reason: appCheck.reason,
-      requiresConfirmation: false,
-    };
-  }
-
-  // 3. Action risk assessment
-  const risk = assessActionRisk(actionType, actionKey, inputs);
-
-  // 4. Bulk confirmation
-  const bulk = needsBulkConfirmation(inputs);
-
-  return {
-    allowed: true,
-    risk,
-    requiresConfirmation: risk.requiresConfirmation || bulk,
-  };
 }
