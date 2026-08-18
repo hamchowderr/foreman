@@ -1,6 +1,6 @@
 import { checkCapability } from "./capabilities";
 import { getSupabase } from "./db";
-import { getOrgGuardrailConfig } from "./guardrails-config";
+import { GUARDRAIL_DEFAULTS } from "./guardrails-config";
 
 // ─── Rate Limiter (in-memory, sliding window) ───
 
@@ -25,17 +25,12 @@ setInterval(() => {
 
 export async function checkRateLimit(
   userId: string,
-  limits?: { perMinute?: number; perHour?: number },
+  limits?: { perMinute?: number; perHour?: number; peek?: boolean },
 ): Promise<{ allowed: boolean; retryAfterMs?: number }> {
-  // Defaults come from the org config, not a second copy of the numbers. The
-  // config is still a stub returning constants (foreman-nz8b), but sourcing
-  // them here means a real admin API flows straight into enforcement instead of
-  // needing this call site changed too. `orgId` is not threaded to the tool
-  // layer yet — requestUserContext carries only userId — so this is per-install
-  // rather than per-org for now.
-  const orgConfig = getOrgGuardrailConfig();
-  const perMinute = limits?.perMinute ?? orgConfig.rateLimitPerMinute;
-  const perHour = limits?.perHour ?? orgConfig.rateLimitPerHour;
+  // Callers that know the workspace pass its configured limits; the built-in
+  // defaults are the fallback and live in one place (guardrails-config.ts).
+  const perMinute = limits?.perMinute ?? GUARDRAIL_DEFAULTS.rateLimitPerMinute;
+  const perHour = limits?.perHour ?? GUARDRAIL_DEFAULTS.rateLimitPerHour;
   const now = Date.now();
 
   let counters = rateLimitStore.get(userId);
@@ -60,9 +55,13 @@ export async function checkRateLimit(
     return { allowed: false, retryAfterMs: 3_600_000 - (now - oldest) };
   }
 
-  // Record this action
-  counters.minute.push(now);
-  counters.hour.push(now);
+  // Record this action — unless the caller only wanted to read the state.
+  // `GET /guardrails/status` is a read: charging a user for looking at their own
+  // remaining budget was a real bug, not a rounding error.
+  if (!limits?.peek) {
+    counters.minute.push(now);
+    counters.hour.push(now);
+  }
 
   return { allowed: true };
 }

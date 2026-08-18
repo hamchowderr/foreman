@@ -71,6 +71,7 @@
     "jsdom": "^29.0.2",
     "patch-package": "^8.0.1",
     "postcss": "^8.5.10",
+    "supabase": "^2.114.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.4"

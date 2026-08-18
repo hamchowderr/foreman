@@ -20,6 +20,7 @@ import {
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
 import { checkAppAccess, checkRateLimit } from "./guardrails";
+import { guardrailConfigForUser } from "./guardrails-config";
 import { requestUserContext } from "./request-user-context";
 import { onZapierSdkEvent } from "./zapier/deprecation";
 import { getSdkForUser } from "./zapier/sdk";
@@ -358,7 +359,14 @@ async function guardrailDenial(
 ): Promise<{ error: string; code: string; retryable: boolean } | null> {
   if (READ_ONLY.has(methodName)) return null;
 
-  const rate = await checkRateLimit(userId);
+  // Limits come from the user's workspace so a workspace admin's settings
+  // actually take effect (foreman-nz8b). Cached, so this is not a DB round trip
+  // per tool call.
+  const config = await guardrailConfigForUser(userId);
+  const rate = await checkRateLimit(userId, {
+    perMinute: config.rateLimitPerMinute,
+    perHour: config.rateLimitPerHour,
+  });
   if (!rate.allowed) {
     const retryAfter = Math.ceil((rate.retryAfterMs ?? 0) / 1000);
     return {
