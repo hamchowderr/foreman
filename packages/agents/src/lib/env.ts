@@ -25,6 +25,12 @@ const envSchema = z.object({
   // OS-level isolation for sandbox commands. `auto` = use the platform backend
   // when one exists; refuse to run unisolated in production, warn in dev/test.
   FOREMAN_SANDBOX_ISOLATION: z.enum(["auto", "off", "require"]).optional().default("auto"),
+  // Platforms served by Mastra's native Agent.channels instead of the custom
+  // :4112 webhook server — comma-separated, e.g. `slack` (foreman-3i9k).
+  // Unset means every channel keeps using the custom stack. Opting a platform in
+  // ADDS a route on :4111; nothing reaches it until that platform's webhook URL
+  // is repointed, which is the deliberate cutover step.
+  FOREMAN_NATIVE_CHANNELS: z.string().optional(),
   PORT: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET_TOKEN: z.string().optional(),

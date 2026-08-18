@@ -1,12 +1,11 @@
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { Chat } from "chat";
-import { decryptToken } from "../lib/crypto";
-import { getSupabase } from "../lib/db";
 import { redeemChannelLinkCode, registerChannelUser } from "../lib/identity";
 import { requestUserContext } from "../lib/request-user-context";
 import { stepCountIs } from "../lib/stop-conditions";
 import { getMastra } from "../mastra";
+import { rehydrateSlackInstallations } from "./installations";
 
 let _bot: Chat<{ slack: ReturnType<typeof createSlackAdapter> }> | undefined;
 let _slackAdapter: ReturnType<typeof createSlackAdapter> | undefined;
@@ -152,35 +151,9 @@ async function _createAndInitBot() {
   _bot = bot;
 
   await bot.initialize();
-  await rehydrateInstallations(slack);
+  await rehydrateSlackInstallations(slack);
 
   return bot;
-}
-
-export async function rehydrateSlackInstallations() {
-  await getSlackBot(); // ensures init + rehydration have run
-}
-
-async function rehydrateInstallations(
-  adapter: ReturnType<typeof createSlackAdapter>,
-): Promise<void> {
-  const db = getSupabase();
-  const { data, error } = await db
-    .from("slack_installation")
-    .select("team_id, team_name, bot_token, bot_user_id");
-  if (error || !data?.length) return;
-  for (const row of data) {
-    try {
-      await adapter.setInstallation(row.team_id, {
-        botToken: decryptToken(row.bot_token),
-        botUserId: row.bot_user_id ?? undefined,
-        teamName: row.team_name ?? undefined,
-      });
-    } catch (err) {
-      console.error("[slack] Failed to rehydrate team", row.team_id, err);
-    }
-  }
-  console.log(`[slack] Rehydrated ${data.length} installation(s) from DB`);
 }
 
 /**
