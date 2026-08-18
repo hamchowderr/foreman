@@ -8,6 +8,7 @@ import {
 } from "../../lib/providers";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import { connectZapierTool } from "../tools/connect-zapier";
+import { piiRedactor } from "../../lib/processors";
 
 const EXECUTION_PROMPT = `You are the Execution Agent, responsible for running Zapier actions on behalf of users. You handle action execution, raw API calls, and Zapier account connections.
 
@@ -55,6 +56,7 @@ export function createExecutionAgent() {
       modelSettings: modelSettingsFor("execution"),
       onFinish: onFinishCostLogger("execution"),
     },
+    outputProcessors: [piiRedactor],
     tools: () => buildExecutionTools(),
   });
 }
