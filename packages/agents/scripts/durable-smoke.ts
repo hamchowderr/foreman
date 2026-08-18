@@ -20,7 +20,7 @@ import {
   runAutomationOnce,
   triggerAutomation,
 } from "../src/lib/durable";
-import { ensureInbox, leaseMessages } from "../src/lib/trigger-inbox";
+import { ensureInbox } from "../src/lib/trigger-inbox";
 
 // Prefer client-credentials (env, via `infisical run`) so this runs headless in
 // CI/probes; fall back to the cached CLI login (~/.zapier-sdk/config.json) locally.
@@ -145,7 +145,13 @@ async function main() {
       action: "issue_v2",
     });
     console.log(`  ensureInbox → ${inbox.id} status=${inbox.status}`);
-    const lease = await leaseMessages({ sdk, inbox: inbox.id, leaseLimit: 1, leaseSeconds: 30 });
+    // Raw SDK reachability probe. Foreman no longer wraps lease/ack/release — the
+    // real consumer is watchTriggerInbox (foreman-em74) — so call the API directly.
+    const { data: lease } = await sdk.leaseTriggerInboxMessages({
+      inbox: inbox.id,
+      leaseLimit: 1,
+      leaseSeconds: 30,
+    });
     console.log(
       `  lease → lease_id=${lease.lease_id ?? "—"} messages=${lease.results.length} inbox=${lease.inbox_attributes.status}`,
     );

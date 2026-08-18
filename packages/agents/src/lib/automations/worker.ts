@@ -1,23 +1,23 @@
 import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "../durable";
-import {
-  ackMessages,
-  ensureInbox,
-  type LeasedMessage,
-  leaseMessages,
-  releaseMessages,
-} from "../trigger-inbox";
+import { ensureInbox, type LeasedMessage, watchInbox } from "../trigger-inbox";
 import { type ExperimentalZapierSdk, getExperimentalSdkForUser } from "../zapier/sdk";
 import type { AutomationRow } from "./store";
 import * as store from "./store";
 import { type InboxTriggerSpec, inboxKeyFor } from "./types";
 
 /**
- * Trigger-inbox poll worker (foreman-l7xq M3). Replaces the removed
- * cron-driver-server. Each cycle, for every active inbox-triggered automation:
- * ensure its inbox (idempotent), lease a batch, dedup + dispatch each message to
- * the durable via triggerWorkflow, record the run, then ack (done) / release
- * (retry). Dedup is a DB constraint (claimInboxMessage) so an at-least-once
- * redelivery can't double-fire. Single instance only — no distributed lock.
+ * Trigger-inbox worker (foreman-l7xq M3, rebuilt on the SDK in foreman-em74).
+ *
+ * One `watchTriggerInbox` SSE subscription per active inbox-triggered automation.
+ * The SDK owns leasing, acking, releasing, retrying and the safety drain; this
+ * module owns only what is genuinely Foreman's: arming the inbox and keeping the
+ * automation row in sync with it, dedup (a DB constraint via claimInboxMessage,
+ * so at-least-once redelivery can't double-fire), firing the durable, and
+ * recording the run.
+ *
+ * This replaced a hand-rolled 60s poll loop that did the SDK's job by hand.
+ * Messages now arrive on an SSE notification instead of waiting up to a minute
+ * for the next tick. Single instance only — no distributed lock (foreman-h4ua).
  */
 
 type Sdk = ExperimentalZapierSdk;
@@ -88,33 +88,23 @@ export async function dispatchMessage(opts: {
   }
 }
 
-export interface AutomationCycleResult {
-  automationId: string;
-  inboxId: string | null;
-  inboxStatus: string | null;
-  processed: number;
-  skipped: number;
-  failed: number;
-}
-
-export async function runInboxCycleForAutomation(opts: {
+/**
+ * Arm an automation's trigger inbox and keep the automation row in sync with it
+ * (foreman-dwf8). Idempotent: `ensureTriggerInbox` is keyed on the inbox key, so
+ * calling this on every (re)subscribe is safe.
+ *
+ * The status sync matters as much as the arming: an inbox that can't subscribe
+ * (missing/expired connection, bad inputs) goes "initialization_failure", and
+ * without reflecting that the automation looks enabled in the UI while silently
+ * never firing.
+ */
+export async function armInbox(opts: {
   sdk: Sdk;
   automation: AutomationRow;
-  leaseLimit?: number;
-  leaseSeconds?: number;
-}): Promise<AutomationCycleResult> {
-  const { sdk, automation, leaseLimit = 25, leaseSeconds = 60 } = opts;
-  const result: AutomationCycleResult = {
-    automationId: automation.id,
-    inboxId: null,
-    inboxStatus: null,
-    processed: 0,
-    skipped: 0,
-    failed: 0,
-  };
-
+}): Promise<{ id: string; status: string } | null> {
+  const { sdk, automation } = opts;
   const spec = inboxSpecOf(automation);
-  if (!spec) return result; // not inbox-triggered
+  if (!spec) return null; // not inbox-triggered
 
   const inbox = await ensureInbox({
     sdk,
@@ -124,14 +114,7 @@ export async function runInboxCycleForAutomation(opts: {
     connection: spec.connection,
     inputs: spec.inputs,
   });
-  result.inboxId = inbox.id;
-  result.inboxStatus = inbox.status;
 
-  // Keep the automation row in sync with its inbox subscription (foreman-dwf8):
-  // persist the inbox id the first time we arm it, AND reflect a failed/recovered
-  // subscription in the automation status. An inbox that can't subscribe (missing/
-  // expired connection, bad inputs) goes "initialization_failure" — without this the
-  // automation looks enabled in the UI but silently never fires.
   const patch: Parameters<typeof store.updateAutomation>[2] = {};
   if (automation.trigger_inbox_id !== inbox.id) patch.triggerInboxId = inbox.id;
   if (inbox.status === "initialization_failure") {
@@ -143,56 +126,49 @@ export async function runInboxCycleForAutomation(opts: {
     await store.updateAutomation(automation.workspace_id ?? undefined, automation.id, patch);
   }
 
-  const lease = await leaseMessages({ sdk, inbox: inbox.id, leaseLimit, leaseSeconds });
-  if (!lease.lease_id || lease.results.length === 0) return result;
-
-  const processed: string[] = [];
-  const skipped: string[] = [];
-  const failed: string[] = [];
-  for (const message of lease.results) {
-    const outcome = await dispatchMessage({ sdk, automation, message });
-    if (outcome === "processed") processed.push(message.id);
-    else if (outcome === "skipped") skipped.push(message.id);
-    else failed.push(message.id);
-  }
-
-  // Ack what we handled or intentionally skipped; release failures to retry.
-  const done = [...processed, ...skipped];
-  if (done.length) {
-    await ackMessages({ sdk, inbox: inbox.id, lease: lease.lease_id, messages: done });
-  }
-  if (failed.length) {
-    await releaseMessages({ sdk, inbox: inbox.id, lease: lease.lease_id, messages: failed });
-  }
-
-  result.processed = processed.length;
-  result.skipped = skipped.length;
-  result.failed = failed.length;
-  return result;
+  return { id: inbox.id, status: inbox.status };
 }
 
-/** One full cycle across all active inbox-triggered automations (cross-workspace). */
-export async function runInboxCycle(): Promise<AutomationCycleResult[]> {
-  const automations = await store.listActiveInboxAutomations();
-  const results: AutomationCycleResult[] = [];
-  for (const automation of automations) {
-    try {
-      const sdk = await getExperimentalSdkForUser(automation.user_id);
-      results.push(await runInboxCycleForAutomation({ sdk, automation }));
-    } catch (err) {
-      // One automation's failure (e.g. an unconnected owner) must not stop the cycle.
-      console.error(`[inbox-worker] automation ${automation.id} cycle failed:`, err);
-      results.push({
-        automationId: automation.id,
-        inboxId: automation.trigger_inbox_id,
-        inboxStatus: "error",
-        processed: 0,
-        skipped: 0,
-        failed: 0,
-      });
-    }
+/**
+ * Arm one automation's inbox and subscribe to it. Resolves when `signal` aborts.
+ *
+ * `dispatchMessage` returns rather than throws, so translate here: "processed"
+ * and "skipped" both resolve (ack — either handled or a duplicate we never want
+ * again), while "failed" throws so the SDK releases it for redelivery.
+ */
+export async function watchAutomationInbox(opts: {
+  sdk: Sdk;
+  automation: AutomationRow;
+  signal: AbortSignal;
+  leaseLimit?: number;
+  leaseSeconds?: number;
+}): Promise<void> {
+  const { sdk, automation, signal, leaseLimit = 25, leaseSeconds = 60 } = opts;
+
+  const inbox = await armInbox({ sdk, automation });
+  if (!inbox) return;
+  if (inbox.status === "initialization_failure") {
+    // Nothing will ever arrive; armInbox already flagged the row. Don't hold a
+    // subscription open against a dead inbox — the refresh pass retries it.
+    return;
   }
-  return results;
+
+  await watchInbox({
+    sdk,
+    inbox: inbox.id,
+    leaseLimit,
+    leaseSeconds,
+    signal,
+    onMessage: async (message) => {
+      const outcome = await dispatchMessage({ sdk, automation, message });
+      if (outcome === "failed") {
+        throw new Error(`dispatch failed for message ${message.id}`);
+      }
+    },
+    onError: (err, message) => {
+      console.error(`[inbox-worker] ${automation.id} message ${message.id} released:`, err);
+    },
+  });
 }
 
 /**
@@ -311,31 +287,91 @@ export async function reconcilePendingRuns(): Promise<{ checked: number; updated
   return { checked: pending.length, updated };
 }
 
-/** Start the worker on an interval. Returns a stop handle. Run a single instance. */
-export function startInboxWorker(intervalMs = 60_000): () => void {
-  let running = false;
-  const tick = async () => {
-    if (running) return; // never overlap cycles
-    running = true;
+export interface InboxWatcherOptions {
+  /** How often to reconcile live subscriptions against the active automation set. */
+  refreshIntervalMs?: number;
+  /** How often to advance fired-but-not-terminal runs to their real status. */
+  reconcileIntervalMs?: number;
+}
+
+/**
+ * Start one SSE subscription per active inbox-triggered automation and keep that
+ * set current. Returns a stop handle. Run a single instance (foreman-h4ua).
+ *
+ * Two independent timers, because they answer different questions:
+ *   - refresh    — which automations should be subscribed right now? Adds new
+ *                  ones, aborts ones that were disabled or deleted, and
+ *                  re-subscribes any whose stream ended.
+ *   - reconcile  — what happened to runs we already fired? This follows the
+ *                  durable, not the inbox, so it stays on a timer no matter how
+ *                  messages arrive.
+ *
+ * Message delivery itself is NOT on a timer any more; that is the point of the
+ * change. A subscription that ends for any reason (dropped stream, expired
+ * connection, an inbox still initializing) removes itself from the map, so the
+ * next refresh re-subscribes it — recovery without its own retry loop.
+ */
+export function startInboxWatcher(opts: InboxWatcherOptions = {}): () => void {
+  const { refreshIntervalMs = 60_000, reconcileIntervalMs = 60_000 } = opts;
+  const subscriptions = new Map<string, AbortController>();
+  let stopped = false;
+
+  const subscribe = async (automation: AutomationRow) => {
+    const controller = new AbortController();
+    subscriptions.set(automation.id, controller); // sync, before any await
     try {
-      const results = await runInboxCycle();
-      const rec = await reconcilePendingRuns();
-      if (results.length || rec.updated) {
-        const t = results.reduce(
-          (a, r) => ({ p: a.p + r.processed, s: a.s + r.skipped, f: a.f + r.failed }),
-          { p: 0, s: 0, f: 0 },
-        );
-        console.log(
-          `[inbox-worker] ${results.length} automations · processed ${t.p} · skipped ${t.s} · failed ${t.f} · reconciled ${rec.updated}/${rec.checked}`,
-        );
-      }
+      const sdk = await getExperimentalSdkForUser(automation.user_id);
+      // Resolves only when the signal aborts.
+      await watchAutomationInbox({ sdk, automation, signal: controller.signal });
     } catch (err) {
-      console.error("[inbox-worker] cycle error:", err);
+      // One automation's failure (e.g. an unconnected owner) must not stop the rest.
+      if (!controller.signal.aborted) {
+        console.error(`[inbox-worker] subscription for ${automation.id} ended:`, err);
+      }
     } finally {
-      running = false;
+      // Only clear our own entry — a refresh may already have replaced it.
+      if (subscriptions.get(automation.id) === controller) subscriptions.delete(automation.id);
     }
   };
-  const handle = setInterval(tick, intervalMs);
-  void tick(); // run once immediately
-  return () => clearInterval(handle);
+
+  const refresh = async () => {
+    if (stopped) return;
+    const automations = await store.listActiveInboxAutomations();
+    const active = new Map(automations.filter((a) => a.user_id).map((a) => [a.id, a]));
+
+    for (const [id, controller] of subscriptions) {
+      if (!active.has(id)) {
+        controller.abort();
+        subscriptions.delete(id);
+      }
+    }
+    for (const [id, automation] of active) {
+      if (!subscriptions.has(id)) void subscribe(automation);
+    }
+  };
+
+  const reconcile = async () => {
+    if (stopped) return;
+    const rec = await reconcilePendingRuns();
+    if (rec.updated) {
+      console.log(`[inbox-worker] reconciled ${rec.updated}/${rec.checked} runs`);
+    }
+  };
+
+  const safely = (fn: () => Promise<void>, label: string) => () => {
+    fn().catch((err) => console.error(`[inbox-worker] ${label} failed:`, err));
+  };
+
+  const refreshTimer = setInterval(safely(refresh, "refresh"), refreshIntervalMs);
+  const reconcileTimer = setInterval(safely(reconcile, "reconcile"), reconcileIntervalMs);
+  safely(refresh, "refresh")();
+
+  return () => {
+    stopped = true;
+    clearInterval(refreshTimer);
+    clearInterval(reconcileTimer);
+    // Aborting releases any unprocessed leased messages and resolves each watcher.
+    for (const controller of subscriptions.values()) controller.abort();
+    subscriptions.clear();
+  };
 }
