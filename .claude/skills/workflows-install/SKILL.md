@@ -4,9 +4,9 @@ description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bo
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
-  sdk_cli_min: "0.54.3"
-  sdk_cli_validated: "0.54.3"
+  version: "1.2.1"
+  sdk_cli_min: "0.74.0"
+  sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -127,6 +127,8 @@ zapier-sdk --experimental run-durable --help
 zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental get-workflow-run --help
 zapier-sdk --experimental trigger-workflow --help
+zapier-sdk --experimental list-workflow-drafts --help
+zapier-sdk --experimental publish-workflow-draft --help
 ```
 
 Expected output includes the Code Workflows command group, including commands such as:
@@ -138,12 +140,20 @@ run-durable
 publish-workflow-version
 list-workflow-runs
 get-workflow-run
+list-workflow-drafts
+create-workflow-draft
+get-workflow-draft
+update-workflow-draft
+publish-workflow-draft
+discard-workflow-draft
 ```
 
 The command-specific help must expose the flags the companion skills depend on:
 
 - `create-workflow --help` includes `--private`.
-- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
+- `publish-workflow-version --help` includes `--connections`, `--app-versions`, and `--trigger`.
+- `update-workflow-draft --help` includes `--draft-revision`.
+- `publish-workflow-draft --help` includes `--draft-revision` and `--enabled`.
 - `run-durable --help` includes `--connections` and `--private`.
 - `list-triggers --help` succeeds.
 - `get-workflow-run --help` succeeds.
