@@ -1,5 +1,6 @@
 import { checkCapability } from "./capabilities";
 import { getSupabase } from "./db";
+import { getOrgGuardrailConfig } from "./guardrails-config";
 
 // ─── Rate Limiter (in-memory, sliding window) ───
 
@@ -26,8 +27,15 @@ export async function checkRateLimit(
   userId: string,
   limits?: { perMinute?: number; perHour?: number },
 ): Promise<{ allowed: boolean; retryAfterMs?: number }> {
-  const perMinute = limits?.perMinute ?? 30;
-  const perHour = limits?.perHour ?? 200;
+  // Defaults come from the org config, not a second copy of the numbers. The
+  // config is still a stub returning constants (foreman-nz8b), but sourcing
+  // them here means a real admin API flows straight into enforcement instead of
+  // needing this call site changed too. `orgId` is not threaded to the tool
+  // layer yet — requestUserContext carries only userId — so this is per-install
+  // rather than per-org for now.
+  const orgConfig = getOrgGuardrailConfig();
+  const perMinute = limits?.perMinute ?? orgConfig.rateLimitPerMinute;
+  const perHour = limits?.perHour ?? orgConfig.rateLimitPerHour;
   const now = Date.now();
 
   let counters = rateLimitStore.get(userId);

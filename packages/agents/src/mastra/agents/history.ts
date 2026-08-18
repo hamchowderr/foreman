@@ -7,6 +7,7 @@ import {
   toolsWithCacheControl,
 } from "../../lib/providers";
 import { searchHistoryTool } from "../tools/search-history";
+import { piiRedactor } from "../../lib/processors";
 
 const HISTORY_PROMPT = `You are the History Agent, a specialist in searching and analyzing a user's past action history. You help users recall previous actions, find patterns in their usage, and recommend actions based on what they have done before.
 
@@ -29,6 +30,7 @@ export function createHistoryAgent() {
       modelSettings: modelSettingsFor("history"),
       onFinish: onFinishCostLogger("history"),
     },
+    outputProcessors: [piiRedactor],
     tools: toolsWithCacheControl("history", {
       search_history: searchHistoryTool,
     }),
