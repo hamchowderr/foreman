@@ -9,6 +9,8 @@ import type { AutomationTrigger } from "./types";
  */
 
 const SOURCE_FILE = "workflow.ts";
+/** Same file, absolute — `validateWorkflow` rejects anything without a leading `/`. */
+const VALIDATE_FILE = `/${SOURCE_FILE}`;
 
 type Sdk = ExperimentalZapierSdk;
 
@@ -58,14 +60,18 @@ export class DurableSourceInvalidError extends Error {
 /**
  * Type-check durable source WITHOUT publishing it (SDK 0.100.0 `validateWorkflow`).
  *
- * `entrypointFile` is passed explicitly: the SDK defaults it to `/workflow.ts`
- * (absolute logical path) while we key `sourceFiles` on the relative
- * `workflow.ts` that `publishWorkflowVersion` / `runDurable` already accept.
+ * `validateWorkflow` demands ABSOLUTE logical paths — both the `sourceFiles`
+ * keys and `entrypointFile` must start with `/`, and it rejects the request
+ * outright otherwise ("Invalid key in record" / "entrypointFile must start with
+ * /"). `publishWorkflowVersion` and `runDurable` accept the relative
+ * `workflow.ts`, so the two surfaces genuinely disagree; hence VALIDATE_FILE
+ * alongside SOURCE_FILE rather than one shared constant.
  *
- * Best-effort by design. If the validate call itself fails — endpoint
- * unavailable, scope not granted on this account — return no issues rather than
- * blocking a deploy path that worked before this pre-flight existed. Only
- * diagnostics the API actually returns can stop a deploy.
+ * Best-effort by design. If the validate call fails — endpoint unavailable,
+ * scope not granted — return no issues rather than blocking a deploy path that
+ * worked before this pre-flight existed. That swallowing is why the path
+ * mistake above went unnoticed until foreman-h54f called the SDK raw, so the
+ * throw is logged rather than discarded silently.
  */
 export async function validateAutomationSource(opts: {
   sdk: Sdk;
@@ -74,10 +80,13 @@ export async function validateAutomationSource(opts: {
   let raw: Awaited<ReturnType<Sdk["validateWorkflow"]>>;
   try {
     raw = await opts.sdk.validateWorkflow({
-      sourceFiles: { [SOURCE_FILE]: opts.source },
-      entrypointFile: SOURCE_FILE,
+      sourceFiles: { [VALIDATE_FILE]: opts.source },
+      entrypointFile: VALIDATE_FILE,
     });
-  } catch {
+  } catch (err) {
+    console.warn(
+      `[durable] validateWorkflow pre-flight unavailable, deploying unvalidated: ${(err as Error).message}`,
+    );
     return [];
   }
   return (raw.data.issues ?? []).map((i) => ({
@@ -156,6 +165,11 @@ export async function deployAutomation(opts: DeployAutomationOptions): Promise<D
     dependencies: durableDependencies(),
     zapierDurableVersion: AGED_DURABLE_DEPS.durable,
     enabled,
+    // A version must declare how it starts. Without a trigger, publish is
+    // rejected outright: "No trigger is configured — set manual: true to run
+    // this workflow on demand". Every trigger-less automation Foreman deploys
+    // (manual + webhook) is exactly that case, so say so explicitly.
+    manual: !trigger,
     connections: shapeConnections(connections),
     trigger: trigger
       ? {
