@@ -3698,16 +3698,28 @@ export type Database = {
       };
       workspace_settings: {
         Row: {
+          max_bulk_items: number | null;
+          rate_limit_per_hour: number | null;
+          rate_limit_per_minute: number | null;
+          redact_emails: boolean;
           updated_at: string;
           workspace_id: string;
           zapier_connection_mode: string;
         };
         Insert: {
+          max_bulk_items?: number | null;
+          rate_limit_per_hour?: number | null;
+          rate_limit_per_minute?: number | null;
+          redact_emails?: boolean;
           updated_at?: string;
           workspace_id: string;
           zapier_connection_mode?: string;
         };
         Update: {
+          max_bulk_items?: number | null;
+          rate_limit_per_hour?: number | null;
+          rate_limit_per_minute?: number | null;
+          redact_emails?: boolean;
           updated_at?: string;
           workspace_id?: string;
           zapier_connection_mode?: string;
