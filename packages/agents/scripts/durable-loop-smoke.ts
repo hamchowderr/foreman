@@ -16,7 +16,11 @@
  */
 import { createZapierSdk } from "@zapier/zapier-sdk/experimental";
 import * as store from "../src/lib/automations/store";
-import { reconcilePendingRuns, runInboxCycleForAutomation } from "../src/lib/automations/worker";
+import {
+  armInbox,
+  reconcilePendingRuns,
+  watchAutomationInbox,
+} from "../src/lib/automations/worker";
 import { getSupabase } from "../src/lib/db";
 import { deleteAutomation } from "../src/lib/durable";
 
@@ -79,13 +83,25 @@ async function main() {
     const row = await store.getAutomationByZapierWorkflowId(workflowId);
     if (!row) throw new Error("automation row not found after insert");
 
-    // 3. Worker cycle 1 — arm the inbox (idempotent ensureInbox).
-    const c1 = await runInboxCycleForAutomation({ sdk, automation: row });
-    inboxId = c1.inboxId;
-    console.log(`3. worker cycle 1 (arm): inbox=${c1.inboxId} status=${c1.inboxStatus}`);
+    // 3. Arm the inbox (idempotent ensureTriggerInbox + automation-row sync).
+    const armed = await armInbox({ sdk, automation: row });
+    inboxId = armed?.id ?? null;
+    console.log(`3. armed inbox=${armed?.id} status=${armed?.status}`);
 
-    // 4. POST a real event to the catch URL.
-    console.log(`4. POST event → ${catchUrl}`);
+    // 4. Subscribe BEFORE posting the event. This is the whole point of the
+    //    watchTriggerInbox migration (foreman-em74): delivery is an SSE
+    //    notification, not the next tick of a 60s poll, so the subscription has
+    //    to be live first. Not awaited — it only resolves when we abort.
+    const controller = new AbortController();
+    const subscription = watchAutomationInbox({
+      sdk,
+      automation: row,
+      signal: controller.signal,
+    }).catch((e) => console.error("   subscription error:", (e as Error).message));
+    console.log("4. subscribed (SSE)");
+
+    // 5. POST a real event to the catch URL, then wait for the run row to appear.
+    console.log(`5. POST event → ${catchUrl}`);
     const res = await fetch(catchUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -93,20 +109,26 @@ async function main() {
     });
     console.log(`   POST → ${res.status}`);
 
-    // 5. Worker cycle 2 — poll until the message lands, then lease→claim→fire→record→ack.
     let fired = false;
-    for (let i = 1; i <= 10; i++) {
-      await sleep(4000);
-      const fresh = await store.getAutomationByZapierWorkflowId(workflowId);
-      const c2 = await runInboxCycleForAutomation({ sdk, automation: fresh ?? row });
-      console.log(
-        `5. worker cycle 2 attempt ${i} (${i * 4}s): processed=${c2.processed} skipped=${c2.skipped} failed=${c2.failed}`,
-      );
-      if (c2.processed > 0 || c2.skipped > 0 || c2.failed > 0) {
+    const startedAt = Date.now();
+    for (let i = 1; i <= 15 && !fired; i++) {
+      await sleep(2000);
+      const { data: rows } = await getSupabase()
+        .from("automation_run")
+        .select("id,status")
+        .eq("automation_id", automationId);
+      if (rows?.length) {
         fired = true;
-        break;
+        console.log(
+          `   fired after ~${Math.round((Date.now() - startedAt) / 1000)}s → run ${rows[0].id} (${rows[0].status})`,
+        );
       }
     }
+    if (!fired) console.log("   no run recorded within 30s");
+
+    // Aborting releases anything still leased and resolves the watcher cleanly.
+    controller.abort();
+    await subscription;
 
     // 6. Reconcile — advance the run from 'started' to its real terminal status.
     let terminal = false;
