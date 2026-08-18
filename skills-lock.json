@@ -17,37 +17,37 @@
       "source": "zapier/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/workflows/create/SKILL.md",
-      "computedHash": "559af2c3be4826cce84b1b0870ba6380968e31f7ad70ccbfc61336d08191961a"
+      "computedHash": "66d6d1d3817e0b50712f7a8ed0f2c271d8598adb9d54d46cc4c53cbcc0bce90c"
     },
     "workflows-doctor": {
       "source": "zapier/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/workflows/doctor/SKILL.md",
-      "computedHash": "e1d7b22ad8d4f61f2f2e215a1137cdf00216686540d85ed09124bbda153f50d4"
+      "computedHash": "a10fbf3381f93acf78f14fa4a36c7791407995f0b61603ed57e6eb7bff374fd1"
     },
     "workflows-history": {
       "source": "zapier/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/workflows/history/SKILL.md",
-      "computedHash": "4ffdf306b2535063633287120f71855ac2be9d724c2378a6c0acdc70811a5057"
+      "computedHash": "70c0b22aeb2e54ec9bea3677722fa6974d1da23c0dc0a090467ceec81d5406a5"
     },
     "workflows-install": {
       "source": "zapier/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/workflows/install/SKILL.md",
-      "computedHash": "fed59f9a0623069a0b1b2b8007ca170e0fbf2eed35b7b343fecab9e9a4d2a61d"
+      "computedHash": "ff8e4a83500f4482ffbb6f8c74265c519b1a18c33574427ec4e693448eb8866f"
     },
     "workflows-list": {
       "source": "zapier/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/workflows/list/SKILL.md",
-      "computedHash": "623ba78117b9160554883c02372951aaf977cc81b0861d1606021726bb25b7e1"
+      "computedHash": "ed5b6fe459e2f842bf05ef40d6b19352c329b28c5423e6f1e7ea10248217e550"
     },
     "workflows-modify": {
       "source": "zapier/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/workflows/modify/SKILL.md",
-      "computedHash": "e9651d2a7879696ae6762ab5b5b3abf16a1317fad48557d66a74281e9ebcd1a8"
+      "computedHash": "7d5497212adc38e91589396b4300588176e0891dbf6f87205a7331650aa50ce7"
     }
   }
 }
