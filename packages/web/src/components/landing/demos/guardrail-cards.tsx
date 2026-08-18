@@ -45,7 +45,7 @@ const GUARDRAILS: Guardrail[] = [
   {
     id: "rate",
     title: "Rate-limited per user",
-    body: "30/min, 200/hour. Bulk ops over 5 records get extra confirmation.",
+    body: "30/min, 200/hour. Bulk writes state their size before you approve them.",
     icon: Gauge,
     demo: () => <RateDemo />,
   },

@@ -2,6 +2,7 @@
 
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
 import {
+  AlertTriangleIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   CircleIcon,
@@ -13,6 +14,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import type { ActionScope } from "@/lib/action-scope";
 import { cn } from "@/lib/utils";
 
 import { CodeBlock } from "./code-block";
@@ -110,6 +112,38 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   />
 );
 
+type ToolScopeNoticeProps = ComponentProps<"div"> & {
+  scope: ActionScope;
+  /** Above the workspace's `max_bulk_items` — worth interrupting for. */
+  oversized: boolean;
+};
+
+/**
+ * States an action's size in one sentence, above the parameters it summarizes
+ * (foreman-nz8b). Sits next to ToolInput because it is the same thing said in
+ * the register a person reads: ToolInput is complete, this is legible.
+ */
+export const ToolScopeNotice = ({
+  className,
+  scope,
+  oversized,
+  ...props
+}: ToolScopeNoticeProps) => (
+  <div
+    className={cn(
+      "flex items-start gap-2 rounded-lg border px-3 py-2 text-[13px] leading-snug",
+      oversized
+        ? "border-amber-500/40 bg-amber-500/10 text-foreground"
+        : "border-border bg-muted/50 text-muted-foreground",
+      className,
+    )}
+    {...props}
+  >
+    {oversized && <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0 text-amber-600" />}
+    <span className={oversized ? "font-medium" : undefined}>{scope.sentence}</span>
+  </div>
+);
+
 type ToolInputProps = ComponentProps<"div"> & {
   input: ToolPart["input"];
 };
@@ -119,7 +153,11 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
     <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
       Parameters
     </h4>
-    <div className="rounded-xl bg-muted/50">
+    {/* Capped and internally scrolled: the body grows with the payload, and a
+        500-record write used to push Approve/Decline thousands of pixels below
+        the fold — unreadable and unreachable in exactly the case that most
+        deserves a careful look (foreman-nz8b). */}
+    <div className="max-h-72 overflow-y-auto rounded-xl bg-muted/50">
       <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
     </div>
   </div>
