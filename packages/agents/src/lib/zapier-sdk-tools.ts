@@ -19,6 +19,7 @@ import {
   ZapierValidationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
+import { checkAppAccess, checkRateLimit } from "./guardrails";
 import { requestUserContext } from "./request-user-context";
 import { onZapierSdkEvent } from "./zapier/deprecation";
 import { getSdkForUser } from "./zapier/sdk";
@@ -332,6 +333,60 @@ let _defaultToolsCache: Record<string, ReturnType<typeof createTool>> | undefine
  * @param connections - Optional pre-seeded connection alias map.
  * @returns Record of tool-name → Tool instances
  */
+/**
+ * Hard guardrail denials, enforced on the generated tools (foreman-nz8b).
+ *
+ * `lib/guardrails.ts` existed but nothing called it: its only caller was
+ * `lib/zapier/execution.ts`, a wrapper that had been dead for months. So rate
+ * limiting and sensitive-app blocking — both advertised on the landing page —
+ * never ran on a single agent action. This is where every action actually
+ * executes, so this is where they belong.
+ *
+ * SCOPE: only methods NOT in READ_ONLY, i.e. the write/execute surface. That
+ * matches the intent of the dead wrapper, which gated `runAction` and nothing
+ * else. Counting discovery reads (list-apps, list-actions, the input-field
+ * lookups) against a 30/min budget would starve the agent's own search loop
+ * long before a user did anything.
+ *
+ * Returns a denial payload shaped like `handleSdkError` output so the agent
+ * reads it the same way as any other tool failure, or null to proceed.
+ */
+async function guardrailDenial(
+  userId: string,
+  methodName: string,
+  input: unknown,
+): Promise<{ error: string; code: string; retryable: boolean } | null> {
+  if (READ_ONLY.has(methodName)) return null;
+
+  const rate = await checkRateLimit(userId);
+  if (!rate.allowed) {
+    const retryAfter = Math.ceil((rate.retryAfterMs ?? 0) / 1000);
+    return {
+      error: `Rate limit exceeded for ${toKebab(methodName)}. Retry in ${retryAfter}s. Tell the user their action was throttled — do not silently retry.`,
+      code: "RATE_LIMITED",
+      retryable: true,
+    };
+  }
+
+  // Sensitive-app blocking only applies when the call names an app — true for
+  // run-action / create-action-run / fetch, not for the table surface.
+  const appKey = (input as { app?: unknown } | null)?.app;
+  if (typeof appKey === "string" && appKey) {
+    const access = await checkAppAccess(userId, appKey);
+    if (!access.allowed) {
+      return {
+        error:
+          access.reason ??
+          `Access to ${appKey} is blocked. It is a sensitive app and requires explicit opt-in.`,
+        code: "APP_BLOCKED",
+        retryable: false,
+      };
+    }
+  }
+
+  return null;
+}
+
 export function generateZapierTools(
   credentials?: string | (() => Promise<string>),
   connections?: Record<string, { connectionId: number }>,
@@ -397,6 +452,16 @@ export function generateZapierTools(
             // Falls back to the global SDK (CLI login / client credentials) when no
             // user context is available — e.g., during channel webhook processing.
             const userCtx = requestUserContext.getStore();
+
+            // Guardrails run BEFORE the SDK client is resolved — a throttled or
+            // blocked call should cost nothing, not a token refresh first.
+            // Skipped when there is no user context (channel webhook processing
+            // on the shared client), because both checks are per-user.
+            if (userCtx?.userId) {
+              const denial = await guardrailDenial(userCtx.userId, fn.name, input);
+              if (denial) return denial;
+            }
+
             const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
             const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
 
