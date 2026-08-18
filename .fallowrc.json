@@ -8,7 +8,14 @@
     "src/mastra/index.ts",
     // Standalone webhook server (port 4112) + channel webhook entry.
     "src/webhook-server.ts",
-    "scripts/**/*.{ts,mjs}"
+    // Long-lived trigger-inbox worker (SSE subscriptions + run reconcile).
+    "src/inbox-worker-server.ts",
+    // Hand-run diagnostic probes and smoke tests. Nothing imports them by
+    // design — they are invoked with `npx tsx`. The root-relative glob below
+    // only ever matched /scripts, so every packages/*/scripts probe was
+    // reported as a dead file (23 of them) and drowned the real findings.
+    "scripts/**/*.{ts,mjs}",
+    "packages/*/scripts/**/*.{ts,mjs}"
   ],
   "workspaces": {
     "packages": [
