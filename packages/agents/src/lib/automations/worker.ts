@@ -153,22 +153,34 @@ export async function watchAutomationInbox(opts: {
     return;
   }
 
-  await watchInbox({
-    sdk,
-    inbox: inbox.id,
-    leaseLimit,
-    leaseSeconds,
-    signal,
-    onMessage: async (message) => {
-      const outcome = await dispatchMessage({ sdk, automation, message });
-      if (outcome === "failed") {
-        throw new Error(`dispatch failed for message ${message.id}`);
-      }
-    },
-    onError: (err, message) => {
-      console.error(`[inbox-worker] ${automation.id} message ${message.id} released:`, err);
-    },
-  });
+  try {
+    await watchInbox({
+      sdk,
+      inbox: inbox.id,
+      leaseLimit,
+      leaseSeconds,
+      signal,
+      onMessage: async (message) => {
+        const outcome = await dispatchMessage({ sdk, automation, message });
+        if (outcome === "failed") {
+          throw new Error(`dispatch failed for message ${message.id}`);
+        }
+      },
+      onError: (err, message) => {
+        console.error(`[inbox-worker] ${automation.id} message ${message.id} released:`, err);
+      },
+    });
+  } catch (err) {
+    // A fresh inbox arms as "initializing" and only fails a moment later, so the
+    // status check above cannot catch it — watchTriggerInbox rejects instead.
+    // Re-arm so the automation row gets flagged trigger_failed; otherwise it
+    // shows as enabled in the UI while silently never firing (foreman-dwf8),
+    // and the only symptom is this subscription reconnecting forever.
+    if (/initialization_failure/.test(err instanceof Error ? err.message : String(err))) {
+      await armInbox({ sdk, automation }).catch(() => {});
+    }
+    throw err;
+  }
 }
 
 /**
