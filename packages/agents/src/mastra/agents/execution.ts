@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { piiRedactor } from "../../lib/processors";
 import {
   AGENT_MODELS,
   modelSettingsFor,
@@ -8,7 +9,6 @@ import {
 } from "../../lib/providers";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import { connectZapierTool } from "../tools/connect-zapier";
-import { piiRedactor } from "../../lib/processors";
 
 const EXECUTION_PROMPT = `You are the Execution Agent, responsible for running Zapier actions on behalf of users. You handle action execution, raw API calls, and Zapier account connections.
 
