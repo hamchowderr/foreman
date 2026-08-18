@@ -6,7 +6,7 @@ import { Memory } from "@mastra/memory";
 import { PgVector, PostgresStore } from "@mastra/pg";
 import { backgroundToolsConfig } from "../../lib/background";
 import { contextInjector, piiRedactor } from "../../lib/processors";
-import { buildSystemPrompt, type PromptContext } from "../../lib/prompt-template";
+import { buildSystemPrompt } from "../../lib/prompt-template";
 import {
   AGENT_MODELS,
   MODELS,
@@ -31,8 +31,6 @@ import { previewAppTool } from "../tools/preview-app";
 import { saveDocumentTool } from "../tools/save-document";
 import { searchHistoryTool } from "../tools/search-history";
 import { buildForemanWorkspace } from "./workspace";
-
-export { buildSystemPrompt, type PromptContext };
 
 // Core tools the agent needs for every action — always loaded, no search required.
 // This avoids wasting steps on search_tools + load_tool for common operations.
