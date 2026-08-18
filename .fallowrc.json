@@ -28,6 +28,20 @@
   "ignorePatterns": [
     "packages/agents/preview-template/**"
   ],
+  // Real dependencies that are never `import`ed, so fallow cannot see them.
+  // Each is verified — do not add a package here just to silence the report.
+  "ignoreDependencies": [
+    // Invoked as a CLI (`npx zapier-sdk …`) and version-tracked by
+    // scripts/zapier-sdk-watch.mjs. Never imported.
+    "@zapier/zapier-sdk-cli",
+    // discord.js loads this native zlib accelerator at runtime if present.
+    "zlib-sync",
+    // Selected by `mastra build` for DEPLOY_TARGET=vercel|cloudflare rather than
+    // imported. NOTE: nothing passes a `deployer` to the Mastra instance either,
+    // so whether these are actually wired is an open question — foreman-x1o8.
+    "@mastra/deployer-cloudflare",
+    "@mastra/deployer-vercel"
+  ],
   "duplicates": {
     // Hide pair-only clones; focus on widespread copy-paste
     // worth refactoring. Lower to 2 to report every duplicate pair.
