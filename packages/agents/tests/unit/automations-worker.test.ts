@@ -23,9 +23,7 @@ vi.mock("@/lib/durable", () => ({
 }));
 vi.mock("@/lib/trigger-inbox", () => ({
   ensureInbox: vi.fn(async () => ({ id: "inbox_1", status: "active" })),
-  leaseMessages: vi.fn(),
-  ackMessages: vi.fn(async () => ({})),
-  releaseMessages: vi.fn(async () => ({})),
+  watchInbox: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/automations/store", () => ({
   claimInboxMessage: vi.fn(),
@@ -38,12 +36,13 @@ vi.mock("@/lib/automations/store", () => ({
 
 import * as store from "@/lib/automations/store";
 import {
+  armInbox,
   dispatchMessage,
   reconcilePendingRuns,
-  runInboxCycleForAutomation,
+  watchAutomationInbox,
 } from "@/lib/automations/worker";
 import { getDurableRunStatus, getTriggerRunStatus, triggerAutomation } from "@/lib/durable";
-import { ackMessages, ensureInbox, leaseMessages, releaseMessages } from "@/lib/trigger-inbox";
+import { ensureInbox, watchInbox } from "@/lib/trigger-inbox";
 
 const automation = {
   id: "auto_1",
@@ -62,15 +61,6 @@ function msg(id: string) {
     status: "leased",
     message_attributes: { lease_count: 1, error_message: null, possible_duplicate_data: false },
     payload: { id },
-  };
-}
-
-function leaseOf(results: ReturnType<typeof msg>[], leaseId: string | null = "lease_1") {
-  return {
-    lease_id: leaseId,
-    leased_until: "t",
-    results,
-    inbox_attributes: { status: "active", paused_reason: null },
   };
 }
 
@@ -134,29 +124,13 @@ describe("dispatchMessage", () => {
   });
 });
 
-describe("runInboxCycleForAutomation", () => {
+describe("armInbox", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ensures the inbox, dispatches the batch, acks done + releases failed", async () => {
-    vi.mocked(leaseMessages).mockResolvedValueOnce(
-      leaseOf([msg("m1"), msg("m2"), msg("m3")]) as never,
-    );
-    // m1 fresh → processed, m2 redelivery → skipped, m3 fresh but trigger throws → failed
-    vi.mocked(store.claimInboxMessage)
-      .mockResolvedValueOnce("run_m1")
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce("run_m3");
-    vi.mocked(triggerAutomation)
-      .mockResolvedValueOnce({ triggerId: "t1" } as never)
-      .mockRejectedValueOnce(new Error("x"));
-
-    const res = await runInboxCycleForAutomation({ sdk: {} as never, automation });
-
+  it("ensures the inbox and persists its id the first time", async () => {
+    const res = await armInbox({ sdk: {} as never, automation });
     expect(ensureInbox).toHaveBeenCalled();
-    expect(res).toMatchObject({ inboxId: "inbox_1", processed: 1, skipped: 1, failed: 1 });
-    expect(ackMessages).toHaveBeenCalledWith(expect.objectContaining({ messages: ["m1", "m2"] }));
-    expect(releaseMessages).toHaveBeenCalledWith(expect.objectContaining({ messages: ["m3"] }));
-    // persisted the inbox id (it was null before)
+    expect(res).toEqual({ id: "inbox_1", status: "active" });
     expect(store.updateAutomation).toHaveBeenCalledWith("ws-1", "auto_1", {
       triggerInboxId: "inbox_1",
     });
@@ -167,10 +141,8 @@ describe("runInboxCycleForAutomation", () => {
       id: "inbox_1",
       status: "initialization_failure",
     } as never);
-    vi.mocked(leaseMessages).mockResolvedValueOnce(leaseOf([], null) as never);
-    // Inbox already armed + currently "active" — only the status should change.
     const armed = { ...(automation as object), trigger_inbox_id: "inbox_1", status: "active" };
-    await runInboxCycleForAutomation({ sdk: {} as never, automation: armed as never });
+    await armInbox({ sdk: {} as never, automation: armed as never });
     expect(store.updateAutomation).toHaveBeenCalledWith("ws-1", "auto_1", {
       status: "trigger_failed",
     });
@@ -178,29 +150,101 @@ describe("runInboxCycleForAutomation", () => {
 
   it("clears trigger_failed back to active once the inbox recovers (foreman-dwf8)", async () => {
     vi.mocked(ensureInbox).mockResolvedValueOnce({ id: "inbox_1", status: "active" } as never);
-    vi.mocked(leaseMessages).mockResolvedValueOnce(leaseOf([], null) as never);
     const failed = {
       ...(automation as object),
       trigger_inbox_id: "inbox_1",
       status: "trigger_failed",
     };
-    await runInboxCycleForAutomation({ sdk: {} as never, automation: failed as never });
+    await armInbox({ sdk: {} as never, automation: failed as never });
     expect(store.updateAutomation).toHaveBeenCalledWith("ws-1", "auto_1", { status: "active" });
   });
 
-  it("returns zeros and skips ensureInbox when not inbox-triggered", async () => {
+  it("returns null and skips ensureInbox when not inbox-triggered", async () => {
     const noTrigger = { ...(automation as object), trigger: null } as never;
-    const res = await runInboxCycleForAutomation({ sdk: {} as never, automation: noTrigger });
-    expect(res).toMatchObject({ processed: 0, skipped: 0, failed: 0, inboxId: null });
+    expect(await armInbox({ sdk: {} as never, automation: noTrigger })).toBeNull();
     expect(ensureInbox).not.toHaveBeenCalled();
   });
+});
 
-  it("no-ops on an empty lease (no ack/release)", async () => {
-    vi.mocked(leaseMessages).mockResolvedValueOnce(leaseOf([], null) as never);
-    const res = await runInboxCycleForAutomation({ sdk: {} as never, automation });
-    expect(res.processed).toBe(0);
-    expect(ackMessages).not.toHaveBeenCalled();
-    expect(releaseMessages).not.toHaveBeenCalled();
+describe("watchAutomationInbox", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /** Grab the options handed to the SDK watcher so we can drive its onMessage. */
+  function subscribedWith() {
+    return vi.mocked(watchInbox).mock.calls[0][0];
+  }
+
+  it("subscribes to the armed inbox with the lease options", async () => {
+    const signal = new AbortController().signal;
+    await watchAutomationInbox({ sdk: {} as never, automation, signal });
+    const opts = subscribedWith();
+    expect(opts.inbox).toBe("inbox_1");
+    expect(opts.leaseLimit).toBe(25);
+    expect(opts.leaseSeconds).toBe(60);
+    expect(opts.signal).toBe(signal);
+  });
+
+  it("does not subscribe when the automation is not inbox-triggered", async () => {
+    const noTrigger = { ...(automation as object), trigger: null } as never;
+    await watchAutomationInbox({
+      sdk: {} as never,
+      automation: noTrigger,
+      signal: new AbortController().signal,
+    });
+    expect(watchInbox).not.toHaveBeenCalled();
+  });
+
+  it("does not hold a subscription open against an inbox that failed to initialize", async () => {
+    vi.mocked(ensureInbox).mockResolvedValueOnce({
+      id: "inbox_1",
+      status: "initialization_failure",
+    } as never);
+    await watchAutomationInbox({
+      sdk: {} as never,
+      automation,
+      signal: new AbortController().signal,
+    });
+    expect(watchInbox).not.toHaveBeenCalled();
+  });
+
+  it("resolves onMessage for a fresh message so the SDK acks it", async () => {
+    vi.mocked(store.claimInboxMessage).mockResolvedValueOnce("run_m1");
+    vi.mocked(triggerAutomation).mockResolvedValueOnce({ triggerId: "t1" } as never);
+    await watchAutomationInbox({
+      sdk: {} as never,
+      automation,
+      signal: new AbortController().signal,
+    });
+    await expect(subscribedWith().onMessage(msg("m1"))).resolves.toBeUndefined();
+    expect(triggerAutomation).toHaveBeenCalled();
+  });
+
+  it("resolves onMessage for a redelivery WITHOUT re-firing the durable", async () => {
+    // claimInboxMessage returns null → already claimed. Acking is correct here:
+    // we never want it again, and it must not fire twice.
+    vi.mocked(store.claimInboxMessage).mockResolvedValueOnce(null);
+    await watchAutomationInbox({
+      sdk: {} as never,
+      automation,
+      signal: new AbortController().signal,
+    });
+    await expect(subscribedWith().onMessage(msg("m2"))).resolves.toBeUndefined();
+    expect(triggerAutomation).not.toHaveBeenCalled();
+  });
+
+  it("rejects onMessage when the dispatch fails so the SDK releases it for retry", async () => {
+    vi.mocked(store.claimInboxMessage).mockResolvedValueOnce("run_m3");
+    vi.mocked(triggerAutomation).mockRejectedValueOnce(new Error("boom"));
+    await watchAutomationInbox({
+      sdk: {} as never,
+      automation,
+      signal: new AbortController().signal,
+    });
+    await expect(subscribedWith().onMessage(msg("m3"))).rejects.toThrow(/m3/);
+    expect(store.updateRun).toHaveBeenCalledWith(
+      "run_m3",
+      expect.objectContaining({ status: "failed" }),
+    );
   });
 });
 

@@ -1,18 +1,16 @@
 /**
- * Unit tests for the trigger-inbox layer (foreman-l7xq M1).
- * Drives the functions against a fake experimental SDK — no network. The dedup
- * test is the important one: at-least-once delivery means redeliveries, and
- * dispatchLeased must not re-run a message the caller already processed.
+ * Unit tests for the trigger-inbox layer (foreman-l7xq M1, rebuilt in foreman-em74).
+ *
+ * The layer is now thin on purpose: arm an inbox, read it, and hand consumption
+ * to the SDK's own `watchTriggerInbox`. So these assert the delegation contract
+ * rather than a loop we own — the options we pass decide whether a failed
+ * message is redelivered or silently stranded until its lease expires.
+ *
+ * Dedup moved with the loop: it lives in `dispatchMessage` (a DB claim) and is
+ * covered in automations-worker.test.ts.
  */
 import { describe, expect, it, vi } from "vitest";
-import {
-  ackMessages,
-  dispatchLeased,
-  ensureInbox,
-  type Lease,
-  type LeasedMessage,
-  releaseMessages,
-} from "../../src/lib/trigger-inbox";
+import { ensureInbox, type LeasedMessage, watchInbox } from "../../src/lib/trigger-inbox";
 import type { ExperimentalZapierSdk } from "../../src/lib/zapier/sdk";
 
 function fakeSdk(overrides: Record<string, unknown>): ExperimentalZapierSdk {
@@ -71,68 +69,66 @@ describe("ensureInbox", () => {
   });
 });
 
-describe("dispatchLeased — dedup", () => {
-  function lease(results: LeasedMessage[]): Lease {
-    return {
-      lease_id: "lease_1",
-      leased_until: "2026-06-25T00:05:00Z",
-      results,
-      inbox_attributes: { status: "active", paused_reason: null },
-    };
-  }
+describe("watchInbox — delegation contract", () => {
+  it("subscribes with release-on-error and continue-on-error, forwarding lease options", async () => {
+    const sdk = fakeSdk({ watchTriggerInbox: vi.fn(async () => undefined) });
+    const controller = new AbortController();
 
-  it("processes fresh messages, skips already-seen redeliveries, releases failures", async () => {
-    const seen = new Set(["m2"]);
-    const handled: string[] = [];
+    await watchInbox({
+      sdk,
+      inbox: "inbox_1",
+      onMessage: () => {},
+      leaseLimit: 25,
+      leaseSeconds: 60,
+      signal: controller.signal,
+    });
 
-    const result = await dispatchLeased({
-      lease: lease([msg("m1"), msg("m2", { lease_count: 2 }), msg("m3")]),
-      isAlreadyProcessed: (m) => seen.has(m.id),
-      handle: (m) => {
-        if (m.id === "m3") throw new Error("boom");
-        handled.push(m.id);
+    const arg = (sdk.watchTriggerInbox as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(arg.inbox).toBe("inbox_1");
+    expect(arg.leaseLimit).toBe(25);
+    expect(arg.leaseSeconds).toBe(60);
+    expect(arg.signal).toBe(controller.signal);
+    // Without releaseOnError a failed message stays leased until it times out
+    // instead of being redelivered.
+    expect(arg.releaseOnError).toBe(true);
+    // Without continueOnError one poisoned message tears down the subscription.
+    expect(arg.continueOnError).toBe(true);
+  });
+
+  it("hands our handler through as onMessage", async () => {
+    const seen: string[] = [];
+    const sdk = fakeSdk({
+      watchTriggerInbox: vi.fn(async (opts: { onMessage: (m: LeasedMessage) => Promise<void> }) => {
+        await opts.onMessage(msg("m1"));
+      }),
+    });
+
+    await watchInbox({
+      sdk,
+      inbox: "inbox_1",
+      onMessage: (m) => {
+        seen.push(m.id);
       },
     });
 
-    expect(result.processed).toEqual(["m1"]);
-    expect(result.skipped).toEqual(["m2"]); // redelivery already in the idempotency store
-    expect(result.failed).toEqual(["m3"]);
-    expect(handled).toEqual(["m1"]); // m2 never re-ran
+    expect(seen).toEqual(["m1"]);
   });
 
-  it("processes everything when no idempotency store is supplied", async () => {
-    const result = await dispatchLeased({
-      lease: lease([msg("a"), msg("b")]),
-      handle: () => {},
-    });
-    expect(result.processed).toEqual(["a", "b"]);
-    expect(result.skipped).toEqual([]);
-    expect(result.failed).toEqual([]);
-  });
-});
-
-describe("ack / release", () => {
-  it("acks processed messages by lease", async () => {
+  it("lets a handler rejection propagate so the SDK releases the message", async () => {
     const sdk = fakeSdk({
-      ackTriggerInboxMessages: vi.fn(async () => ({ data: { acked_id: "x", results: [] } })),
+      watchTriggerInbox: vi.fn(async (opts: { onMessage: (m: LeasedMessage) => Promise<void> }) => {
+        await opts.onMessage(msg("m2"));
+      }),
     });
-    await ackMessages({ sdk, inbox: "inbox_1", lease: "lease_1", messages: ["m1"] });
-    expect(sdk.ackTriggerInboxMessages).toHaveBeenCalledWith({
-      inbox: "inbox_1",
-      lease: "lease_1",
-      messages: ["m1"],
-    });
-  });
 
-  it("releases failed messages for retry", async () => {
-    const sdk = fakeSdk({
-      releaseTriggerInboxMessages: vi.fn(async () => ({ data: { released_id: "x", results: [] } })),
-    });
-    await releaseMessages({ sdk, inbox: "inbox_1", lease: "lease_1", messages: ["m3"] });
-    expect(sdk.releaseTriggerInboxMessages).toHaveBeenCalledWith({
-      inbox: "inbox_1",
-      lease: "lease_1",
-      messages: ["m3"],
-    });
+    await expect(
+      watchInbox({
+        sdk,
+        inbox: "inbox_1",
+        onMessage: () => {
+          throw new Error("dispatch failed");
+        },
+      }),
+    ).rejects.toThrow("dispatch failed");
   });
 });

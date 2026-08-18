@@ -2,13 +2,17 @@
  * Standalone entrypoint for the trigger-inbox worker (foreman-l7xq M3). Run with:
  *   npm run start:inbox-worker   (npx tsx --env-file=.env.local src/inbox-worker-server.ts)
  *
- * Long-lived process: every cycle it leases each active inbox-triggered
- * automation's trigger-inbox, dedups (claimInboxMessage), fires the durable via
- * triggerWorkflow, records the run, and acks. Single instance only — there is no
- * distributed lock (matches the removed cron-driver-server). Cadence via
- * FOREMAN_INBOX_WORKER_INTERVAL_MS (default 60000).
+ * Long-lived process: holds one `watchTriggerInbox` SSE subscription per active
+ * inbox-triggered automation, dedups each message (claimInboxMessage), fires the
+ * durable via triggerWorkflow and records the run. Zapier's SDK owns the
+ * lease/ack/release loop (foreman-em74) — messages arrive on a notification, not
+ * a poll tick. Single instance only — there is no distributed lock.
+ *
+ * FOREMAN_INBOX_WORKER_INTERVAL_MS (default 60000) no longer paces delivery. It
+ * paces the two housekeeping passes: re-checking which automations should be
+ * subscribed, and advancing already-fired runs to their terminal status.
  */
-import { startInboxWorker } from "./lib/automations/worker";
+import { startInboxWatcher } from "./lib/automations/worker";
 import { getMastra } from "./mastra";
 
 // Construct the agent in THIS process so the experimental SDK / registry init
@@ -24,8 +28,11 @@ mastra.startWorkers().catch((err) => {
 });
 
 const intervalMs = Number(process.env.FOREMAN_INBOX_WORKER_INTERVAL_MS) || 60_000;
-console.log(`[inbox-worker] starting · interval ${intervalMs}ms`);
-const stop = startInboxWorker(intervalMs);
+console.log(`[inbox-worker] starting · SSE subscriptions · housekeeping ${intervalMs}ms`);
+const stop = startInboxWatcher({
+  refreshIntervalMs: intervalMs,
+  reconcileIntervalMs: intervalMs,
+});
 
 const shutdown = (sig: string) => {
   console.log(`[inbox-worker] received ${sig}, shutting down`);

@@ -3,13 +3,19 @@ import type { ExperimentalZapierSdk } from "../zapier/sdk";
 /**
  * Trigger-inbox layer (foreman-l7xq) — the chosen trigger substrate. A trigger
  * inbox is a server-side durable queue Zapier maintains for an app+action+
- * connection: `ensureInbox` once, then `lease` a batch, process, and `ack`
- * (done) / `release` (retry). At-least-once delivery, so the queue can redeliver;
- * `dispatchLeased` dedups on the message id.
+ * connection: `ensureInbox` once, then subscribe with `watchInbox` and handle
+ * each message. Delivery is at-least-once, so the queue can redeliver; the
+ * caller dedups on the message id.
+ *
+ * The lease/ack/release loop is NOT ours (foreman-em74). `watchTriggerInbox` is
+ * the SDK's own consumer: an SSE subscription that leases, dispatches to
+ * `onMessage`, acks on resolve and releases on reject, with a periodic safety
+ * drain in case a notification is missed. Foreman previously hand-rolled that
+ * loop on a 60s poll and inherited none of its improvements — SSE landed in SDK
+ * 0.69.0 and transient 5xx/429 retries in 0.70.0 while we kept polling.
  *
  * Every function takes the SDK client as a parameter so the layer is testable
- * with a fake; production passes `getExperimentalSdkForUser(userId)`. The lease
- * loop that drives this (worker, run dispatch, idempotency store) is M3.
+ * with a fake; production passes `getExperimentalSdkForUser(userId)`.
  */
 
 type Sdk = ExperimentalZapierSdk;
@@ -28,13 +34,6 @@ export interface LeasedMessage {
   status: string;
   message_attributes: InboxMessageAttributes;
   payload: Record<string, unknown>;
-}
-
-export interface Lease {
-  lease_id: string | null;
-  leased_until: string | null;
-  results: LeasedMessage[];
-  inbox_attributes: { status: string; paused_reason: string | null };
 }
 
 export async function ensureInbox(opts: {
@@ -68,90 +67,42 @@ export async function listInboxMessages(sdk: Sdk, inbox: string, maxItems = 20) 
   return res.data;
 }
 
-export async function leaseMessages(opts: {
+/**
+ * Subscribe to an inbox and handle every message as it arrives. Resolves only
+ * when `signal` aborts (aborting cancels in-flight HTTP, releases unprocessed
+ * messages, and resolves cleanly) or a non-recoverable SDK error rejects.
+ *
+ * The ack/release contract is the SDK's, and we lean on it deliberately:
+ *   - `onMessage` RESOLVES  → the message is acked (handled, or a duplicate we
+ *     intentionally skipped — both mean "don't send it again").
+ *   - `onMessage` REJECTS   → released for redelivery, because `releaseOnError`
+ *     is on. Without it a failure would sit leased until the lease expired.
+ *   - `continueOnError` keeps one poisoned message from tearing down the whole
+ *     subscription; the failure surfaces through `onError` instead.
+ *
+ * `leaseLimit` also sets `concurrency` by default, so it caps how many messages
+ * are in flight at once, not just the HTTP batch size.
+ */
+export function watchInbox(opts: {
   sdk: Sdk;
   inbox: string;
+  onMessage: (message: LeasedMessage) => Promise<void> | void;
+  onError?: (error: unknown, message: LeasedMessage) => void;
   leaseLimit?: number;
   leaseSeconds?: number;
+  /** Seconds between safety drains when no SSE notification arrives (SDK default 300). */
+  maxDrainIntervalSeconds?: number;
   signal?: AbortSignal;
-}): Promise<Lease> {
-  const r = await opts.sdk.leaseTriggerInboxMessages({
+}): Promise<void> {
+  return opts.sdk.watchTriggerInbox({
     inbox: opts.inbox,
+    onMessage: opts.onMessage as (message: unknown) => Promise<void> | void,
+    onError: opts.onError as ((error: unknown, message: unknown) => void) | undefined,
     leaseLimit: opts.leaseLimit,
     leaseSeconds: opts.leaseSeconds,
+    maxDrainIntervalSeconds: opts.maxDrainIntervalSeconds,
+    releaseOnError: true,
+    continueOnError: true,
     signal: opts.signal,
-  });
-  return r.data as Lease;
-}
-
-export async function ackMessages(opts: {
-  sdk: Sdk;
-  inbox: string;
-  lease: string;
-  messages?: string[];
-}) {
-  return (
-    await opts.sdk.ackTriggerInboxMessages({
-      inbox: opts.inbox,
-      lease: opts.lease,
-      messages: opts.messages,
-    })
-  ).data;
-}
-
-export async function releaseMessages(opts: {
-  sdk: Sdk;
-  inbox: string;
-  lease: string;
-  messages?: string[];
-}) {
-  return (
-    await opts.sdk.releaseTriggerInboxMessages({
-      inbox: opts.inbox,
-      lease: opts.lease,
-      messages: opts.messages,
-    })
-  ).data;
-}
-
-export interface DispatchResult {
-  /** Handled successfully this round — ack these. */
-  processed: string[];
-  /** Already handled before (redelivery / duplicate) — ack these too, but don't re-run. */
-  skipped: string[];
-  /** Handler threw — release these for retry. */
-  failed: string[];
-}
-
-/**
- * Run a handler over a leased batch with dedup. Because delivery is at-least-once,
- * a message can reappear (`lease_count > 1`, or `possible_duplicate_data`); the
- * caller supplies `isAlreadyProcessed` (its idempotency store — the automation_run
- * table in M3) and anything already seen is skipped, not re-run. The message id is
- * the dedup key. This does NOT ack/release — it classifies so the caller acks
- * `processed`+`skipped` and releases `failed`.
- */
-export async function dispatchLeased(opts: {
-  lease: Lease;
-  handle: (message: LeasedMessage) => Promise<void> | void;
-  isAlreadyProcessed?: (message: LeasedMessage) => Promise<boolean> | boolean;
-}): Promise<DispatchResult> {
-  const { lease, handle, isAlreadyProcessed } = opts;
-  const result: DispatchResult = { processed: [], skipped: [], failed: [] };
-
-  for (const message of lease.results) {
-    const seen = isAlreadyProcessed ? await isAlreadyProcessed(message) : false;
-    if (seen) {
-      result.skipped.push(message.id);
-      continue;
-    }
-    try {
-      await handle(message);
-      result.processed.push(message.id);
-    } catch {
-      result.failed.push(message.id);
-    }
-  }
-
-  return result;
+  } as Parameters<Sdk["watchTriggerInbox"]>[0]);
 }
