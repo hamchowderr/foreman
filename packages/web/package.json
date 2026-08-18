@@ -19,7 +19,6 @@
     "@codemirror/view": "^6.35.3",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
-    "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@streamdown/cjk": "^1.0.2",
     "@streamdown/code": "^1.1.1",
