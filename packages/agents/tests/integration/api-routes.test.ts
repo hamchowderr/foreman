@@ -177,14 +177,25 @@ vi.mock("@/lib/guardrails", async () => {
 });
 
 vi.mock("@/lib/guardrails-config", () => ({
-  getOrgGuardrailConfig: () => ({
+  GUARDRAIL_DEFAULTS: {
     rateLimitPerMinute: 30,
     rateLimitPerHour: 200,
-    blockedApps: [],
-    allowedApps: [],
-    requireApprovalForWrites: false,
     maxBulkItems: 5,
+    redactEmails: false,
+  },
+  getWorkspaceGuardrailConfig: async () => ({
+    rateLimitPerMinute: 30,
+    rateLimitPerHour: 200,
+    maxBulkItems: 5,
+    redactEmails: false,
   }),
+  guardrailConfigForUser: async () => ({
+    rateLimitPerMinute: 30,
+    rateLimitPerHour: 200,
+    maxBulkItems: 5,
+    redactEmails: false,
+  }),
+  invalidateGuardrailConfig: () => {},
 }));
 
 vi.mock("@/lib/voice", () => ({
@@ -299,7 +310,7 @@ describe("API route integration tests", () => {
       const body = (await res.json()) as {
         rateLimit: { allowed: boolean; limits: { perMinute: number; perHour: number } };
         appAccess: Record<string, { allowed: boolean; apps: string[] }>;
-        config: { requireApprovalForWrites: boolean; maxBulkItems: number };
+        config: { maxBulkItems: number; redactEmails: boolean };
       };
 
       // Rate limit section
@@ -317,7 +328,7 @@ describe("API route integration tests", () => {
 
       // Config section
       expect(body).toHaveProperty("config");
-      expect(body.config).toHaveProperty("requireApprovalForWrites", false);
+      expect(body.config).toHaveProperty("redactEmails", false);
       expect(body.config).toHaveProperty("maxBulkItems", 5);
     });
   });
