@@ -89,7 +89,7 @@
 # - github.repo
 
 sync-branch: "beads-sync"
-dolt.shared-server: true
+dolt.shared-server: false
 export:
     auto: true
     git-add: false
