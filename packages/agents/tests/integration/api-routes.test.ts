@@ -23,9 +23,6 @@ vi.mock("@/discord/webhook", () => ({
 }));
 
 // Mock stream utilities used by conversations
-vi.mock("@/lib/stream/transformer", () => ({
-  createChunkTransformer: vi.fn(),
-}));
 vi.mock("@/lib/stream/sse", () => ({
   encodeSSE: vi.fn((data: any) => new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)),
   sseHeaders: vi.fn(() => ({
