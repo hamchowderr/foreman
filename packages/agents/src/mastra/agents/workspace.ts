@@ -10,7 +10,7 @@ import {
   resolveWorkspaceFilesystem as resolveFsProvider,
   resolveSandbox,
 } from "../../lib/providers/sandbox";
-import { requestUserContext } from "../../lib/request-user-context";
+import { resolveRequestUserId } from "../../lib/request-user-context";
 
 /**
  * Foreman's agent workspace — a per-tenant LocalFilesystem + LocalSandbox for
@@ -27,12 +27,13 @@ import { requestUserContext } from "../../lib/request-user-context";
  * Construction is cheap: the vector store and embedder are shared singletons.
  *
  * Where workspace_id comes from (in priority order):
- *  1. `RequestContext` — the web /chat route already resolves it and sets
- *     `workspaceId` (mastra/index.ts), so no extra DB hit on that path.
- *  2. `requestUserContext` (AsyncLocalStorage `{ userId }`) — every channel bot
- *     wraps `agent.generate` in `requestUserContext.run({ userId })`, so the
- *     resolver back-resolves the active workspace from the userId. Covers all
- *     9 channels without editing each bot.
+ *  1. `RequestContext.workspaceId` — the web /chat route already resolves it
+ *     (mastra/index.ts), so no extra DB hit on that path.
+ *  2. The acting user id, back-resolved to their active workspace. That id
+ *     comes from `resolveRequestUserId`, which reads `RequestContext.userId`
+ *     first and the AsyncLocalStorage second — so this covers both a native
+ *     Mastra channel handler (which stamps the RequestContext) and the current
+ *     custom bots (which wrap the call in the ALS), without editing either.
  *  3. Fallback to a shared `_shared` dir/index when neither is present (e.g. the
  *     proposals approve/decline path, which executes Zapier actions and does not
  *     touch the workspace filesystem).
@@ -55,7 +56,7 @@ export async function resolveWorkspaceTenantKey(requestContext?: {
 }): Promise<string> {
   let wsId = (requestContext?.get("workspaceId") as string | undefined) ?? undefined;
   if (!wsId) {
-    const userId = requestUserContext.getStore()?.userId;
+    const userId = resolveRequestUserId(requestContext);
     if (userId) {
       wsId = (await resolveActiveWorkspace(userId).catch(() => null)) ?? undefined;
     }
