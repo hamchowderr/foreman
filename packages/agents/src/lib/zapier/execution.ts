@@ -75,7 +75,10 @@ export async function runAction(
     try {
       const { data: conn } = await sdk.findFirstConnection({
         app,
-        expired: false,
+        // `expired` is deprecated as of SDK 0.98.0 and throws when combined with
+        // `status`. "active" is the default; kept explicit so the intent — only
+        // connections that can actually run — survives a default change.
+        status: "active",
       });
       if (conn?.id) {
         resolvedConnection = conn.id;

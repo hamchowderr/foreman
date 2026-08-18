@@ -30,6 +30,65 @@ export function editorUrl(workflowId: string): string {
   return `https://zapier.com/durables-editor/${workflowId}`;
 }
 
+/** One diagnostic from `validateWorkflow` — SDK 0.100.0. */
+export interface DurableSourceIssue {
+  kind: string;
+  message: string;
+  severity: "error" | "warning" | "info" | "hint";
+  suggestion?: string;
+  /** 1-based line in the durable source, when the diagnostic points at one. */
+  line?: number;
+}
+
+/** Thrown by `deployAutomation` when the source fails validation before anything is created. */
+export class DurableSourceInvalidError extends Error {
+  constructor(readonly issues: DurableSourceIssue[]) {
+    super(
+      `Durable source failed validation:\n${issues
+        .map(
+          (i) =>
+            `  ${i.line ? `line ${i.line}: ` : ""}${i.message}${i.suggestion ? ` — ${i.suggestion}` : ""}`,
+        )
+        .join("\n")}`,
+    );
+    this.name = "DurableSourceInvalidError";
+  }
+}
+
+/**
+ * Type-check durable source WITHOUT publishing it (SDK 0.100.0 `validateWorkflow`).
+ *
+ * `entrypointFile` is passed explicitly: the SDK defaults it to `/workflow.ts`
+ * (absolute logical path) while we key `sourceFiles` on the relative
+ * `workflow.ts` that `publishWorkflowVersion` / `runDurable` already accept.
+ *
+ * Best-effort by design. If the validate call itself fails — endpoint
+ * unavailable, scope not granted on this account — return no issues rather than
+ * blocking a deploy path that worked before this pre-flight existed. Only
+ * diagnostics the API actually returns can stop a deploy.
+ */
+export async function validateAutomationSource(opts: {
+  sdk: Sdk;
+  source: string;
+}): Promise<DurableSourceIssue[]> {
+  let raw: Awaited<ReturnType<Sdk["validateWorkflow"]>>;
+  try {
+    raw = await opts.sdk.validateWorkflow({
+      sourceFiles: { [SOURCE_FILE]: opts.source },
+      entrypointFile: SOURCE_FILE,
+    });
+  } catch {
+    return [];
+  }
+  return (raw.data.issues ?? []).map((i) => ({
+    kind: i.kind,
+    message: i.message,
+    severity: i.severity,
+    suggestion: i.suggestion,
+    line: i.source?.start_line,
+  }));
+}
+
 export interface DeployAutomationOptions {
   sdk: Sdk;
   name: string;
@@ -63,6 +122,11 @@ export interface DeployResult {
  * requested with `enabled`, re-read the workflow to confirm the claim landed —
  * trigger claims are asynchronous and fail SILENTLY (publish returns ok, the
  * workflow stays disabled), most often from an unversioned `selectedApi`.
+ *
+ * Source is validated FIRST. `createWorkflow` runs before `publishWorkflowVersion`,
+ * so source that fails to compile used to leave an orphan workflow container in
+ * the user's account with no published version. Validating up front means bad
+ * agent-generated source creates nothing at all.
  */
 export async function deployAutomation(opts: DeployAutomationOptions): Promise<DeployResult> {
   const {
@@ -75,6 +139,13 @@ export async function deployAutomation(opts: DeployAutomationOptions): Promise<D
     enabled = true,
     isPrivate = true,
   } = opts;
+
+  // Only `error` blocks. `kind` values are added over time, so an unfamiliar one
+  // is a diagnostic, not a failure — severity is the thing to branch on.
+  const blocking = (await validateAutomationSource({ sdk, source })).filter(
+    (i) => i.severity === "error",
+  );
+  if (blocking.length) throw new DurableSourceInvalidError(blocking);
 
   const created = await sdk.createWorkflow({ name, description, is_private: isPrivate });
   const workflowId = created.data.id;

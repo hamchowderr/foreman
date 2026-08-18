@@ -475,7 +475,7 @@ export function handleSdkError(
     const ae = err as any;
     const appKey = ae.appKey ?? ae.app ?? null;
     return {
-      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`isExpired: true\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
+      error: `Zapier authentication failed for ${methodName}${appKey ? ` (app: ${appKey})` : ""}. The connection is likely expired. Suggest the user reconnect — call list-connections with \`status: "expired"\` to confirm, then use connect_zapier${appKey ? ` with slug "${appKey}"` : ""} to generate a fresh connect URL.`,
       code: "AUTH_FAILED",
       retryable: false,
       suggestedRecovery: {
