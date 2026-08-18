@@ -6,7 +6,7 @@ import type {
 } from "@mastra/core/processors";
 import type { ChunkType } from "@mastra/core/stream";
 import { guardrailConfigForUser } from "../guardrails-config";
-import { requestUserContext } from "../request-user-context";
+import { type ReadableRequestContext, resolveRequestUserId } from "../request-user-context";
 
 /**
  * Regex patterns for common PII and secrets.
@@ -73,15 +73,19 @@ function redactPII(text: string, redactEmails = false): string {
 /**
  * Whether the acting user's workspace has opted into email redaction.
  *
- * Defaults to false whenever there is no user context (channel webhook
+ * Takes the run's RequestContext so this keeps working when the agent is
+ * invoked from a native Mastra channel route, where the AsyncLocalStorage the
+ * custom bots set is absent (foreman-3i9k).
+ *
+ * Defaults to false whenever there is no user context (unauthenticated webhook
  * processing) or the lookup fails — matching the historical behaviour rather
  * than silently changing what a reply looks like.
  */
-async function emailRedactionEnabled(): Promise<boolean> {
-  const ctx = requestUserContext.getStore();
-  if (!ctx?.userId) return false;
+async function emailRedactionEnabled(requestContext?: ReadableRequestContext): Promise<boolean> {
+  const userId = resolveRequestUserId(requestContext);
+  if (!userId) return false;
   try {
-    return (await guardrailConfigForUser(ctx.userId)).redactEmails;
+    return (await guardrailConfigForUser(userId)).redactEmails;
   } catch {
     return false;
   }
@@ -100,11 +104,11 @@ export const piiRedactor: OutputProcessor = {
   description:
     "Redacts API keys, tokens, phone numbers, credit cards and SSNs from agent output; emails too when the workspace opts in",
 
-  async processOutputStream({ part }: ProcessOutputStreamArgs) {
+  async processOutputStream({ part, requestContext }: ProcessOutputStreamArgs) {
     if (part.type === "text-delta") {
       const text = part.payload?.text;
       if (typeof text === "string") {
-        const redacted = redactPII(text, await emailRedactionEnabled());
+        const redacted = redactPII(text, await emailRedactionEnabled(requestContext));
         if (redacted !== text) {
           return {
             ...part,
@@ -116,8 +120,11 @@ export const piiRedactor: OutputProcessor = {
     return part;
   },
 
-  async processOutputResult({ messages }: ProcessOutputResultArgs): Promise<MastraDBMessage[]> {
-    const redactEmails = await emailRedactionEnabled();
+  async processOutputResult({
+    messages,
+    requestContext,
+  }: ProcessOutputResultArgs): Promise<MastraDBMessage[]> {
+    const redactEmails = await emailRedactionEnabled(requestContext);
     // Redact PII in all assistant messages before they are persisted to memory
     return messages.map((msg) => {
       if (msg.role !== "assistant") return msg;

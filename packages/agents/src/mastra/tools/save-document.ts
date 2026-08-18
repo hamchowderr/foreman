@@ -2,7 +2,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { docPath as physicalDocPath } from "../../lib/documents/spaces";
 import { recordVersion } from "../../lib/documents/versions";
-import { requestUserContext } from "../../lib/request-user-context";
+import { resolveRequestUserId } from "../../lib/request-user-context";
 import {
   indexSharedDoc,
   resolveWorkspaceFilesystem,
@@ -71,8 +71,7 @@ export const saveDocumentTool = createTool({
     if (!fs) throw new Error("save_document: workspace filesystem unavailable");
 
     // userId is needed for the per-user PERSONAL space path (foreman-5e4f).
-    const userId =
-      (rc?.get("userId") as string | undefined) ?? requestUserContext.getStore()?.userId;
+    const userId = resolveRequestUserId(rc);
     // A personal save needs a userId to scope the path; without one, fall back to
     // the shared space rather than failing the save.
     const resolvedSpace = space === "personal" && userId ? "personal" : "shared";
