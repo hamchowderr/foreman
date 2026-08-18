@@ -117,7 +117,7 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 | `lib/processors/`        | Input (context injector) + Output (PII redactor) |
 | `lib/prompt-template.ts` | Dynamic system prompt builder                    |
 | `lib/proposals.ts`       | Action proposal DB access                        |
-| `lib/stream/`            | SSE encoding, chunk transformer                  |
+| `lib/stream/`            | SSE encoding + stream types (`sse.ts`, `types.ts`) |
 | `lib/rag/`               | Action history indexing + semantic search        |
 | `lib/validation.ts`      | Shared Zod schemas                               |
 | `lib/voice.ts`           | STT (Whisper) + TTS (ElevenLabs/OpenAI)          |
