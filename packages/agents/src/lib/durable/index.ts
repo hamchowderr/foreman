@@ -5,46 +5,22 @@
 
 export {
   activeDurableAdapter,
-  type DecisionDelivery,
-  type DecisionInput,
-  type DecisionResult,
-  type DurableAdapter,
   deliveryForActiveAdapter,
-  filesystemDelivery,
-  findOpenLocalGate,
-  type LocalDurableStore,
-  zapierDelivery,
 } from "./delivery";
 export {
-  type AutomationSummary,
   cancelDurableRun,
-  type DeployAutomationOptions,
-  type DeployResult,
-  type DurableCallback,
-  type DurableOpDetail,
-  type DurableRunDetail,
   deleteAutomation,
   deployAutomation,
-  editorUrl,
   getDurableRunStatus,
   getTriggerRunStatus,
   inspectAutomation,
   listAutomations,
   postCallback,
-  type ResolvedCallback,
   resolveCallbackUrl,
   runAutomationOnce,
   setAutomationEnabled,
   triggerAutomation,
 } from "./deploy";
 export { AGED_DURABLE_DEPS } from "./deps";
-export {
-  assertLocalDurableAllowed,
-  type LocalDurableResult,
-  LocalDurableUnavailableError,
-  type RunDurableLocallyOptions,
-  readLocalDurableSource,
-  runDurableLocally,
-} from "./runner";
+
 export { buildDurableSource, humanApprovalGate } from "./source";
-export type { ActionType, AutomationSpec, AutomationStep, AutomationTrigger } from "./types";
