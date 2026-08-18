@@ -53,6 +53,10 @@ describe("deployAutomation", () => {
     expect(pubArg.zapierDurableVersion).toBe(AGED_DURABLE_DEPS.durable);
     expect(pubArg.connections).toEqual({ slack_work: { connectionId: "123" } });
     expect(pubArg.trigger).toBeUndefined();
+    // A version must declare how it starts. Trigger-less publishes are rejected
+    // outright ("No trigger is configured — set manual: true") — a live-only
+    // failure the mocked suite missed until foreman-h54f exercised it.
+    expect(pubArg.manual).toBe(true);
   });
 
   it("verifies the trigger claim and flags a silent failure", async () => {
@@ -91,6 +95,54 @@ describe("deployAutomation", () => {
       authenticationId: null,
       params: undefined,
     });
+    // A trigger IS the start condition, so this must not claim to be manual.
+    expect(pubArg.manual).toBe(false);
+  });
+
+  it("validates source before creating anything, and creates nothing when it fails", async () => {
+    const sdk = fakeSdk({
+      validateWorkflow: vi.fn(async () => ({
+        data: {
+          issues: [
+            { kind: "syntax", message: "Unexpected token", severity: "error" },
+            { kind: "style", message: "prefer const", severity: "warning" },
+          ],
+        },
+      })),
+      createWorkflow: vi.fn(),
+      publishWorkflowVersion: vi.fn(),
+    });
+
+    await expect(
+      deployAutomation({ sdk, name: "Bad", source: "BROKEN", enabled: true }),
+    ).rejects.toThrow(/Unexpected token/);
+
+    // createWorkflow runs BEFORE publish, so a failed publish used to leave an
+    // orphan container behind. Validating first means nothing is created.
+    expect(sdk.createWorkflow).not.toHaveBeenCalled();
+    expect(sdk.publishWorkflowVersion).not.toHaveBeenCalled();
+  });
+
+  it("does not block on non-error diagnostics", async () => {
+    const sdk = fakeSdk({
+      validateWorkflow: vi.fn(async () => ({
+        data: {
+          issues: [
+            { kind: "style", message: "prefer const", severity: "warning" },
+            { kind: "future-kind-we-do-not-know", message: "heads up", severity: "info" },
+          ],
+        },
+      })),
+      createWorkflow: vi.fn(async () => ({
+        data: { id: "wf_3", trigger_url: "https://trig/z", enabled: true, is_private: true },
+      })),
+      publishWorkflowVersion: vi.fn(async () => ({ data: { id: "ver_3", workflow_id: "wf_3" } })),
+      getWorkflow: vi.fn(),
+    });
+
+    const res = await deployAutomation({ sdk, name: "Warny", source: "SRC", enabled: true });
+    expect(res.workflowId).toBe("wf_3");
+    expect(sdk.publishWorkflowVersion).toHaveBeenCalled();
   });
 });
 
