@@ -21,7 +21,7 @@ import {
 import { z } from "zod";
 import { checkAppAccess, checkRateLimit } from "./guardrails";
 import { guardrailConfigForUser } from "./guardrails-config";
-import { requestUserContext } from "./request-user-context";
+import { resolveRequestUserId } from "./request-user-context";
 import { onZapierSdkEvent } from "./zapier/deprecation";
 import { getSdkForUser } from "./zapier/sdk";
 
@@ -454,23 +454,28 @@ export function generateZapierTools(
         inputSchema: (SCHEMA_OVERRIDES[fn.name] ?? unwrapped) as unknown as z.ZodObject<any>,
         ...(isDestructive ? { requireApproval: true } : {}),
         ...mcpAnnotations,
-        execute: async (input) => {
+        execute: async (input, context) => {
           try {
-            // Resolve per-user SDK if a user context is active (set by request handler).
-            // Falls back to the global SDK (CLI login / client credentials) when no
-            // user context is available — e.g., during channel webhook processing.
-            const userCtx = requestUserContext.getStore();
+            // Whose Zapier connection this call runs as. Reads the run's
+            // RequestContext first and the AsyncLocalStorage second — see
+            // lib/request-user-context.ts. That order is what lets native
+            // Mastra channels work at all: they invoke the agent from their own
+            // route, where no ALS scope exists, so an ALS-only read would
+            // silently execute as the global client-credentials identity
+            // instead of as the person who sent the message (foreman-3i9k).
+            // Falls back to the global SDK when there is genuinely no user.
+            const userId = resolveRequestUserId(context?.requestContext);
 
             // Guardrails run BEFORE the SDK client is resolved — a throttled or
             // blocked call should cost nothing, not a token refresh first.
             // Skipped when there is no user context (channel webhook processing
             // on the shared client), because both checks are per-user.
-            if (userCtx?.userId) {
-              const denial = await guardrailDenial(userCtx.userId, fn.name, input);
+            if (userId) {
+              const denial = await guardrailDenial(userId, fn.name, input);
               if (denial) return denial;
             }
 
-            const activeSdk = userCtx?.userId ? await getSdkForUser(userCtx.userId) : sdk;
+            const activeSdk = userId ? await getSdkForUser(userId) : sdk;
             const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
 
             // Positional-projection methods (only `fetch` today) take SPREAD
