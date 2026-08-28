@@ -93,3 +93,5 @@ dolt.shared-server: false
 export:
     auto: true
     git-add: false
+sync:
+    remote: otaku-solutions/foreman
