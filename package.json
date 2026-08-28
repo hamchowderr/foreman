@@ -66,7 +66,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/ui": "^4.1.4",
-    "@zapier/zapier-sdk-cli": "^0.77.1",
+    "@zapier/zapier-sdk-cli": "^0.77.8",
     "drizzle-kit": "^0.31.10",
     "jsdom": "^29.0.2",
     "patch-package": "^8.0.1",
