@@ -31,6 +31,7 @@ import { forkConversationTool } from "../tools/fork-conversation";
 import { previewAppTool } from "../tools/preview-app";
 import { saveDocumentTool } from "../tools/save-document";
 import { searchHistoryTool } from "../tools/search-history";
+import { storedFilesTools } from "../tools/stored-files";
 import { buildForemanWorkspace } from "./workspace";
 
 // Core tools the agent needs for every action — always loaded, no search required.
@@ -113,6 +114,8 @@ function buildForemanTools() {
       run_automation: runAutomationTool,
       list_automations: listAutomationsTool,
       inspect_automation: inspectAutomationTool,
+      // Zapier stored files (VFS, experimental SDK) — reads open, writes approval-gated.
+      ...storedFilesTools,
       ...coreTools,
     }),
   );
