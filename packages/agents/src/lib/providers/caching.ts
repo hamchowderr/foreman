@@ -41,6 +41,9 @@ export const AGENT_PROMPT_CACHING: Record<AgentName, boolean> = {
   execution: parseBoolEnv(process.env.EXECUTION_PROMPT_CACHING),
   supervisor: parseBoolEnv(process.env.SUPERVISOR_PROMPT_CACHING),
   history: parseBoolEnv(process.env.HISTORY_PROMPT_CACHING),
+  files: parseBoolEnv(process.env.FILES_PROMPT_CACHING),
+  automations: parseBoolEnv(process.env.AUTOMATIONS_PROMPT_CACHING),
+  tables: parseBoolEnv(process.env.TABLES_PROMPT_CACHING),
   digest: parseBoolEnv(process.env.DIGEST_PROMPT_CACHING),
 };
 
@@ -50,6 +53,9 @@ export const AGENT_TOOL_CACHING: Record<AgentName, boolean> = {
   execution: parseBoolEnv(process.env.EXECUTION_TOOL_CACHING),
   supervisor: parseBoolEnv(process.env.SUPERVISOR_TOOL_CACHING),
   history: parseBoolEnv(process.env.HISTORY_TOOL_CACHING),
+  files: parseBoolEnv(process.env.FILES_TOOL_CACHING),
+  automations: parseBoolEnv(process.env.AUTOMATIONS_TOOL_CACHING),
+  tables: parseBoolEnv(process.env.TABLES_TOOL_CACHING),
   digest: parseBoolEnv(process.env.DIGEST_TOOL_CACHING),
 };
 

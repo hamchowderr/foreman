@@ -9,7 +9,6 @@ import apps from "./apps";
 import automations from "./automations";
 import capabilities from "./capabilities";
 import channelLinks from "./channel-links";
-import conversations from "./conversations";
 import documents from "./documents";
 import guardrails from "./guardrails";
 import proposals from "./proposals";
@@ -24,7 +23,7 @@ import zapierConnect, { handleOAuthCallback } from "./zapier-connect";
  * Mounted as Mastra server middleware so it coexists with
  * Mastra's built-in /api routes (agents, memory, etc.).
  *
- * Our routes live under /conversations, /proposals, /zapier, /webhooks,
+ * Our routes live under /proposals, /zapier, /webhooks,
  * /telegram, /slack, and /discord (not /api/* which is reserved by Mastra).
  */
 const app = new Hono();
@@ -39,7 +38,6 @@ app.use(
     credentials: true,
   }),
 );
-app.route("/conversations", conversations);
 app.route("/proposals", proposals);
 app.route("/apps", apps);
 app.route("/documents", documents);

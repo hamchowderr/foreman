@@ -6,11 +6,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { createClient } from "@/lib/server";
 
 /**
- * Shared app shell — the same shadcn sidebar (AppSidebar) the chat uses, wrapped
- * around any authed section (Automations, Inbox, Dashboards, Workspaces, Settings,
+ * Shared app shell — the shadcn sidebar (AppSidebar) wrapped
+ * around every authed section (Chat, Automations, Inbox, Dashboards, Workspaces, Settings,
  * Editor) so the whole app keeps one persistent sidebar instead of bare pages /
  * one-off headers. Server component: reads the user + persisted collapse state,
- * like the chat layout's SidebarShell.
+ * so every section shares one sidebar.
  *
  * `fullBleed` drops the scrolling content wrapper + top bar so a full-height tool
  * (the agent editor) can fill the inset itself.

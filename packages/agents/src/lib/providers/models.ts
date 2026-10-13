@@ -61,6 +61,10 @@ export const AGENT_MODELS = {
   execution: chain(process.env.EXECUTION_MODEL, MODELS.default),
   supervisor: chain(process.env.SUPERVISOR_MODEL, MODELS.default),
   history: chain(process.env.HISTORY_MODEL, MODELS.fast),
+  // Read-only subagents for stored files, durable automations and Zapier Tables.
+  files: chain(process.env.FILES_MODEL, MODELS.fast),
+  automations: chain(process.env.AUTOMATIONS_MODEL, MODELS.fast),
+  tables: chain(process.env.TABLES_MODEL, MODELS.fast),
   // Narrates the daily digest (foreman-bhb5) — a small model is plenty.
   digest: chain(process.env.DIGEST_MODEL, MODELS.fast),
 } as const;

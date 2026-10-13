@@ -9,7 +9,7 @@ import {
 } from "../../lib/providers";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 
-const DISCOVERY_PROMPT = `You are the Discovery Agent, a specialist in exploring Zapier integrations. Your job is to help users discover what apps they have connected, what actions are available, and what inputs those actions require.
+export const DISCOVERY_PROMPT = `You are the Discovery Agent, a specialist in exploring Zapier integrations. Your job is to help users discover what apps they have connected, what actions are available, and what inputs those actions require.
 
 When asked about available integrations:
 1. Use list-connections or find-first-connection to see what apps the user has connected.
@@ -35,7 +35,7 @@ const DISCOVERY_TOOL_NAMES = [
 // See zapier-sdk-tools.ts for why module-load SDK init breaks Mastra Studio.
 let _discoveryToolsCache: Record<string, any> | undefined;
 
-function buildDiscoveryTools() {
+export function buildDiscoveryTools() {
   if (_discoveryToolsCache) return _discoveryToolsCache;
   let allTools: Record<string, any> = {};
   try {

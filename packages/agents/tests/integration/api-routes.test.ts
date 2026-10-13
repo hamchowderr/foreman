@@ -22,7 +22,7 @@ vi.mock("@/discord/webhook", () => ({
   handleDiscordWebhook: vi.fn((c: any) => c.json({ ok: true })),
 }));
 
-// Mock stream utilities used by conversations
+// Mock stream utilities used by proposals
 vi.mock("@/lib/stream/sse", () => ({
   encodeSSE: vi.fn((data: any) => new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)),
   sseHeaders: vi.fn(() => ({

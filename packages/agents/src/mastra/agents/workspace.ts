@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Workspace, type WorkspaceFilesystem } from "@mastra/core/workspace";
+import { WORKSPACE_TOOLS, Workspace, type WorkspaceFilesystem } from "@mastra/core/workspace";
 import { resolveActiveWorkspace } from "../../lib/identity";
 import {
   getKnowledgeVector,
@@ -11,6 +11,7 @@ import {
   resolveSandbox,
 } from "../../lib/providers/sandbox";
 import { resolveRequestUserId } from "../../lib/request-user-context";
+import { approvalUnlessScheduledGrant } from "../lib/schedule-grants";
 
 /**
  * Foreman's agent workspace — a per-tenant LocalFilesystem + LocalSandbox for
@@ -109,10 +110,18 @@ export async function buildForemanWorkspace({
     searchIndexName: knowledgeIndexName(tenantKey),
     tools: {
       mastra_workspace_index: { enabled: false },
-      mastra_workspace_write_file: { requireApproval: true },
-      mastra_workspace_edit_file: { requireApproval: true },
+      // Writes, edits and commands ask, except in a scheduled run whose conversation
+      // already has "Always allow" for that kind of tool (lib/schedule-grants.ts).
+      mastra_workspace_write_file: {
+        requireApproval: approvalUnlessScheduledGrant(WORKSPACE_TOOLS.FILESYSTEM.WRITE_FILE),
+      },
+      mastra_workspace_edit_file: {
+        requireApproval: approvalUnlessScheduledGrant(WORKSPACE_TOOLS.FILESYSTEM.EDIT_FILE),
+      },
       mastra_workspace_delete: { requireApproval: true },
-      mastra_workspace_execute_command: { requireApproval: true },
+      mastra_workspace_execute_command: {
+        requireApproval: approvalUnlessScheduledGrant(WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND),
+      },
     },
   });
 }

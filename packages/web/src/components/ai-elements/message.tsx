@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { HoverCardTrigger } from "@/components/ui/hover-card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useKnowledgePanel } from "@/hooks/use-knowledge-panel";
 import { cn } from "@/lib/utils";
 import {
   InlineCitation,
@@ -284,7 +283,7 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
   );
 };
 
-type MessageResponseProps = ComponentProps<typeof Streamdown>;
+export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
@@ -293,8 +292,8 @@ const streamdownPlugins = { cjk, code, math, mermaid };
  * a doc with a plain markdown link using the `doc:` scheme —
  * `[cited text](doc:documents/<slug>.md "Title")` — so it streams through
  * Streamdown like any link, and we render the AI Elements InlineCitation here.
- * Clicking the badge (or "Open document") opens the KnowledgePanel side panel;
- * it is a button, not an anchor, so it never triggers link-safety/navigation.
+ * Clicking the badge (or "Open document") opens the document on the Documents page
+ * in a new tab; it is a button, not an anchor, so it never triggers link safety.
  */
 const DocCitation = ({
   path,
@@ -305,8 +304,8 @@ const DocCitation = ({
   title: string;
   children?: ReactNode;
 }) => {
-  const { open } = useKnowledgePanel();
-  const handleOpen = () => open({ path, title });
+  const handleOpen = () =>
+    window.open(`/documents?doc=${encodeURIComponent(path)}`, "_blank", "noopener");
 
   return (
     <InlineCitation>

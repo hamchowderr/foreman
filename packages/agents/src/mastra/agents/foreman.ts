@@ -152,7 +152,46 @@ function buildForemanInputProcessors() {
   return _foremanProcessorsCache;
 }
 
-export function createForemanAgent(databaseUrl: string) {
+/**
+ * The foreman agent's Memory. Exported so the AgentController (lib/agent-controller.ts)
+ * shares the very same instance: the controller's own memory drives subagents and
+ * observational state, and two instances would mean two caches over one thread store.
+ */
+export function createForemanMemory(databaseUrl: string): Memory {
+  return new Memory({
+    storage: new PostgresStore({
+      id: "foreman-memory",
+      connectionString: databaseUrl,
+    }),
+    vector: new PgVector({
+      id: "foreman-memory-vector",
+      connectionString: databaseUrl,
+    }),
+    // Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed.
+    embedder: fastembed,
+    options: {
+      lastMessages: 20,
+      generateTitle: {
+        model: MODELS.fast,
+        instructions:
+          "Generate a concise 3-6 word title summarizing the user's request in this conversation. " +
+          "Output ONLY the plain title text — no markdown, no surrounding quotes, no 'Title:' label, " +
+          "and no trailing punctuation. Do not answer or react to the conversation; just title it.",
+      },
+      workingMemory: { enabled: true },
+      semanticRecall: {
+        topK: 2,
+        messageRange: 1,
+        scope: "resource",
+      },
+      // Observer + Reflector compress long threads into an observation log. They
+      // run on the fast tier through the AI Gateway, like generateTitle above.
+      observationalMemory: { model: MODELS.fast },
+    },
+  });
+}
+
+export function createForemanAgent(databaseUrl: string, memory?: Memory) {
   return new Agent({
     id: "foreman",
     name: "Foreman",
@@ -197,38 +236,6 @@ export function createForemanAgent(databaseUrl: string) {
     // generates no webhook route and the custom :4112 stack stays sole owner of
     // Slack — this is additive until the Event Subscription URL is repointed.
     channels: buildSlackChannelConfig(),
-    memory: new Memory({
-      storage: new PostgresStore({
-        id: "foreman-memory",
-        connectionString: databaseUrl,
-      }),
-      vector: new PgVector({
-        id: "foreman-memory-vector",
-        connectionString: databaseUrl,
-      }),
-      // Local ONNX embedder (bge-small, 384-dim) — no OpenAI key/quota needed.
-      embedder: fastembed,
-      options: {
-        lastMessages: 20,
-        generateTitle: {
-          model: MODELS.fast,
-          instructions:
-            "Generate a concise 3-6 word title summarizing the user's request in this conversation. " +
-            "Output ONLY the plain title text — no markdown, no surrounding quotes, no 'Title:' label, " +
-            "and no trailing punctuation. Do not answer or react to the conversation; just title it.",
-        },
-        workingMemory: { enabled: true },
-        semanticRecall: {
-          topK: 2,
-          messageRange: 1,
-          scope: "resource",
-        },
-        // observationalMemory removed: its input processor requires a threadId
-        // in RequestContext, which Mastra's experiment runner doesn't inject.
-        // workingMemory + lastMessages + semanticRecall provide sufficient
-        // memory for production conversational use.
-        observationalMemory: false,
-      },
-    }),
+    memory: memory ?? createForemanMemory(databaseUrl),
   });
 }
