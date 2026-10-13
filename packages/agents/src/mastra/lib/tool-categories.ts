@@ -82,7 +82,9 @@ export const PLAN_MODE_TOOLS: readonly string[] = [
 /**
  * Tools every session runs without an approval card. Two groups:
  *  - the controller's own interaction/bookkeeping tools (ask_user, submit_plan, task_*),
- *    where the prompt or checklist IS the interaction;
+ *    where the prompt or checklist IS the interaction, and Memory's updateWorkingMemory
+ *    (the agent's own notes about the user; gated, it parks the run on a card after most
+ *    turns and scheduled fires queue behind it);
  *  - everything Foreman already ran without approval before the AgentController: reads
  *    (Zapier READ_ONLY, tool search, history, automations, schedules, workspace reads),
  *    connect_zapier (it only returns a connect link) and the in-app builders
@@ -97,6 +99,7 @@ export const AUTO_ALLOWED_TOOLS: readonly string[] = [
   "task_update",
   "task_complete",
   "task_check",
+  "updateWorkingMemory",
   ...READ_TOOLS,
   "connect_zapier",
   "save_document",
