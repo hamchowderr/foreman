@@ -19,11 +19,16 @@ import {
   ZapierValidationError,
 } from "@zapier/zapier-sdk";
 import { z } from "zod";
-import { checkAppAccess, checkRateLimit } from "./guardrails";
+import {
+  checkAppAccess,
+  checkKnownActionPermission,
+  checkRateLimit,
+  recordActionPermissions,
+} from "./guardrails";
 import { guardrailConfigForUser } from "./guardrails-config";
-import { resolveRequestUserId } from "./request-user-context";
+import { resolveRequestUserId, resolveTraceIds } from "./request-user-context";
 import { onZapierSdkEvent } from "./zapier/deprecation";
-import { getSdkForUser } from "./zapier/sdk";
+import { getSdkForUser, withTraceOptions } from "./zapier/sdk";
 
 /**
  * Auto-generate Mastra tools from the Zapier SDK's internal registry.
@@ -390,9 +395,42 @@ async function guardrailDenial(
         retryable: false,
       };
     }
+
+    // Admin-restricted action (SDK 0.112.5 `permissions.can_use`). Only what a
+    // discovery call ALREADY returned is consulted — no extra API round-trip.
+    const { actionType, action } = (input ?? {}) as { actionType?: unknown; action?: unknown };
+    if (typeof actionType === "string" && typeof action === "string") {
+      const perm = checkKnownActionPermission(userId, appKey, actionType, action);
+      if (!perm.allowed) {
+        return {
+          error: perm.reason ?? `The ${appKey} action "${action}" was restricted by an admin.`,
+          code: "ACTION_RESTRICTED",
+          retryable: false,
+        };
+      }
+    }
   }
 
   return null;
+}
+
+/** Discovery methods whose items carry a `permissions` map worth remembering. */
+const ACTION_PERMISSION_SOURCES = new Set(["listActions", "getAction", "listTriggers"]);
+
+/** Feed the `can_use` flags a discovery call returned into the guardrail store. */
+function rememberActionPermissions(
+  userId: string,
+  methodName: string,
+  input: unknown,
+  output: unknown,
+): void {
+  if (!ACTION_PERMISSION_SOURCES.has(methodName) || !output || typeof output !== "object") return;
+  const data = (output as { data?: unknown }).data;
+  const items = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : [];
+  const app = (input as { app?: unknown; appKey?: unknown } | null) ?? {};
+  const requestedApp =
+    typeof app.app === "string" ? app.app : typeof app.appKey === "string" ? app.appKey : undefined;
+  recordActionPermissions(userId, requestedApp, items);
 }
 
 export function generateZapierTools(
@@ -405,15 +443,20 @@ export function generateZapierTools(
   const isDebug = process.env.FOREMAN_MODE === "dev" || process.env.DEBUG === "true";
   const hasConnections = connections && Object.keys(connections).length > 0;
   const resolvedCredentials = resolveCredentials(credentials);
-  const sdk = createZapierSdk({
+  const baseOptions: NonNullable<Parameters<typeof createZapierSdk>[0]> = {
     ...(resolvedCredentials ? { credentials: resolvedCredentials } : {}),
     ...(hasConnections ? { manifest: { connections } } : {}),
     debug: isDebug,
     maxNetworkRetries: 3,
+    // `maxNetworkRetryDelaySeconds` IS the documented createZapierSdk option at
+    // 0.115.1 (BaseSdkOptionsSchema; `maxNetworkRetryDelayMs` is deprecated).
+    // `maxNetworkRetryDelayMilliseconds` exists only on the low-level
+    // `createZapierApi` ApiClientOptions, not on createZapierSdk — so keep this.
     maxNetworkRetryDelaySeconds: 30,
     canDeleteTables: true,
     onEvent: onZapierSdkEvent,
-  });
+  };
+  const sdk = createZapierSdk(baseOptions);
 
   const registry = sdk.getRegistry({ package: "mcp" });
   const tools: Record<string, ReturnType<typeof createTool>> = {};
@@ -475,7 +518,17 @@ export function generateZapierTools(
               if (denial) return denial;
             }
 
-            const activeSdk = userId ? await getSdkForUser(userId) : sdk;
+            // Request tracing (SDK 0.105.0): the conversation's thread id as
+            // `correlationId`, and — while an approved proposal executes — the
+            // proposal id as `causationId`. Per-run values from the run's own
+            // context; never the process-wide ZAPIER_*_ID env vars (multi-tenant).
+            const trace = resolveTraceIds(context?.requestContext, context?.agent?.threadId);
+            const traced = Boolean(trace.correlationId || trace.causationId);
+            const activeSdk = userId
+              ? await getSdkForUser(userId, undefined, trace)
+              : traced
+                ? createZapierSdk(withTraceOptions(baseOptions, trace))
+                : sdk;
             const activeMethod = (activeSdk as any)[fn.name] as (...args: any[]) => Promise<any>;
 
             // Positional-projection methods (only `fetch` today) take SPREAD
@@ -491,12 +544,15 @@ export function generateZapierTools(
               return summarize(await activeMethod.call(activeSdk, ...args));
             }
 
+            let result: unknown;
             if (PAGINATED_METHODS.has(fn.name)) {
               const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
-              const result = await activeMethod.call(activeSdk, { ...input, maxItems });
-              return summarize(result);
+              result = await activeMethod.call(activeSdk, { ...input, maxItems });
+            } else {
+              result = await activeMethod.call(activeSdk, input);
             }
-            return summarize(await activeMethod.call(activeSdk, input));
+            if (userId) rememberActionPermissions(userId, fn.name, input, result);
+            return summarize(result);
           } catch (err) {
             return handleSdkError(err, fn.name);
           }
@@ -646,6 +702,18 @@ export function handleSdkError(
   // or the approval URL is silently lost.
   if (err instanceof ZapierApprovalError) {
     const ae = err as ZapierApprovalError;
+    // SDK 0.115.0: after an approval is granted the SDK retries once with a
+    // one-time approval token. `approval_token_invalid` means that token was
+    // rejected (already used, expired, or no longer valid for this request).
+    // Terminal — retrying the same request again will not help; a brand-new
+    // approval has to be requested.
+    if (ae.approvalStatus === "approval_token_invalid") {
+      return {
+        error: `${methodName} could not run: the Zapier approval for this request is no longer valid (it was already used, expired, or no longer matches the request). A fresh approval is needed — tell the user, then run the action again to request a new approval. Do not retry it automatically.`,
+        code: "APPROVAL_TOKEN_INVALID",
+        retryable: false,
+      };
+    }
     return {
       error: ae.approvalUrl
         ? `${methodName} needs your approval on Zapier before it can run. Open this link to approve, then try again: ${ae.approvalUrl}`
@@ -725,12 +793,20 @@ export function handleSdkError(
 /**
  * Summarize tool results to reduce context usage.
  */
-function createSummarizer(fnName: string) {
+export function createSummarizer(fnName: string) {
   return (output: unknown): unknown => {
     if (!output || typeof output !== "object") return output;
 
     const data = (output as any).data ?? output;
     const result = (output as any).result ?? data;
+
+    // runAction pages carry the Zapier action-run id in `meta.id` (SDK 0.114.2),
+    // present even when `data` is empty. The summary below reads only `data`,
+    // so lift it out explicitly — it's the handle for tracing a run on Zapier's
+    // side, and the proposal approve route persists it with the action_run.
+    const metaId = (output as any).meta?.id;
+    const zapierRunId =
+      fnName === "runAction" && typeof metaId === "string" && metaId ? metaId : undefined;
 
     // For list operations, summarize count + key fields
     if (Array.isArray(result)) {
@@ -751,6 +827,12 @@ function createSummarizer(fnName: string) {
           status,
           type,
           actionType,
+          // Kept explicitly (they'd otherwise vanish into `_extraFields`):
+          // `is_managed` on connections (SDK 0.112.1 — admin-managed, no
+          // individual owner) and `permissions` on actions/triggers (0.112.5 —
+          // `can_use: false` means an admin restricted the action).
+          is_managed,
+          permissions,
           ...rest
         } = item;
         const summary: Record<string, unknown> = {};
@@ -767,6 +849,10 @@ function createSummarizer(fnName: string) {
         if (status) summary.status = status;
         if (type) summary.type = type;
         if (actionType) summary.actionType = actionType;
+        // `!== undefined`, not truthiness: `is_managed: false` / `can_use: false`
+        // are exactly the values worth keeping.
+        if (is_managed !== undefined) summary.is_managed = is_managed;
+        if (permissions !== undefined) summary.permissions = permissions;
         const extraKeys = Object.keys(rest);
         if (extraKeys.length <= 3) {
           Object.assign(summary, rest);
@@ -781,11 +867,14 @@ function createSummarizer(fnName: string) {
       };
       if (result.length > 20) response.truncated = true;
       if ((output as any).nextCursor) response.nextCursor = (output as any).nextCursor;
+      if (zapierRunId) response.zapier_run_id = zapierRunId;
       return response;
     }
 
     // For run-action results, keep the full result
-    if (fnName === "runAction") return output;
+    if (fnName === "runAction") {
+      return zapierRunId ? { ...(output as object), zapier_run_id: zapierRunId } : output;
+    }
 
     // For single-item responses, trim long strings
     if (typeof result === "object" && result !== null) {
