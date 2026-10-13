@@ -30,6 +30,7 @@ import {
   getForemanAgentController,
   getForemanSession,
 } from "./lib/agent-controller";
+import { setScheduleGrantStore } from "./lib/schedule-grants";
 import { readWorkspaceFile, readWorkspaceTree, workspaceRootLabel } from "./lib/workspace-files";
 import { createControllerRoutes } from "./routes/controller";
 import { CHAT_KIT_PREFIXES, CHAT_KIT_USER_KEY, CHAT_KIT_WORKSPACE_KEY } from "./routes/resource";
@@ -65,6 +66,7 @@ export function getMastra(): Mastra {
 
   // One Memory instance, shared by the foreman agent and its AgentController.
   const foremanMemory = createForemanMemory(databaseUrl);
+  setScheduleGrantStore(foremanMemory);
   const foremanAgent = createForemanAgent(databaseUrl, foremanMemory);
   // mastra-chat-kit: the web chat drives the foreman agent through an AgentController
   // (lib/agent-controller.ts). Channel bots and /chat/:agentId still call the agent directly.

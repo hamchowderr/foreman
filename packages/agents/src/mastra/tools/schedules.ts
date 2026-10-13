@@ -1,5 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { SCHEDULE_THREAD_KEY } from "../lib/schedule-grants";
 
 /**
  * # Recurring schedules (from mastra-chat-kit's tools/schedule.ts, scoped per user)
@@ -101,8 +102,12 @@ export const startScheduleTool = createTool({
       prompt,
       threadId,
       resourceId,
-      // Wake the thread on each fire, running as the creator in their workspace.
-      ifIdle: { behavior: "wake", streamOptions: { requestContext: identity } },
+      // Wake the thread on each fire, running as the creator in their workspace. The
+      // thread id lets the fire reuse that conversation's "Always allow" choices.
+      ifIdle: {
+        behavior: "wake",
+        streamOptions: { requestContext: { ...identity, [SCHEDULE_THREAD_KEY]: threadId } },
+      },
       ...(name ? { name } : {}),
     });
     return toView(created);

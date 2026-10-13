@@ -13,6 +13,7 @@
 import type { Session } from "@mastra/core/agent-controller";
 import { RequestContext } from "@mastra/core/request-context";
 import { registerApiRoute } from "@mastra/core/server";
+import { recordAlwaysAllow } from "../lib/schedule-grants";
 import { TIME_ZONE_KEY } from "../lib/time-zone";
 import { resourceIdOf, workspaceIdOf } from "./resource";
 import { sessionEventStream } from "./session-sse";
@@ -160,6 +161,17 @@ export const createControllerRoutes = (deps: ChatServerDeps) => [
       const toolCallId = requested ?? pendingApprovalId(session);
       if (!toolCallId) {
         return c.json({ error: "no approval is pending" }, 409);
+      }
+      // Foreman: keep an "Always allow" on the gate's conversation, so scheduled runs
+      // there honor it too (Mastra's own grant lives only in this live session).
+      if (decision === "always_allow_category") {
+        const gate = session.displayState.get().pendingApprovals.get(toolCallId);
+        const threadId = gate?.threadId ?? session.thread.getId();
+        if (gate && threadId) {
+          await recordAlwaysAllow(threadId, gate.toolName).catch((err) =>
+            console.error("[approve] could not save Always allow:", err),
+          );
+        }
       }
       // Foreman: the resumed tool runs as this user (Zapier identity, workspace).
       session.respondToToolApproval({
