@@ -67,6 +67,9 @@ const CORE_REQUIREMENTS: Record<AgentName, Capability[]> = {
   execution: ["tools", "streaming"],
   supervisor: ["tools"],
   history: ["tools"],
+  files: ["tools"],
+  automations: ["tools"],
+  tables: ["tools"],
   // The digest narrator is a one-shot text generation — no tools, no streaming.
   digest: [],
 };

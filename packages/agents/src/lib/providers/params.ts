@@ -43,6 +43,9 @@ export const AGENT_PARAMS: Record<AgentName, AgentParams> = {
   execution: readParams("EXECUTION"),
   supervisor: readParams("SUPERVISOR"),
   history: readParams("HISTORY"),
+  files: readParams("FILES"),
+  automations: readParams("AUTOMATIONS"),
+  tables: readParams("TABLES"),
   digest: readParams("DIGEST"),
 };
 

@@ -14,7 +14,8 @@
  *    and isolated sandbox. The kit shares one workspace across every user.
  *  - Storage and memory are Foreman's Postgres (Supabase), not libSQL.
  *  - One Session per signed-in user (resource id = Foreman user id).
- *  - Subagents are Foreman's read-only specialists (discovery, history); see subagents.ts.
+ *  - Subagents are Foreman's read-only specialists (discovery, history, files,
+ *    automations, tables); see subagents.ts.
  *  - No browser (shared server-wide in the kit).
  */
 
