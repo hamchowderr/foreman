@@ -1,10 +1,13 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
+  getManagementForUser,
   inspectForUser,
   listForUser,
   provisionAutomation,
   runAutomationById,
+  testAutomationById,
+  updateManagementForUser,
 } from "../../lib/automations/service";
 
 /**
@@ -189,6 +192,108 @@ export const inspectAutomationTool = createTool({
   }),
   execute: async ({ userId, automationId, maxRuns }) => {
     const result = await inspectForUser(userId, automationId, maxRuns);
+    if (!result) throw new Error("Automation not found in this workspace");
+    return result;
+  },
+});
+
+export const testAutomationTool = createTool({
+  id: "test_automation",
+  // Draft runs are free and never touch the live version, but they EXECUTE the
+  // source for real — every sdk.runAction step hits the connected app (posts the
+  // Slack message, creates the row). Same blast radius as run_automation, so the
+  // same gate.
+  requireApproval: true,
+  description:
+    "Test a workspace automation WITHOUT publishing: runs its durable source as a free draft run of the saved " +
+    "Zapier workflow (the live version is untouched). Pass `source` to try an edited version before redeploying. " +
+    "Automations with no saved workflow fall back to a one-off ephemeral run. Side effects in connected apps WILL " +
+    "happen. Returns the run id + initial status; use inspect_automation to follow it (draft runs show kind 'draft').",
+  inputSchema: z.object({
+    userId: z.string(),
+    automationId: z.string().describe("The Foreman automation id (from list/create)."),
+    input: z.record(z.string(), z.unknown()).optional().describe("Input payload for the run."),
+    source: z
+      .string()
+      .optional()
+      .describe("Durable workflow.ts source to test instead of the stored source."),
+  }),
+  outputSchema: z.object({
+    kind: z.enum(["draft", "ephemeral"]),
+    runId: z.string(),
+    status: z.string(),
+    durableRunId: z.string().nullable(),
+  }),
+  execute: async ({ userId, automationId, input, source }) => {
+    const result = await testAutomationById(userId, automationId, { input, source });
+    if (!result) throw new Error("Automation not found in this workspace");
+    return result;
+  },
+});
+
+const managementStateSchema = z.object({
+  enabled: z.boolean(),
+  autoApprove: z.boolean(),
+  modes: z.array(z.string()),
+  managerId: z.string().nullable(),
+  intent: z.string().nullable(),
+});
+
+export const getAutomationManagementTool = createTool({
+  id: "get_automation_management",
+  description:
+    "Read a workspace automation's Zapier agentic-management settings: whether it's on, which modes run " +
+    "(heal = diagnose failed runs and draft+test a fix; expand = propose new branches/steps for runs that " +
+    "succeeded without doing anything; harden = convert repetitive AI steps into fixed code), whether changes " +
+    "go live without approval, and the live version's recorded intent. Read-only.",
+  inputSchema: z.object({
+    userId: z.string(),
+    automationId: z.string().describe("The Foreman automation id."),
+  }),
+  outputSchema: managementStateSchema,
+  execute: async ({ userId, automationId }) => {
+    const result = await getManagementForUser(userId, automationId);
+    if (!result) throw new Error("Automation not found in this workspace");
+    return result;
+  },
+});
+
+export const setAutomationManagementTool = createTool({
+  id: "set_automation_management",
+  requireApproval: true,
+  description:
+    "Turn Zapier agentic management on/off for a workspace automation, or change its modes " +
+    "(heal/expand/harden — the list REPLACES the current set), auto-approve setting, or intent (what the live " +
+    "version is meant to do). Enabling defaults autoApprove to false so proposed fixes wait for a human; only set " +
+    "autoApprove:true when the user explicitly asks for fixes to apply without review.",
+  inputSchema: z.object({
+    userId: z.string(),
+    automationId: z.string().describe("The Foreman automation id."),
+    enabled: z
+      .boolean()
+      .optional()
+      .describe("true = enable, false = disable; omit to leave as is."),
+    modes: z
+      .array(z.enum(["heal", "expand", "harden"]))
+      .optional()
+      .describe("Replaces the whole mode set."),
+    autoApprove: z
+      .boolean()
+      .optional()
+      .describe("Apply proposed fixes without human approval. Defaults to false on enable."),
+    intent: z
+      .string()
+      .optional()
+      .describe("Plain-language statement of what the automation is meant to do."),
+  }),
+  outputSchema: managementStateSchema,
+  execute: async ({ userId, automationId, enabled, modes, autoApprove, intent }) => {
+    const result = await updateManagementForUser(userId, automationId, {
+      enabled,
+      modes,
+      autoApprove,
+      intent,
+    });
     if (!result) throw new Error("Automation not found in this workspace");
     return result;
   },

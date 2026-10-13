@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import {
   cancelRunForUser,
   getInboxView,
+  getManagementForUser,
   getWorkspaceInbox,
   inspectForUser,
   listForUser,
@@ -9,9 +10,16 @@ import {
   removeAutomationForUser,
   respondToCallbackForUser,
   runAutomationById,
+  testAutomationById,
   updateAutomationForUser,
+  updateManagementForUser,
 } from "../lib/automations/service";
 import type { InboxTriggerSpec } from "../lib/automations/types";
+import {
+  AGENTIC_MANAGEMENT_MODES,
+  type AgenticManagementMode,
+  type AgenticManagementPatch,
+} from "../lib/durable/deploy";
 import { validateParam } from "../lib/validation";
 import { authMiddleware } from "./middleware";
 import type { AppEnv } from "./types";
@@ -27,6 +35,9 @@ import type { AppEnv } from "./types";
  *   GET    /automations/:id        → automation + recent runs
  *   PATCH  /automations/:id        → rename / describe / enable-disable
  *   POST   /automations/:id/run    → manually fire it
+ *   POST   /automations/:id/test   → free draft test run (live version untouched)
+ *   GET    /automations/:id/management → agentic-management config + intent
+ *   PUT    /automations/:id/management → enable/disable, modes, autoApprove, intent
  *   POST   /automations/runs/:runId/cancel   → cancel a running durable run
  *   POST   /automations/runs/:runId/callback → approve/deny a human-approval gate
  *   DELETE /automations/:id        → remove (row + best-effort Zapier workflow)
@@ -182,6 +193,77 @@ automations.post("/:id/run", async (c) => {
   }
   const body = (await c.req.json().catch(() => ({}))) as { input?: Record<string, unknown> };
   const result = await runAutomationById(userId, id, body.input);
+  if (!result) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(result);
+});
+
+// Test the automation's source as a free draft run of its saved workflow (or an
+// ephemeral run when there is none). The live version is untouched, but the
+// source executes for real — connected-app actions happen.
+automations.post("/:id/test", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as {
+    input?: Record<string, unknown>;
+    source?: unknown;
+  };
+  const result = await testAutomationById(userId, id, {
+    input: body.input,
+    source: typeof body.source === "string" && body.source.trim() ? body.source : undefined,
+  });
+  if (!result) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(result);
+});
+
+automations.get("/:id/management", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+  const result = await getManagementForUser(userId, id);
+  if (!result) {
+    return c.json({ error: "Not found" }, 404);
+  }
+  return c.json(result);
+});
+
+automations.put("/:id/management", async (c) => {
+  const userId = c.get("userId");
+  const id = validateParam(c.req.param("id"), "id");
+  if (!id) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as {
+    enabled?: unknown;
+    modes?: unknown;
+    autoApprove?: unknown;
+    intent?: unknown;
+  };
+  const patch: AgenticManagementPatch = {};
+  if (typeof body.enabled === "boolean") patch.enabled = body.enabled;
+  if (typeof body.autoApprove === "boolean") patch.autoApprove = body.autoApprove;
+  if (typeof body.intent === "string") patch.intent = body.intent;
+  if (body.modes !== undefined) {
+    if (
+      !Array.isArray(body.modes) ||
+      !body.modes.every((m) => (AGENTIC_MANAGEMENT_MODES as readonly unknown[]).includes(m))
+    ) {
+      return c.json(
+        { error: `modes must be a subset of ${AGENTIC_MANAGEMENT_MODES.join(", ")}` },
+        400,
+      );
+    }
+    patch.modes = body.modes as AgenticManagementMode[];
+  }
+  const result = await updateManagementForUser(userId, id, patch);
   if (!result) {
     return c.json({ error: "Not found" }, 404);
   }
