@@ -2,6 +2,7 @@ import type { InputProcessor, ProcessInputArgs } from "@mastra/core/processors";
 import { searchAppCatalog } from "../catalog";
 import { listUserConnections } from "../zapier";
 import { loadUserConnectionsMap } from "../zapier/aliases";
+import { resolveZapierIdentity } from "../zapier/sdk";
 
 /**
  * Input processor that injects user context (connected apps, recent actions)
@@ -21,7 +22,11 @@ export const contextInjector: InputProcessor = {
     try {
       const [connections, aliasMap] = await Promise.all([
         listUserConnections(userId).catch(() => []),
-        loadUserConnectionsMap(userId).catch(() => ({})),
+        // Aliases of the account the user's calls run on — the shared connection's
+        // owner when the workspace routes them through one.
+        resolveZapierIdentity(userId)
+          .then((identity) => loadUserConnectionsMap(identity?.user_id ?? userId))
+          .catch(() => ({})),
       ]);
 
       const extraMessages: Array<{ role: "system"; content: string }> = [];

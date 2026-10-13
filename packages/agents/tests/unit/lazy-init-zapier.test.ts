@@ -45,10 +45,12 @@ vi.mock("@zapier/zapier-sdk", async () => {
 
 describe("Zapier SDK lazy-init (mastra dev hang regression)", () => {
   it("does not call createZapierSdk when importing agent modules", {
-    timeout: 30_000,
+    timeout: 120_000,
   }, async () => {
     // Cold-imports three large module trees (Mastra core + memory + chat
-    // adapters + zapier-sdk). 2-3s nominal; pad timeout to 30s for shared CI.
+    // adapters + zapier-sdk). 2-3s nominal, but 10s pinned to one CPU and past
+    // 30s when the full suite runs in parallel on a busy machine (foreman-zyzk).
+    // The import has to happen inside this test, so it gets the long timeout.
     await import("../../src/mastra/agents/foreman");
     await import("../../src/mastra/agents/discovery");
     await import("../../src/mastra/agents/execution");

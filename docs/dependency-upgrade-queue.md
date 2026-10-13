@@ -26,10 +26,14 @@ longer appear in `npm outdated`.
 
 ## Also open, not a dependency
 
-- **foreman-zyzk** (P2) — agents suite intermittently fails 3–4 files
-  (`mastra-agent`, `lazy-init-zapier`, `slack-channel`), each passing in
-  isolation and in CI. Parallel-run contention, likely the `:4112` webhook
-  server binding. Not a regression from any bump.
+- ~~**foreman-zyzk**~~ (fixed) — `mastra-agent`, `lazy-init-zapier` and
+  `slack-channel` failed intermittently under a parallel full run. Not the
+  `:4112` webhook server (none of the three binds a port): each cold-imports
+  the Mastra/Foreman module tree inside a test body, which takes ~10s pinned to
+  one CPU and can blow the test timeout on a busy machine (`slack-channel`'s
+  import sat under the 5s default). The imports now run in `beforeAll` hooks
+  with a 120s budget (or, for the lazy-init check that must import in-test, a
+  120s test timeout).
 - **`rls_auto_enable`** — exists in the production database but in **no repo
   migration**, and granted EXECUTE to `anon` and `authenticated`. The
   `20260828000000` migration revoked those grants, but the function itself is

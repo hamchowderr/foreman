@@ -10,6 +10,9 @@ vi.mock("@/lib/zapier", () => ({
 vi.mock("@/lib/zapier/aliases", () => ({
   loadUserConnectionsMap: vi.fn().mockResolvedValue({}),
 }));
+vi.mock("@/lib/zapier/sdk", () => ({
+  resolveZapierIdentity: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/lib/catalog", () => ({
   searchAppCatalog: vi.fn().mockResolvedValue([]),
 }));

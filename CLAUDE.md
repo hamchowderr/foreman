@@ -69,6 +69,7 @@ All custom routes: `agents/src/routes/index.ts` (Hono, mounted as Mastra middlew
 | `/automations/*`    | `routes/automations.ts`    | Durable automation CRUD + run    |
 | `/apps/*`           | `routes/apps.ts`           | App catalog/search + pulled data |
 | `/documents/*`      | `routes/documents.ts`      | Document CRUD + import           |
+| `/chat-shares/*`    | `routes/chat-shares.ts`    | Public chat share links          |
 | `/workspaces/*`     | `routes/workspaces.ts`     | Workspace CRUD + settings        |
 | `/stored/agents/*`  | `routes/stored-agents.ts`  | Saved/preview agents             |
 | `/zapier/*` `/oauth`| `routes/zapier-connect.ts` | OAuth connect + callback flow    |
