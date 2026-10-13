@@ -13,10 +13,11 @@ import { FOREMAN_APPROVAL_VIEWS } from "@/components/chat/foreman-approval-views
  * Memory is off because Foreman doesn't run observational memory.
  */
 
+// Claude through the Vercel AI Gateway; the agent server allowlists the same ids.
 const MODELS: ModelOption[] = [
-  { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", provider: "anthropic" },
-  { id: "anthropic/claude-opus-4-6", name: "Claude Opus 4.6", provider: "anthropic" },
-  { id: "anthropic/claude-haiku-4-5-20251001", name: "Claude Haiku 4.5", provider: "anthropic" },
+  { id: "vercel/anthropic/claude-sonnet-4.6", name: "Claude Sonnet 4.6", provider: "anthropic" },
+  { id: "vercel/anthropic/claude-opus-4.6", name: "Claude Opus 4.6", provider: "anthropic" },
+  { id: "vercel/anthropic/claude-haiku-4.5", name: "Claude Haiku 4.5", provider: "anthropic" },
 ];
 
 const SUGGESTIONS = [

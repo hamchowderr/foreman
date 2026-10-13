@@ -5,6 +5,7 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+  let cacheHeaders: Record<string, string> = {};
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
@@ -16,7 +17,7 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
@@ -25,6 +26,13 @@ export async function updateSession(request: NextRequest) {
           });
           cookiesToSet.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set(name, value, options);
+          });
+          // A response that sets auth cookies must not be cached by a CDN, or one
+          // user's session can be served to another. @supabase/ssr only passes
+          // these headers on the first write, so keep them across rebuilds.
+          cacheHeaders = { ...cacheHeaders, ...headers };
+          Object.entries(cacheHeaders).forEach(([key, value]) => {
+            supabaseResponse.headers.set(key, value);
           });
         },
       },

@@ -38,9 +38,9 @@ import { ToolsPicker } from "./tools-picker";
 import { VersionHistoryPanel } from "./version-history-panel";
 
 const MODELS = [
-  { id: "anthropic/claude-sonnet-4-6", label: "Claude Sonnet 4.6 (default)" },
-  { id: "anthropic/claude-opus-4-6", label: "Claude Opus 4.6 (heavy reasoning)" },
-  { id: "anthropic/claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (fast)" },
+  { id: "vercel/anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6 (default)" },
+  { id: "vercel/anthropic/claude-opus-4.6", label: "Claude Opus 4.6 (heavy reasoning)" },
+  { id: "vercel/anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5 (fast)" },
 ];
 
 const AUTOSAVE_DEBOUNCE_MS = 800;

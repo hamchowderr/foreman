@@ -139,9 +139,9 @@ export function getMastra(): Mastra {
       throw new Error("the browser is off in Foreman");
     },
     modelAllowlist: new Set([
-      "anthropic/claude-sonnet-4-6",
-      "anthropic/claude-opus-4-6",
-      "anthropic/claude-haiku-4-5-20251001",
+      "vercel/anthropic/claude-sonnet-4.6",
+      "vercel/anthropic/claude-opus-4.6",
+      "vercel/anthropic/claude-haiku-4.5",
     ]),
   };
 
@@ -514,13 +514,13 @@ export function getMastra(): Mastra {
               const rctx = new RequestContext(ctxEntries);
 
               // Per-request model override (the composer's model selector sends
-              // `model`). Allowlisted to Foreman-supported Anthropic models so a
+              // `model`). Allowlisted to Foreman-supported Claude gateway models so a
               // bad/cross-provider value can't break prompt/tool cache-control or
               // route to an unknown model. Falls back to the agent's default.
               const ALLOWED_CHAT_MODELS = new Set([
-                "anthropic/claude-sonnet-4-6",
-                "anthropic/claude-opus-4-6",
-                "anthropic/claude-haiku-4-5-20251001",
+                "vercel/anthropic/claude-sonnet-4.6",
+                "vercel/anthropic/claude-opus-4.6",
+                "vercel/anthropic/claude-haiku-4.5",
               ]);
               const requestedModel =
                 typeof body.model === "string" && ALLOWED_CHAT_MODELS.has(body.model)

@@ -3,10 +3,13 @@
 import { auth } from "@/lib/auth";
 import { createClient } from "@/lib/server";
 import type {
+  AgenticManagementPatch,
+  AgenticManagementState,
   Automation,
   AutomationDetail,
   InboxState,
   RunResult,
+  TestRunResult,
   WorkspaceInbox,
 } from "./automations-types";
 
@@ -78,6 +81,22 @@ export async function renameAutomation(id: string, name: string): Promise<void> 
 
 export async function runAutomation(id: string): Promise<RunResult> {
   return agent(`/automations/${id}/run`, { method: "POST", body: {} });
+}
+
+/** Free draft test run of the automation's source — the live version is untouched. */
+export async function testAutomation(id: string): Promise<TestRunResult> {
+  return agent(`/automations/${id}/test`, { method: "POST", body: {} });
+}
+
+export async function getAutomationManagement(id: string): Promise<AgenticManagementState> {
+  return agent(`/automations/${id}/management`);
+}
+
+export async function updateAutomationManagement(
+  id: string,
+  patch: AgenticManagementPatch,
+): Promise<AgenticManagementState> {
+  return agent(`/automations/${id}/management`, { method: "PUT", body: patch });
 }
 
 export async function deleteAutomation(id: string): Promise<void> {

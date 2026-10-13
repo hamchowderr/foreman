@@ -35,8 +35,12 @@ export interface Automation {
   updated_at: string;
 }
 
+/** "live" = a run of the published version; "draft" = a free test run of a draft. */
+export type AutomationRunKind = "draft" | "live";
+
 export interface AutomationRun {
   id: string;
+  kind: AutomationRunKind;
   status: string;
   inbox_message_id: string | null;
   trigger_id: string | null;
@@ -149,4 +153,31 @@ export interface RunResult {
   triggerId: string;
   status: string;
   durableRunId: string | null;
+}
+
+/** Result of `POST /automations/:id/test` — a draft run, or ephemeral when no saved workflow. */
+export interface TestRunResult {
+  kind: "draft" | "ephemeral";
+  runId: string;
+  status: string;
+  durableRunId: string | null;
+}
+
+export type AgenticManagementMode = "heal" | "expand" | "harden";
+
+/** Zapier agentic-management state for one automation. */
+export interface AgenticManagementState {
+  enabled: boolean;
+  autoApprove: boolean;
+  /** May include server-only modes (migrate/optimize) beyond the three Foreman sets. */
+  modes: string[];
+  managerId: string | null;
+  intent: string | null;
+}
+
+export interface AgenticManagementPatch {
+  enabled?: boolean;
+  modes?: AgenticManagementMode[];
+  autoApprove?: boolean;
+  intent?: string;
 }

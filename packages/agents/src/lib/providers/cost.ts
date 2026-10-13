@@ -36,11 +36,23 @@ export interface ModelPricing {
  * the other will miss validation or miss cost accounting.
  */
 export const MODEL_PRICING: Record<string, ModelPricing> = {
+  // Vercel AI Gateway — passes provider list prices through with no markup
+  // (vercel.com/docs/ai-gateway/pricing), so these mirror the direct entries.
+  "vercel/anthropic/claude-sonnet-4.6": { inputPer1M: 3, outputPer1M: 15, cachedInputPer1M: 0.3 },
+  "vercel/anthropic/claude-haiku-4.5": { inputPer1M: 1, outputPer1M: 5, cachedInputPer1M: 0.1 },
+  "vercel/anthropic/claude-opus-4.6": { inputPer1M: 5, outputPer1M: 25, cachedInputPer1M: 0.5 },
+  "vercel/openai/gpt-4o": { inputPer1M: 2.5, outputPer1M: 10 },
+  "vercel/openai/gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 },
+  "vercel/openai/gpt-4.1": { inputPer1M: 2, outputPer1M: 8 },
+  "vercel/openai/gpt-4.1-mini": { inputPer1M: 0.4, outputPer1M: 1.6 },
+  "vercel/google/gemini-2.5-flash": { inputPer1M: 0.075, outputPer1M: 0.3 },
+  "vercel/google/gemini-2.5-pro": { inputPer1M: 1.25, outputPer1M: 5 },
+
   // Anthropic — anthropic.com/pricing
   "anthropic/claude-sonnet-4-6": { inputPer1M: 3, outputPer1M: 15, cachedInputPer1M: 0.3 },
   "anthropic/claude-haiku-4-5-20251001": { inputPer1M: 1, outputPer1M: 5, cachedInputPer1M: 0.1 },
   "anthropic/claude-haiku-4-5": { inputPer1M: 1, outputPer1M: 5, cachedInputPer1M: 0.1 },
-  "anthropic/claude-opus-4-6": { inputPer1M: 15, outputPer1M: 75, cachedInputPer1M: 1.5 },
+  "anthropic/claude-opus-4-6": { inputPer1M: 5, outputPer1M: 25, cachedInputPer1M: 0.5 },
 
   // OpenAI — openai.com/api/pricing
   "openai/gpt-4o": { inputPer1M: 2.5, outputPer1M: 10 },
@@ -75,6 +87,20 @@ export interface CostBreakdown {
   cachedInputCostUsd: number;
   totalCostUsd: number;
   pricingMissing: boolean;
+}
+
+/**
+ * Map the model id a finish event reports onto a MODEL_PRICING key. Callers
+ * see three shapes: the configured id (`vercel/anthropic/claude-sonnet-4.6`),
+ * the gateway's own id without the Mastra prefix (`anthropic/claude-sonnet-4.6`),
+ * and a bare provider id (`claude-sonnet-4-6`). Returns the first candidate
+ * that has pricing, or the input unchanged so the miss is still logged.
+ */
+export function resolvePricingKey(rawModel: string): string {
+  const candidates = rawModel.includes("/")
+    ? [rawModel, `vercel/${rawModel}`]
+    : [`vercel/anthropic/${rawModel}`, `anthropic/${rawModel}`];
+  return candidates.find((c) => c in MODEL_PRICING) ?? rawModel;
 }
 
 function providerOf(model: string): string {
@@ -151,19 +177,15 @@ export function onFinishCostLogger(agent: AgentName) {
     model?: string | { modelId?: string };
   }): void => {
     // Prefer the model that ACTUALLY ran this call (per-request override from
-    // the composer's model selector) over the agent's static default. AI SDK v6
-    // exposes it on the finish event's response metadata. The router gives Mastra
-    // a bare provider model id (e.g. "claude-haiku-4-5-20251001"), so re-attach
-    // the "anthropic/" prefix to match the MODEL_PRICING keys.
+    // the composer's model selector) over the agent's static default. AI SDK
+    // exposes it on the finish event's response metadata, but without Mastra's
+    // `vercel/` prefix (or any prefix at all), so normalize it back onto a
+    // MODEL_PRICING key.
     const rawModel =
       event?.response?.modelId ??
       event?.modelId ??
       (typeof event?.model === "string" ? event.model : event?.model?.modelId);
-    const model = rawModel
-      ? rawModel.includes("/")
-        ? rawModel
-        : `anthropic/${rawModel}`
-      : primary(AGENT_MODELS[agent]);
+    const model = rawModel ? resolvePricingKey(rawModel) : primary(AGENT_MODELS[agent]);
     const usage = event?.totalUsage ?? { inputTokens: 0, outputTokens: 0 };
     const breakdown = calculateCost(model, usage);
 

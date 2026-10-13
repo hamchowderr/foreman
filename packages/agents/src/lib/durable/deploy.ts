@@ -181,6 +181,24 @@ export async function deployAutomation(opts: DeployAutomationOptions): Promise<D
       : undefined,
   });
 
+  // Agentic management reads the per-VERSION intent to judge proposed fixes, and a
+  // freshly published version starts with none — so record what this version is
+  // meant to do from the spec's description. Best-effort: the deploy already
+  // succeeded, and a missing intent only weakens future heal/expand proposals.
+  if (description?.trim()) {
+    try {
+      await sdk.updateAgenticManagementIntent({
+        workflow: workflowId,
+        version: version.data.id,
+        intent: description.trim(),
+      });
+    } catch (err) {
+      console.warn(
+        `[durable] could not record agentic-management intent for ${workflowId}: ${(err as Error).message}`,
+      );
+    }
+  }
+
   let finalEnabled = enabled;
   let triggerClaimFailed = false;
   let disabledReason: string | null | undefined;
@@ -223,6 +241,185 @@ export async function runAutomationOnce(opts: {
     private: true,
   });
   return { runId: r.data.id, status: r.data.status };
+}
+
+/** Which kind of workflow run — a published version ("live") or a draft test run. */
+export type WorkflowRunKind = "draft" | "live";
+
+export interface DraftTestResult {
+  kind: "draft";
+  /** The workflow-run id (getWorkflowRun / listWorkflowRuns). */
+  runId: string;
+  status: string;
+  /** Null until the engine links the durable execution. */
+  durableRunId: string | null;
+  draftId: string;
+  draftRevision: number;
+}
+
+/**
+ * Test durable source as a DRAFT run of an already-saved workflow (SDK 0.110.0
+ * `runWorkflowDraft`). Forks a draft off the live version, saves `source` into
+ * it, and launches a run of exactly that revision — nothing is published and the
+ * live version is untouched. Draft runs are not task-charged, but they execute
+ * the source for real: any `sdk.runAction` step hits the connected app.
+ *
+ * The run snapshots the draft's payload at creation, so the draft is discarded
+ * right after launch (unless `keepDraft`): an open draft would otherwise make a
+ * later `publishWorkflowVersion` 409 and linger in the user's editor. Like
+ * `runAutomationOnce`, this returns as soon as the run is accepted ("initialized");
+ * follow it with `getWorkflowRunStatus`.
+ */
+export async function testAutomationDraft(opts: {
+  sdk: Sdk;
+  workflowId: string;
+  source: string;
+  input?: unknown;
+  connections?: Record<string, string | number>;
+  keepDraft?: boolean;
+}): Promise<DraftTestResult> {
+  const { sdk, workflowId } = opts;
+  const created = await sdk.createWorkflowDraft({ workflow: workflowId, slug: "foreman-test" });
+  const draftId = created.data.id;
+  try {
+    const saved = await sdk.updateWorkflowDraft({
+      workflow: workflowId,
+      draft: draftId,
+      sourceFiles: { [SOURCE_FILE]: opts.source },
+      dependencies: durableDependencies(),
+      zapierDurableVersion: AGED_DURABLE_DEPS.durable,
+      // Optimistic concurrency against the revision we just forked.
+      draftRevision: created.data.draft_revision,
+      // Foreman owns the firing (inbox worker / scheduler), so every durable it
+      // deploys is manual — keep the draft consistent with the live version.
+      manual: true,
+      connections: shapeConnections(opts.connections) ?? null,
+    });
+    const run = await sdk.runWorkflowDraft({
+      workflow: workflowId,
+      draft: draftId,
+      draftRevision: saved.data.draft_revision,
+      input: opts.input,
+    });
+    return {
+      kind: "draft",
+      runId: run.data.id,
+      status: run.data.status,
+      durableRunId: run.data.durable_run_id,
+      draftId,
+      draftRevision: run.data.draft_revision,
+    };
+  } finally {
+    if (!opts.keepDraft) {
+      await discardAutomationDraft(sdk, workflowId, draftId).catch((err) =>
+        console.warn(
+          `[durable] could not discard test draft ${draftId}: ${(err as Error).message}`,
+        ),
+      );
+    }
+  }
+}
+
+/** Soft-delete a workflow draft (status → discarded). */
+export async function discardAutomationDraft(
+  sdk: Sdk,
+  workflowId: string,
+  draftId: string,
+): Promise<void> {
+  await sdk.discardWorkflowDraft({ workflow: workflowId, draft: draftId });
+}
+
+/**
+ * Publish an open draft as the workflow's new live version (consumes the draft).
+ * Pass the `draftRevision` that was tested so a concurrent edit can't ship untested.
+ */
+export async function publishAutomationDraft(opts: {
+  sdk: Sdk;
+  workflowId: string;
+  draftId: string;
+  draftRevision?: number;
+  enabled?: boolean;
+}): Promise<{ versionId: string }> {
+  const r = await opts.sdk.publishWorkflowDraft({
+    workflow: opts.workflowId,
+    draft: opts.draftId,
+    draftRevision: opts.draftRevision,
+    enabled: opts.enabled,
+  });
+  return { versionId: r.data.version.id };
+}
+
+/** Current state of a workflow run, live or draft (`kind` says which). */
+export async function getWorkflowRunStatus(
+  sdk: Sdk,
+  runId: string,
+  workflowId?: string,
+): Promise<{
+  kind: WorkflowRunKind;
+  status: string;
+  durableRunId: string | null;
+  output: unknown;
+  error: unknown;
+}> {
+  const r = await sdk.getWorkflowRun({ run: runId, workflow: workflowId });
+  return {
+    kind: r.data.kind,
+    status: r.data.status,
+    durableRunId: r.data.durable_run_id,
+    output: r.data.output,
+    error: r.data.error,
+  };
+}
+
+/** One row of a workflow's run history with its kind made explicit. */
+export interface WorkflowRunSummary {
+  id: string;
+  kind: WorkflowRunKind;
+  status: string;
+  durableRunId: string | null;
+  input: unknown;
+  error: unknown;
+  createdAt: string;
+  updatedAt: string;
+  /** Live runs only. */
+  triggerId?: string | null;
+  workflowVersionId?: string | null;
+  /** Draft runs only. */
+  workflowDraftId?: string | null;
+  draftRevision?: number;
+}
+
+type ListedWorkflowRun = Awaited<ReturnType<Sdk["listWorkflowRuns"]>>["data"][number];
+
+function summarizeRun(r: ListedWorkflowRun): WorkflowRunSummary {
+  const base = {
+    id: r.id,
+    // Pre-0.110 rows (and fakes) may omit kind — those were all live runs.
+    kind: (r.kind ?? "live") as WorkflowRunKind,
+    status: r.status,
+    durableRunId: r.durable_run_id,
+    input: r.input,
+    error: r.error,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+  return r.kind === "draft"
+    ? { ...base, workflowDraftId: r.workflow_draft_id, draftRevision: r.draft_revision }
+    : { ...base, triggerId: r.trigger_id, workflowVersionId: r.workflow_version_id };
+}
+
+/** A workflow's runs, newest first. Omit `kind` for live + draft interleaved. */
+export async function listWorkflowRunsByKind(
+  sdk: Sdk,
+  workflowId: string,
+  opts: { kind?: WorkflowRunKind; maxItems?: number } = {},
+): Promise<WorkflowRunSummary[]> {
+  const res = await sdk.listWorkflowRuns({
+    workflow: workflowId,
+    maxItems: opts.maxItems ?? 10,
+    ...(opts.kind ? { kind: opts.kind } : {}),
+  });
+  return res.data.map(summarizeRun);
 }
 
 /** Manually fire a deployed workflow. Returns the trigger id (bridge via getTriggerRunStatus). */
@@ -437,14 +634,20 @@ export async function listAutomations(sdk: Sdk): Promise<AutomationSummary[]> {
   }));
 }
 
+/**
+ * Workflow + recent run history. Since SDK 0.110.0 the run list interleaves live
+ * runs with free draft test runs; every run carries an explicit `kind`, and
+ * `kind` narrows the list (pass "live" when only real executions count).
+ */
 export async function inspectAutomation(
   sdk: Sdk,
   workflowId: string,
   maxRuns = 10,
-): Promise<{ workflow: unknown; runs: unknown[] }> {
+  kind?: WorkflowRunKind,
+): Promise<{ workflow: unknown; runs: WorkflowRunSummary[] }> {
   const wf = await sdk.getWorkflow({ workflow: workflowId });
-  const runs = await sdk.listWorkflowRuns({ workflow: workflowId, maxItems: maxRuns });
-  return { workflow: wf.data, runs: runs.data };
+  const runs = await listWorkflowRunsByKind(sdk, workflowId, { kind, maxItems: maxRuns });
+  return { workflow: wf.data, runs };
 }
 
 export async function deleteAutomation(sdk: Sdk, workflowId: string): Promise<void> {
@@ -461,4 +664,86 @@ export async function setAutomationEnabled(
     ? await sdk.enableWorkflow({ workflow: workflowId })
     : await sdk.disableWorkflow({ workflow: workflowId });
   return r.data.enabled;
+}
+
+/** Agentic-management modes Foreman may set (the API may also report migrate/optimize). */
+export type AgenticManagementMode = "heal" | "expand" | "harden";
+export const AGENTIC_MANAGEMENT_MODES: readonly AgenticManagementMode[] = [
+  "heal",
+  "expand",
+  "harden",
+];
+
+export interface AgenticManagementState {
+  enabled: boolean;
+  autoApprove: boolean;
+  modes: string[];
+  managerId: string | null;
+  /** The live version's recorded intent; null if none (or unreadable). */
+  intent: string | null;
+}
+
+/** Read a workflow's agentic-management config + the live version's intent. */
+export async function getAutomationManagement(
+  sdk: Sdk,
+  workflowId: string,
+): Promise<AgenticManagementState> {
+  const cfg = await sdk.getAgenticManagementConfig({ workflow: workflowId });
+  let intent: string | null = null;
+  try {
+    intent = (await sdk.getAgenticManagementIntent({ workflow: workflowId })).data.intent;
+  } catch {
+    // Intent is advisory; a failed read shouldn't hide the config.
+  }
+  return {
+    enabled: cfg.data.enabled,
+    autoApprove: cfg.data.auto_approve,
+    modes: cfg.data.modes,
+    managerId: cfg.data.manager_id ?? null,
+    intent,
+  };
+}
+
+export interface AgenticManagementPatch {
+  /** true = enable, false = disable (settings are kept), omit = leave as is. */
+  enabled?: boolean;
+  /** Replaces the whole mode set. */
+  modes?: AgenticManagementMode[];
+  /** Apply proposed fixes without human approval. */
+  autoApprove?: boolean;
+  /** What the live version is meant to do. */
+  intent?: string;
+}
+
+/**
+ * Change a workflow's agentic management. Enabling always sends an explicit
+ * `autoApprove` (default FALSE): the SDK treats an omitted value on first enable
+ * as "apply fixes without asking", which contradicts Foreman's human-approval
+ * model. Returns the resulting state.
+ */
+export async function setAutomationManagement(
+  sdk: Sdk,
+  workflowId: string,
+  patch: AgenticManagementPatch,
+): Promise<AgenticManagementState> {
+  if (patch.enabled === true) {
+    await sdk.enableAgenticManagement({
+      workflow: workflowId,
+      modes: patch.modes,
+      autoApprove: patch.autoApprove ?? false,
+    });
+  } else {
+    if (patch.enabled === false) await sdk.disableAgenticManagement({ workflow: workflowId });
+    if (patch.modes !== undefined || patch.autoApprove !== undefined) {
+      await sdk.updateAgenticManagementConfig({
+        workflow: workflowId,
+        modes: patch.modes,
+        autoApprove: patch.autoApprove,
+      });
+    }
+  }
+  if (patch.intent?.trim()) {
+    await sdk.updateAgenticManagementIntent({ workflow: workflowId, intent: patch.intent.trim() });
+  }
+  return getAutomationManagement(sdk, workflowId);
 }

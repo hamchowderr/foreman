@@ -4,11 +4,21 @@ import {
   deleteAutomation as deleteZapierWorkflow,
   deliveryForActiveAdapter,
   deployAutomation,
+  getAutomationManagement,
   getTriggerRunStatus,
+  listWorkflowRunsByKind,
+  runAutomationOnce,
   setAutomationEnabled,
+  setAutomationManagement,
+  testAutomationDraft,
   triggerAutomation,
 } from "../durable";
-import type { DeployResult } from "../durable/deploy";
+import type {
+  AgenticManagementPatch,
+  AgenticManagementState,
+  DeployResult,
+  WorkflowRunKind,
+} from "../durable/deploy";
 import { runDurableLocally } from "../durable/runner";
 import { resolveActiveWorkspace } from "../identity";
 import { getInbox, listInboxMessages } from "../trigger-inbox";
@@ -172,16 +182,165 @@ export async function listForUser(userId: string): Promise<AutomationRow[]> {
   return store.listAutomations(workspaceId);
 }
 
+/**
+ * A run as the UI/agent sees it. Foreman-recorded runs are always LIVE (fired via
+ * triggerWorkflow / the inbox worker / the scheduler); free draft test runs live
+ * only on Zapier and are merged in with `kind: "draft"`.
+ */
+export type AutomationRunView = AutomationRunRow & { kind: WorkflowRunKind };
+
+/** Digest automations carry a sentinel workflow id that never reached Zapier. */
+function hasZapierWorkflow(automation: AutomationRow): boolean {
+  return (
+    Boolean(automation.zapier_workflow_id) &&
+    !automation.zapier_workflow_id.startsWith("foreman:digest:")
+  );
+}
+
+/** Recent draft test runs from Zapier, shaped like store rows. Best-effort: [] on any failure. */
+async function listDraftRunViews(
+  userId: string,
+  automation: AutomationRow,
+  maxRuns: number,
+): Promise<AutomationRunView[]> {
+  if (activeDurableAdapter() !== "zapier" || !hasZapierWorkflow(automation)) return [];
+  try {
+    const sdk = await getExperimentalSdkForUser(userId);
+    const drafts = await listWorkflowRunsByKind(sdk, automation.zapier_workflow_id, {
+      kind: "draft",
+      maxItems: maxRuns,
+    });
+    return drafts.map((r) => ({
+      id: r.id,
+      automation_id: automation.id,
+      workspace_id: automation.workspace_id,
+      inbox_message_id: null,
+      trigger_id: null,
+      durable_run_id: r.durableRunId,
+      workflow_version_id: null,
+      status: r.status,
+      input: r.input,
+      // listWorkflowRuns rows carry no output; getWorkflowRun has it.
+      output: null,
+      error: r.error,
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
+      kind: "draft" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function inspectForUser(
   userId: string,
   automationId: string,
   maxRuns = 20,
-): Promise<{ automation: AutomationRow; runs: AutomationRunRow[] } | null> {
+): Promise<{ automation: AutomationRow; runs: AutomationRunView[] } | null> {
   const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
   const automation = await store.getAutomation(workspaceId, automationId);
   if (!automation) return null;
-  const runs = await store.listRuns(workspaceId, automationId, maxRuns);
+  const [liveRows, draftRuns] = await Promise.all([
+    store.listRuns(workspaceId, automationId, maxRuns),
+    listDraftRunViews(userId, automation, maxRuns),
+  ]);
+  const runs: AutomationRunView[] = [
+    ...liveRows.map((r) => ({ ...r, kind: "live" as const })),
+    ...draftRuns,
+  ].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
   return { automation, runs };
+}
+
+export interface TestRunResult {
+  /** "draft" = draft run of the saved workflow; "ephemeral" = one-off runDurable (no saved workflow). */
+  kind: "draft" | "ephemeral";
+  runId: string;
+  status: string;
+  durableRunId: string | null;
+}
+
+/**
+ * Test an automation's source WITHOUT touching its live version. With a saved
+ * Zapier workflow this is a free draft run (`runWorkflowDraft`); without one it
+ * falls back to the ephemeral `runDurable` path. `source` overrides the stored
+ * source so an edit can be tried before redeploying. Draft runs execute for real
+ * — connected-app actions in the source do happen. Not recorded in
+ * automation_run (the reconcile worker tracks live trigger runs only); draft runs
+ * show up through `inspectForUser`'s Zapier merge. Returns null if not found.
+ */
+export async function testAutomationById(
+  userId: string,
+  automationId: string,
+  opts: { input?: Record<string, unknown>; source?: string } = {},
+): Promise<TestRunResult | null> {
+  const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const automation = await store.getAutomation(workspaceId, automationId);
+  if (!automation) return null;
+
+  const source = opts.source ?? automation.source;
+  if (!source.trim()) throw new Error("This automation has no durable source to test");
+  if (activeDurableAdapter() !== "zapier") {
+    throw new Error("Draft test runs need the Zapier durable adapter");
+  }
+
+  const sdk = await getExperimentalSdkForUser(userId);
+  if (!hasZapierWorkflow(automation)) {
+    const r = await runAutomationOnce({
+      sdk,
+      source,
+      input: opts.input,
+      connections: automation.connections,
+    });
+    return { kind: "ephemeral", runId: r.runId, status: r.status, durableRunId: r.runId };
+  }
+
+  const r = await testAutomationDraft({
+    sdk,
+    workflowId: automation.zapier_workflow_id,
+    source,
+    input: opts.input,
+    connections: automation.connections,
+  });
+  return { kind: "draft", runId: r.runId, status: r.status, durableRunId: r.durableRunId };
+}
+
+async function managedAutomation(
+  userId: string,
+  automationId: string,
+): Promise<AutomationRow | null> {
+  const workspaceId = (await resolveActiveWorkspace(userId)) ?? undefined;
+  const automation = await store.getAutomation(workspaceId, automationId);
+  if (!automation) return null;
+  if (!hasZapierWorkflow(automation)) {
+    throw new Error("Agentic management needs a deployed Zapier workflow");
+  }
+  return automation;
+}
+
+/** Read an automation's agentic-management config + intent. Null if not found. */
+export async function getManagementForUser(
+  userId: string,
+  automationId: string,
+): Promise<AgenticManagementState | null> {
+  const automation = await managedAutomation(userId, automationId);
+  if (!automation) return null;
+  const sdk = await getExperimentalSdkForUser(userId);
+  return getAutomationManagement(sdk, automation.zapier_workflow_id);
+}
+
+/**
+ * Enable/disable/reconfigure agentic management. Enabling defaults `autoApprove`
+ * to false (see setAutomationManagement). Null if not found.
+ */
+export async function updateManagementForUser(
+  userId: string,
+  automationId: string,
+  patch: AgenticManagementPatch,
+): Promise<AgenticManagementState | null> {
+  const automation = await managedAutomation(userId, automationId);
+  if (!automation) return null;
+  const sdk = await getExperimentalSdkForUser(userId);
+  return setAutomationManagement(sdk, automation.zapier_workflow_id, patch);
 }
 
 export interface InboxView {

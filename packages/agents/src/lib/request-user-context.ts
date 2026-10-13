@@ -51,3 +51,42 @@ export function resolveRequestUserId(
   if (typeof fromRequest === "string" && fromRequest) return fromRequest;
   return requestUserContext.getStore()?.userId;
 }
+
+/** The key the conversation's Mastra thread id is stamped under (the web `/chat`
+ *  route sets it alongside `userId`; the proposal approve route sets it too). */
+export const THREAD_ID_KEY = "threadId";
+
+/** The key an approved action proposal's id is stamped under while that approved
+ *  tool call executes (`POST /proposals/:id/approve`). */
+export const PROPOSAL_ID_KEY = "proposalId";
+
+/**
+ * Zapier request-tracing ids for the current run (SDK 0.105.0 `correlationId` /
+ * `causationId`, sent as `zapier-correlation-id` / `zapier-causation-id` headers).
+ *
+ * - `correlationId` — the conversation / Mastra thread id, so every Zapier call a
+ *   conversation makes can be tied together on Zapier's side. RequestContext
+ *   wins; the tool's own `agent.threadId` is the fallback.
+ * - `causationId` — the approved proposal's id, set only on the approval path,
+ *   so the Zapier run traces back to the human approval that caused it.
+ *
+ * Per-run values only. The SDK's `ZAPIER_CORRELATION_ID` / `ZAPIER_CAUSATION_ID`
+ * env vars are process-wide and this server is multi-tenant — never use them.
+ */
+export interface ZapierTraceIds {
+  correlationId?: string;
+  causationId?: string;
+}
+
+export function resolveTraceIds(
+  requestContext?: ReadableRequestContext | null,
+  agentThreadId?: string,
+): ZapierTraceIds {
+  const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+  const correlationId = str(requestContext?.get(THREAD_ID_KEY)) ?? str(agentThreadId);
+  const causationId = str(requestContext?.get(PROPOSAL_ID_KEY));
+  return {
+    ...(correlationId ? { correlationId } : {}),
+    ...(causationId ? { causationId } : {}),
+  };
+}

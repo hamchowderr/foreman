@@ -27,7 +27,7 @@ packages/web/      → Next.js 16 frontend (port 3000)
 
 Models are centralized in `agents/src/lib/providers/models.ts` (`AGENT_MODELS`) and are
 env-overridable (`FOREMAN_MODEL`, `DISCOVERY_MODEL`, `EXECUTION_MODEL`, …). Tier defaults:
-`default` = `claude-sonnet-4-6`, `fast` = `claude-haiku-4-5-20251001`, `heavy` = `claude-opus-4-6`.
+`default` = `vercel/anthropic/claude-sonnet-4.6`, `fast` = `vercel/anthropic/claude-haiku-4.5`, `heavy` = `vercel/anthropic/claude-opus-4.6` (Vercel AI Gateway, `AI_GATEWAY_API_KEY`).
 
 Mastra instance + server config: `agents/src/mastra/index.ts`
 
@@ -43,6 +43,7 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
 - `READ_ONLY` set: 27 discovery tools (used for MCP annotations + agent-level background execution)
 - `EXCLUDED_METHODS` set: 23 methods skipped during tool generation — deprecated wrappers (`request`, the `*Authentication` duplicates of the `connection`-prefixed methods, the `*InputField*` aliases) plus surfaces Foreman doesn't expose (Connect-Builder OAuth client-credentials; the blocking `createConnection`/`getConnectionStartUrl`/`waitForNewConnection` helpers; the trigger-inbox lifecycle + lease/ack methods that `lib/trigger-inbox/` drives directly)
 - The durable-workflow surface (`createWorkflow`, `publishWorkflowVersion`, `validateWorkflow`, `importWorkflow`, …) is **not** in the mcp registry — it lives on the experimental client (`@zapier/zapier-sdk/experimental` via `getExperimentalSdkForUser`) and needs no classification
+- **Stability tiers (SDK 0.113.0):** stable `@zapier/zapier-sdk`, beta `@zapier/zapier-sdk/beta`, experimental `@zapier/zapier-sdk/experimental`. The `/beta` tier currently ships empty — it exposes the same 58 methods as stable — so Foreman's imports stay on stable + experimental. Re-check after SDK bumps whether anything has moved into `/beta`.
 - **Auth model** — which auth (client-creds vs per-user userJwt) works on which SDK surface, and why durable is internal-scope-walled: [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md)
 
 ### Custom Tools
@@ -172,11 +173,11 @@ For requirements, full quick-start, env vars, ngrok, deployment, and the testing
 
 ## Gotchas (hard-won — read before debugging the agent server)
 
-- **Run the agents server through Infisical.** Secrets (incl. `ANTHROPIC_API_KEY`)
+- **Run the agents server through Infisical.** Secrets (incl. `AI_GATEWAY_API_KEY`)
   live in Infisical (`otaku-internal`/`dev`), **not** in `agents/.env.local`
   (those keys are commented out). Start with:
   `cd packages/agents && infisical run --projectId e56e0da5-6460-4bab-bdd6-2fd12ac5447b --env dev --recursive --silent -- npm run dev`.
-  Plain `npm run dev` → no Anthropic key → every chat 500s with `invalid x-api-key`.
+  Plain `npm run dev` → no gateway key → every chat 500s on auth.
   Local infra (`DATABASE_URL`, local `SUPABASE_URL`) stays in `.env.local` and is
   baked in by `mastra dev`, so Infisical's cloud values don't clobber it.
 - **Keep `@mastra/core`, `@mastra/deployer`, `@mastra/server` on the SAME version.**

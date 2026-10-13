@@ -20,13 +20,28 @@ const baseWithCaching: Set<Capability> = new Set(["tools", "streaming", "prompt-
 
 /**
  * Models Foreman is tested against. Unknown models fail startup validation.
+ * The `vercel/` entries are the Vercel AI Gateway ids Foreman uses by default;
+ * the gateway forwards `providerOptions.anthropic.cacheControl` to Anthropic
+ * unchanged, so Claude keeps prompt caching through it. The direct-provider
+ * ids below stay for anyone running with their own provider keys.
  * Only Anthropic Claude variants expose explicit cache_control; OpenAI has
  * automatic prefix caching (not opt-in via an API flag) and Gemini/others
  * don't have an equivalent AI SDK surface, so `prompt-caching` is Anthropic-
  * only here.
  */
 export const MODEL_CAPABILITIES: Record<string, Set<Capability>> = {
-  // Anthropic
+  // Vercel AI Gateway (default — AI_GATEWAY_API_KEY)
+  "vercel/anthropic/claude-sonnet-4.6": baseWithCaching,
+  "vercel/anthropic/claude-haiku-4.5": baseWithCaching,
+  "vercel/anthropic/claude-opus-4.6": baseWithCaching,
+  "vercel/openai/gpt-4o": base,
+  "vercel/openai/gpt-4o-mini": base,
+  "vercel/openai/gpt-4.1": base,
+  "vercel/openai/gpt-4.1-mini": base,
+  "vercel/google/gemini-2.5-flash": base,
+  "vercel/google/gemini-2.5-pro": base,
+
+  // Anthropic (direct — ANTHROPIC_API_KEY)
   "anthropic/claude-sonnet-4-6": baseWithCaching,
   "anthropic/claude-haiku-4-5-20251001": baseWithCaching,
   "anthropic/claude-haiku-4-5": baseWithCaching,

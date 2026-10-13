@@ -101,7 +101,7 @@ own docs page lists the exact scopes and developer-portal steps.
 | WhatsApp | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` |
 | GitHub | `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID` |
 | Linear | `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, `LINEAR_ACCESS_TOKEN` |
-| iMessage | `IMESSAGE_API_KEY`, `IMESSAGE_SERVER_URL` (when relaying via a Mac) |
+| iMessage | `IMESSAGE_PROJECT_ID`, `IMESSAGE_PROJECT_SECRET`, `IMESSAGE_WEBHOOK_SECRET` (Spectrum Cloud), or `IMESSAGE_SERVER_URL` (gRPC `host:port`) + `IMESSAGE_API_KEY` (self-hosted) |
 
 `packages/agents/src/lib/env.ts` is the authoritative list.
 

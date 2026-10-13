@@ -22,9 +22,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/guardrails", () => ({
   checkRateLimit: vi.fn(async () => ({ allowed: true })),
   checkAppAccess: vi.fn(async () => ({ allowed: true })),
+  checkKnownActionPermission: vi.fn(() => ({ allowed: true })),
+  recordActionPermissions: vi.fn(),
 }));
 
-import { checkAppAccess, checkRateLimit } from "@/lib/guardrails";
+import { checkAppAccess, checkKnownActionPermission, checkRateLimit } from "@/lib/guardrails";
 import { requestUserContext } from "@/lib/request-user-context";
 import { generateZapierTools } from "@/lib/zapier-sdk-tools";
 
@@ -54,6 +56,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true });
   vi.mocked(checkAppAccess).mockResolvedValue({ allowed: true });
+  vi.mocked(checkKnownActionPermission).mockReturnValue({ allowed: true });
 });
 
 describe("guardrails on generated tools", () => {
@@ -83,6 +86,20 @@ describe("guardrails on generated tools", () => {
     expect(res.retryable).toBe(false);
     expect(res.error).toContain("chase");
     expect(checkAppAccess).toHaveBeenCalledWith("user-1", "chase");
+  });
+
+  it("blocks a run of an action an admin restricted (known can_use=false)", async () => {
+    vi.mocked(checkKnownActionPermission).mockReturnValueOnce({
+      allowed: false,
+      reason: 'The slack action "send" (write) has been restricted by an admin.',
+    });
+
+    const res = await asAlsUser("user-1", () => run("run-action", WRITE));
+
+    expect(res.code).toBe("ACTION_RESTRICTED");
+    expect(res.retryable).toBe(false);
+    expect(res.error).toContain("restricted by an admin");
+    expect(checkKnownActionPermission).toHaveBeenCalledWith("user-1", "slack", "write", "send");
   });
 
   it("does not rate-limit read-only discovery tools", async () => {

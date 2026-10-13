@@ -71,10 +71,15 @@ const envSchema = z.object({
   IMESSAGE_LOCAL: z.string().optional(),
   IMESSAGE_SERVER_URL: z.string().optional(),
   IMESSAGE_API_KEY: z.string().optional(),
+  IMESSAGE_PROJECT_ID: z.string().optional(),
+  IMESSAGE_PROJECT_SECRET: z.string().optional(),
+  IMESSAGE_WEBHOOK_SECRET: z.string().optional(),
   // Model provider overrides (see src/lib/providers/). Any unset value falls
-  // back to the tier default, then to the hardcoded Anthropic default.
+  // back to the tier default, then to the hardcoded Claude-via-gateway default.
   // Per-agent values accept a comma-separated fallback chain, e.g.
-  //   EXECUTION_MODEL=anthropic/claude-sonnet-4-6,openai/gpt-4o
+  //   EXECUTION_MODEL=vercel/anthropic/claude-sonnet-4.6,vercel/openai/gpt-4o
+  // Vercel AI Gateway key — authenticates every default `vercel/...` model.
+  AI_GATEWAY_API_KEY: z.string().optional(),
   MODEL_DEFAULT: z.string().optional(),
   MODEL_FAST: z.string().optional(),
   MODEL_HEAVY: z.string().optional(),
