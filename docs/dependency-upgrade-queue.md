@@ -21,9 +21,8 @@ longer appear in `npm outdated`.
 
 | Issue | Package | Current | Latest | P | Notes |
 |---|---|---|---|---|---|
-| foreman-sd1r | `typescript` | 5.9.3 | 7.0.2 | 2 | Two majors. Highest risk in the tree; do alone. No new `@ts-expect-error` to silence real errors. |
+| foreman-sd1r | `typescript` | 6.0.3 | 7.0.2 | 2 | 6.0.3 landed (stacked PR). 7.x is the native Go compiler and ships no JS compiler API (`require("typescript")` only exports the version), which breaks Next.js build type-checking and `typescript-paths` (used by `@mastra/deployer`, peer `<7`). Revisit when those support TS 7. |
 | foreman-cpdh | `@types/node` | 24.13.3 | 26.4.0 | 2 | Two majors. Declared in **all three** workspaces — must move together. Confirm the target Node version first. |
-| foreman-5qml | `chat-adapter-imessage` | 0.1.1 | 1.1.0 | 3 | 0.x→1.x, so no semver protection. Confirm the adapter is still wanted — if it's dead weight, remove rather than upgrade. |
 
 ## Also open, not a dependency
 

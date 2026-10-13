@@ -71,6 +71,9 @@ const envSchema = z.object({
   IMESSAGE_LOCAL: z.string().optional(),
   IMESSAGE_SERVER_URL: z.string().optional(),
   IMESSAGE_API_KEY: z.string().optional(),
+  IMESSAGE_PROJECT_ID: z.string().optional(),
+  IMESSAGE_PROJECT_SECRET: z.string().optional(),
+  IMESSAGE_WEBHOOK_SECRET: z.string().optional(),
   // Model provider overrides (see src/lib/providers/). Any unset value falls
   // back to the tier default, then to the hardcoded Anthropic default.
   // Per-agent values accept a comma-separated fallback chain, e.g.

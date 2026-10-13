@@ -23,7 +23,7 @@ export async function getiMessageBot() {
 
   const bot = new Chat({
     userName: "foreman",
-    adapters: { imessage } as any, // Type mismatch: chat-adapter-imessage missing channelIdFromThreadId
+    adapters: { imessage },
     state: createMemoryState(),
     logger: "info",
   });
