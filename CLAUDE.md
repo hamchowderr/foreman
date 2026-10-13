@@ -19,7 +19,7 @@ packages/web/      → Next.js 16 frontend (port 3000)
 
 | Agent             | File                                     | Model      | Tools                                                   |
 | ----------------- | ---------------------------------------- | ---------- | ------------------------------------------------------- |
-| Foreman (primary) | `agents/src/mastra/agents/foreman.ts`    | sonnet 4.6 | All SDK tools (via ToolSearchProcessor) + 7 custom-tool modules |
+| Foreman (primary) | `agents/src/mastra/agents/foreman.ts`    | sonnet 4.6 | All SDK tools (via ToolSearchProcessor) + 8 custom-tool modules |
 | Supervisor        | `agents/src/mastra/agents/supervisor.ts` | sonnet 4.6 | Routes to discovery/execution/history agents            |
 | Discovery         | `agents/src/mastra/agents/discovery.ts`  | haiku 4.5  | 8 read-only SDK tools (`DISCOVERY_TOOL_NAMES`)          |
 | Execution         | `agents/src/mastra/agents/execution.ts`  | sonnet 4.6 | run-action, fetch, connect_zapier                       |
@@ -57,6 +57,7 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
 | preview_app                     | `agents/src/mastra/tools/preview-app.ts`       |
 | save_document                   | `agents/src/mastra/tools/save-document.ts`     |
 | create/run/inspect/list_automation | `agents/src/mastra/tools/automations.ts`   |
+| list/read/stat/write/append/copy/move/delete_stored_file, create_stored_folder | `agents/src/mastra/tools/stored-files.ts` (Zapier VFS via experimental SDK; writes need approval) |
 
 ### API Routes
 
