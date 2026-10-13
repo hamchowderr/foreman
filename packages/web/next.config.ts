@@ -24,7 +24,6 @@ const nextConfig: NextConfig = {
   experimental: {
     prefetchInlining: true,
     cachedNavigations: true,
-    appNewScrollHandler: true,
     inlineCss: true,
     // turbopackFileSystemCacheForDev intentionally OFF: the experimental Turbopack
     // dev FS cache triggers a process-spawn/OOM storm on Windows (see foreman-5rph).

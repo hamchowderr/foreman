@@ -294,7 +294,7 @@ function extractRunDetail(execution: DurableExecution | null): DurableRunDetail 
       status: o.status,
       retryCount: o.retry_count,
       maxAttempts: o.max_attempts,
-      nextRetryAt: o.next_retry_at,
+      nextRetryAt: o.next_retry_at ?? undefined,
       error: o.error,
     }));
   // Approval gates: ops carrying a callback_token are createCallback pauses.
@@ -305,8 +305,8 @@ function extractRunDetail(execution: DurableExecution | null): DurableRunDetail 
       status: o.status,
       callbackToken: o.callback_token,
       payloadSchema: o.payload_schema,
-      resumeAt: o.resume_at,
-      expiresAt: o.expires_at,
+      resumeAt: o.resume_at ?? undefined,
+      expiresAt: o.expires_at ?? undefined,
     }));
   const waiting = execution.status === "waiting";
   const lastError = execution.summary?.last_error ?? null;
