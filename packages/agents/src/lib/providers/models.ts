@@ -4,11 +4,16 @@
  * Resolution order for each agent's model:
  *   1. Per-agent env var (e.g. EXECUTION_MODEL)
  *   2. Tier env var (MODEL_DEFAULT / MODEL_FAST / MODEL_HEAVY)
- *   3. Hardcoded tier default (Anthropic)
+ *   3. Hardcoded tier default (Claude via the Vercel AI Gateway)
+ *
+ * Defaults route through Mastra's `vercel/` gateway prefix, which authenticates
+ * with AI_GATEWAY_API_KEY — no direct Anthropic key needed. Gateway model ids
+ * use dotted versions (`anthropic/claude-sonnet-4.6`), not Anthropic's dashed
+ * API ids. A direct `anthropic/...` id still works if ANTHROPIC_API_KEY is set.
  *
  * Per-agent env vars accept a single `provider/model` string OR a
  * comma-separated fallback chain that Mastra retries down on transient errors:
- *   EXECUTION_MODEL=anthropic/claude-sonnet-4-6,openai/gpt-4o
+ *   EXECUTION_MODEL=vercel/anthropic/claude-sonnet-4.6,vercel/openai/gpt-4o
  */
 
 /** Entry in a Mastra fallback array. Matches `ModelWithRetries` from `@mastra/core`. */
@@ -18,9 +23,9 @@ export type ModelFallback = { model: string; maxRetries?: number };
 export type ModelSpec = string | ModelFallback[];
 
 const TIER_DEFAULTS = {
-  default: "anthropic/claude-sonnet-4-6",
-  fast: "anthropic/claude-haiku-4-5-20251001",
-  heavy: "anthropic/claude-opus-4-6",
+  default: "vercel/anthropic/claude-sonnet-4.6",
+  fast: "vercel/anthropic/claude-haiku-4.5",
+  heavy: "vercel/anthropic/claude-opus-4.6",
 } as const;
 
 const FALLBACK_MAX_RETRIES = 2;

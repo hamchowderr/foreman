@@ -14,7 +14,7 @@ const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_SERVER_URL || "http://localhost:
 
 // The demo runs on haiku — cheap + fast, and reliable now that the table tools
 // coerce the stringified row data weak models emit (zapier-sdk-tools SCHEMA_OVERRIDES).
-const DEMO_MODEL = "anthropic/claude-haiku-4-5-20251001";
+const DEMO_MODEL = "vercel/anthropic/claude-haiku-4.5";
 
 // Per use-case demo: the table Foreman builds + the natural-language instruction
 // that drives it (showcasing NL → real action). The agent creates the table and
