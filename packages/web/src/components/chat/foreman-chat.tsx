@@ -8,9 +8,9 @@ import { FOREMAN_APPROVAL_VIEWS } from "@/components/chat/foreman-approval-views
  * The web chat: mastra-chat-kit's `ChatSwitcher` (conversations │ chat │ workbench) on
  * Foreman's AgentController (agents server: mastra/lib/agent-controller.ts).
  *
- * Workbench: Files and Terminal show the user's own per-tenant workspace; Schedules
- * shows only their schedules. Browser stays off until it is isolated per tenant, and
- * Memory is off because Foreman doesn't run observational memory.
+ * Workbench: Files and Terminal show the user's own per-tenant workspace; Memory shows
+ * the thread's observational memory; Schedules shows only their schedules. Browser
+ * stays off until it is isolated per tenant.
  */
 
 // Claude through the Vercel AI Gateway; the agent server allowlists the same ids.
@@ -41,7 +41,7 @@ export function ForemanChat() {
   return (
     <ChatSwitcher
       className="h-dvh"
-      workbenchTabs={["files", "terminal", "schedules"]}
+      workbenchTabs={["files", "terminal", "memory", "schedules"]}
       models={MODELS}
       webSearch={false}
       greeting={{

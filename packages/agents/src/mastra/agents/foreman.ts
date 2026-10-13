@@ -184,11 +184,9 @@ export function createForemanMemory(databaseUrl: string): Memory {
         messageRange: 1,
         scope: "resource",
       },
-      // observationalMemory removed: its input processor requires a threadId
-      // in RequestContext, which Mastra's experiment runner doesn't inject.
-      // workingMemory + lastMessages + semanticRecall provide sufficient
-      // memory for production conversational use.
-      observationalMemory: false,
+      // Observer + Reflector compress long threads into an observation log. They
+      // run on the fast tier through the AI Gateway, like generateTitle above.
+      observationalMemory: { model: MODELS.fast },
     },
   });
 }
