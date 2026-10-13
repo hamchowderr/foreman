@@ -283,8 +283,16 @@ export function getMastra(): Mastra {
           }
           const identity = await resolveFromRequest(c.req.raw);
           if (!identity) return c.json({ error: "Unauthorized" }, 401);
-          (c as any).set(CHAT_KIT_USER_KEY, identity.userId);
-          if (identity.workspaceId) (c as any).set(CHAT_KIT_WORKSPACE_KEY, identity.workspaceId);
+          // Mastra runs apiRoutes on a separate Hono app and carries only the
+          // request context across, so the identity goes there (not c.set). Set or
+          // clear both keys: a client can seed requestContext from the body/query.
+          const requestContext = (c as any).get("requestContext");
+          requestContext.set(CHAT_KIT_USER_KEY, identity.userId);
+          if (identity.workspaceId) {
+            requestContext.set(CHAT_KIT_WORKSPACE_KEY, identity.workspaceId);
+          } else {
+            requestContext.delete(CHAT_KIT_WORKSPACE_KEY);
+          }
           await next();
         },
         async (c, next) => {

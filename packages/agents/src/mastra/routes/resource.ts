@@ -8,7 +8,11 @@
  * Foreman user id, so each user gets their own Session and threads.
  */
 
-/** Hono context keys `chatKitAuth` sets. */
+/**
+ * Request-context keys `chatKitAuth` sets. They live on Mastra's per-request
+ * `requestContext`, the only thing Mastra carries from server middleware into
+ * custom apiRoutes (which run on a separate Hono app).
+ */
 export const CHAT_KIT_USER_KEY = "foremanUserId";
 export const CHAT_KIT_WORKSPACE_KEY = "foremanWorkspaceId";
 
@@ -17,19 +21,19 @@ export const CHAT_KIT_PREFIXES = ["/agent-controller", "/workspace", "/images", 
 
 // biome-ignore lint/suspicious/noExplicitAny: the Hono context type is Mastra-internal
 export function resourceIdOf(c: any): string | undefined {
-  try {
-    const id = c.get(CHAT_KIT_USER_KEY);
-    return typeof id === "string" && id ? id : undefined;
-  } catch {
-    return undefined;
-  }
+  return readKey(c, CHAT_KIT_USER_KEY);
 }
 
 /** The signed-in user's active workspace, when they have one. */
 // biome-ignore lint/suspicious/noExplicitAny: the Hono context type is Mastra-internal
 export function workspaceIdOf(c: any): string | undefined {
+  return readKey(c, CHAT_KIT_WORKSPACE_KEY);
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: the Hono context type is Mastra-internal
+function readKey(c: any, key: string): string | undefined {
   try {
-    const id = c.get(CHAT_KIT_WORKSPACE_KEY);
+    const id = c.get("requestContext")?.get(key);
     return typeof id === "string" && id ? id : undefined;
   } catch {
     return undefined;
