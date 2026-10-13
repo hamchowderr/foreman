@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  BotIcon,
   CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
+  FlaskConicalIcon,
   InboxIcon,
   PlayIcon,
   RefreshCwIcon,
@@ -15,6 +17,7 @@ import {
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
   EmptyDescription,
@@ -39,22 +42,164 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   cancelRun,
   deleteAutomation,
   getAutomation,
+  getAutomationManagement,
   getAutomations,
   getInboxState,
   respondToCallback,
   runAutomation,
   setAutomationEnabled,
+  testAutomation,
+  updateAutomationManagement,
 } from "@/data/automations";
 import type {
+  AgenticManagementMode,
+  AgenticManagementPatch,
+  AgenticManagementState,
   Automation,
   AutomationDetail,
   InboxState,
   ScheduleSpec,
 } from "@/data/automations-types";
+
+const MANAGEMENT_MODES: { mode: AgenticManagementMode; label: string; hint: string }[] = [
+  { mode: "heal", label: "Heal", hint: "Diagnose failed runs and draft a tested fix" },
+  {
+    mode: "expand",
+    label: "Expand",
+    hint: "Propose steps for runs that succeeded without doing anything",
+  },
+  { mode: "harden", label: "Harden", hint: "Turn repetitive AI steps into fixed code" },
+];
+
+/**
+ * Zapier agentic management for one automation: on/off, modes, auto-approve and
+ * the live version's intent. Loads its own state; keyed by automation id by the
+ * caller so switching automations resets it.
+ */
+function AgenticManagementPanel({ automationId }: { automationId: string }) {
+  const [state, setState] = useState<AgenticManagementState | null>(null);
+  const [intent, setIntent] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+
+  useEffect(() => {
+    let active = true;
+    getAutomationManagement(automationId)
+      .then((s) => {
+        if (!active) return;
+        setState(s);
+        setIntent(s.intent ?? "");
+      })
+      .catch((e) => active && setError((e as Error).message));
+    return () => {
+      active = false;
+    };
+  }, [automationId]);
+
+  function save(patch: AgenticManagementPatch) {
+    setError(null);
+    startSaving(async () => {
+      try {
+        const next = await updateAutomationManagement(automationId, patch);
+        setState(next);
+        setIntent(next.intent ?? "");
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    });
+  }
+
+  if (!state) {
+    return (
+      <p className="py-4 text-muted-foreground text-sm">{error ?? "Loading agentic management…"}</p>
+    );
+  }
+
+  const activeModes = MANAGEMENT_MODES.map((m) => m.mode).filter((m) => state.modes.includes(m));
+
+  return (
+    <div className="space-y-4 py-2">
+      {error && <p className="text-destructive text-sm">{error}</p>}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-medium text-sm">Agentic management</p>
+          <p className="text-muted-foreground text-xs">
+            Zapier watches runs and proposes changes to this automation.
+          </p>
+        </div>
+        <Switch
+          aria-label="Agentic management"
+          checked={state.enabled}
+          disabled={saving}
+          onCheckedChange={(v) => save({ enabled: v })}
+        />
+      </div>
+
+      <fieldset className="space-y-2" disabled={saving}>
+        <legend className="mb-1 text-muted-foreground text-xs">Modes</legend>
+        {MANAGEMENT_MODES.map(({ mode, label, hint }) => (
+          <label className="flex items-start gap-2 text-sm" htmlFor={`mode-${mode}`} key={mode}>
+            <Checkbox
+              checked={activeModes.includes(mode)}
+              // Keep at least one mode — an empty set would manage nothing.
+              disabled={saving || (activeModes.length === 1 && activeModes[0] === mode)}
+              id={`mode-${mode}`}
+              onCheckedChange={(v) => {
+                const modes = v ? [...activeModes, mode] : activeModes.filter((m) => m !== mode);
+                save({ modes });
+              }}
+            />
+            <span>
+              {label}
+              <span className="block text-muted-foreground text-xs">{hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm">Auto-approve changes</p>
+          <p className="text-muted-foreground text-xs">
+            Off: proposed changes wait for your approval before going live.
+          </p>
+        </div>
+        <Switch
+          aria-label="Auto-approve changes"
+          checked={state.autoApprove}
+          disabled={saving}
+          onCheckedChange={(v) => save({ autoApprove: v })}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={`intent-${automationId}`}>
+          Intent
+        </label>
+        <Textarea
+          id={`intent-${automationId}`}
+          onChange={(e) => setIntent(e.target.value)}
+          placeholder="What this automation is meant to do — guides proposed changes."
+          rows={3}
+          value={intent}
+        />
+        <Button
+          disabled={saving || !intent.trim() || intent.trim() === (state.intent ?? "")}
+          onClick={() => save({ intent })}
+          size="sm"
+          variant="outline"
+        >
+          Save intent
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Human label for a cron schedule (foreman-bhb5). Humanizes the common daily case
@@ -112,6 +257,7 @@ export function AutomationsManager() {
   const [detail, setDetail] = useState<AutomationDetail | null>(null);
   const [inbox, setInbox] = useState<InboxState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -148,6 +294,7 @@ export function AutomationsManager() {
   }, []);
 
   useEffect(() => {
+    setNotice(null);
     if (selectedId) loadDetail(selectedId);
   }, [selectedId, loadDetail]);
 
@@ -186,6 +333,7 @@ export function AutomationsManager() {
 
   function act(fn: () => Promise<unknown>, reloadList = false) {
     setError(null);
+    setNotice(null);
     startTransition(async () => {
       try {
         await fn();
@@ -294,6 +442,26 @@ export function AutomationsManager() {
             >
               <PlayIcon className="size-4" /> Run now
             </Button>
+            {!selected.trigger?.digest && (
+              <Button
+                disabled={pending}
+                onClick={() =>
+                  act(async () => {
+                    const r = await testAutomation(selected.id);
+                    setNotice(
+                      r.kind === "draft"
+                        ? `Draft test run started (${r.status}) — the live version is unchanged.`
+                        : `Test run started (${r.status}).`,
+                    );
+                  })
+                }
+                size="sm"
+                title="Run the current source as a free draft test — connected-app actions still happen"
+                variant="outline"
+              >
+                <FlaskConicalIcon className="size-4" /> Test
+              </Button>
+            )}
             {selected.editor_url && (
               <Button asChild size="sm" variant="ghost">
                 <a href={selected.editor_url} rel="noopener noreferrer" target="_blank">
@@ -322,6 +490,8 @@ export function AutomationsManager() {
             )}
           </div>
 
+          {notice && <p className="mt-3 text-muted-foreground text-sm">{notice}</p>}
+
           {(selected.status === "trigger_failed" || selected.status === "trigger_claim_failed") && (
             <p className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-sm">
               This automation’s trigger couldn’t subscribe, so it won’t fire. Reconnect the app or
@@ -337,6 +507,11 @@ export function AutomationsManager() {
               <TabsTrigger value="inbox">
                 <InboxIcon className="size-3.5" /> Trigger inbox
               </TabsTrigger>
+              {!selected.trigger?.digest && (
+                <TabsTrigger value="management">
+                  <BotIcon className="size-3.5" /> Agentic management
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="runs">
@@ -353,6 +528,7 @@ export function AutomationsManager() {
                       <TableRow>
                         <TableHead className="w-6" />
                         <TableHead>When</TableHead>
+                        <TableHead>Kind</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Durable run</TableHead>
                         <TableHead className="w-16" />
@@ -363,6 +539,7 @@ export function AutomationsManager() {
                         const detailJson = r.error != null ? r.error : (r.output ?? null);
                         const expandable = detailJson != null;
                         const expanded = expandedRunId === r.id;
+                        const isDraft = r.kind === "draft";
                         return (
                           <Fragment key={r.id}>
                             <TableRow
@@ -385,13 +562,27 @@ export function AutomationsManager() {
                                 {new Date(r.created_at).toLocaleString()}
                               </TableCell>
                               <TableCell>
+                                <Badge
+                                  title={
+                                    isDraft
+                                      ? "Free test run of a draft — not the live version"
+                                      : "Run of the published version"
+                                  }
+                                  variant={isDraft ? "outline" : "secondary"}
+                                >
+                                  {isDraft ? "draft" : "live"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
                                 <Badge variant={runStatusVariant(r.status)}>{r.status}</Badge>
                               </TableCell>
                               <TableCell className="font-mono text-xs">
                                 {r.durable_run_id ? shortId(r.durable_run_id) : "—"}
                               </TableCell>
                               <TableCell className="text-right">
-                                {r.status === "waiting" ? (
+                                {/* Draft runs live only on Zapier — no Foreman run row to
+                                    cancel or approve against. */}
+                                {isDraft ? null : r.status === "waiting" ? (
                                   <div className="flex items-center justify-end gap-1">
                                     <Button
                                       aria-label="Approve"
@@ -443,7 +634,7 @@ export function AutomationsManager() {
                             </TableRow>
                             {expanded && detailJson != null && (
                               <TableRow className="hover:bg-transparent">
-                                <TableCell className="p-0" colSpan={5}>
+                                <TableCell className="p-0" colSpan={6}>
                                   <div className="px-3 pb-3">
                                     <p className="mb-1 text-muted-foreground text-xs">
                                       {r.status === "waiting"
@@ -574,6 +765,12 @@ export function AutomationsManager() {
                 </p>
               )}
             </TabsContent>
+
+            {!selected.trigger?.digest && (
+              <TabsContent value="management">
+                <AgenticManagementPanel automationId={selected.id} key={selected.id} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       )}

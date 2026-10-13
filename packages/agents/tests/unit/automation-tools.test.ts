@@ -6,9 +6,12 @@
 import { describe, expect, it } from "vitest";
 import {
   createAutomationTool,
+  getAutomationManagementTool,
   inspectAutomationTool,
   listAutomationsTool,
   runAutomationTool,
+  setAutomationManagementTool,
+  testAutomationTool,
 } from "../../src/mastra/tools/automations";
 
 const allTools = [
@@ -16,6 +19,9 @@ const allTools = [
   runAutomationTool,
   listAutomationsTool,
   inspectAutomationTool,
+  testAutomationTool,
+  getAutomationManagementTool,
+  setAutomationManagementTool,
 ];
 
 describe("automation tools", () => {
@@ -24,13 +30,20 @@ describe("automation tools", () => {
     expect(runAutomationTool.id).toBe("run_automation");
     expect(listAutomationsTool.id).toBe("list_automations");
     expect(inspectAutomationTool.id).toBe("inspect_automation");
+    expect(testAutomationTool.id).toBe("test_automation");
+    expect(getAutomationManagementTool.id).toBe("get_automation_management");
+    expect(setAutomationManagementTool.id).toBe("set_automation_management");
   });
 
   it("gate the write tools behind approval and leave reads open", () => {
     expect(createAutomationTool.requireApproval).toBe(true);
     expect(runAutomationTool.requireApproval).toBe(true);
+    // Draft runs are free but execute connected-app actions for real.
+    expect(testAutomationTool.requireApproval).toBe(true);
+    expect(setAutomationManagementTool.requireApproval).toBe(true);
     expect(listAutomationsTool.requireApproval).toBeFalsy();
     expect(inspectAutomationTool.requireApproval).toBeFalsy();
+    expect(getAutomationManagementTool.requireApproval).toBeFalsy();
   });
 
   it("declare input and output schemas", () => {

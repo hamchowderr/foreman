@@ -21,9 +21,12 @@ import { generateZapierTools } from "../../lib/zapier-sdk-tools";
 import { buildSlackChannelConfig } from "../../slack/channel";
 import {
   createAutomationTool,
+  getAutomationManagementTool,
   inspectAutomationTool,
   listAutomationsTool,
   runAutomationTool,
+  setAutomationManagementTool,
+  testAutomationTool,
 } from "../tools/automations";
 import { connectZapierTool } from "../tools/connect-zapier";
 import { createDashboardTool } from "../tools/create-dashboard";
@@ -114,6 +117,9 @@ function buildForemanTools() {
       run_automation: runAutomationTool,
       list_automations: listAutomationsTool,
       inspect_automation: inspectAutomationTool,
+      test_automation: testAutomationTool,
+      get_automation_management: getAutomationManagementTool,
+      set_automation_management: setAutomationManagementTool,
       // Zapier stored files (VFS, experimental SDK) — reads open, writes approval-gated.
       ...storedFilesTools,
       ...coreTools,
