@@ -142,9 +142,10 @@ the live SDK schema when EA lands.
   solo workspace at `registerChannelUser`; `stored_agent`, `automation`, dashboards, documents and
   shares are workspace-scoped; Zapier connections honor `workspace_settings.zapier_connection_mode`
   (member-first / shared / personal). Left on `user_id` on purpose: `api_key`, `capability_flag`,
-  `channel_link_code` (personal by nature). Still open: `connection_alias` is per-user while a
-  shared-mode member runs on the workspace's Zapier account, and `GET /zapier/status` only checks
-  the member's own connection. (Status as of 2026-10-13.)
+  `channel_link_code` (personal by nature). Connection aliases follow the Zapier account a call
+  runs on (`resolveZapierIdentity`): a member on the shared connection gets its owner's aliases.
+  `GET /zapier/status` counts the shared connection too and reports `shared`. (Status as of
+  2026-10-13.)
 - **Phase 2c — Durable/trigger-inbox tables:** land §5 schema (gated on EA for the code that uses it).
 
 Each phase: `npm test` (vitest) + `biome lint` + `next build` + `db:types:check` must stay green.

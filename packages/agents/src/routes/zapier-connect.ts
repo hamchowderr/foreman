@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
-import { getSupabase } from "../lib/db";
 import { ensureUserExists, resolveFromSupabaseJwt } from "../lib/identity";
 import {
   buildAuthorizeUrl,
@@ -8,6 +7,7 @@ import {
   exchangeCodeAndStore,
   webConnectStateMap,
 } from "../lib/zapier/connect";
+import { resolveZapierIdentity } from "../lib/zapier/sdk";
 
 const zapierConnect = new Hono();
 
@@ -38,7 +38,10 @@ zapierConnect.get("/web-connect", async (c) => {
 });
 
 /**
- * Check if the current user has a connected Zapier account.
+ * Whether the current user's calls have a Zapier account to run on — their own,
+ * or their workspace's shared connection (per its connection mode). `shared` says
+ * the account belongs to someone else, so a member relying on the workspace's
+ * connection isn't sent back through onboarding to connect their own.
  */
 zapierConnect.get("/status", async (c) => {
   const authHeader = c.req.header("Authorization");
@@ -48,14 +51,8 @@ zapierConnect.get("/status", async (c) => {
   const identity = await resolveFromSupabaseJwt(authHeader.slice(7));
   if (!identity) return c.json({ error: "Unauthorized" }, 401);
 
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from("zapier_identity")
-    .select("id")
-    .eq("user_id", identity.userId)
-    .maybeSingle();
-
-  return c.json({ connected: !!data });
+  const account = await resolveZapierIdentity(identity.userId);
+  return c.json({ connected: !!account, shared: !!account && account.user_id !== identity.userId });
 });
 
 /**

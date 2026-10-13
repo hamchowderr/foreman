@@ -103,49 +103,22 @@ export function withTraceOptions(options: ZapierSdkOptions, trace?: SdkTraceIds)
   };
 }
 
+type ZapierIdentityRow = Database["public"]["Tables"]["zapier_identity"]["Row"];
+
 /**
- * Shared per-user client builder. The stable and experimental SDK factories take
- * the same options and differ only in the surface they expose, so both run
- * through one token + connection-alias resolution path (and one refresh) here —
- * each with its own cache. Don't duplicate this logic per factory.
+ * The Zapier account a user's calls run on, per their workspace's connection mode
+ * (workspace_settings.zapier_connection_mode): their own connection, the
+ * workspace's designated shared one (usually owned by another member), or either
+ * (member-first). An explicit orgId picks the governing workspace; otherwise it's
+ * the user's active workspace. Returns null when nothing resolves.
  *
- * TRACING (correlationId / causationId, SDK 0.105.0): these are client-level
- * options, but they vary per conversation / per approval. They are deliberately
- * NOT part of the cache key. The cache holds the user's resolved auth (token +
- * alias manifest) keyed on who the user is; keying it on a conversation id would
- * re-run the DB lookups and token resolution on the first call of every
- * conversation and grow the map by one entry per conversation (entries are only
- * evicted when re-read after expiry). Instead, a traced call gets a lightweight
- * per-call client built from the CACHED options plus the trace ids — client
- * construction is a few ms of in-process wiring with no I/O, and the untraced
- * cached client is untouched.
+ * The row's `user_id` is the account's OWNER — connection aliases follow it, since
+ * a connection id only means something inside the Zapier account that owns it.
  */
-async function buildSdkForUser<T>(
-  factory: ZapierSdkFactory<T>,
-  cache: Map<string, CachedSdk<T>>,
+export async function resolveZapierIdentity(
   userId: string,
   orgId?: string,
-  trace?: SdkTraceIds,
-): Promise<T> {
-  const env = getEnv();
-
-  // DEV_ZAPIER_OVERRIDE: use a direct token for local development
-  if (env.DEV_ZAPIER_OVERRIDE) {
-    return factory(
-      withTraceOptions({ credentials: env.DEV_ZAPIER_OVERRIDE, onEvent: onZapierSdkEvent }, trace),
-    );
-  }
-
-  // Cache key includes orgId so org and personal connections are cached separately.
-  // Trace ids are intentionally excluded — see the TRACING note above.
-  const cacheKey = orgId ? `${userId}:org:${orgId}` : userId;
-
-  // Check cache
-  const cached = cache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return hasTrace(trace) ? factory(withTraceOptions(cached.options, trace)) : cached.sdk;
-  }
-
+): Promise<ZapierIdentityRow | null> {
   // Resolve the workspace whose policy governs this user (an explicit orgId wins;
   // otherwise the user's active workspace), then that workspace's connection mode.
   const supabase = getSupabase();
@@ -153,8 +126,6 @@ async function buildSdkForUser<T>(
   const mode: ConnectionMode = workspaceId
     ? await resolveWorkspaceConnectionMode(workspaceId)
     : "personal";
-
-  type ZapierIdentityRow = Database["public"]["Tables"]["zapier_identity"]["Row"];
 
   // The loaders RETURN the row rather than mutating a captured `identity` — TS
   // can't track assignments made inside a closure, so the old mutate-in-closure
@@ -209,6 +180,55 @@ async function buildSdkForUser<T>(
     if (!identity) identity = await loadPersonal(true);
   }
 
+  return identity;
+}
+
+/**
+ * Shared per-user client builder. The stable and experimental SDK factories take
+ * the same options and differ only in the surface they expose, so both run
+ * through one token + connection-alias resolution path (and one refresh) here —
+ * each with its own cache. Don't duplicate this logic per factory.
+ *
+ * TRACING (correlationId / causationId, SDK 0.105.0): these are client-level
+ * options, but they vary per conversation / per approval. They are deliberately
+ * NOT part of the cache key. The cache holds the user's resolved auth (token +
+ * alias manifest) keyed on who the user is; keying it on a conversation id would
+ * re-run the DB lookups and token resolution on the first call of every
+ * conversation and grow the map by one entry per conversation (entries are only
+ * evicted when re-read after expiry). Instead, a traced call gets a lightweight
+ * per-call client built from the CACHED options plus the trace ids — client
+ * construction is a few ms of in-process wiring with no I/O, and the untraced
+ * cached client is untouched.
+ */
+async function buildSdkForUser<T>(
+  factory: ZapierSdkFactory<T>,
+  cache: Map<string, CachedSdk<T>>,
+  userId: string,
+  orgId?: string,
+  trace?: SdkTraceIds,
+): Promise<T> {
+  const env = getEnv();
+
+  // DEV_ZAPIER_OVERRIDE: use a direct token for local development
+  if (env.DEV_ZAPIER_OVERRIDE) {
+    return factory(
+      withTraceOptions({ credentials: env.DEV_ZAPIER_OVERRIDE, onEvent: onZapierSdkEvent }, trace),
+    );
+  }
+
+  // Cache key includes orgId so org and personal connections are cached separately.
+  // Trace ids are intentionally excluded — see the TRACING note above.
+  const cacheKey = orgId ? `${userId}:org:${orgId}` : userId;
+
+  // Check cache
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return hasTrace(trace) ? factory(withTraceOptions(cached.options, trace)) : cached.sdk;
+  }
+
+  const identity = await resolveZapierIdentity(userId, orgId);
+  const supabase = getSupabase();
+
   if (!identity) {
     // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json).
     // production and self_hosted both require a real per-user OAuth connection.
@@ -251,7 +271,9 @@ async function buildSdkForUser<T>(
     tokenExpiry = expiresAtMs ?? Date.now() + 5 * 60 * 1000;
   }
 
-  const connectionsMap = await loadUserConnectionsMap(userId);
+  // Aliases follow the account the call runs on: a shared connection uses its
+  // owner's aliases, never the member's own (their ids belong to another account).
+  const connectionsMap = await loadUserConnectionsMap(identity.user_id);
   const hasConnections = Object.keys(connectionsMap).length > 0;
 
   const options: ZapierSdkOptions = {
