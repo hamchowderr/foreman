@@ -19,7 +19,7 @@ packages/web/      → Next.js 16 frontend (port 3000)
 
 | Agent             | File                                     | Model      | Tools                                                   |
 | ----------------- | ---------------------------------------- | ---------- | ------------------------------------------------------- |
-| Foreman (primary) | `agents/src/mastra/agents/foreman.ts`    | sonnet 4.6 | All SDK tools (via ToolSearchProcessor) + 7 custom-tool modules |
+| Foreman (primary) | `agents/src/mastra/agents/foreman.ts`    | sonnet 4.6 | All SDK tools (via ToolSearchProcessor) + 8 custom-tool modules |
 | Supervisor        | `agents/src/mastra/agents/supervisor.ts` | sonnet 4.6 | Routes to discovery/execution/history agents            |
 | Discovery         | `agents/src/mastra/agents/discovery.ts`  | haiku 4.5  | 8 read-only SDK tools (`DISCOVERY_TOOL_NAMES`)          |
 | Execution         | `agents/src/mastra/agents/execution.ts`  | sonnet 4.6 | run-action, fetch, connect_zapier                       |
@@ -43,6 +43,7 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
 - `READ_ONLY` set: 27 discovery tools (used for MCP annotations + agent-level background execution)
 - `EXCLUDED_METHODS` set: 23 methods skipped during tool generation — deprecated wrappers (`request`, the `*Authentication` duplicates of the `connection`-prefixed methods, the `*InputField*` aliases) plus surfaces Foreman doesn't expose (Connect-Builder OAuth client-credentials; the blocking `createConnection`/`getConnectionStartUrl`/`waitForNewConnection` helpers; the trigger-inbox lifecycle + lease/ack methods that `lib/trigger-inbox/` drives directly)
 - The durable-workflow surface (`createWorkflow`, `publishWorkflowVersion`, `validateWorkflow`, `importWorkflow`, …) is **not** in the mcp registry — it lives on the experimental client (`@zapier/zapier-sdk/experimental` via `getExperimentalSdkForUser`) and needs no classification
+- **Stability tiers (SDK 0.113.0):** stable `@zapier/zapier-sdk`, beta `@zapier/zapier-sdk/beta`, experimental `@zapier/zapier-sdk/experimental`. The `/beta` tier currently ships empty — it exposes the same 58 methods as stable — so Foreman's imports stay on stable + experimental. Re-check after SDK bumps whether anything has moved into `/beta`.
 - **Auth model** — which auth (client-creds vs per-user userJwt) works on which SDK surface, and why durable is internal-scope-walled: [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md)
 
 ### Custom Tools
@@ -56,6 +57,7 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
 | preview_app                     | `agents/src/mastra/tools/preview-app.ts`       |
 | save_document                   | `agents/src/mastra/tools/save-document.ts`     |
 | create/run/inspect/list_automation | `agents/src/mastra/tools/automations.ts`   |
+| list/read/stat/write/append/copy/move/delete_stored_file, create_stored_folder | `agents/src/mastra/tools/stored-files.ts` (Zapier VFS via experimental SDK; writes need approval) |
 
 ### API Routes
 

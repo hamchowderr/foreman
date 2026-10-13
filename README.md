@@ -255,6 +255,8 @@ Foreman accepts any credential type the SDK does; you pick one with `FOREMAN_MOD
 | **Client credentials** | `ZAPIER_CLIENT_ID` + `ZAPIER_CLIENT_SECRET` | App-level, server-to-server calls. |
 | **Token override** | `DEV_ZAPIER_OVERRIDE=<jwt>` | Use a pre-obtained token for local dev — skips login entirely. |
 
+> **Multiple Zapier accounts:** `npx zapier-sdk login` (the `@zapier/zapier-sdk-cli` bin) now shows a searchable chooser over your stored accounts, and `npx zapier-sdk login --name <name>` switches to that stored account (or creates one with that name) without revoking the others. Credentials supplied as SDK options (Foreman passes `ZAPIER_CLIENT_ID`/`ZAPIER_CLIENT_SECRET` or `DEV_ZAPIER_OVERRIDE` as `credentials`) or through the SDK's credential env vars take precedence over stored accounts, so the chooser and account switching are skipped when they're set.
+
 > **Heads-up:** not every surface is open yet. The everyday action layer (run actions, discovery, tables, trigger inboxes) works with any Zapier login. The experimental **durable / scheduled-automation** endpoints are gated behind a Zapier **early-access allowlist**, so automations require applying for access — see [Experimental access](#-experimental-access). More detail: [`docs/zapier-auth-model.md`](docs/zapier-auth-model.md).
 
 ### Staying current — `npm run sdk:check`
