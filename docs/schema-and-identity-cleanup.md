@@ -137,8 +137,14 @@ the live SDK schema when EA lands.
 - **Phase 2a — Migration reorg (no behavior change):** ✅ done — decomposed `foreman_core`
   (`fa51547`), cut the marketing/feedback CMS (`67a4b25`). `db reset` + `db:types:check` +
   vitest green.
-- **Phase 2b — Multi-tenancy wiring:** add `workspace_id` to remaining tables; resolve/thread it;
-  scope reads/writes; solo workspace for channel principals. Code + schema.
+- **Phase 2b — Multi-tenancy wiring:** ✅ mostly done — `resolveActiveWorkspace` (identity.ts)
+  resolves the active workspace and middleware threads `workspaceId`; channel principals get a
+  solo workspace at `registerChannelUser`; `stored_agent`, `automation`, dashboards, documents and
+  shares are workspace-scoped; Zapier connections honor `workspace_settings.zapier_connection_mode`
+  (member-first / shared / personal). Left on `user_id` on purpose: `api_key`, `capability_flag`,
+  `channel_link_code` (personal by nature). Still open: `connection_alias` is per-user while a
+  shared-mode member runs on the workspace's Zapier account, and `GET /zapier/status` only checks
+  the member's own connection. (Status as of 2026-10-13.)
 - **Phase 2c — Durable/trigger-inbox tables:** land §5 schema (gated on EA for the code that uses it).
 
 Each phase: `npm test` (vitest) + `biome lint` + `next build` + `db:types:check` must stay green.

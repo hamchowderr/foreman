@@ -10,7 +10,7 @@
  * are pinned here.
  */
 import { RequestContext } from "@mastra/core/request-context";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const setInstallation = vi.fn();
 const adapterInitialize = vi.fn(async () => {});
@@ -229,6 +229,14 @@ describe("memory ownership", () => {
 });
 
 describe("the generated webhook route", () => {
+  // Cold-importing @mastra/core takes seconds on a loaded machine (3.6s seen
+  // pinned to one CPU), close to the 5s default test timeout. Pay it in a hook
+  // with room to spare so the tests below only time their own work (foreman-zyzk).
+  let Agent: typeof import("@mastra/core/agent").Agent;
+  beforeAll(async () => {
+    ({ Agent } = await import("@mastra/core/agent"));
+  }, 120_000);
+
   it("mounts on :4111 under the agent, unauthenticated, only when opted in", async () => {
     // The point of the migration: Mastra serves this on the main server, so the
     // standalone raw-Node webhook server on :4112 has nothing left to do for
@@ -236,7 +244,6 @@ describe("the generated webhook route", () => {
     // Supabase JWT middleware would reject it otherwise — and the path must not
     // collide with anything in CUSTOM_ROUTE_PREFIXES or Foreman's own
     // middleware would swallow the body before signature verification.
-    const { Agent } = await import("@mastra/core/agent");
     const agent = new Agent({
       id: "foreman",
       name: "Foreman",
@@ -257,7 +264,6 @@ describe("the generated webhook route", () => {
 
   it("generates no route at all while the flag is off", async () => {
     delete process.env.FOREMAN_NATIVE_CHANNELS;
-    const { Agent } = await import("@mastra/core/agent");
     const agent = new Agent({
       id: "foreman",
       name: "Foreman",
