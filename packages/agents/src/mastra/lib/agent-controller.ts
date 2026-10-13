@@ -14,7 +14,8 @@
  *    and isolated sandbox. The kit shares one workspace across every user.
  *  - Storage and memory are Foreman's Postgres (Supabase), not libSQL.
  *  - One Session per signed-in user (resource id = Foreman user id).
- *  - No browser (shared server-wide in the kit) and no subagents yet.
+ *  - Subagents are Foreman's read-only specialists (discovery, history); see subagents.ts.
+ *  - No browser (shared server-wide in the kit).
  */
 
 import type { Agent } from "@mastra/core/agent";
@@ -23,6 +24,7 @@ import type { MastraMemory } from "@mastra/core/memory";
 import type { MastraCompositeStore } from "@mastra/core/storage";
 import { buildForemanWorkspace } from "../agents/workspace";
 import { scheduleTools } from "../tools/schedules";
+import { FOREMAN_SUBAGENTS } from "./subagents";
 import { AUTO_ALLOWED_TOOLS, PLAN_MODE_TOOLS, resolveToolCategory } from "./tool-categories";
 
 /**
@@ -73,6 +75,7 @@ export function createForemanAgentController(opts: {
     // Controller-level tools reach the agent on every controller run (and only there:
     // channel bots calling the agent directly don't get them).
     tools: scheduleTools,
+    subagents: FOREMAN_SUBAGENTS,
     // Per-tenant: resolved from the run's request context (workspaceId / userId).
     workspace: buildForemanWorkspace,
   });

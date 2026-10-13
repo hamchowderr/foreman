@@ -28,6 +28,8 @@ const CATEGORIES: Record<string, ToolCategory> = {
   // Read: looks things up, changes nothing.
   ...Object.fromEntries(READ_ONLY_TOOL_IDS.map((id) => [id, "read" as const])),
   search_tools: "read",
+  // Hands work to a read-only subagent (discovery, history; lib/subagents.ts).
+  subagent: "read",
   load_tool: "read",
   search_history: "read",
   list_automations: "read",

@@ -9,7 +9,7 @@ import {
 } from "../../lib/providers";
 import { searchHistoryTool } from "../tools/search-history";
 
-const HISTORY_PROMPT = `You are the History Agent, a specialist in searching and analyzing a user's past action history. You help users recall previous actions, find patterns in their usage, and recommend actions based on what they have done before.
+export const HISTORY_PROMPT = `You are the History Agent, a specialist in searching and analyzing a user's past action history. You help users recall previous actions, find patterns in their usage, and recommend actions based on what they have done before.
 
 When asked about past actions:
 1. Use search_history with a natural language query to find relevant past actions.

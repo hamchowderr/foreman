@@ -63,7 +63,6 @@ All custom routes: `agents/src/routes/index.ts` (Hono, mounted as Mastra middlew
 
 | Route               | File                       | Purpose                          |
 | ------------------- | -------------------------- | -------------------------------- |
-| `/conversations/*`  | `routes/conversations.ts`  | CRUD + SSE message streaming     |
 | `/proposals/*`      | `routes/proposals.ts`      | Approve/decline/field-choices    |
 | `/automations/*`    | `routes/automations.ts`    | Durable automation CRUD + run    |
 | `/apps/*`           | `routes/apps.ts`           | App catalog/search + pulled data |
@@ -131,9 +130,9 @@ Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
 | What           | Where                                                                    |
 | -------------- | ------------------------------------------------------------------------ |
 | App layout     | `web/src/app/layout.tsx`; app shell `web/src/components/app-shell.tsx`   |
-| Chat UI        | `web/src/components/chat/` — `shell.tsx`, `messages.tsx`, `message.tsx`, `chat-header.tsx` (artifacts/preview panel alongside) |
-| Approval / tool UI | rendered inline in the message stream via `web/src/components/ai-elements/tool.tsx` (no standalone approval-card) |
-| API client     | domain clients `web/src/lib/{conversations,apps,documents,stored-agents}-client.ts` + `web/src/app/api/*` proxy routes (hit `NEXT_PUBLIC_AGENT_SERVER_URL`) |
+| Chat UI        | `web/src/components/chat/foreman-chat.tsx` — mastra-chat-kit's `ChatSwitcher` on the AgentController (`agents/src/mastra/lib/agent-controller.ts`, kit routes in `agents/src/mastra/routes/`); engine in `web/src/lib/agent-controller/` |
+| Approval / tool UI | kit approval card (`components/chat/transcript.tsx`), Foreman's per-tool text in `components/chat/foreman-approval-views.tsx` |
+| API client     | domain clients `web/src/lib/{apps,documents,stored-agents}-client.ts` + `lib/mastra-proxy.ts` (kit) + `web/src/app/api/*` proxy routes (hit `NEXT_PUBLIC_AGENT_SERVER_URL`) |
 | Key pages      | `web/src/app/{chat,apps,automations,documents,workspaces,inbox,editor,settings}/` (the old `workflows/` page is now `automations/`) |
 
 ## Evaluation pipeline

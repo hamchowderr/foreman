@@ -12,13 +12,27 @@ import { z } from "zod";
  *
  * Foreman is multi-user, so unlike the kit every schedule is scoped to the resource
  * (user) that created it: `list_schedules` shows only the caller's schedules and
- * `stop_schedule` refuses another user's. Agent schedules carry no request context,
- * so a fired run's Zapier tools act as the schedule's resource (= the Foreman user
- * id; see lib/zapier-sdk-tools.ts).
+ * `stop_schedule` refuses another user's.
+ *
+ * A fire reaches the agent through `agent.sendSignal`, outside any HTTP request, so
+ * the schedule stores the creator's identity (`userId`, `workspaceId`) as the wake
+ * run's request context (`ifIdle.streamOptions.requestContext`). That is what makes a
+ * fired run's Zapier tools act as the user and its workspace tools use the user's
+ * own workspace, exactly as in the chat.
  */
 
 /** Agent id the schedules target — the key the foreman agent is registered under. */
 export const SCHEDULE_AGENT_ID = "foreman";
+
+/** The identity a fired run needs, copied from the creating run's request context. */
+function runIdentity(requestContext: { get(key: string): unknown } | undefined) {
+  const identity: Record<string, string> = {};
+  for (const key of ["userId", "workspaceId"]) {
+    const value = requestContext?.get(key);
+    if (typeof value === "string" && value) identity[key] = value;
+  }
+  return identity;
+}
 
 /** Flat, JSON-safe view of an agent schedule for tool output + the schedules panel. */
 const scheduleView = z.object({
@@ -77,12 +91,18 @@ export const startScheduleTool = createTool({
     if (!threadId || !resourceId) {
       throw new Error("A conversation thread is required to create a schedule.");
     }
+    const identity = runIdentity(ctx?.requestContext);
+    if (!identity.userId) {
+      throw new Error("A signed-in user is required to create a schedule.");
+    }
     const created = await schedules.create({
       agentId: SCHEDULE_AGENT_ID,
       cron,
       prompt,
       threadId,
       resourceId,
+      // Wake the thread on each fire, running as the creator in their workspace.
+      ifIdle: { behavior: "wake", streamOptions: { requestContext: identity } },
       ...(name ? { name } : {}),
     });
     return toView(created);

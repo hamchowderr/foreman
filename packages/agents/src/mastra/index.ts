@@ -98,7 +98,6 @@ export function getMastra(): Mastra {
   // *before* the handler ran. Mastra's server.middleware contract is
   // headers/context only — it must not read the body of requests it doesn't own.
   const CUSTOM_ROUTE_PREFIXES = [
-    "/conversations",
     "/proposals",
     "/apps",
     "/documents",

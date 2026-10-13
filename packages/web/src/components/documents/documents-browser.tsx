@@ -78,9 +78,12 @@ export function DocumentsBrowser() {
 
   useEffect(() => {
     load();
+    // `?doc=<path>` opens that document straight away (a chat citation links here).
+    const path = new URLSearchParams(window.location.search).get("doc");
+    if (path) openDoc({ path, name: path.split("/").pop() ?? path });
   }, []);
 
-  function openDoc(doc: DocumentMeta) {
+  function openDoc(doc: Pick<DocumentMeta, "path" | "name">) {
     setOpen({ path: doc.path, title: docTitle(doc.name) });
     setContent(null);
     getDocument(doc.path)
