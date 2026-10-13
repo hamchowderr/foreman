@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import DataGrid from "react-data-grid";
+import { DataGrid } from "react-data-grid";
 import "react-data-grid/lib/styles.css";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

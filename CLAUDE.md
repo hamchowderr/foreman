@@ -38,7 +38,7 @@ Mastra instance + server config: `agents/src/mastra/index.ts`
 - Parameter names come from the SDK's Zod schemas — read them from the registry, never guess
   - Table operations use `table` (not `tableId`)
   - Record creation uses `{ data: {...} }` wrapper per record
-- The three sets below must partition the mcp registry exactly — **10 + 27 + 23 = 60 methods** at SDK 0.103.0. The `zapier-sdk-tools` unit test asserts it; re-check the counts after every SDK bump.
+- The three sets below must partition the mcp registry exactly — **10 + 25 + 23 = 58 methods** at SDK 0.115.1. The `zapier-sdk-tools` unit test asserts it; re-check the counts after every SDK bump.
 - `APPROVAL_REQUIRED` set: 10 write/delete tools need human approval
 - `READ_ONLY` set: 27 discovery tools (used for MCP annotations + agent-level background execution)
 - `EXCLUDED_METHODS` set: 23 methods skipped during tool generation — deprecated wrappers (`request`, the `*Authentication` duplicates of the `connection`-prefixed methods, the `*InputField*` aliases) plus surfaces Foreman doesn't expose (Connect-Builder OAuth client-credentials; the blocking `createConnection`/`getConnectionStartUrl`/`waitForNewConnection` helpers; the trigger-inbox lifecycle + lease/ack methods that `lib/trigger-inbox/` drives directly)

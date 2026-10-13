@@ -9,8 +9,11 @@ any of them** — each needs a deliberate range bump in `package.json`.
 
 ## Already current (do not re-file)
 
-All 16 `@mastra/*` packages (core/deployer/server at 1.63.0, CLI at 1.27.0) and
-all four Zapier packages (SDK 0.103.0, CLI 0.77.8, durable 0.12.6, mcp 0.21.9).
+All 16 `@mastra/*` packages (core/deployer/server at 1.76.0, CLI at 1.34.0) and
+the Zapier SDK 0.115.1 + CLI 0.86.7 (mcp 0.27.7, transitive) as of 2026-10-13.
+`@zapier/zapier-durable` 0.14.1, zod 4.6.7, and the former safe tier (foreman-9qa8:
+`next` 16.4.0, `@biomejs/biome` 2.5.15, `ansi-to-react` 6.2.6, `react-data-grid`
+beta.61) also landed in the same PR.
 `ai`, `@ai-sdk/react`, `@supabase/supabase-js`, `hono`, `pg` and `tokenx` no
 longer appear in `npm outdated`.
 
@@ -19,7 +22,6 @@ longer appear in `npm outdated`.
 | Issue | Package | Current | Latest | P | Notes |
 |---|---|---|---|---|---|
 | foreman-fwhi | `@supabase/ssr` | 0.10.3 | 0.12.5 | 1 | Web auth layer (`lib/server.ts`, `lib/client.ts`, `lib/middleware.ts`). A regression logs everyone out — verify sign-up, login, password reset and session refresh by hand, not just the build. |
-| foreman-9qa8 | safe tier | — | — | 2 | `next` 16.2.12→16.3.3, `@biomejs/biome` 2.5.4→2.5.11, `ansi-to-react` 6.1.6→6.2.6, `react-data-grid` beta.47→beta.61. Patch/minor; ship as one PR. |
 | foreman-sd1r | `typescript` | 5.9.3 | 7.0.2 | 2 | Two majors. Highest risk in the tree; do alone. No new `@ts-expect-error` to silence real errors. |
 | foreman-cpdh | `@types/node` | 24.13.3 | 26.4.0 | 2 | Two majors. Declared in **all three** workspaces — must move together. Confirm the target Node version first. |
 | foreman-47vg | `framer-motion` + `motion` | 12.43.0 | 13.1.1 | 2 | Same library, two names, both in `packages/web`. Bumping one alone ships two copies. |
