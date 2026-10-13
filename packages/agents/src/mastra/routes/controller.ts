@@ -1,0 +1,318 @@
+// ──────────────────────────────────────────────────────────────────────────
+// The Agent Controller run surface: the SSE stream, the two human-in-the-loop
+// resolvers (tool approval + tool suspension), and the read-only views the web
+// panels hydrate from (goal, observational memory, schedules).
+//
+// Modes (Chat / Plan) are configured on the controller (lib/agent-controller.ts).
+// There's no separate switch route: a turn names its mode in the /stream body (the
+// composer's Plan toggle), and approving a plan switches Plan → Chat by itself
+// (the mode's `transitionsTo`). The agent can still plan unprompted from Chat mode by
+// calling the built-in submit_plan.
+// ──────────────────────────────────────────────────────────────────────────
+
+import type { Session } from "@mastra/core/agent-controller";
+import { RequestContext } from "@mastra/core/request-context";
+import { registerApiRoute } from "@mastra/core/server";
+import { TIME_ZONE_KEY } from "../lib/time-zone";
+import { resourceIdOf, workspaceIdOf } from "./resource";
+import { sessionEventStream } from "./session-sse";
+import { streamBodyLimit, streamBodySchema, timeZone } from "./stream-body";
+import type { ChatServerDeps } from "./types";
+
+/**
+ * A turn's request context: the composer's Search toggle and the browser's time zone,
+ * plus (Foreman) the acting user and workspace from `deps.runContext`.
+ */
+function turnRequestContext(
+  { webSearch, timeZone }: { webSearch?: boolean; timeZone?: string },
+  run: Record<string, string> = {},
+) {
+  const requestContext = new RequestContext();
+  for (const [key, value] of Object.entries(run)) requestContext.set(key, value);
+  if (webSearch === true) requestContext.set("webSearch", true);
+  if (timeZone) requestContext.set(TIME_ZONE_KEY, timeZone);
+  return requestContext;
+}
+
+/**
+ * The toolCallId of the approval gate parked on the session's current thread (the
+ * newest one when several are), or undefined when none is.
+ */
+function pendingApprovalId(session: Session): string | undefined {
+  const threadId = session.thread.getId();
+  const pending = [...session.displayState.get().pendingApprovals.values()];
+  const mine = pending.filter((p) => !p.threadId || p.threadId === threadId);
+  return mine.at(-1)?.toolCallId;
+}
+
+/** Foreman: the run's request-context entries for the requesting user. */
+// biome-ignore lint/suspicious/noExplicitAny: the Hono context type is Mastra-internal
+function runContextOf(deps: ChatServerDeps, c: any): Record<string, string> {
+  return deps.runContext({ userId: resourceIdOf(c), workspaceId: workspaceIdOf(c) });
+}
+
+export const createControllerRoutes = (deps: ChatServerDeps) => [
+  // Agent Controller endpoint: POST /agent-controller/stream → SSE of AgentControllerEvents.
+  // Body: { text: string, threadId?: string }. The AgentController wraps the same
+  // chatAgent but emits the richer orchestration surface (sessions, modes,
+  // approvals, subagents, tasks) the AI SDK UIMessage stream can't carry.
+  // The web `agent-controller` transport maps these events onto the same elements.
+  registerApiRoute("/agent-controller/stream", {
+    method: "POST",
+    // Cap the body before it is read: attachments are inline data URLs.
+    middleware: streamBodyLimit,
+    handler: async (c) => {
+      // Checked before the session is touched: shape, attachment schemes, media types
+      // and sizes (./stream-body.ts). A bad body is a 400, never a 500.
+      const parsed = streamBodySchema.safeParse(await c.req.json().catch(() => undefined));
+      if (!parsed.success) {
+        return c.json({ error: parsed.error.issues[0]?.message ?? "invalid body" }, 400);
+      }
+      const { text, threadId, model, mode, webSearch, files, timeZone } = parsed.data;
+      // Route the composer's "Search" toggle through the request context (not the
+      // user message) so the agent's dynamic instructions flip into browse-the-web
+      // mode — driving the workspace browser the Browser panel screencasts.
+      // The browser's time zone rides the same way, for today's date (lib/turn-context.ts).
+      const requestContext = turnRequestContext({ webSearch, timeZone }, runContextOf(deps, c));
+      // Map the composer's attachments onto sendMessage's file shape ({ data, ... }).
+      // `createMessageInput` accepts a data URL as `data` for both text and binary parts.
+      const messageFiles = files?.length
+        ? files.map((f) => ({
+            data: f.url,
+            mediaType: f.mediaType,
+            ...(f.filename ? { filename: f.filename } : {}),
+          }))
+        : undefined;
+
+      const session = await deps.getSession(resourceIdOf(c));
+      // Resume the given thread, or start a fresh thread when none is sent. No
+      // placeholder title — the sidebar derives the display title from the first
+      // user message (chat-app convention) until AI titling lands (see 698.11).
+      if (threadId) {
+        // Only this user's own threads can be resumed.
+        if (!(await session.thread.list()).some((t) => t.id === threadId)) {
+          return c.json({ error: "thread not found" }, 404);
+        }
+        await session.thread.switch({ threadId });
+      } else {
+        await session.thread.create();
+      }
+      const activeThreadId = session.thread.requireId();
+      const agentController = await deps.getAgentController();
+
+      return sessionEventStream({
+        session,
+        signal: c.req.raw.signal,
+        // tool_approval_required carries only the tool name. Add its category so the
+        // UI can offer "Always allow <category> tools"; null means always-allow
+        // would approve just this one call, so the UI hides that option.
+        decorate: (event) =>
+          event.type === "tool_approval_required"
+            ? { ...event, category: agentController.getToolCategory({ toolName: event.toolName }) }
+            : event,
+        // Hand the client the active thread id so it can continue the conversation.
+        prelude: [{ type: "__thread__", threadId: activeThreadId }],
+        run: async () => {
+          // Honor the composer's model pick (validated against MODEL_ALLOWLIST).
+          // Switching here — inside the subscribed
+          // stream — lets the resulting `model_changed` event flow to the client too.
+          if (model && deps.modelAllowlist.has(model)) {
+            await session.model.switch(model);
+          }
+          // Same for the mode: switching inside the stream sends `mode_changed` too.
+          if (
+            mode &&
+            mode !== session.mode.get() &&
+            agentController.listModes().some((m) => m.id === mode)
+          ) {
+            await session.mode.switch({ modeId: mode });
+          }
+          await session.sendMessage({
+            content: text,
+            ...(messageFiles ? { files: messageFiles } : {}),
+            requestContext,
+          });
+        },
+      });
+    },
+  }),
+
+  // Agent Controller HITL: POST /agent-controller/approve resolves a parked tool-approval
+  // gate. The matching /agent-controller/stream call is suspended at the gate; responding
+  // here resumes it and the continuation events flow on that still-open SSE.
+  registerApiRoute("/agent-controller/approve", {
+    method: "POST",
+    handler: async (c) => {
+      const { decision, toolCallId: requested } = await c.req.json<{
+        decision?: "approve" | "decline" | "always_allow_category";
+        toolCallId?: string;
+      }>();
+      if (
+        decision !== "approve" &&
+        decision !== "decline" &&
+        decision !== "always_allow_category"
+      ) {
+        return c.json({ error: "decision must be approve | decline | always_allow_category" }, 400);
+      }
+      const session = await deps.getSession(resourceIdOf(c));
+      // @mastra/core >= 1.7x requires the gate's toolCallId. The web client sends none,
+      // so resolve the gate parked on the session's current thread.
+      const toolCallId = requested ?? pendingApprovalId(session);
+      if (!toolCallId) {
+        return c.json({ error: "no approval is pending" }, 409);
+      }
+      // Foreman: the resumed tool runs as this user (Zapier identity, workspace).
+      session.respondToToolApproval({
+        decision,
+        toolCallId,
+        requestContext: turnRequestContext({}, runContextOf(deps, c)),
+      });
+      return c.json({ ok: true });
+    },
+  }),
+
+  // Agent Controller HITL: POST /agent-controller/answer resolves a parked tool SUSPENSION —
+  // the agent-driven `ask_user` flow, or a submitted plan (`plan`: approve / reject it). When a request is ambiguous the agent calls
+  // the built-in `ask_user`, which suspends the tool and ENDS the run
+  // (`agent_end` reason 'suspended'), so the /agent-controller/stream SSE has closed.
+  // Posting the answer resumes the SAME suspended tool, and this response streams
+  // the resumed run's events as SSE, the same shape /stream sends (mastra-chat-kit-ymk).
+  // `answer` is a string (free-text / single choice) or string[] (multi-select
+  // labels); `toolCallId` selects which prompt to resolve when several are pending.
+  registerApiRoute("/agent-controller/answer", {
+    method: "POST",
+    handler: async (c) => {
+      const body = await c.req.json<{
+        answer?: string | string[];
+        // A decision on a `submit_plan` suspension. Core routes it through plan approval:
+        // 'approved' switches to the mode's `transitionsTo` and resumes the agent on the
+        // plan; 'rejected' resumes it with the (optional) feedback to revise by.
+        plan?: { action?: string; feedback?: string };
+        toolCallId?: string;
+        timeZone?: string;
+      }>();
+      const { answer, plan, toolCallId } = body;
+      let resumeData: string | string[] | { action: "approved" | "rejected"; feedback?: string };
+      if (plan !== undefined) {
+        if (plan?.action !== "approved" && plan?.action !== "rejected") {
+          return c.json({ error: "plan.action must be approved | rejected" }, 400);
+        }
+        resumeData = {
+          action: plan.action,
+          ...(typeof plan.feedback === "string" && plan.feedback
+            ? { feedback: plan.feedback }
+            : {}),
+        };
+      } else if (typeof answer === "string" || Array.isArray(answer)) {
+        resumeData = answer;
+      } else {
+        return c.json({ error: "answer must be a string or string[], or plan an object" }, 400);
+      }
+      const session = await deps.getSession(resourceIdOf(c));
+      return sessionEventStream({
+        session,
+        signal: c.req.raw.signal,
+        run: () =>
+          session.respondToToolSuspension({
+            resumeData,
+            ...(toolCallId ? { toolCallId } : {}),
+            // The resumed run reads today's date in the user's zone too.
+            requestContext: turnRequestContext(
+              { timeZone: timeZone.parse(body.timeZone) },
+              runContextOf(deps, c),
+            ),
+          }),
+      });
+    },
+  }),
+
+  // Agent Controller goals: the agent's native objective mechanism (flagship demo). Goals
+  // are AGENT-DRIVEN — the chat agent calls its own `setGoal` tool when it recognizes a
+  // standing objective (see agents/chat.ts), which iterates toward it: after each turn a
+  // judge scores the objective and the run loops (up to maxRuns) until it passes, emitting
+  // `goal_evaluation` events the web folds into a goal card. These read/clear routes back
+  // the card (hydrate on reload + dismiss); they drive the SAME session as /agent-controller/stream
+  // via `controller.getCurrentAgent` (the mode-backing agent with the controller's storage).
+
+  // GET the current objective for the session's active thread ({ objective: record|null }).
+  registerApiRoute("/agent-controller/goal", {
+    method: "GET",
+    handler: async (c) => {
+      const controller = await deps.getAgentController();
+      const session = await deps.getSession(resourceIdOf(c));
+      const threadId = session.thread.getId();
+      if (!threadId) {
+        return c.json({ objective: null });
+      }
+      const agent = controller.getCurrentAgent(session);
+      const objective = await agent.getObjective({ threadId });
+      return c.json({ objective: objective ?? null });
+    },
+  }),
+
+  // Clear the objective for the active thread (the agent stops goal-driven looping).
+  registerApiRoute("/agent-controller/goal", {
+    method: "DELETE",
+    handler: async (c) => {
+      const controller = await deps.getAgentController();
+      const session = await deps.getSession(resourceIdOf(c));
+      const threadId = session.thread.getId();
+      if (threadId) {
+        await controller.getCurrentAgent(session).clearObjective({ threadId });
+      }
+      return c.json({ ok: true });
+    },
+  }),
+
+  // GET the current Observational-Memory record — the facts the Observer has distilled
+  // across this resource's conversations. Lets the Memory panel show learned facts ON
+  // LOAD (before the next run's `om_status` fills the live token windows), so a returning
+  // user isn't met with an empty panel. Strips the `<thread id="…">` attribution wrappers
+  // (present in resource scope) to plain text for display.
+  registerApiRoute("/agent-controller/om", {
+    method: "GET",
+    handler: async (c) => {
+      const controller = await deps.getAgentController();
+      const session = await deps.getSession(resourceIdOf(c));
+      const record = await controller.getObservationalMemoryRecord(session);
+      const observations =
+        record?.activeObservations?.replace(/<\/?thread[^>]*>/g, "").trim() || null;
+      return c.json({
+        observations,
+        generationCount: record?.generationCount ?? 0,
+        lastObservedAt: record?.lastObservedAt ?? null,
+      });
+    },
+  }),
+
+  // List the recurring schedules the controller agent has set up (the Schedules
+  // panel). Reads the native `mastra.schedules` service directly — the same
+  // service the agent's start_schedule / stop_schedule tools write to — and
+  // returns flat agent-schedule views. Read-only: creating/pausing is
+  // AGENT-DRIVEN (the user asks the agent), so there's no mutate route here.
+  // The Mastra instance comes off the Hono context (`CustomRouteVariables`) rather
+  // than an import — importing it from index.ts would be circular.
+  registerApiRoute("/agent-controller/schedules", {
+    method: "GET",
+    handler: async (c) => {
+      // Foreman: only the caller's own schedules (they are per user).
+      const resourceId = resourceIdOf(c);
+      const rows = await c.get("mastra").schedules.list({ agentId: deps.agentId, resourceId });
+      const schedules = rows
+        // biome-ignore lint/suspicious/noExplicitAny: AnySchedule union — agent schedules carry agentId
+        .filter((s: any) => s?.agentId && s?.resourceId === resourceId)
+        // biome-ignore lint/suspicious/noExplicitAny: flat AgentSchedule view
+        .map((s: any) => ({
+          id: String(s.id),
+          cron: String(s.cron ?? ""),
+          prompt: String(s.prompt ?? ""),
+          status: s.status === "paused" ? "paused" : "active",
+          nextFireAt: typeof s.nextFireAt === "number" ? s.nextFireAt : 0,
+          lastFireAt: typeof s.lastFireAt === "number" ? s.lastFireAt : null,
+          ...(s.name ? { name: String(s.name) } : {}),
+        }))
+        .sort((a, b) => a.nextFireAt - b.nextFireAt);
+      return c.json({ schedules });
+    },
+  }),
+];

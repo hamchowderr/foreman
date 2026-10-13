@@ -463,8 +463,13 @@ export function generateZapierTools(
             // route, where no ALS scope exists, so an ALS-only read would
             // silently execute as the global client-credentials identity
             // instead of as the person who sent the message (foreman-3i9k).
+            // Then the run's memory resource: a schedule fire (tools/schedules.ts)
+            // reaches the agent with no request context, and Foreman's resource id
+            // IS the Foreman user id on every path (web, channels, controller).
             // Falls back to the global SDK when there is genuinely no user.
-            const userId = resolveRequestUserId(context?.requestContext);
+            const userId =
+              resolveRequestUserId(context?.requestContext) ??
+              ((context as any)?.agent?.resourceId as string | undefined);
 
             // Guardrails run BEFORE the SDK client is resolved — a throttled or
             // blocked call should cost nothing, not a token refresh first.

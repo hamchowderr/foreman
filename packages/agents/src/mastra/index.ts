@@ -21,10 +21,22 @@ import { runAutomationWorkflow } from "../workflows/run-automation";
 import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import { createDiscoveryAgent } from "./agents/discovery";
 import { createExecutionAgent } from "./agents/execution";
-import { createForemanAgent } from "./agents/foreman";
+import { createForemanAgent, createForemanMemory } from "./agents/foreman";
 import { createHistoryAgent } from "./agents/history";
 import { createPreviewBuilderAgent } from "./agents/preview-builder";
 import { createSupervisorAgent } from "./agents/supervisor";
+import {
+  createForemanAgentController,
+  getForemanAgentController,
+  getForemanSession,
+} from "./lib/agent-controller";
+import { readWorkspaceFile, readWorkspaceTree, workspaceRootLabel } from "./lib/workspace-files";
+import { createControllerRoutes } from "./routes/controller";
+import { CHAT_KIT_PREFIXES, CHAT_KIT_USER_KEY, CHAT_KIT_WORKSPACE_KEY } from "./routes/resource";
+import { createThreadRoutes } from "./routes/threads";
+import type { ChatServerDeps } from "./routes/types";
+import { createWorkspaceRoutes } from "./routes/workspace";
+import { SCHEDULE_AGENT_ID } from "./tools/schedules";
 
 validateAgentCapabilities();
 
@@ -51,7 +63,16 @@ export function getMastra(): Mastra {
     connectionString: databaseUrl,
   });
 
-  const foremanAgent = createForemanAgent(databaseUrl);
+  // One Memory instance, shared by the foreman agent and its AgentController.
+  const foremanMemory = createForemanMemory(databaseUrl);
+  const foremanAgent = createForemanAgent(databaseUrl, foremanMemory);
+  // mastra-chat-kit: the web chat drives the foreman agent through an AgentController
+  // (lib/agent-controller.ts). Channel bots and /chat/:agentId still call the agent directly.
+  const foremanController = createForemanAgentController({
+    agent: foremanAgent,
+    storage,
+    memory: foremanMemory,
+  });
   const discoveryAgent = createDiscoveryAgent();
   const executionAgent = createExecutionAgent();
   const historyAgent = createHistoryAgent();
@@ -96,6 +117,34 @@ export function getMastra(): Mastra {
     "/slack",
     "/discord",
   ];
+
+  // mastra-chat-kit's route contract (routes/), with Foreman's implementation of its
+  // dependencies. See routes/types.ts for what each field is for.
+  const chatServerDeps: ChatServerDeps = {
+    getSession: getForemanSession,
+    getAgentController: getForemanAgentController,
+    agentId: SCHEDULE_AGENT_ID,
+    workspace: {
+      root: workspaceRootLabel,
+      readTree: readWorkspaceTree,
+      readFile: readWorkspaceFile,
+    },
+    runContext: ({ userId, workspaceId }) => ({
+      ...(userId ? { userId } : {}),
+      ...(workspaceId ? { workspaceId } : {}),
+    }),
+    // Foreman generates no images through the controller; /images/:id answers 404.
+    getImage: () => undefined,
+    // The browser stays off until it is per tenant (the kit's is shared server-wide).
+    getBrowser: async () => {
+      throw new Error("the browser is off in Foreman");
+    },
+    modelAllowlist: new Set([
+      "anthropic/claude-sonnet-4-6",
+      "anthropic/claude-opus-4-6",
+      "anthropic/claude-haiku-4-5-20251001",
+    ]),
+  };
 
   // Observability is always on so the Mastra Studio Observability tab works.
   // OTEL_ENABLED=true additionally enables the OTEL Console exporter for local
@@ -161,6 +210,9 @@ export function getMastra(): Mastra {
   };
 
   _mastra = new Mastra({
+    // Registered so the controller runs on THIS Mastra (and its observability). Left
+    // unregistered, its init() moves the foreman agent onto an internal Mastra.
+    agentControllers: { foreman: foremanController },
     agents: {
       foreman: foremanAgent,
       discovery: discoveryAgent,
@@ -218,6 +270,24 @@ export function getMastra(): Mastra {
       // Mastra with the request body intact (a Web Request body is single-read —
       // see CUSTOM_ROUTE_PREFIXES above).
       middleware: [
+        // mastra-chat-kit routes: authenticate with Foreman's own identity resolver
+        // (Supabase JWT or fmn_ API key, headers only — the body stays unread) and
+        // record the user for routes/resource.ts. No user, no access.
+        async (c, next) => {
+          const p = c.req.path;
+          const kitRoute = CHAT_KIT_PREFIXES.some(
+            (prefix) => p === prefix || p.startsWith(`${prefix}/`),
+          );
+          if (!kitRoute) {
+            await next();
+            return;
+          }
+          const identity = await resolveFromRequest(c.req.raw);
+          if (!identity) return c.json({ error: "Unauthorized" }, 401);
+          (c as any).set(CHAT_KIT_USER_KEY, identity.userId);
+          if (identity.workspaceId) (c as any).set(CHAT_KIT_WORKSPACE_KEY, identity.workspaceId);
+          await next();
+        },
         async (c, next) => {
           const p = c.req.path;
           const owned = CUSTOM_ROUTE_PREFIXES.some(
@@ -240,6 +310,9 @@ export function getMastra(): Mastra {
         return c.json({ error: "Internal Server Error" }, 500);
       },
       apiRoutes: [
+        ...createThreadRoutes(chatServerDeps),
+        ...createControllerRoutes(chatServerDeps),
+        ...createWorkspaceRoutes(chatServerDeps),
         registerApiRoute("/chat/:agentId", {
           method: "POST",
           handler: async (c: any) => {

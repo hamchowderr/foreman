@@ -5,10 +5,9 @@ import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/chat/app-sidebar";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { DevConsolePanel } from "@/components/chat/dev-console";
-import { ChatShell } from "@/components/chat/shell";
+import { ForemanChat } from "@/components/chat/foreman-chat";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { DevConsoleProvider } from "@/hooks/use-dev-console";
 import { createClient } from "@/lib/server";
 
@@ -61,9 +60,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
           }}
         />
         <Suspense fallback={<div className="flex h-dvh" />}>
-          <ActiveChatProvider>
-            <ChatShell />
-          </ActiveChatProvider>
+          <ForemanChat />
         </Suspense>
         {children}
       </SidebarInset>

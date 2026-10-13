@@ -19,6 +19,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@supabase": "https://supabase.com/ui/r/{name}.json"
+    "@supabase": "https://supabase.com/ui/r/{name}.json",
+    "@mastra-chat-kit": "https://mastra-chat-kit-registry.vercel.app/r/{name}.json"
   }
 }
