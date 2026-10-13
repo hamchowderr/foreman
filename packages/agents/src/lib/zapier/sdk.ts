@@ -31,7 +31,29 @@ const ZAPIER_PKCE_CLIENT_ID = "grwWZD5hUWGvb4V8ODBuOtXer3h0DBEZ2HR8aay6";
 
 type ZapierSdk = ReturnType<typeof createZapierSdk>;
 
-const sdkCache = new Map<string, { sdk: ZapierSdk; expiresAt: number }>();
+type ZapierSdkOptions = NonNullable<Parameters<typeof createZapierSdk>[0]>;
+
+/**
+ * Request-tracing ids for one call (SDK 0.105.0). See `resolveTraceIds` in
+ * lib/request-user-context.ts for what each carries.
+ */
+export interface SdkTraceIds {
+  correlationId?: string;
+  causationId?: string;
+}
+
+/**
+ * A cached per-user client plus the resolved options it was built from. The
+ * options (token, connection-alias manifest) are what's expensive — DB reads,
+ * decrypt, maybe a token refresh — so they're what the cache really holds.
+ */
+interface CachedSdk<T> {
+  sdk: T;
+  options: ZapierSdkOptions;
+  expiresAt: number;
+}
+
+const sdkCache = new Map<string, CachedSdk<ZapierSdk>>();
 const ZAPIER_TOKEN_URL = "https://zapier.com/oauth/token/";
 
 async function refreshAccessToken(
@@ -68,35 +90,60 @@ async function refreshAccessToken(
 
 type ZapierSdkFactory<T> = (options?: Parameters<typeof createZapierSdk>[0]) => T;
 
+function hasTrace(trace?: SdkTraceIds): trace is SdkTraceIds {
+  return Boolean(trace?.correlationId || trace?.causationId);
+}
+
+/** Options with the per-call trace ids layered on (unset ids are omitted). */
+export function withTraceOptions(options: ZapierSdkOptions, trace?: SdkTraceIds): ZapierSdkOptions {
+  return {
+    ...options,
+    ...(trace?.correlationId ? { correlationId: trace.correlationId } : {}),
+    ...(trace?.causationId ? { causationId: trace.causationId } : {}),
+  };
+}
+
 /**
  * Shared per-user client builder. The stable and experimental SDK factories take
  * the same options and differ only in the surface they expose, so both run
  * through one token + connection-alias resolution path (and one refresh) here —
  * each with its own cache. Don't duplicate this logic per factory.
+ *
+ * TRACING (correlationId / causationId, SDK 0.105.0): these are client-level
+ * options, but they vary per conversation / per approval. They are deliberately
+ * NOT part of the cache key. The cache holds the user's resolved auth (token +
+ * alias manifest) keyed on who the user is; keying it on a conversation id would
+ * re-run the DB lookups and token resolution on the first call of every
+ * conversation and grow the map by one entry per conversation (entries are only
+ * evicted when re-read after expiry). Instead, a traced call gets a lightweight
+ * per-call client built from the CACHED options plus the trace ids — client
+ * construction is a few ms of in-process wiring with no I/O, and the untraced
+ * cached client is untouched.
  */
 async function buildSdkForUser<T>(
   factory: ZapierSdkFactory<T>,
-  cache: Map<string, { sdk: T; expiresAt: number }>,
+  cache: Map<string, CachedSdk<T>>,
   userId: string,
   orgId?: string,
+  trace?: SdkTraceIds,
 ): Promise<T> {
   const env = getEnv();
 
   // DEV_ZAPIER_OVERRIDE: use a direct token for local development
   if (env.DEV_ZAPIER_OVERRIDE) {
-    return factory({
-      credentials: env.DEV_ZAPIER_OVERRIDE,
-      onEvent: onZapierSdkEvent,
-    });
+    return factory(
+      withTraceOptions({ credentials: env.DEV_ZAPIER_OVERRIDE, onEvent: onZapierSdkEvent }, trace),
+    );
   }
 
-  // Cache key includes orgId so org and personal connections are cached separately
+  // Cache key includes orgId so org and personal connections are cached separately.
+  // Trace ids are intentionally excluded — see the TRACING note above.
   const cacheKey = orgId ? `${userId}:org:${orgId}` : userId;
 
   // Check cache
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.sdk;
+    return hasTrace(trace) ? factory(withTraceOptions(cached.options, trace)) : cached.sdk;
   }
 
   // Resolve the workspace whose policy governs this user (an explicit orgId wins;
@@ -166,7 +213,7 @@ async function buildSdkForUser<T>(
     // Dev fallback: use CLI login credentials (~/.zapier-sdk/config.json).
     // production and self_hosted both require a real per-user OAuth connection.
     if (env.FOREMAN_MODE === "dev") {
-      return factory({ onEvent: onZapierSdkEvent });
+      return factory(withTraceOptions({ onEvent: onZapierSdkEvent }, trace));
     }
     throw new ZapierNotConnected(userId);
   }
@@ -207,33 +254,43 @@ async function buildSdkForUser<T>(
   const connectionsMap = await loadUserConnectionsMap(userId);
   const hasConnections = Object.keys(connectionsMap).length > 0;
 
-  const sdk = factory({
+  const options: ZapierSdkOptions = {
     credentials: accessToken,
     ...(hasConnections ? { manifest: { connections: connectionsMap } } : {}),
     onEvent: onZapierSdkEvent,
-  });
+  };
+  const sdk = factory(options);
 
   // Cache for 5 minutes or until token expires, whichever is sooner
   const fiveMinutes = Date.now() + 5 * 60 * 1000;
   cache.set(cacheKey, {
     sdk,
+    options,
     expiresAt: Math.min(fiveMinutes, tokenExpiry),
   });
 
-  return sdk;
+  return hasTrace(trace) ? factory(withTraceOptions(options, trace)) : sdk;
 }
 
 /**
  * Per-user STABLE SDK client — action execution, discovery, tables. The default
  * surface used by the generated Zapier tools.
+ *
+ * Pass `trace` to stamp `zapier-correlation-id` / `zapier-causation-id` on this
+ * call's requests; the returned client is then a per-call one built from the
+ * cached auth (see the TRACING note on `buildSdkForUser`).
  */
-export function getSdkForUser(userId: string, orgId?: string): Promise<ZapierSdk> {
-  return buildSdkForUser(createZapierSdk, sdkCache, userId, orgId);
+export function getSdkForUser(
+  userId: string,
+  orgId?: string,
+  trace?: SdkTraceIds,
+): Promise<ZapierSdk> {
+  return buildSdkForUser(createZapierSdk, sdkCache, userId, orgId, trace);
 }
 
 export type ExperimentalZapierSdk = ReturnType<typeof createExperimentalSdk>;
 
-const experimentalSdkCache = new Map<string, { sdk: ExperimentalZapierSdk; expiresAt: number }>();
+const experimentalSdkCache = new Map<string, CachedSdk<ExperimentalZapierSdk>>();
 
 /**
  * Per-user EXPERIMENTAL SDK client — adds the durable-workflow + trigger-inbox
