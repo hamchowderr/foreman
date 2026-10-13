@@ -1,7 +1,14 @@
+import { RequestContext } from "@mastra/core/request-context";
 import { Hono } from "hono";
 import { getSupabase } from "../lib/db";
-import { loadOwnedProposal } from "../lib/proposals";
+import {
+  actionRunResultJson,
+  loadOwnedProposal,
+  PROPOSAL_EXECUTION_TOOL,
+  toolResultError,
+} from "../lib/proposals";
 import { indexActionRun } from "../lib/rag";
+import { PROPOSAL_ID_KEY, THREAD_ID_KEY, USER_ID_KEY } from "../lib/request-user-context";
 import { encodeSSE, sseHeaders } from "../lib/stream/sse";
 import type { AppChunk } from "../lib/stream/types";
 import { validateParam } from "../lib/validation";
@@ -89,7 +96,17 @@ proposals.post("/:id/approve", async (c) => {
   const sseStream = new ReadableStream({
     async start(controller) {
       try {
-        const result = await agent.approveToolCall({ runId, toolCallId });
+        // Stamp who is acting and the trace ids on the resumed run, so the
+        // approved tool call executes as this user and its Zapier requests carry
+        // `zapier-correlation-id` (the conversation) and `zapier-causation-id`
+        // (this proposal). conversation.mastra_thread_id is always the
+        // conversation id (routes/conversations.ts, the /chat route).
+        const requestContext = new RequestContext([
+          [USER_ID_KEY, userId],
+          [THREAD_ID_KEY, proposal.conversation_id],
+          [PROPOSAL_ID_KEY, id],
+        ]);
+        const result = await agent.approveToolCall({ runId, toolCallId, requestContext });
         const reader = result.fullStream.getReader();
 
         while (true) {
@@ -98,15 +115,46 @@ proposals.post("/:id/approve", async (c) => {
 
           const chunk = value as any;
 
-          if (chunk.type === "tool-result" && chunk.payload?.toolName === "execute_action") {
+          if (
+            chunk.type === "tool-result" &&
+            chunk.payload?.toolName === PROPOSAL_EXECUTION_TOOL &&
+            toolResultError(chunk.payload.result) !== null
+          ) {
+            // The tool returned a structured failure (SDK error / guardrail
+            // denial) rather than throwing — record it as a failed run.
+            const errorMsg = toolResultError(chunk.payload.result) as string;
+            await supabase.from("action_run").insert({
+              id: crypto.randomUUID(),
+              proposal_id: id,
+              result: JSON.stringify(chunk.payload.result),
+              error: errorMsg,
+              executed_at: new Date().toISOString(),
+            });
+            await supabase
+              .from("action_proposal")
+              .update({ status: "failed", updated_at: new Date().toISOString() })
+              .eq("id", id);
+            controller.enqueue(
+              encodeSSE({
+                type: "error",
+                code: "EXECUTION_ERROR",
+                message: errorMsg,
+                proposalId: id,
+              }),
+            );
+          } else if (
+            chunk.type === "tool-result" &&
+            chunk.payload?.toolName === PROPOSAL_EXECUTION_TOOL
+          ) {
             const toolResult = chunk.payload.result;
             const summary = `Executed ${proposal.app_key} ${proposal.action_key}`;
+            const resultJson = actionRunResultJson(toolResult);
 
             const runRowId = crypto.randomUUID();
             await supabase.from("action_run").insert({
               id: runRowId,
               proposal_id: id,
-              result: JSON.stringify(toolResult),
+              result: resultJson,
               error: null,
               executed_at: new Date().toISOString(),
             });
@@ -120,7 +168,7 @@ proposals.post("/:id/approve", async (c) => {
               {
                 id: runRowId,
                 proposalId: id,
-                result: JSON.stringify(toolResult),
+                result: resultJson,
                 executedAt: new Date(),
               },
               proposal,

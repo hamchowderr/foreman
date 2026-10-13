@@ -153,3 +153,99 @@ async function checkSensitiveAppCapability(userId: string, capability: string): 
   if (!data) return false;
   return data.enabled;
 }
+
+// ─── Known Zapier action permissions (admin restrictions, SDK 0.112.5) ───
+
+/**
+ * `listActions` / `getAction` / `listTriggers` return a `permissions` map per
+ * action; `permissions.can_use === false` means a Zapier account admin has
+ * restricted that action. We never fetch it just to check — that would add a
+ * network round-trip to every run. Instead the generated discovery tools record
+ * what they already saw (`recordActionPermissions`), and the run-action
+ * pre-check consults it (`checkKnownActionPermission`). Unknown ⇒ allowed:
+ * Zapier still enforces the restriction server-side; this only turns a known
+ * dead end into a clear message before the call.
+ *
+ * In-memory, per user, short TTL — admins can lift a restriction.
+ */
+const ACTION_PERMISSION_TTL_MS = 10 * 60_000;
+const actionPermissionStore = new Map<string, { canUse: boolean; expiresAt: number }>();
+
+function actionPermissionKey(
+  userId: string,
+  appKey: string,
+  actionType: string,
+  actionKey: string,
+): string {
+  return JSON.stringify([
+    userId,
+    appKey.toLowerCase(),
+    actionType.toLowerCase(),
+    actionKey.toLowerCase(),
+  ]);
+}
+
+interface ActionPermissionItem {
+  key?: unknown;
+  app_key?: unknown;
+  action_type?: unknown;
+  permissions?: unknown;
+}
+
+/**
+ * Remember the `can_use` flag of action items a discovery call already returned.
+ * `requestedApp` is the app key the caller passed (e.g. "slack"); the item's own
+ * `app_key` may be spelled differently, so both are recorded.
+ */
+export function recordActionPermissions(
+  userId: string,
+  requestedApp: string | undefined,
+  items: readonly ActionPermissionItem[],
+): void {
+  const expiresAt = Date.now() + ACTION_PERMISSION_TTL_MS;
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const { key, app_key, action_type, permissions } = item;
+    if (typeof key !== "string" || typeof action_type !== "string") continue;
+    const canUse = (permissions as { can_use?: unknown } | null | undefined)?.can_use;
+    if (typeof canUse !== "boolean") continue;
+    const apps = new Set<string>();
+    if (typeof requestedApp === "string" && requestedApp) apps.add(requestedApp);
+    if (typeof app_key === "string" && app_key) apps.add(app_key);
+    for (const app of apps) {
+      actionPermissionStore.set(actionPermissionKey(userId, app, action_type, key), {
+        canUse,
+        expiresAt,
+      });
+    }
+  }
+}
+
+/**
+ * Deny a run of an action we already KNOW an admin restricted. No I/O: only
+ * consults what `recordActionPermissions` saw. Unknown or expired ⇒ allowed.
+ */
+export function checkKnownActionPermission(
+  userId: string,
+  appKey: string,
+  actionType: string,
+  actionKey: string,
+): { allowed: boolean; reason?: string } {
+  const k = actionPermissionKey(userId, appKey, actionType, actionKey);
+  const entry = actionPermissionStore.get(k);
+  if (!entry) return { allowed: true };
+  if (entry.expiresAt <= Date.now()) {
+    actionPermissionStore.delete(k);
+    return { allowed: true };
+  }
+  if (entry.canUse) return { allowed: true };
+  return {
+    allowed: false,
+    reason: `The ${appKey} action "${actionKey}" (${actionType}) has been restricted by an admin of this Zapier account, so it can't be run. Ask a Zapier account admin to allow it, or choose a different action.`,
+  };
+}
+
+/** Test hook: forget every recorded action permission. */
+export function clearActionPermissions(): void {
+  actionPermissionStore.clear();
+}
