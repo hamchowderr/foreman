@@ -92,6 +92,20 @@ describe("sanitizeToolSchemas — schema rewrite", () => {
     assertNoOpenObjects(js);
   });
 
+  it("leaves a defaulted field optional (the model's input view, not the parsed output)", () => {
+    // Marking it required next to its default made Mastra re-derive an empty
+    // schema that the AI Gateway rejects ("input_schema.type: Field required").
+    const { tool } = makeTool(
+      z.object({ id: z.string(), maxRuns: z.number().optional().default(10) }),
+    );
+    sanitizeToolSchemas({ tool });
+    const js = rawSchema(tool);
+
+    expect(js.type).toBe("object");
+    expect(js.required).toEqual(["id"]);
+    expect(js.properties.maxRuns).toMatchObject({ type: "number", default: 10 });
+  });
+
   it("leaves a tool with an unresolvable schema untouched and never throws", () => {
     const tool = { id: "x", inputSchema: undefined, execute: vi.fn() };
     expect(() => sanitizeToolSchemas({ tool })).not.toThrow();

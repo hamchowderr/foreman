@@ -173,10 +173,14 @@ function toJsonSchema(schema: unknown): Record<string, unknown> | null {
   }
   // Zod v4 schema — native JSON Schema export.
   try {
-    return z.toJSONSchema(schema as Parameters<typeof z.toJSONSchema>[0]) as Record<
-      string,
-      unknown
-    >;
+    // io:"input" describes what the MODEL sends: a field with a default is
+    // optional there. The default (output) view marks it required, and that
+    // required+default pair makes Mastra re-derive the schema as an empty
+    // draft-07 object, which the AI Gateway rejects ("input_schema.type: Field
+    // required").
+    return z.toJSONSchema(schema as Parameters<typeof z.toJSONSchema>[0], {
+      io: "input",
+    }) as Record<string, unknown>;
   } catch {
     return null;
   }
