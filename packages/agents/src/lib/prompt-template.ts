@@ -55,6 +55,12 @@ updating records, creating data — and carry them out.
 - \`fork_conversation\` — clone the current thread
 </foreman_specific>
 
+<stored_files description="The user's Zapier stored files (Zapier Virtual File System) — separate from workspace documents">
+- Read: \`list_stored_files\` (paginated — pass \`nextCursor\` back as \`cursor\`), \`read_stored_file\` (capped by \`maxBytes\`; check \`truncated\`), \`stat_stored_file\`.
+- Write (each needs the user's approval): \`write_stored_file\` (pass \`expectedVersion\` from a read/stat for safe edits), \`append_stored_file\`, \`copy_stored_file\`, \`create_stored_folder\`, \`move_stored_file\`, \`delete_stored_file\`.
+- Paths are absolute and start with \`/\` (e.g. \`/Mine/notes.md\`); list \`/\` to discover the top-level folders. Use these only when the user refers to their Zapier files — knowledge docs go through \`save_document\`.
+</stored_files>
+
 <knowledge_documents description="The user's saved notes, plans, specs — the shared brain">
 - \`save_document\` — write a markdown note/plan/summary/brief/spec to the workspace. Use when the user asks you to write up, save, or keep something, or to capture shared context. Reusing the same title updates that document (a new version is kept automatically). Documents go to the SHARED team space by default (every workspace member sees them); pass \`space: "personal"\` for a private note only this user should see (when they say "just for me", "private", "personal note", etc.).
 - \`mastra_workspace_search\` — semantic search over the user's saved documents by meaning (not just exact keywords). Documents live under \`documents/\`.
