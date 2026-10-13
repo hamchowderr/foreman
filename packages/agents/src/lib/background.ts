@@ -27,8 +27,18 @@ import { READ_ONLY_TOOL_IDS } from "./zapier-sdk-tools";
  */
 const BACKGROUND_WAIT_TIMEOUT_MS = 30_000;
 
-/** Custom (non-Zapier) read-only tools that should also run in the background. */
-const CUSTOM_BACKGROUND_TOOL_IDS = ["search_history"];
+/**
+ * Custom (non-generated) read-only tools that should also run in the background.
+ * The stored-file reads mirror STORED_FILES_READ_TOOL_IDS in
+ * mastra/tools/stored-files.ts (kept literal here to avoid importing the tool
+ * module; a unit test asserts they match).
+ */
+const CUSTOM_BACKGROUND_TOOL_IDS = [
+  "search_history",
+  "list_stored_files",
+  "read_stored_file",
+  "stat_stored_file",
+];
 
 export function backgroundToolsConfig() {
   const ids = [...READ_ONLY_TOOL_IDS, ...CUSTOM_BACKGROUND_TOOL_IDS];
