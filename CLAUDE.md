@@ -218,7 +218,7 @@ Foreman uses **SemVer** (`MAJOR.MINOR.PATCH`) with **annotated** git tags at rel
 - **Cut a release:** bump `package.json` `version` → commit `chore(release): vX.Y.Z` → `git tag -a vX.Y.Z -m "..."` on that commit (annotated, not lightweight — annotated stores author/date/notes; releases and `git describe` need it).
 - **Push tags explicitly:** `git push origin main --follow-tags` (a plain `git push` does NOT send tags — the usual gotcha). Optional: `gh release create vX.Y.Z --generate-notes` for a GitHub Release.
 - **Pre-1.0 (`0.x`):** bump MINOR for features *or* breaking changes, PATCH for fixes; no stability promise until `v1.0.0`.
-- Keep `package.json` `version` and the tag **in lockstep**. Current: `0.1.0`, **no tags yet** — first baseline tag (`v0.1.0`) pending.
+- Keep `package.json` `version` and the tag **in lockstep** (root + both workspaces; `npm version X.Y.Z --no-git-tag-version --workspaces --include-workspace-root` bumps all three and the lockfile). Current: `0.2.0`. Tags: `v0.1.0` (2026-06-17, alpha baseline), `v0.2.0` (2026-10-13). A fresh clone may not have tags locally — `git fetch --tags` before checking.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 
