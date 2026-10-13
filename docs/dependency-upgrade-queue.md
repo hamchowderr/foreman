@@ -21,7 +21,6 @@ longer appear in `npm outdated`.
 
 | Issue | Package | Current | Latest | P | Notes |
 |---|---|---|---|---|---|
-| foreman-fwhi | `@supabase/ssr` | 0.10.3 | 0.12.5 | 1 | Web auth layer (`lib/server.ts`, `lib/client.ts`, `lib/middleware.ts`). A regression logs everyone out — verify sign-up, login, password reset and session refresh by hand, not just the build. |
 | foreman-sd1r | `typescript` | 5.9.3 | 7.0.2 | 2 | Two majors. Highest risk in the tree; do alone. No new `@ts-expect-error` to silence real errors. |
 | foreman-cpdh | `@types/node` | 24.13.3 | 26.4.0 | 2 | Two majors. Declared in **all three** workspaces — must move together. Confirm the target Node version first. |
 | foreman-5qml | `chat-adapter-imessage` | 0.1.1 | 1.1.0 | 3 | 0.x→1.x, so no semver protection. Confirm the adapter is still wanted — if it's dead weight, remove rather than upgrade. |
