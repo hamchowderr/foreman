@@ -7,12 +7,14 @@ import {
   PanelLeftIcon,
   PencilIcon,
   SearchIcon,
+  Share2Icon,
   SquarePenIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +72,7 @@ export function AgentControllerSidebar({
 }) {
   const [showArchived, setShowArchived] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ThreadItem | null>(null);
+  const [sharing, setSharing] = useState<ThreadItem | null>(null);
 
   // All thread data + mutations live in the engine so a second skin inherits them
   // (bd h27). This component owns only presentation — including the toasts below,
@@ -239,6 +242,7 @@ export function AgentControllerSidebar({
                       onArchive={() => handleArchive(t, true)}
                       onRename={(title) => handleRename(t, title)}
                       onDelete={() => setPendingDelete(t)}
+                      onShare={() => setSharing(t)}
                     />
                   ))}
                 </Section>
@@ -264,6 +268,7 @@ export function AgentControllerSidebar({
                         onArchive={() => handleArchive(t, false)}
                         onRename={(title) => handleRename(t, title)}
                         onDelete={() => setPendingDelete(t)}
+                        onShare={() => setSharing(t)}
                         archivedRow
                       />
                     ))}
@@ -302,6 +307,7 @@ export function AgentControllerSidebar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ShareChatDialog thread={sharing} onClose={() => setSharing(null)} />
     </aside>
   );
 }
@@ -328,6 +334,7 @@ function ChatRow({
   onArchive,
   onRename,
   onDelete,
+  onShare,
   archivedRow,
 }: {
   thread: ThreadItem;
@@ -336,6 +343,7 @@ function ChatRow({
   onArchive: () => void;
   onRename: (title: string) => void;
   onDelete: () => void;
+  onShare: () => void;
   archivedRow?: boolean;
 }) {
   const [renaming, setRenaming] = useState(false);
@@ -413,6 +421,10 @@ function ChatRow({
           <DropdownMenuItem onClick={startRename}>
             <PencilIcon className="size-4" />
             Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onShare}>
+            <Share2Icon className="size-4" />
+            Share
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onArchive}>
             {archivedRow ? (
