@@ -27,7 +27,7 @@ packages/web/      → Next.js 16 frontend (port 3000)
 
 Models are centralized in `agents/src/lib/providers/models.ts` (`AGENT_MODELS`) and are
 env-overridable (`FOREMAN_MODEL`, `DISCOVERY_MODEL`, `EXECUTION_MODEL`, …). Tier defaults:
-`default` = `claude-sonnet-4-6`, `fast` = `claude-haiku-4-5-20251001`, `heavy` = `claude-opus-4-6`.
+`default` = `vercel/anthropic/claude-sonnet-4.6`, `fast` = `vercel/anthropic/claude-haiku-4.5`, `heavy` = `vercel/anthropic/claude-opus-4.6` (Vercel AI Gateway, `AI_GATEWAY_API_KEY`).
 
 Mastra instance + server config: `agents/src/mastra/index.ts`
 
@@ -174,11 +174,11 @@ For requirements, full quick-start, env vars, ngrok, deployment, and the testing
 
 ## Gotchas (hard-won — read before debugging the agent server)
 
-- **Run the agents server through Infisical.** Secrets (incl. `ANTHROPIC_API_KEY`)
+- **Run the agents server through Infisical.** Secrets (incl. `AI_GATEWAY_API_KEY`)
   live in Infisical (`otaku-internal`/`dev`), **not** in `agents/.env.local`
   (those keys are commented out). Start with:
   `cd packages/agents && infisical run --projectId e56e0da5-6460-4bab-bdd6-2fd12ac5447b --env dev --recursive --silent -- npm run dev`.
-  Plain `npm run dev` → no Anthropic key → every chat 500s with `invalid x-api-key`.
+  Plain `npm run dev` → no gateway key → every chat 500s on auth.
   Local infra (`DATABASE_URL`, local `SUPABASE_URL`) stays in `.env.local` and is
   baked in by `mastra dev`, so Infisical's cloud values don't clobber it.
 - **Keep `@mastra/core`, `@mastra/deployer`, `@mastra/server` on the SAME version.**

@@ -390,7 +390,7 @@ cd packages/agents && npm run dev    # agent server + Studio → http://localhos
 
 What you get:
 
-- 💬 **Chat** with Foreman directly — and the tool-isolated sub-agents it spawns on the harness (uses your `ANTHROPIC_API_KEY`)
+- 💬 **Chat** with Foreman directly — and the tool-isolated sub-agents it spawns on the harness (uses your `AI_GATEWAY_API_KEY`)
 - ✏️ **Edit & version the system prompt** — change an agent's instructions live, save a draft, publish; or use Foreman's own agent editor at [`localhost:3000/editor`](http://localhost:3000/editor)
 - 🧠 **Memory & threads** — every conversation, persisted to your local Supabase
 - 🔭 **Traces** — per-run agent / tool / LLM spans, so you can see each step an agent took

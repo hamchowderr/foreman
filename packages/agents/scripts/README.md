@@ -9,7 +9,7 @@ directly with `npx tsx`.
 - A `packages/agents/.env.local` with the secrets the script needs. Scripts load it
   via `--env-file=.env.local` (or `npx tsx --env-file=.env.local …`) — **no
   credentials are hardcoded**. Common keys: `SUPABASE_URL`,
-  `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `ANTHROPIC_API_KEY`, and (for the
+  `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `AI_GATEWAY_API_KEY`, and (for the
   Zapier probes) a logged-in Zapier SDK session + `ZAPIER_ACCOUNT_ID`.
 - A running local Supabase (`npx supabase start` from the repo root) for anything
   that touches Postgres.

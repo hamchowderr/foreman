@@ -54,14 +54,14 @@ afterEach(() => {
 });
 
 describe("providers/models defaults", () => {
-  it("falls back to hardcoded Anthropic tier defaults when no env set", async () => {
+  it("falls back to hardcoded Claude-via-gateway tier defaults when no env set", async () => {
     const { MODELS, AGENT_MODELS } = await import("@/lib/providers");
-    expect(MODELS.default).toBe("anthropic/claude-sonnet-4-6");
-    expect(MODELS.fast).toBe("anthropic/claude-haiku-4-5-20251001");
-    expect(MODELS.heavy).toBe("anthropic/claude-opus-4-6");
-    expect(AGENT_MODELS.foreman).toBe("anthropic/claude-sonnet-4-6");
-    expect(AGENT_MODELS.discovery).toBe("anthropic/claude-haiku-4-5-20251001");
-    expect(AGENT_MODELS.history).toBe("anthropic/claude-haiku-4-5-20251001");
+    expect(MODELS.default).toBe("vercel/anthropic/claude-sonnet-4.6");
+    expect(MODELS.fast).toBe("vercel/anthropic/claude-haiku-4.5");
+    expect(MODELS.heavy).toBe("vercel/anthropic/claude-opus-4.6");
+    expect(AGENT_MODELS.foreman).toBe("vercel/anthropic/claude-sonnet-4.6");
+    expect(AGENT_MODELS.discovery).toBe("vercel/anthropic/claude-haiku-4.5");
+    expect(AGENT_MODELS.history).toBe("vercel/anthropic/claude-haiku-4.5");
   });
 
   it("tier env vars override tier defaults and flow into agents", async () => {
@@ -367,6 +367,29 @@ describe("providers/cost", () => {
     expect(result.totalCostUsd).toBeCloseTo(0.57, 6);
   });
 
+  it("prices gateway models and maps every finish-event id shape onto them", async () => {
+    const { calculateCost } = await import("@/lib/providers");
+    const { resolvePricingKey } = await import("@/lib/providers/cost");
+    const result = calculateCost("vercel/anthropic/claude-sonnet-4.6", {
+      inputTokens: 1_000_000,
+      outputTokens: 1_000_000,
+    });
+    expect(result.totalCostUsd).toBeCloseTo(18, 6);
+    expect(result.provider).toBe("vercel");
+    expect(resolvePricingKey("vercel/anthropic/claude-haiku-4.5")).toBe(
+      "vercel/anthropic/claude-haiku-4.5",
+    );
+    expect(resolvePricingKey("anthropic/claude-haiku-4.5")).toBe(
+      "vercel/anthropic/claude-haiku-4.5",
+    );
+    expect(resolvePricingKey("claude-haiku-4.5")).toBe("vercel/anthropic/claude-haiku-4.5");
+    expect(resolvePricingKey("claude-haiku-4-5-20251001")).toBe(
+      "anthropic/claude-haiku-4-5-20251001",
+    );
+    expect(resolvePricingKey("anthropic/claude-sonnet-4-6")).toBe("anthropic/claude-sonnet-4-6");
+    expect(resolvePricingKey("mystery/model")).toBe("mystery/model");
+  });
+
   it("handles models without an explicit cached-input price by reusing input price", async () => {
     const { calculateCost } = await import("@/lib/providers");
     const result = calculateCost("openai/gpt-4o-mini", {
@@ -421,7 +444,7 @@ describe("providers/cost", () => {
     expect(parsed.agent).toBe("discovery");
     expect(parsed.inputTokens).toBe(1000);
     expect(parsed.outputTokens).toBe(500);
-    expect(parsed.provider).toBe("anthropic"); // discovery default
+    expect(parsed.provider).toBe("vercel"); // discovery default routes through the gateway
     expect(parsed.totalCostUsd).toBeGreaterThan(0);
   });
 

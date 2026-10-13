@@ -105,7 +105,7 @@ structured confirmation template for write actions.
 
 Reply with ONLY a single number between 0 and 1 (e.g. "0.8"), nothing else.`;
 
-const JUDGE_MODEL = "anthropic/claude-haiku-4-5-20251001";
+const JUDGE_MODEL = "vercel/anthropic/claude-haiku-4.5";
 
 export const foremanLLMJudgeScorer = createScorer({
   id: "foreman-llm-judge" as const,

@@ -13,6 +13,10 @@
  * Both switches gate on the `prompt-caching` capability — if either is true
  * and the configured model doesn't support caching, startup validation fails.
  *
+ * Works unchanged through the Vercel AI Gateway: its language model forwards
+ * the full call options (message and tool `providerOptions` included) to the
+ * gateway, which hands `providerOptions.anthropic` to Anthropic.
+ *
  * Documented surfaces:
  *   - System prompt: AI SDK attaches `providerOptions` to system messages
  *     (ai/docs/02-foundations/03-prompts.mdx:118–133).
