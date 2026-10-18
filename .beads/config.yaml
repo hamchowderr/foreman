@@ -94,4 +94,4 @@ export:
     auto: true
     git-add: false
 sync:
-    remote: otaku-solutions/foreman
+    remote: chowderr/foreman
