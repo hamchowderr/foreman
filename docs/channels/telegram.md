@@ -1,6 +1,6 @@
 # Telegram
 
-Foreman's Telegram integration uses `@chat-adapter/telegram` via the Chat SDK. The adapter runs in `auto` mode — polling locally, webhooks in production.
+Foreman's Telegram integration uses `@chat-adapter/telegram` on the Foreman Agent Controller (see [How Channels Work](README.md#how-channels-work)). The adapter runs in `auto` mode — polling locally, webhooks in production. Actions that need approval post Approve / Deny buttons.
 
 ## How It Works
 
@@ -37,15 +37,9 @@ TELEGRAM_WEBHOOK_SECRET_TOKEN=...       # Optional — for webhook signature ver
 
 ## Local Development (Polling Mode)
 
-The adapter detects it's running locally and falls back to long-polling automatically — no public URL needed.
+The adapter detects it's running locally and falls back to long-polling automatically — no public URL needed. Polling starts with the agent server (`npm run dev` in `packages/agents`, through Infisical). Send a message to your bot in Telegram and it responds via the Foreman agent.
 
-```bash
-cd packages/agents && npm run dev:telegram
-```
-
-This calls `bot.initialize()` which starts polling. Send a message to your bot in Telegram and it responds via the Foreman agent.
-
-To verify the mode: look for `Telegram bot started in polling mode` in the console.
+To verify the mode: look for `Telegram auto mode selected polling mode` in the console.
 
 **Note:** If a webhook is registered, polling won't start. Delete the webhook first:
 
@@ -57,7 +51,7 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/deleteWebhook"
 
 ### 1. Deploy the agent server
 
-The webhook endpoint is mounted at `POST /telegram/webhook`.
+The webhook endpoint is `POST /api/agent-controllers/foreman-agent-controller/channels/telegram/webhook`. The older `POST /telegram/webhook` forwards there.
 
 ### 2. Register the webhook
 
@@ -88,12 +82,10 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/deleteWebhook"
 
 ## Files
 
-| File                            | Purpose                                     |
-| ------------------------------- | ------------------------------------------- |
-| `src/telegram/bot.ts`           | Bot singleton, event handlers, agent wiring |
-| `src/telegram/webhook.ts`       | Hono webhook handler                        |
-| `src/telegram/start-polling.ts` | Entrypoint for `npm run dev:telegram`       |
-| `src/routes/index.ts`           | Mounts webhook at `POST /telegram/webhook`  |
+| File                                  | Purpose                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `src/channels/controller-channels.ts` | Slack/Discord/Telegram on the Agent Controller, event handlers |
+| `src/channels/legacy-webhooks.ts`     | Forwards `POST /telegram/webhook` to the controller channels   |
 
 ## Troubleshooting
 
@@ -106,7 +98,7 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/deleteWebhook"
 **Polling mode not starting:**
 
 - Ensure no webhook is registered — run `deleteWebhook`
-- Look for `Telegram bot started in polling mode` in console output
+- Look for `Telegram auto mode selected polling mode` in console output
 
 **Webhook returns 401:**
 

@@ -18,7 +18,6 @@ import {
 import { stepCountIs } from "../../lib/stop-conditions";
 import { sanitizeToolSchemas } from "../../lib/tool-schema-sanitizer";
 import { generateZapierTools } from "../../lib/zapier-sdk-tools";
-import { buildSlackChannelConfig } from "../../slack/channel";
 import {
   createAutomationTool,
   getAutomationManagementTool,
@@ -231,11 +230,6 @@ export function createForemanAgent(databaseUrl: string, memory?: Memory) {
     inputProcessors: () => buildForemanInputProcessors(),
     outputProcessors: [piiRedactor],
     workspace: buildForemanWorkspace,
-    // Native Mastra channels, off unless FOREMAN_NATIVE_CHANNELS opts a platform
-    // in (foreman-3i9k). `undefined` means no channels config at all, so Mastra
-    // generates no webhook route and the custom :4112 stack stays sole owner of
-    // Slack — this is additive until the Event Subscription URL is repointed.
-    channels: buildSlackChannelConfig(),
     memory: memory ?? createForemanMemory(databaseUrl),
   });
 }

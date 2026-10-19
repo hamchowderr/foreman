@@ -1,6 +1,6 @@
 # Slack
 
-Foreman's Slack integration uses `@chat-adapter/slack` via the Chat SDK. It receives events via webhook and responds to DMs and @-mentions.
+Foreman's Slack integration uses `@chat-adapter/slack` on the Foreman Agent Controller (see [How Channels Work](README.md#how-channels-work)). It receives events via webhook on the main agent server and responds to DMs and @-mentions. Actions that need approval post Approve / Deny buttons in the thread.
 
 ## How It Works
 
@@ -37,13 +37,18 @@ The bot handles three event types:
 **Event Subscriptions** → toggle **Enable Events** → set Request URL:
 
 ```
-https://your-domain.com/slack/webhook
+https://your-domain.com/api/agent-controllers/foreman-agent-controller/channels/slack/webhook
 ```
 
-Slack sends a `url_verification` challenge when you save — the webhook handler responds automatically. Subscribe to these bot events:
+(`https://your-domain.com/slack/webhook` still works and forwards there.) Slack sends a `url_verification` challenge when you save — the webhook handler responds automatically. Subscribe to these bot events:
 
 - `app_mention`
 - `message.im`
+
+### Interactivity
+
+**Interactivity & Shortcuts** → toggle on → set the Request URL to the same webhook URL as above.
+Without it, the Approve / Deny buttons on approval cards do nothing.
 
 ### Install & Copy Credentials
 
@@ -63,27 +68,22 @@ SLACK_SIGNING_SECRET=...        # From Basic Information tab
 
 ## Local Development
 
-Use [ngrok](https://ngrok.com) to expose the webhook server:
+Run the agent server (`npm run dev` in `packages/agents`, through Infisical) and expose it with [ngrok](https://ngrok.com):
 
 ```bash
-ngrok http 4112
+ngrok http 4111
 ```
 
-Set the Request URL in Event Subscriptions to `https://<ngrok-subdomain>.ngrok.io/slack/webhook`.
-
-Start the webhook server:
-
-```bash
-cd packages/agents && npm run start:webhooks
-```
+Set the Event Subscriptions and Interactivity Request URLs to `https://<ngrok-subdomain>.ngrok.io/slack/webhook`.
 
 ## Files
 
-| File                   | Purpose                                                       |
-| ---------------------- | ------------------------------------------------------------- |
-| `src/slack/bot.ts`     | Bot singleton, event handlers, agent wiring                   |
-| `src/slack/webhook.ts` | Hono webhook handler (signature verification + event routing) |
-| `src/routes/index.ts`  | Mounts webhook at `POST /slack/webhook`                       |
+| File                                  | Purpose                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `src/channels/controller-channels.ts` | Slack/Discord/Telegram on the Agent Controller, event handlers |
+| `src/channels/legacy-webhooks.ts`     | Forwards `POST /slack/webhook` to the controller channels      |
+| `src/slack/oauth.ts`                  | Multi-workspace OAuth install (`GET /slack/oauth`)             |
+| `src/slack/installations.ts`          | Loads stored workspace installs into the adapter               |
 
 ## Troubleshooting
 
@@ -95,7 +95,7 @@ cd packages/agents && npm run start:webhooks
 
 **Webhook verification fails (Slack shows "Your URL didn't respond with the value of the `challenge` parameter"):**
 
-- The webhook server must be running and publicly reachable before Slack will accept the URL
+- The agent server must be running and publicly reachable before Slack will accept the URL
 - Check `SLACK_SIGNING_SECRET` is correct — signature mismatch returns 401
 
 **Bot responds to its own messages (infinite loop):**

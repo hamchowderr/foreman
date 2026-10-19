@@ -79,11 +79,21 @@ All custom routes: `agents/src/routes/index.ts` (Hono, mounted as Mastra middlew
 | `/api-keys/*`       | `routes/api-keys.ts`       | `fmn_` API key CRUD              |
 | `/channel-links/*`  | `routes/channel-links.ts`  | Channel pairing/link codes       |
 | `/voice`            | `routes/voice.ts`          | STT/TTS endpoints                |
-| `/telegram/webhook` | `telegram/webhook.ts`      | Telegram bot                     |
-| `/slack/webhook` `/slack/oauth` | `slack/webhook.ts` | Slack bot + OAuth              |
-| `/discord/webhook`  | `discord/webhook.ts`       | Discord bot                      |
+| `/telegram/webhook` `/slack/webhook` `/discord/webhook` | `channels/legacy-webhooks.ts` | Old paths, forwarded to the controller channels |
+| `/slack/oauth`      | `slack/oauth.ts`           | Slack multi-workspace install    |
 
-Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`
+Mastra built-in routes (not ours): `/api/agents`, `/a2a/foreman`, `/mcp/*`, and the channel webhooks
+`/api/agent-controllers/foreman-agent-controller/channels/{slack,discord,telegram}/webhook`.
+
+### Channels
+
+Slack, Discord and Telegram run on the Foreman AgentController (`agents/src/channels/controller-channels.ts`),
+the same engine as the web chat: one Session per chat thread, owned by the sender's Foreman user, with
+approval buttons, schedules and subagents. Only the thread's owner can use it. `/link CODE` in a DM links a
+web account and moves earlier channel threads over (`channels/relink.ts`). Side processes that build Mastra
+(`webhook-server.ts`, `inbox-worker-server.ts`) call `skipControllerChannels()` so only the main server
+hosts them. Teams, Google Chat, WhatsApp, GitHub, Linear and iMessage are still plain `agent.generate`
+bots on the `:4112` webhook server.
 
 ### Auth
 

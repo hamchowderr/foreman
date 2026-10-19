@@ -206,10 +206,9 @@ export async function registerChannelUser(
 
 // ─── Channel Link Code Redemption ───
 
-export interface RedeemResult {
-  ok: boolean;
-  error?: "not_found" | "expired" | "already_used";
-}
+export type RedeemResult =
+  | { ok: true; userId: string }
+  | { ok: false; error: "not_found" | "expired" | "already_used" | "wrong_channel" };
 
 /**
  * Redeem a linking code from a channel bot.
@@ -234,9 +233,18 @@ export async function redeemChannelLinkCode(
   if (!data) return { ok: false, error: "not_found" };
   if (data.used_at) return { ok: false, error: "already_used" };
   if (data.expires_at < now) return { ok: false, error: "expired" };
+  // A code is made for one app; a Telegram code must not link a Discord account.
+  if (data.channel !== channel) return { ok: false, error: "wrong_channel" };
 
-  // Mark code as used
-  await supabase.from("channel_link_code").update({ used_at: now }).eq("id", data.id);
+  // Claim the code atomically: only the redeem that flips used_at from null wins,
+  // so two concurrent redeems can't both link.
+  const { data: claimed } = await supabase
+    .from("channel_link_code")
+    .update({ used_at: now })
+    .eq("id", data.id)
+    .is("used_at", null)
+    .select("id");
+  if (!claimed?.length) return { ok: false, error: "already_used" };
 
   // Upsert channel_identity: link this channel account to the web user
   const { data: existing } = await supabase
@@ -263,7 +271,17 @@ export async function redeemChannelLinkCode(
     });
   }
 
-  return { ok: true };
+  return { ok: true, userId: data.user_id };
+}
+
+/**
+ * Whether a principal exists only because a channel sender messaged the bot before
+ * linking (`registerChannelUser` gives them a placeholder `@foreman.local` email and
+ * no web login). Everything such a principal owns came from that one channel account.
+ */
+export async function isChannelOnlyUser(userId: string): Promise<boolean> {
+  const { data } = await getSupabase().from("user").select("email").eq("id", userId).maybeSingle();
+  return typeof data?.email === "string" && data.email.endsWith("@foreman.local");
 }
 
 // ─── Unified Resolution ───

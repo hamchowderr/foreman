@@ -1,13 +1,11 @@
 import http from "node:http";
-import { getDiscordAdapter, getDiscordBot } from "./discord/bot";
+import { skipControllerChannels } from "./channels/controller-channels";
 import { getGoogleChatBot } from "./gchat/bot";
 import { getGitHubBot } from "./github/bot";
 import { getiMessageBot } from "./imessage/bot";
 import { getLinearBot } from "./linear/bot";
 import { getMastra } from "./mastra";
-import { getSlackBot } from "./slack/bot";
 import { getTeamsBot } from "./teams/bot";
-import { getTelegramBot } from "./telegram/bot";
 import { getWhatsAppBot } from "./whatsapp/bot";
 
 /**
@@ -15,9 +13,17 @@ import { getWhatsAppBot } from "./whatsapp/bot";
  * Hono and @hono/node-server consume the request body stream
  * before the Chat SDK can read it for signature verification.
  * This server passes a fresh Request object with the raw body intact.
+ *
+ * Slack, Discord and Telegram are NOT served here any more: they run on the
+ * AgentController's channels on the main server (src/channels/), which also
+ * forwards their old /slack|/discord|/telegram/webhook paths.
  */
 
 const port = Number(process.env.WEBHOOK_PORT) || 4112;
+
+// The main server hosts the controller channels; hosting them here too would answer
+// every Slack/Discord/Telegram message twice. Must run before anything builds Mastra.
+skipControllerChannels();
 
 const server = http.createServer(async (req, res) => {
   // Collect the raw body
@@ -31,43 +37,6 @@ const server = http.createServer(async (req, res) => {
   const path = req.url || "/";
 
   try {
-    if (path === "/slack/webhook" && req.method === "POST") {
-      const bot = await getSlackBot();
-      // Build a fresh Web API Request with the exact raw body bytes
-      const request = new Request(url, {
-        method: "POST",
-        headers: Object.fromEntries(
-          Object.entries(req.headers)
-            .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
-        ),
-        body: rawBody,
-      });
-      const response = await bot.webhooks.slack(request);
-      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-      const body = await response.text();
-      res.end(body);
-      return;
-    }
-
-    if (path === "/telegram/webhook" && req.method === "POST") {
-      const bot = await getTelegramBot();
-      const request = new Request(url, {
-        method: "POST",
-        headers: Object.fromEntries(
-          Object.entries(req.headers)
-            .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
-        ),
-        body: rawBody,
-      });
-      const response = await bot.webhooks.telegram(request);
-      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-      const body = await response.text();
-      res.end(body);
-      return;
-    }
-
     if (path === "/teams/webhook" && req.method === "POST") {
       const bot = await getTeamsBot();
       const request = new Request(url, {
@@ -158,24 +127,6 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (path === "/discord/webhook" && req.method === "POST") {
-      const bot = await getDiscordBot();
-      const request = new Request(url, {
-        method: "POST",
-        headers: Object.fromEntries(
-          Object.entries(req.headers)
-            .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v!]),
-        ),
-        body: rawBody,
-      });
-      const response = await bot.webhooks.discord(request);
-      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-      const body = await response.text();
-      res.end(body);
-      return;
-    }
-
     if (path === "/imessage/webhook" && req.method === "POST") {
       const bot = await getiMessageBot();
       const request = new Request(url, {
@@ -237,38 +188,4 @@ server.listen(port, () => {
   // Pre-build the foreman agent so the first inbound message doesn't pay the
   // lazy Mastra construction cost.
   getMastra();
-
-  // Initialize Slack bot — getSlackBot() handles init + rehydration internally
-  if (process.env.SLACK_SIGNING_SECRET) {
-    getSlackBot()
-      .then(() => console.log("[slack] Bot ready"))
-      .catch((err: unknown) => console.error("[slack] Bot initialization failed:", err));
-  }
-
-  // Initialize Discord bot — start Gateway WebSocket for receiving messages
-  if (process.env.DISCORD_BOT_TOKEN) {
-    (async () => {
-      try {
-        const bot = await getDiscordBot();
-        const adapter = getDiscordAdapter();
-        // Must initialize Chat instance before starting Gateway
-        await bot.initialize();
-        // Start Gateway listener in legacy mode (direct processing, no webhook forwarding)
-        adapter
-          .startGatewayListener(
-            {
-              waitUntil: (p: Promise<unknown>) => {
-                p.catch((err: unknown) => console.error("Discord Gateway error:", err));
-              },
-            },
-            24 * 60 * 60 * 1000, // 24 hours
-          )
-          .then(() => console.log("Discord Gateway listener started"))
-          .catch((err: unknown) => console.error("Discord Gateway startup error:", err));
-        console.log("Discord bot initialized");
-      } catch (err) {
-        console.error("Failed to initialize Discord bot:", err);
-      }
-    })();
-  }
 });
