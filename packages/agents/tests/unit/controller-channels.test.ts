@@ -102,6 +102,15 @@ describe("which platforms are hosted", () => {
     for (const key of ENV_KEYS) delete process.env[key];
     expect(buildForemanChannels()).toBeUndefined();
   });
+
+  it("keeps approval buttons on every platform", () => {
+    // Core auto-resumes gated tools (no Approve/Deny) on a display that can't show
+    // buttons, such as "text". Unset means core's default, "cards".
+    for (const config of Object.values(configured().adapters)) {
+      const { toolDisplay } = config as { toolDisplay?: unknown };
+      expect([undefined, "cards", "timeline", "grouped"]).toContain(toolDisplay);
+    }
+  });
 });
 
 describe("acting-user stamping", () => {

@@ -129,11 +129,9 @@ function buildAdapters(): Partial<Record<ChannelPlatform, ChannelAdapterConfig>>
   }
 
   if (process.env.DISCORD_BOT_TOKEN) {
-    // Discord has no native rich cards; plain-text tool updates read better there.
-    const discord = tryAdapter("discord", () => ({
-      adapter: createDiscordAdapter(),
-      toolDisplay: "text",
-    }));
+    // Keep core's default "cards" display: on "text" core can't post Approve/Deny
+    // buttons and auto-resumes gated tools, so Zapier writes would skip approval.
+    const discord = tryAdapter("discord", () => ({ adapter: createDiscordAdapter() }));
     if (discord) adapters.discord = discord;
   }
 
