@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ─── Supabase mock ───
 
 let nextQueryResult: any = { data: null, error: null };
+// Per-query results, consumed in order before falling back to nextQueryResult.
+let queuedResults: any[] = [];
+const takeResult = () => (queuedResults.length ? queuedResults.shift() : nextQueryResult);
 
 function createChain() {
   const builder: any = {};
@@ -16,14 +19,15 @@ function createChain() {
     "update",
     "upsert",
     "delete",
+    "is",
   ];
   for (const method of chainMethods) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
-  builder.single = vi.fn().mockImplementation(() => Promise.resolve(nextQueryResult));
-  builder.maybeSingle = vi.fn().mockImplementation(() => Promise.resolve(nextQueryResult));
+  builder.single = vi.fn().mockImplementation(() => Promise.resolve(takeResult()));
+  builder.maybeSingle = vi.fn().mockImplementation(() => Promise.resolve(takeResult()));
   // biome-ignore lint/suspicious/noThenProperty: deliberate — mock makes the Supabase query builder thenable so tests can `await builder`
-  builder.then = (resolve: any) => resolve(nextQueryResult);
+  builder.then = (resolve: any) => resolve(takeResult());
   return builder;
 }
 
@@ -51,6 +55,7 @@ describe("identity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     nextQueryResult = { data: null, error: null };
+    queuedResults = [];
   });
 
   describe("resolveFromSupabaseJwt", () => {
@@ -155,6 +160,43 @@ describe("identity", () => {
       const { resolveFromChannel } = await import("@/lib/identity");
       const result = await resolveFromChannel("discord", "unknown-user");
       expect(result).toBeNull();
+    });
+  });
+
+  describe("redeemChannelLinkCode", () => {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const code = (channel: string) => ({
+      data: { id: "code-1", user_id: "web-user", channel, expires_at: future, used_at: null },
+      error: null,
+    });
+
+    it("refuses a code made for a different app", async () => {
+      queuedResults = [code("telegram")];
+      const { redeemChannelLinkCode } = await import("@/lib/identity");
+      const result = await redeemChannelLinkCode("ABCD1234", "discord", "D1");
+      expect(result).toEqual({ ok: false, error: "wrong_channel" });
+      // Refused before the code is spent or any identity is touched.
+      expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+    });
+
+    it("loses the race when another redeem already claimed the code", async () => {
+      // The lookup saw used_at = null, but the conditional claim updated no row.
+      queuedResults = [code("slack"), { data: [], error: null }];
+      const { redeemChannelLinkCode } = await import("@/lib/identity");
+      const result = await redeemChannelLinkCode("ABCD1234", "slack", "U1");
+      expect(result).toEqual({ ok: false, error: "already_used" });
+    });
+
+    it("links and returns the web user it linked to", async () => {
+      queuedResults = [
+        code("slack"),
+        { data: [{ id: "code-1" }], error: null }, // claim
+        { data: null, error: null }, // no existing channel_identity
+        { data: null, error: null }, // insert
+      ];
+      const { redeemChannelLinkCode } = await import("@/lib/identity");
+      const result = await redeemChannelLinkCode("ABCD1234", "slack", "U1", "Ada");
+      expect(result).toEqual({ ok: true, userId: "web-user" });
     });
   });
 });
