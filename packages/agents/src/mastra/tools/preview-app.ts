@@ -63,7 +63,7 @@ export const previewAppTool = createTool({
     const o = output as { url: string; title?: string };
     return {
       type: "text" as const,
-      text: `Live preview${o.title ? ` "${o.title}"` : ""} is running and shown in the side panel (${o.url}).`,
+      value: `Live preview${o.title ? ` "${o.title}"` : ""} is running and shown in the side panel (${o.url}).`,
     };
   },
   execute: async ({ brief, data, title }, ctx) => {

@@ -39,7 +39,7 @@ export const createDashboardTool = createTool({
     const o = output as { title: string; rowCount: number; appKey: string; url: string };
     return {
       type: "text" as const,
-      text: `Built the app "${o.title}" from ${o.rowCount} ${o.appKey} record(s). It is shown in the chat and available at ${o.url}.`,
+      value: `Built the app "${o.title}" from ${o.rowCount} ${o.appKey} record(s). It is shown in the chat and available at ${o.url}.`,
     };
   },
   onOutput: ({ output, toolName }) => {

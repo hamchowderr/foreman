@@ -1,54 +1,74 @@
 {
   "fixtures": [
     {
-      "match": { "userMessage": "hello" },
+      "match": {
+        "userMessage": "hello"
+      },
       "response": {
         "content": "Hello! I'm Foreman, your AI automation assistant. I can help you connect apps, automate workflows, and execute actions through Zapier. What would you like to do?"
       }
     },
     {
-      "match": { "userMessage": "help" },
+      "match": {
+        "userMessage": "help"
+      },
       "response": {
         "content": "I can help you with:\n1. Discovering available app connections\n2. Listing and executing actions\n3. Setting up automations\n4. Managing your workflow history\n\nJust tell me what you'd like to accomplish!"
       }
     },
     {
-      "match": { "userMessage": "connect", "sequenceIndex": 0 },
+      "match": {
+        "userMessage": "connect",
+        "sequenceIndex": 0
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "discover_connections",
-            "arguments": { "query": "all" }
+            "name": "list-connections",
+            "arguments": {}
           }
         ]
       }
     },
     {
-      "match": { "toolCallId": "call_discover" },
+      "match": {
+        "toolCallId": "call_discover"
+      },
       "response": {
         "content": "I found several available connections. Which app would you like to connect?"
       }
     },
     {
-      "match": { "userMessage": "send email", "sequenceIndex": 0 },
+      "match": {
+        "userMessage": "send email",
+        "sequenceIndex": 0
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "list_actions",
-            "arguments": { "connectionId": "gmail" }
+            "name": "list-actions",
+            "arguments": {
+              "app": "gmail"
+            }
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "send email", "sequenceIndex": 1 },
+      "match": {
+        "userMessage": "send email",
+        "sequenceIndex": 1
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "execute_action",
+            "name": "run-action",
             "arguments": {
-              "actionId": "gmail_send_email",
-              "params": {
+              "app": "gmail",
+              "actionType": "write",
+              "action": "message",
+              "connection": "conn_gmail_1",
+              "inputs": {
                 "to": "test@example.com",
                 "subject": "Test",
                 "body": "Hello from Foreman"
@@ -59,7 +79,10 @@
       }
     },
     {
-      "match": { "userMessage": "send email", "sequenceIndex": 2 },
+      "match": {
+        "userMessage": "send email",
+        "sequenceIndex": 2
+      },
       "response": {
         "content": "Done! I've sent the email via Gmail. Is there anything else you'd like me to do?"
       }

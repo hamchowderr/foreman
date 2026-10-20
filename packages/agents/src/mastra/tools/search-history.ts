@@ -34,7 +34,7 @@ export const searchHistoryTool = createTool({
       action: (r.metadata as any).action ?? "unknown",
       date: (r.metadata as any).executedAt ?? (r.metadata as any).date,
     }));
-    return { type: "text" as const, text: JSON.stringify(results) };
+    return { type: "text" as const, value: JSON.stringify(results) };
   },
   onOutput: ({ output, toolName }) => {
     const count = (output as any)?.results?.length ?? 0;

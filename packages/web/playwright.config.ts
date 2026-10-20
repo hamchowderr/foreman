@@ -7,8 +7,6 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
-  globalSetup: "./tests/aimock-setup.ts",
-  globalTeardown: "./tests/aimock-teardown.ts",
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
@@ -29,8 +27,6 @@ export default defineConfig({
         process.env.ENCRYPTION_KEY ??
         "9e104b5209f208812a9e03e113b30ba7d9867eda25e388469dbd22ed2266a206",
       BETTER_AUTH_URL: "http://localhost:3000",
-      ANTHROPIC_API_KEY: "sk-ant-mock-key-for-testing",
-      ANTHROPIC_BASE_URL: "http://localhost:5555/v1",
     },
     timeout: 120000,
   },

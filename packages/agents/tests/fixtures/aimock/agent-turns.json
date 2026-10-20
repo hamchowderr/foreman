@@ -1,0 +1,34 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "what did I send last week", "hasToolResult": true },
+      "response": {
+        "content": "Last week you sent one email with Gmail."
+      }
+    },
+    {
+      "match": { "userMessage": "what did I send last week" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "search_history",
+            "arguments": { "query": "emails sent last week", "userId": "user_test_1" }
+          }
+        ]
+      }
+    },
+    {
+      "match": { "userMessage": "show me the leaked key" },
+      "response": {
+        "content": "The key is sk-abcdefghijklmnopqrstuvwxyz123456."
+      }
+    },
+    {
+      "match": { "userMessage": "provider is having an outage" },
+      "response": {
+        "error": { "message": "Invalid request", "type": "invalid_request_error" },
+        "status": 400
+      }
+    }
+  ]
+}
