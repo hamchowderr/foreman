@@ -1,9 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { handleDiscordWebhook } from "../discord/webhook";
+import { forwardChannelWebhook } from "../channels/legacy-webhooks";
 import { handleSlackOAuth } from "../slack/oauth";
-import { handleSlackWebhook } from "../slack/webhook";
-import { handleTelegramWebhook } from "../telegram/webhook";
 import apiKeys from "./api-keys";
 import apps from "./apps";
 import automations from "./automations";
@@ -54,9 +52,10 @@ app.route("/channel-links", channelLinks);
 app.route("/workspaces", workspaces);
 app.route("/automations", automations);
 app.route("/chat-shares", chatShares);
-app.post("/telegram/webhook", handleTelegramWebhook);
-app.post("/slack/webhook", handleSlackWebhook);
+// Channel webhooks now land on the AgentController's channels (channels/).
+app.post("/telegram/webhook", forwardChannelWebhook("telegram"));
+app.post("/slack/webhook", forwardChannelWebhook("slack"));
 app.get("/slack/oauth", handleSlackOAuth);
-app.post("/discord/webhook", handleDiscordWebhook);
+app.post("/discord/webhook", forwardChannelWebhook("discord"));
 
 export default app;

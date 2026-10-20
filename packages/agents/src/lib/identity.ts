@@ -274,6 +274,16 @@ export async function redeemChannelLinkCode(
   return { ok: true, userId: data.user_id };
 }
 
+/**
+ * Whether a principal exists only because a channel sender messaged the bot before
+ * linking (`registerChannelUser` gives them a placeholder `@foreman.local` email and
+ * no web login). Everything such a principal owns came from that one channel account.
+ */
+export async function isChannelOnlyUser(userId: string): Promise<boolean> {
+  const { data } = await getSupabase().from("user").select("email").eq("id", userId).maybeSingle();
+  return typeof data?.email === "string" && data.email.endsWith("@foreman.local");
+}
+
 // ─── Unified Resolution ───
 
 export interface ResolvedIdentity {

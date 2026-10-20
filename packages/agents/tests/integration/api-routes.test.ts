@@ -11,15 +11,9 @@ vi.mock("@/mastra", () => ({
   })),
 }));
 
-// Mock channel webhook handlers
-vi.mock("@/telegram/webhook", () => ({
-  handleTelegramWebhook: vi.fn((c: any) => c.json({ ok: true })),
-}));
-vi.mock("@/slack/webhook", () => ({
-  handleSlackWebhook: vi.fn((c: any) => c.json({ ok: true })),
-}));
-vi.mock("@/discord/webhook", () => ({
-  handleDiscordWebhook: vi.fn((c: any) => c.json({ ok: true })),
+// Mock the channel webhook forwarding (it reaches into the AgentController)
+vi.mock("@/channels/legacy-webhooks", () => ({
+  forwardChannelWebhook: vi.fn(() => (c: any) => c.json({ ok: true })),
 }));
 
 // Mock stream utilities used by proposals
