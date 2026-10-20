@@ -122,14 +122,13 @@ See [Streaming](/docs/architecture/streaming) for the full pipeline.
 
 ## Workflows
 
-Mastra has its own `Workflow` primitive. Foreman uses it for three cron
+Mastra has its own `Workflow` primitive. Foreman uses it for two cron
 jobs:
 
 | Workflow | Purpose |
 | --- | --- |
 | `daily-summary` | 24h activity digest |
 | `health-check` | Zapier connection health |
-| `webhook-handler` | HTTP trigger workflow |
 
 User-saved workflows are stored in the `workflow` + `workflow_step` tables
 and compiled into Mastra Workflow objects on demand.
