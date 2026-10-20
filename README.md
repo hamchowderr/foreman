@@ -212,7 +212,7 @@ cd packages/agents && npm run dev
 cd packages/web && npm run dev
 ```
 
-Copy `packages/agents/.env.example` → `.env.local` (and `packages/web/.env.example` for the frontend) — every variable is documented inline. For incoming channel webhooks, also run `cd packages/agents && npm run start:webhooks` on port `:4112`. For deterministic mock-mode dev (no real LLM / voice / MCP / A2A): `cd packages/agents && npm run dev:mock`.
+Copy `packages/agents/.env.example` → `.env.local` (and `packages/web/.env.example` for the frontend) — every variable is documented inline. Slack, Discord and Telegram are served by the agents server itself; for the other channels' webhooks, also run `cd packages/agents && npm run start:webhooks` on port `:4112`. For deterministic mock-mode dev (no real LLM / voice / MCP / A2A): `cd packages/agents && npm run dev:mock`.
 
 ---
 
@@ -300,7 +300,8 @@ packages/
 │  │  ├─ processors/         context injector (in) + PII redactor (out)
 │  │  └─ rag/                action-history indexing + semantic search
 │  ├─ src/routes/            Hono: /conversations /proposals /automations /apps /documents /voice …
-│  └─ src/{slack,discord,telegram,teams,…}/   channel webhooks (:4112)
+│  ├─ src/channels/        Slack · Discord · Telegram on the Agent Controller (:4111)
+│  └─ src/{teams,gchat,linear,…}/   other channel webhooks (:4112)
 └─ web/                     Next.js 16 frontend (:3000)
    └─ src/
       ├─ app/                App Router — chat, /apps, /automations, /documents, /auth
@@ -336,7 +337,8 @@ supabase/migrations/         Postgres schema (users, conversations, proposals,
 ```
 
 - **Agents server (`:4111`):** Mastra agents over Hono. Custom routes — `/chat`, `/conversations`, `/proposals`, `/automations`, `/apps`, `/documents`, `/capabilities`, `/voice` — plus Mastra built-ins `/api/agents`, `/a2a/foreman`, `/mcp/*`.
-- **Webhooks server (`:4112`):** optional separate process for inbound channel webhooks — HTTP only, no persistent socket.
+- **Channels:** Slack, Discord and Telegram run on the agents server's Agent Controller, with approval buttons in the chat (see [docs/channels](docs/channels/README.md)).
+- **Webhooks server (`:4112`):** optional separate process for the other channel webhooks (Teams, Google Chat, Linear, …) — HTTP only, no persistent socket.
 - **Web frontend (`:3000`):** Next.js 16 + React 19 + Tailwind 4 + shadcn/ui, streaming over SSE.
 - **Storage:** `PostgresStore` (a Mastra composite store) on Postgres — every Mastra domain, **including observability** (traces, scores, metrics); no DuckDB.
 

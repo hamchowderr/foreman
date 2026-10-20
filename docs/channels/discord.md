@@ -1,6 +1,6 @@
 # Discord
 
-Foreman's Discord integration uses `@chat-adapter/discord` via the Chat SDK. It connects via both the Gateway WebSocket (for receiving messages) and the Interactions endpoint (for slash commands and verification).
+Foreman's Discord integration uses `@chat-adapter/discord` on the Foreman Agent Controller (see [How Channels Work](README.md#how-channels-work)). It connects via both the Gateway WebSocket (for receiving messages) and the Interactions endpoint (for button clicks, slash commands and verification).
 
 ## How It Works
 
@@ -10,7 +10,7 @@ The bot handles three event types:
 - **@-mentions** — `@Foreman` in any channel; the bot subscribes to the thread for follow-ups
 - **Subscribed messages** — follow-up messages in threads the bot joined
 
-Intermediate tool steps are streamed as they finish (`onStepFinish`) to keep long-running actions visible. The final reply deduplicates any text already posted mid-stream.
+Tool steps are posted as short text updates while they run, and actions that need approval post Approve / Deny buttons.
 
 ## Prerequisites
 
@@ -31,7 +31,6 @@ Intermediate tool steps are streamed as they finish (`onStepFinish`) to keep lon
 DISCORD_BOT_TOKEN=...           # Bot token from the Bot tab
 DISCORD_PUBLIC_KEY=...          # From General Information tab
 DISCORD_APPLICATION_ID=...      # From General Information tab
-CRON_SECRET=...                 # Any random string — used to authenticate internal Gateway restart calls
 ```
 
 ## Invite the Bot to a Server
@@ -47,27 +46,21 @@ https://discord.com/api/oauth2/authorize?client_id=<DISCORD_APPLICATION_ID>&perm
 In the Discord Developer Portal → **General Information** → set **Interactions Endpoint URL**:
 
 ```
-https://your-domain.com/discord/webhook
+https://your-domain.com/api/agent-controllers/foreman-agent-controller/channels/discord/webhook
 ```
 
-Discord will send a verification ping when you save. The webhook handler verifies the signature using `DISCORD_PUBLIC_KEY` and responds with a `PONG` — the URL must be publicly reachable before Discord accepts it.
+(`https://your-domain.com/discord/webhook` still works and forwards there.) Discord will send a verification ping when you save. The webhook handler verifies the signature using `DISCORD_PUBLIC_KEY` and responds with a `PONG` — the URL must be publicly reachable before Discord accepts it.
 
 ## Gateway WebSocket
 
-The Gateway listener starts automatically when the webhook server boots and `DISCORD_BOT_TOKEN` is set. It connects to Discord's WebSocket and receives real-time events. No additional configuration needed.
-
-To start the webhook server:
-
-```bash
-cd packages/agents && npm run start:webhooks
-```
+The Gateway listener starts with the agent server when `DISCORD_BOT_TOKEN` is set, and reconnects by itself whenever a session ends (Discord sessions are renewed every 24 hours). Run only one agent server per bot token, or every message is answered twice.
 
 ## Local Development
 
-For local testing, use [ngrok](https://ngrok.com) to expose the webhook server:
+For local testing, use [ngrok](https://ngrok.com) to expose the agent server:
 
 ```bash
-ngrok http 4112
+ngrok http 4111
 ```
 
 Set the Interactions Endpoint URL to `https://<ngrok-subdomain>.ngrok.io/discord/webhook` in the Developer Portal.
@@ -76,11 +69,10 @@ The Gateway connection works locally without ngrok — it connects outbound to D
 
 ## Files
 
-| File                     | Purpose                                                             |
-| ------------------------ | ------------------------------------------------------------------- |
-| `src/discord/bot.ts`     | Bot singleton, event handlers, agent wiring                         |
-| `src/discord/webhook.ts` | Hono webhook handler (signature verification + interaction routing) |
-| `src/routes/index.ts`    | Mounts webhook at `POST /discord/webhook`                           |
+| File                                  | Purpose                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `src/channels/controller-channels.ts` | Slack/Discord/Telegram on the Agent Controller, event handlers |
+| `src/channels/legacy-webhooks.ts`     | Forwards `POST /discord/webhook` to the controller channels    |
 
 ## Troubleshooting
 
@@ -88,7 +80,7 @@ The Gateway connection works locally without ngrok — it connects outbound to D
 
 - Confirm Message Content Intent is enabled in the Developer Portal
 - Verify `DISCORD_BOT_TOKEN` is correct
-- Check that the Gateway connection started: look for `[discord] Gateway connected` in the webhook server logs
+- Check that the Gateway connection started: look for `Discord Gateway connected` in the agent server logs
 
 **Interactions Endpoint verification fails:**
 
@@ -97,8 +89,8 @@ The Gateway connection works locally without ngrok — it connects outbound to D
 
 **Duplicate replies:**
 
-- The bot deduplicates step-streamed text from the final result — if you see duplicates, check for multiple running webhook server instances
+- Check for more than one agent server running with the same bot token (each opens its own Gateway connection)
 
 **Gateway disconnects:**
 
-- The adapter auto-reconnects on disconnect. If it doesn't, restart the webhook server.
+- The listener reconnects on its own, retrying every 5 seconds after an error. If it doesn't, restart the agent server.
