@@ -12,9 +12,10 @@ import { PinoLogger } from "@mastra/loggers";
 import { ConsoleExporter, DefaultExporter, Observability } from "@mastra/observability";
 import { PostgresStore } from "@mastra/pg";
 import { createUIMessageStreamResponse } from "ai";
-import { resolveActiveWorkspace, resolveFromRequest } from "../lib/identity";
+import { resolveActiveWorkspace } from "../lib/identity";
 import { validateAgentCapabilities } from "../lib/providers";
 import { requestUserContext } from "../lib/request-user-context";
+import { foremanServerAuth, identityForRequest } from "../lib/server-auth";
 import { stepCountIs } from "../lib/stop-conditions";
 import { dailyDigestWorkflow } from "../workflows/daily-digest";
 import { runAutomationWorkflow } from "../workflows/run-automation";
@@ -262,6 +263,9 @@ export function getMastra(): Mastra {
     server: {
       port: Number(process.env.PORT) || 4111,
       host: "0.0.0.0",
+      // Authenticates Mastra's built-in /api/* routes and our apiRoutes with
+      // Foreman's identity resolver; see lib/server-auth.ts (foreman-359q).
+      auth: foremanServerAuth,
       // Inlined so Mastra's own Middleware type contextually types (c, next):
       // @mastra/core vendors its own hono type snapshot, so annotating with a
       // root-`hono` MiddlewareHandler isn't assignable here. Only pre-routes the
@@ -281,7 +285,7 @@ export function getMastra(): Mastra {
             await next();
             return;
           }
-          const identity = await resolveFromRequest(c.req.raw);
+          const identity = await identityForRequest(c.req.raw);
           if (!identity) return c.json({ error: "Unauthorized" }, 401);
           // Mastra runs apiRoutes on a separate Hono app and carries only the
           // request context across, so the identity goes there (not c.set). Set or
@@ -336,7 +340,7 @@ export function getMastra(): Mastra {
               // supplies and could spoof to act as another user (foreman-tss9). All
               // HTTP callers of /chat authenticate; channels invoke the agent
               // in-process, not via this route. body.resourceId is now ignored.
-              const identity = await resolveFromRequest(c.req.raw);
+              const identity = await identityForRequest(c.req.raw);
               if (!identity) return c.json({ error: "Unauthorized" }, 401);
 
               if (body.approveRunId) {
