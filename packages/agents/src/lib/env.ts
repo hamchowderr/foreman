@@ -41,7 +41,6 @@ const envSchema = z.object({
   DISCORD_PUBLIC_KEY: z.string().optional(),
   OTEL_ENABLED: z.string().optional(),
   OTEL_EXPORTER_ENDPOINT: z.string().optional(),
-  ZAPIER_WEBHOOK_SECRET: z.string().optional(),
   // Microsoft Teams
   TEAMS_APP_ID: z.string().optional(),
   TEAMS_APP_PASSWORD: z.string().optional(),
