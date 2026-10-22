@@ -73,7 +73,6 @@ All custom routes: `agents/src/routes/index.ts` (Hono, mounted as Mastra middlew
 | `/workspaces/*`     | `routes/workspaces.ts`     | Workspace CRUD + settings        |
 | `/stored/agents/*`  | `routes/stored-agents.ts`  | Saved/preview agents             |
 | `/zapier/*` `/oauth`| `routes/zapier-connect.ts` | OAuth connect + callback flow    |
-| `/webhooks/*`       | `routes/webhooks.ts`       | Inbound webhook ingestion        |
 | `/capabilities`     | `routes/capabilities.ts`   | Per-user feature flags           |
 | `/guardrails`       | `routes/guardrails.ts`     | Safety settings                  |
 | `/api-keys/*`       | `routes/api-keys.ts`       | `fmn_` API key CRUD              |
