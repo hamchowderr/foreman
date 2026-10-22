@@ -12,11 +12,15 @@
  * paces the two housekeeping passes: re-checking which automations should be
  * subscribed, and advancing already-fired runs to their terminal status.
  */
+
+import { skipControllerChannels } from "./channels/controller-channels";
 import { startInboxWatcher } from "./lib/automations/worker";
 import { getMastra } from "./mastra";
 
 // Construct the agent in THIS process so the experimental SDK / registry init
 // happens here (mirrors how cron-driver-server built Mastra in-worker).
+// The main server hosts Slack/Discord/Telegram; a second host would answer twice.
+skipControllerChannels();
 const mastra = getMastra();
 
 // Run Mastra's workers here (foreman-bhb5): the WorkflowScheduler that fires

@@ -199,4 +199,14 @@ describe("identity", () => {
       expect(result).toEqual({ ok: true, userId: "web-user" });
     });
   });
+
+  describe("isChannelOnlyUser", () => {
+    it("is true only for the placeholder principals channel senders get", async () => {
+      const { isChannelOnlyUser } = await import("@/lib/identity");
+      queuedResults = [{ data: { email: "slack-U1@foreman.local" }, error: null }];
+      expect(await isChannelOnlyUser("u1")).toBe(true);
+      queuedResults = [{ data: { email: "ada@example.com" }, error: null }];
+      expect(await isChannelOnlyUser("u2")).toBe(false);
+    });
+  });
 });

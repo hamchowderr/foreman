@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { getSlackChannelAdapter } from "../channels/controller-channels";
 import { encryptToken } from "../lib/crypto";
 import { getSupabase } from "../lib/db";
 
@@ -63,6 +64,16 @@ export async function handleSlackOAuth(c: Context): Promise<Response> {
       },
       { onConflict: "team_id" },
     );
+
+    // Hand the install to the live adapter too, so the new workspace is answered
+    // now rather than after the next restart's rehydrate.
+    await getSlackChannelAdapter()
+      ?.setInstallation(data.team.id, {
+        botToken: data.access_token,
+        botUserId: data.bot_user_id ?? undefined,
+        teamName: data.team.name ?? undefined,
+      })
+      .catch((err) => console.error("[slack/oauth] Could not load the install live:", err));
 
     console.log("[slack/oauth] Connected team:", data.team.id, data.team.name);
 

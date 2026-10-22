@@ -17,12 +17,15 @@
  *  - Subagents are Foreman's read-only specialists (discovery, history, files,
  *    automations, tables); see subagents.ts.
  *  - No browser (shared server-wide in the kit).
+ *  - Slack, Discord and Telegram run on this same controller (channels/controller-channels.ts),
+ *    one Session per channel thread, so they get approvals, schedules and subagents too.
  */
 
 import type { Agent } from "@mastra/core/agent";
 import { AgentController, type Session } from "@mastra/core/agent-controller";
 import type { MastraMemory } from "@mastra/core/memory";
 import type { MastraCompositeStore } from "@mastra/core/storage";
+import { buildForemanChannels } from "../../channels/controller-channels";
 import { buildForemanWorkspace } from "../agents/workspace";
 import { scheduleTools } from "../tools/schedules";
 import { FOREMAN_SUBAGENTS } from "./subagents";
@@ -73,12 +76,14 @@ export function createForemanAgentController(opts: {
     ],
     storage: opts.storage,
     memory: opts.memory,
-    // Controller-level tools reach the agent on every controller run (and only there:
-    // channel bots calling the agent directly don't get them).
+    // Controller-level tools reach the agent on every controller run (web chat and the
+    // controller channels; the remaining :4112 bots call the agent directly and don't).
     tools: scheduleTools,
     subagents: FOREMAN_SUBAGENTS,
     // Per-tenant: resolved from the run's request context (workspaceId / userId).
     workspace: buildForemanWorkspace,
+    // Slack / Discord / Telegram, when configured (undefined otherwise: no routes, no sockets).
+    channels: buildForemanChannels(),
   });
   return instance;
 }
