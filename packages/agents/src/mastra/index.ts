@@ -18,7 +18,6 @@ import { requestUserContext } from "../lib/request-user-context";
 import { stepCountIs } from "../lib/stop-conditions";
 import { dailyDigestWorkflow } from "../workflows/daily-digest";
 import { runAutomationWorkflow } from "../workflows/run-automation";
-import { webhookHandlerWorkflow } from "../workflows/webhook-handler";
 import { createDiscoveryAgent } from "./agents/discovery";
 import { createExecutionAgent } from "./agents/execution";
 import { createForemanAgent, createForemanMemory } from "./agents/foreman";
@@ -106,7 +105,6 @@ export function getMastra(): Mastra {
     "/stored",
     "/zapier",
     "/oauth",
-    "/webhooks",
     "/capabilities",
     "/guardrails",
     "/voice",
@@ -224,7 +222,6 @@ export function getMastra(): Mastra {
       "preview-builder": previewBuilderAgent,
     },
     workflows: {
-      webhookHandler: webhookHandlerWorkflow,
       // Keys MUST match each workflow's own id — imperative schedules target them
       // by id and the event dispatcher resolves by id first (foreman-bhb5).
       "daily-digest": dailyDigestWorkflow,
