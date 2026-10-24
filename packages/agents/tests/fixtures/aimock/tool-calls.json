@@ -1,25 +1,34 @@
 {
   "fixtures": [
     {
-      "match": { "userMessage": "send email" },
+      "match": {
+        "userMessage": "send email"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "list_actions",
-            "arguments": { "app": "gmail" }
+            "name": "list-actions",
+            "arguments": {
+              "app": "gmail"
+            }
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "send.*gmail" },
+      "match": {
+        "userMessage": "send.*gmail"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "execute_action",
+            "name": "run-action",
             "arguments": {
-              "action_id": "gmail_send_email",
-              "params": {
+              "app": "gmail",
+              "actionType": "write",
+              "action": "message",
+              "connection": "conn_gmail_1",
+              "inputs": {
                 "to": "test@example.com",
                 "subject": "Test Email",
                 "body": "This is a test email sent via Foreman."
@@ -30,34 +39,48 @@
       }
     },
     {
-      "match": { "userMessage": "create task" },
+      "match": {
+        "userMessage": "create task"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "list_actions",
-            "arguments": { "app": "todoist" }
+            "name": "list-actions",
+            "arguments": {
+              "app": "todoist"
+            }
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "slack message" },
+      "match": {
+        "userMessage": "slack message"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "list_actions",
-            "arguments": { "app": "slack" }
+            "name": "list-actions",
+            "arguments": {
+              "app": "slack"
+            }
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "schema" },
+      "match": {
+        "userMessage": "schema"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "get_action_schema",
-            "arguments": { "action_id": "gmail_send_email" }
+            "name": "get-action",
+            "arguments": {
+              "app": "gmail",
+              "actionType": "write",
+              "action": "message"
+            }
           }
         ]
       }

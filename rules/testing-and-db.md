@@ -12,3 +12,9 @@
 - **Schema is generated, not hand-written.** `src/lib/db/database.types.ts` is
   codegen — edit migrations in `supabase/migrations/`, then regenerate; never
   hand-edit the types.
+- **Agent turns go through AIMock only on direct provider ids.** The default
+  `vercel/...` gateway models can't be mocked; call `useDirectAnthropicModels()`
+  (`tests/helpers/aimock.ts`) before importing an agent, add fixtures under
+  `tests/fixtures/aimock/`, and assert on the request via `journalFor()`.
+- **`toModelOutput` text results are `{ type: "text", value }`.** A `text` key is
+  silently dropped and the model sees an empty tool result.

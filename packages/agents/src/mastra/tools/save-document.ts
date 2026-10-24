@@ -60,7 +60,7 @@ export const saveDocumentTool = createTool({
     const o = output as { title: string; path: string };
     return {
       type: "text" as const,
-      text: `Saved document "${o.title}" (${o.path}). It is shown in the side panel, and you can read it back anytime with your workspace file tools.`,
+      value: `Saved document "${o.title}" (${o.path}). It is shown in the side panel, and you can read it back anytime with your workspace file tools.`,
     };
   },
   execute: async ({ title, content, space }, context) => {

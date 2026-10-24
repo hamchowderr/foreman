@@ -1,78 +1,132 @@
 {
   "strict": true,
-  "llm": { "fixtures": "./tests/fixtures/aimock" },
+  "llm": {
+    "fixtures": "./tests/fixtures/aimock"
+  },
   "mcp": {
     "tools": [
       {
-        "name": "discover_connections",
-        "description": "Discover available Zapier connections",
+        "name": "list-connections",
+        "description": "List the user's Zapier connections, optionally filtered by app or search text",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "query": { "type": "string", "description": "Search query for connections" }
+            "app": {
+              "type": "string",
+              "description": "App key, e.g. gmail"
+            },
+            "search": {
+              "type": "string",
+              "description": "Search text"
+            }
           }
         },
-        "result": "{\"connections\":[{\"id\":\"gmail\",\"app\":\"gmail\",\"title\":\"Gmail\"},{\"id\":\"slack\",\"app\":\"slack\",\"title\":\"Slack\"}]}"
+        "result": "{\"data\":[{\"id\":\"conn_gmail_1\",\"app\":\"GmailCLIAPI\",\"title\":\"Gmail (test@example.com)\"},{\"id\":\"conn_slack_1\",\"app\":\"SlackCLIAPI\",\"title\":\"Slack (Acme)\"}]}"
       },
       {
-        "name": "list_actions",
-        "description": "List available actions for a connection",
+        "name": "list-actions",
+        "description": "List the actions an app supports",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "connectionId": { "type": "string", "description": "The connection ID" }
+            "app": {
+              "type": "string",
+              "description": "App key"
+            },
+            "actionType": {
+              "type": "string",
+              "description": "read, write, search, ..."
+            }
           },
-          "required": ["connectionId"]
+          "required": ["app"]
         },
-        "result": "{\"actions\":[{\"id\":\"gmail_send_email\",\"name\":\"Send Email\"}]}"
+        "result": "{\"data\":[{\"key\":\"message\",\"app\":\"GmailCLIAPI\",\"actionType\":\"write\",\"title\":\"Send Email\"}]}"
       },
       {
-        "name": "get_action_schema",
-        "description": "Get the schema for a specific action",
+        "name": "get-action",
+        "description": "Get one action's details",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "actionId": { "type": "string", "description": "The action ID" }
+            "app": {
+              "type": "string"
+            },
+            "actionType": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            }
           },
-          "required": ["actionId"]
+          "required": ["app", "actionType", "action"]
         },
-        "result": "{\"actionId\":\"gmail_send_email\",\"fields\":[{\"key\":\"to\",\"type\":\"string\",\"required\":true},{\"key\":\"subject\",\"type\":\"string\"},{\"key\":\"body\",\"type\":\"string\"}]}"
+        "result": "{\"data\":{\"key\":\"message\",\"app\":\"GmailCLIAPI\",\"actionType\":\"write\",\"title\":\"Send Email\"}}"
       },
       {
-        "name": "get_field_choices",
-        "description": "Get field choices for an action parameter",
+        "name": "list-action-input-field-choices",
+        "description": "List the choices for one of an action's input fields",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "actionId": { "type": "string", "description": "The action ID" },
-            "fieldName": { "type": "string", "description": "The field name" }
+            "app": {
+              "type": "string"
+            },
+            "actionType": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "inputField": {
+              "type": "string"
+            },
+            "connection": {
+              "type": "string"
+            }
           },
-          "required": ["actionId", "fieldName"]
+          "required": ["app", "actionType", "action", "inputField"]
         },
-        "result": "{\"choices\":[]}"
+        "result": "{\"data\":[]}"
       },
       {
-        "name": "execute_action",
-        "description": "Execute a Zapier action",
+        "name": "run-action",
+        "description": "Run a Zapier action (needs approval)",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "actionId": { "type": "string", "description": "The action ID" },
-            "params": { "type": "object", "description": "Action parameters" }
+            "app": {
+              "type": "string"
+            },
+            "actionType": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "connection": {
+              "type": "string"
+            },
+            "inputs": {
+              "type": "object",
+              "description": "Action inputs"
+            }
           },
-          "required": ["actionId"]
+          "required": ["app", "actionType", "action"]
         },
-        "result": "{\"status\":\"success\",\"result\":{\"id\":\"msg_mock_1\"}}"
+        "result": "{\"data\":[{\"id\":\"msg_mock_1\"}]}"
       },
       {
-        "name": "raw_api_call",
-        "description": "Make a raw API call",
+        "name": "fetch",
+        "description": "Make an authenticated HTTP request through a Zapier connection",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "url": { "type": "string" },
-            "method": { "type": "string" },
-            "body": { "type": "object" }
+            "url": {
+              "type": "string"
+            },
+            "init": {
+              "type": "object"
+            }
           },
           "required": ["url"]
         },
@@ -80,29 +134,43 @@
       },
       {
         "name": "search_history",
-        "description": "Search conversation history",
+        "description": "Search the user's past action history",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "query": { "type": "string" },
-            "limit": { "type": "number" }
+            "query": {
+              "type": "string"
+            },
+            "userId": {
+              "type": "string"
+            },
+            "topK": {
+              "type": "number"
+            }
           },
-          "required": ["query"]
+          "required": ["query", "userId"]
         },
         "result": "{\"results\":[]}"
       },
       {
         "name": "fork_conversation",
-        "description": "Fork the current conversation",
+        "description": "Fork the current conversation into a new thread",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "conversationId": { "type": "string" },
-            "fromMessageId": { "type": "string" }
+            "threadId": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "messageLimit": {
+              "type": "number"
+            }
           },
-          "required": ["conversationId"]
+          "required": ["threadId"]
         },
-        "result": "{\"conversationId\":\"conv_forked_mock\"}"
+        "result": "{\"newThreadId\":\"thread_forked_mock\",\"title\":\"Forked\",\"messagesCopied\":2,\"sourceThreadId\":\"thread_mock\"}"
       }
     ]
   },
@@ -111,27 +179,72 @@
       {
         "name": "foreman",
         "description": "Primary orchestrator agent",
-        "messages": [{ "pattern": ".*", "parts": [{ "text": "Foreman mock response." }] }]
+        "messages": [
+          {
+            "pattern": ".*",
+            "parts": [
+              {
+                "text": "Foreman mock response."
+              }
+            ]
+          }
+        ]
       },
       {
         "name": "discovery",
         "description": "Tool and connection discovery agent",
-        "messages": [{ "pattern": ".*", "parts": [{ "text": "Discovery mock response." }] }]
+        "messages": [
+          {
+            "pattern": ".*",
+            "parts": [
+              {
+                "text": "Discovery mock response."
+              }
+            ]
+          }
+        ]
       },
       {
         "name": "execution",
         "description": "Action execution agent",
-        "messages": [{ "pattern": ".*", "parts": [{ "text": "Execution mock response." }] }]
+        "messages": [
+          {
+            "pattern": ".*",
+            "parts": [
+              {
+                "text": "Execution mock response."
+              }
+            ]
+          }
+        ]
       },
       {
         "name": "history",
         "description": "Conversation history agent",
-        "messages": [{ "pattern": ".*", "parts": [{ "text": "History mock response." }] }]
+        "messages": [
+          {
+            "pattern": ".*",
+            "parts": [
+              {
+                "text": "History mock response."
+              }
+            ]
+          }
+        ]
       },
       {
         "name": "supervisor",
         "description": "Agent supervision and routing",
-        "messages": [{ "pattern": ".*", "parts": [{ "text": "Supervisor mock response." }] }]
+        "messages": [
+          {
+            "pattern": ".*",
+            "parts": [
+              {
+                "text": "Supervisor mock response."
+              }
+            ]
+          }
+        ]
       }
     ]
   }

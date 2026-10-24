@@ -106,7 +106,7 @@ export const createAutomationTool = createTool({
   }),
   toModelOutput: (output) => ({
     type: "text" as const,
-    text: JSON.stringify({
+    value: JSON.stringify({
       id: output.id,
       enabled: output.enabled,
       editorUrl: output.editorUrl,

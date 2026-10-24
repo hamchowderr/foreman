@@ -1,44 +1,52 @@
 {
   "fixtures": [
     {
-      "match": { "userMessage": "what apps" },
+      "match": {
+        "userMessage": "what apps"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "discover_connections",
+            "name": "list-connections",
             "arguments": {}
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "connections" },
+      "match": {
+        "userMessage": "connections"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "discover_connections",
+            "name": "list-connections",
             "arguments": {}
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "connected" },
+      "match": {
+        "userMessage": "connected"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "discover_connections",
+            "name": "list-connections",
             "arguments": {}
           }
         ]
       }
     },
     {
-      "match": { "userMessage": "show my apps" },
+      "match": {
+        "userMessage": "show my apps"
+      },
       "response": {
         "toolCalls": [
           {
-            "name": "discover_connections",
+            "name": "list-connections",
             "arguments": {}
           }
         ]

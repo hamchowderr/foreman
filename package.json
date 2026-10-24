@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@copilotkit/aimock": "^1.14.3",
+    "@copilotkit/aimock": "^1.45.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
