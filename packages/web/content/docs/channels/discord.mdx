@@ -86,9 +86,8 @@ description: Gateway + slash commands, in any server.
     DISCORD_APPLICATION_ID=...
     ```
 
-    Restart the webhook server (`npm run start:webhooks`, port `4112`).
-    The Discord Gateway listener auto-starts on boot when
-    `DISCORD_BOT_TOKEN` is set.
+    Restart the agent server. The Discord Gateway listener starts with it
+    when `DISCORD_BOT_TOKEN` is set, and reconnects on its own.
   </Step>
 </Steps>
 

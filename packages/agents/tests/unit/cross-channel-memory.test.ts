@@ -17,17 +17,9 @@ import { describe, expect, it } from "vitest";
  * reading the source and checking for the expected memory config shape.
  */
 
-const CHANNELS = [
-  "telegram",
-  "slack",
-  "discord",
-  "teams",
-  "gchat",
-  "whatsapp",
-  "github",
-  "linear",
-  "imessage",
-] as const;
+// Slack, Discord and Telegram run on the AgentController (src/channels/) and are
+// covered by controller-channels.test.ts; these are the remaining :4112 bots.
+const CHANNELS = ["teams", "gchat", "whatsapp", "github", "linear", "imessage"] as const;
 
 function readBotSource(channel: string): string {
   const path = resolve(__dirname, `../../src/${channel}/bot.ts`);

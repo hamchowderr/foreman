@@ -1,12 +1,21 @@
 ---
 title: Webhook server · self-hosted
-description: Receive incoming messages from Slack, Discord, Telegram, and other channels.
+description: Receive incoming messages from Teams, Google Chat, GitHub, Linear and other channels.
 ---
 
 If you only use the web UI, you can skip this page entirely. The webhook
-server is for **inbound channel traffic** — when Slack, Discord, Telegram,
-Teams, Google Chat, WhatsApp, GitHub, or Linear push events to your
-Foreman instance, they hit this server.
+server is for **inbound channel traffic** — when Teams, Google Chat,
+WhatsApp, GitHub, Linear or iMessage push events to your Foreman
+instance, they hit this server.
+
+<Callout type="info">
+  **Slack, Discord and Telegram don't use this server.** They run on the
+  agent server (port `4111`), on the same engine as the web chat, so they
+  get approval buttons, schedules and shared memory. Their webhook URL is
+  `https://your-agent-host/api/agent-controllers/foreman-agent-controller/channels/<slack|discord|telegram>/webhook`
+  (the older `/slack/webhook`, `/discord/webhook` and `/telegram/webhook`
+  paths on the agent server forward there).
+</Callout>
 
 It's a separate process from the agent server and listens on its own
 port. The split exists for a real reason: signature verification needs
@@ -25,13 +34,6 @@ npm run start:webhooks
 That starts a Node process on `WEBHOOK_PORT` (default `4112`). On boot it:
 
 - Listens on `/health` and the channel webhook routes below.
-- Initializes a Slack bot if `SLACK_SIGNING_SECRET` is set (rehydrates
-  installations from the database so previously-connected workspaces
-  keep working across restarts).
-- Initializes the Discord bot and starts the **Gateway listener** if
-  `DISCORD_BOT_TOKEN` is set. Discord doesn't push DMs over webhooks —
-  it pushes them over a persistent WebSocket. Slash commands still come
-  in via the webhook URL.
 
 <Callout type="info">
   The agent server (port `4111`) and the webhook server (port `4112`)
@@ -46,9 +48,6 @@ provider's dashboard.
 
 | Channel | Path | Method |
 | --- | --- | --- |
-| Slack | `/slack/webhook` | POST |
-| Discord (slash commands) | `/discord/webhook` | POST |
-| Telegram | `/telegram/webhook` | POST |
 | Microsoft Teams | `/teams/webhook` | POST |
 | Google Chat | `/gchat/webhook` | POST |
 | WhatsApp | `/whatsapp/webhook` | POST + GET (verify) |
@@ -93,9 +92,6 @@ own docs page lists the exact scopes and developer-portal steps.
 
 | Channel | Env vars |
 | --- | --- |
-| Slack | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optionally `SLACK_CLIENT_ID`/`SECRET`/`REDIRECT_URI` for the OAuth install flow |
-| Discord | `DISCORD_BOT_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID` |
-| Telegram | `TELEGRAM_BOT_TOKEN` |
 | Microsoft Teams | `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD`, `TEAMS_APP_TENANT_ID` |
 | Google Chat | `GOOGLE_CHAT_CREDENTIALS` (JSON) or `GOOGLE_CHAT_USE_ADC=true` |
 | WhatsApp | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` |
