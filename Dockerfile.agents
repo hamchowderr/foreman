@@ -11,6 +11,8 @@ RUN apt-get update \
 # Copy workspace root + agents package
 COPY package.json package-lock.json ./
 COPY packages/agents/package.json packages/agents/package.json
+# The root postinstall runs this check
+COPY scripts/check-dep-uniqueness.mjs scripts/check-dep-uniqueness.mjs
 
 # Install all deps (including dev — mastra CLI needed for build)
 RUN npm install
