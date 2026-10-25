@@ -2,6 +2,12 @@ FROM node:24-slim AS builder
 
 WORKDIR /app
 
+# zlib-sync (Discord gateway compression) compiles with node-gyp during npm install.
+# Builder only: the production stage copies the compiled node_modules.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy workspace root + agents package
 COPY package.json package-lock.json ./
 COPY packages/agents/package.json packages/agents/package.json
