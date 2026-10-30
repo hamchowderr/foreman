@@ -172,6 +172,12 @@ export interface ResolveSandboxOptions {
    */
   readOnlyPaths?: string[];
   /**
+   * Extra paths the sandboxed process may WRITE, beyond the working directory.
+   * A durable runner needs its tenant's state directory (the journal lives
+   * there, one level above the run directory).
+   */
+  readWritePaths?: string[];
+  /**
    * Whether the sandboxed process may reach the network. Off by default, which
    * is the useful default for running untrusted code; callers that genuinely
    * need egress (a durable calling the Zapier API) opt in explicitly.
@@ -214,6 +220,7 @@ export function resolveSandbox(options: ResolveSandboxOptions): WorkspaceSandbox
     nativeSandbox: {
       allowNetwork: options.allowNetwork ?? false,
       ...(options.readOnlyPaths?.length ? { readOnlyPaths: options.readOnlyPaths } : {}),
+      ...(options.readWritePaths?.length ? { readWritePaths: options.readWritePaths } : {}),
     },
   });
 }
