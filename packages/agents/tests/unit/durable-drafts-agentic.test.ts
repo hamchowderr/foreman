@@ -103,6 +103,29 @@ describe("testAutomationDraft", () => {
     const res = await testAutomationDraft({ sdk: flaky, workflowId: "wf_1", source: "SRC" });
     expect(res.runId).toBe("run_d1");
   });
+
+  it("waits for the run's result when asked (SDK 0.119.0 waitSeconds)", async () => {
+    const sdk = draftSdk();
+    vi.mocked(sdk.runWorkflowDraft).mockResolvedValueOnce({
+      data: {
+        id: "run_d1",
+        kind: "draft",
+        status: "finished",
+        durable_run_id: "dur_1",
+        draft_revision: 2,
+        output: { ok: true },
+        error: null,
+      },
+    } as never);
+    const res = await testAutomationDraft({
+      sdk,
+      workflowId: "wf_1",
+      source: "SRC",
+      waitSeconds: 30,
+    });
+    expect(vi.mocked(sdk.runWorkflowDraft).mock.calls[0][0]).toMatchObject({ waitSeconds: 30 });
+    expect(res).toMatchObject({ status: "finished", output: { ok: true }, error: null });
+  });
 });
 
 describe("publishAutomationDraft / getWorkflowRunStatus", () => {

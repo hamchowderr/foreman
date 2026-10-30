@@ -26,6 +26,7 @@
  * multi-tenant Linux case — which is exactly where bwrap is available.
  */
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { resolveIsolation, resolveSandbox } from "../providers/sandbox";
@@ -148,12 +149,15 @@ function bootstrapSource(opts: { fsDir: string; executionId?: string }): string 
  * Node resolves bare imports by walking `node_modules` up from the entry file.
  * The run directory lives deep under the workspace, so every ancestor is a
  * candidate — name them all so isolation does not break `@zapier/zapier-durable`.
+ * Only roots that exist are named: bwrap refuses to start when a bind source is
+ * missing ("Can't find source path"), and the run directory has none of its own.
  */
 function nodeModulesRootsFor(runDir: string): string[] {
   const roots: string[] = [];
   let dir = path.resolve(runDir);
   for (;;) {
-    roots.push(path.join(dir, "node_modules"));
+    const root = path.join(dir, "node_modules");
+    if (existsSync(root)) roots.push(root);
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -198,9 +202,11 @@ export async function runDurableLocally(
     workingDirectory: runDir,
     tenantKey: opts.tenantKey,
     idSuffix: "durable",
-    // The state directory is the parent of runDir and must stay writable — the
-    // durable journal is written there, not in the run directory.
     readOnlyPaths: [...nodeModulesRootsFor(runDir), ...(opts.readOnlyPaths ?? [])],
+    // The state directory is the parent of runDir and must stay writable — the
+    // durable journal is written there, not in the run directory. Under bwrap
+    // only the working directory is writable unless a path is named here.
+    readWritePaths: [stateDir],
     // A durable exists to call app APIs; without egress every runAction fails.
     allowNetwork: true,
   });

@@ -49,7 +49,9 @@ export const BRAND_COLORS = {
   zapier: "#FF4A00",
 } as const;
 
+// Called once per icon at module level, so each icon keeps one component identity.
 function brand(icon: unknown, defaultColor: string) {
+  // biome-ignore lint/correctness/noComponentHookFactories: module-level factory, not called during render
   return function BrandIcon({
     color = defaultColor,
     size = 24,

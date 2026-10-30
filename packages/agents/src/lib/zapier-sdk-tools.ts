@@ -215,6 +215,28 @@ const PAGINATED_METHODS = new Set([
 const DEFAULT_MAX_ITEMS = 100;
 
 /**
+ * Action-run methods that take an `idempotencyKey` (SDK 0.118.0). A run started
+ * with a key Zapier saw in the last 72 hours returns the original run instead of
+ * running the action again.
+ */
+const IDEMPOTENT_METHODS = new Set(["runAction", "createActionRun"]);
+
+/**
+ * Default `idempotencyKey` for an action run: the tool call id. It stays the same
+ * across an approval's suspend/resume and any replay of that call, so the action
+ * runs once per call, while a new call (a deliberate re-run) gets a new key. A key
+ * the model passed itself wins.
+ */
+export function withIdempotencyKey(
+  fnName: string,
+  input: Record<string, unknown>,
+  toolCallId: string | undefined,
+): Record<string, unknown> {
+  if (!IDEMPOTENT_METHODS.has(fnName) || !toolCallId || input.idempotencyKey) return input;
+  return { ...input, idempotencyKey: `foreman:${toolCallId}`.slice(0, 255) };
+}
+
+/**
  * Stringified-open-object coercion (the nested-in-array gap).
  *
  * A few Zapier tools take an "open bag" param — dynamic keys, `additionalProperties`
@@ -544,12 +566,13 @@ export function generateZapierTools(
               return summarize(await activeMethod.call(activeSdk, ...args));
             }
 
+            const args = withIdempotencyKey(fn.name, input as any, context?.agent?.toolCallId);
             let result: unknown;
             if (PAGINATED_METHODS.has(fn.name)) {
-              const maxItems = (input as any).maxItems ?? DEFAULT_MAX_ITEMS;
-              result = await activeMethod.call(activeSdk, { ...input, maxItems });
+              const maxItems = (args as any).maxItems ?? DEFAULT_MAX_ITEMS;
+              result = await activeMethod.call(activeSdk, { ...args, maxItems });
             } else {
-              result = await activeMethod.call(activeSdk, input);
+              result = await activeMethod.call(activeSdk, args);
             }
             if (userId) rememberActionPermissions(userId, fn.name, input, result);
             return summarize(result);

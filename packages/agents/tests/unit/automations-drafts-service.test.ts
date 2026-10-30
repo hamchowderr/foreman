@@ -47,6 +47,7 @@ vi.mock("@/lib/automations/store", () => ({
 }));
 
 import {
+  DRAFT_TEST_WAIT_SECONDS,
   getManagementForUser,
   inspectForUser,
   testAutomationById,
@@ -93,6 +94,7 @@ describe("testAutomationById", () => {
       source: "STORED",
       input: { x: 1 },
       connections: { slack: "1" },
+      waitSeconds: DRAFT_TEST_WAIT_SECONDS,
     });
     expect(runAutomationOnce).not.toHaveBeenCalled();
   });

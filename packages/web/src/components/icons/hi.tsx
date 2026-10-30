@@ -49,7 +49,9 @@ type IconProps = Omit<SVGProps<SVGSVGElement>, "color"> & {
   strokeWidth?: number;
 };
 
+// Called once per icon at module level, so each icon keeps one component identity.
 function make(icon: unknown) {
+  // biome-ignore lint/correctness/noComponentHookFactories: module-level factory, not called during render
   return function Icon(props: IconProps) {
     return (
       <HugeiconsIcon

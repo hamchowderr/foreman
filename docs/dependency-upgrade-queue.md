@@ -9,10 +9,11 @@ any of them** — each needs a deliberate range bump in `package.json`.
 
 ## Already current (do not re-file)
 
-All 16 `@mastra/*` packages (core/deployer/server at 1.76.0, CLI at 1.34.0) and
-the Zapier SDK 0.115.1 + CLI 0.86.7 (mcp 0.27.7, transitive) as of 2026-10-13.
-`@zapier/zapier-durable` 0.14.1, zod 4.6.7, and the former safe tier (foreman-9qa8:
-`next` 16.4.0, `@biomejs/biome` 2.5.15, `ansi-to-react` 6.2.6, `react-data-grid`
+All 16 `@mastra/*` packages (core/deployer/server at 1.80.0, CLI at 1.36.0) and
+`next` 16.4.3 as of 2026-10-30, and the Zapier SDK 0.119.0 + CLI 0.89.0 (mcp 0.28.0,
+transitive) as of 2026-10-30.
+`@zapier/zapier-durable` 0.14.3, zod 4.6.7, and the former safe tier (foreman-9qa8:
+`next` 16.4.0 (since 16.4.3), `@biomejs/biome` 2.5.15, `ansi-to-react` 6.2.6, `react-data-grid`
 beta.61) also landed in the same PR.
 `ai`, `@ai-sdk/react`, `@supabase/supabase-js`, `hono`, `pg` and `tokenx` no
 longer appear in `npm outdated`.

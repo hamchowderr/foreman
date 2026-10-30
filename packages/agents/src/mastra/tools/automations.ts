@@ -208,7 +208,8 @@ export const testAutomationTool = createTool({
     "Test a workspace automation WITHOUT publishing: runs its durable source as a free draft run of the saved " +
     "Zapier workflow (the live version is untouched). Pass `source` to try an edited version before redeploying. " +
     "Automations with no saved workflow fall back to a one-off ephemeral run. Side effects in connected apps WILL " +
-    "happen. Returns the run id + initial status; use inspect_automation to follow it (draft runs show kind 'draft').",
+    "happen. A draft run waits up to 30s and returns its output or error when it ends in time; otherwise use " +
+    "inspect_automation to follow it (draft runs show kind 'draft').",
   inputSchema: z.object({
     userId: z.string(),
     automationId: z.string().describe("The Foreman automation id (from list/create)."),
@@ -223,6 +224,8 @@ export const testAutomationTool = createTool({
     runId: z.string(),
     status: z.string(),
     durableRunId: z.string().nullable(),
+    output: z.unknown().optional(),
+    error: z.unknown().optional(),
   }),
   execute: async ({ userId, automationId, input, source }) => {
     const result = await testAutomationById(userId, automationId, { input, source });
