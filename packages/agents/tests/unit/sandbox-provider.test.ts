@@ -78,15 +78,20 @@ describe("isolation posture", () => {
 
   it("passes the resolved backend through to the sandbox it builds", () => {
     // `LocalSandbox`'s constructor independently re-checks availability and
-    // throws IsolationUnavailableError — it will not accept a backend the host
-    // cannot provide, no matter what detection says. So on a host without a
-    // backend (this one, and CI), asking for bwrap surfaces as that error, which
-    // is itself the proof that resolveSandbox forwarded the resolved backend
-    // rather than dropping it.
+    // throws IsolationUnavailableError when the host cannot provide the backend.
+    // So on a host without bwrap, asking for it surfaces as that error; on a host
+    // with it (GitHub's runners now ship bwrap), the sandbox comes back using it.
+    // Either way resolveSandbox forwarded the resolved backend rather than
+    // dropping it.
     mockDetect(true, "bwrap");
-    expect(() => resolveSandbox({ workingDirectory: "/tmp/x", tenantKey: "acme" })).toThrow(
-      /bwrap/,
-    );
+    let sandbox: LocalSandbox | undefined;
+    try {
+      sandbox = resolveSandbox({ workingDirectory: "/tmp/x", tenantKey: "acme" }) as LocalSandbox;
+    } catch (err) {
+      expect((err as Error).message).toMatch(/bwrap/);
+      return;
+    }
+    expect(sandbox.isolation).toBe("bwrap");
   });
 
   it("builds a working sandbox, tagged per tenant, on a host with no backend", () => {
