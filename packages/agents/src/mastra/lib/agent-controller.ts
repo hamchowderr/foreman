@@ -111,8 +111,9 @@ export function getForemanAgentController(): Promise<AgentController> {
 export async function getForemanSession(resourceId?: string): Promise<Session> {
   if (!resourceId) throw new Error("A signed-in user is required");
   const controller = await getForemanAgentController();
-  const existing = await controller.getSessionByResource(resourceId);
-  const session = existing ?? (await controller.createSession({ resourceId }));
+  // Sessions are keyed by id, and the web session's id is its resourceId.
+  const existing = await controller.getSession(resourceId);
+  const session = existing ?? (await controller.createSession({ resourceId, id: resourceId }));
   // In-memory + idempotent, so re-granting each call is free.
   for (const tool of AUTO_ALLOWED_TOOLS) {
     session.grantTool(tool);
