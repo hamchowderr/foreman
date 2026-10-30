@@ -15,6 +15,7 @@ import {
   generateZapierTools,
   handleSdkError,
   METHOD_CLASSIFICATION,
+  withIdempotencyKey,
 } from "../../src/lib/zapier-sdk-tools";
 
 let tools: Record<string, any>;
@@ -265,5 +266,34 @@ describe("registry classification coverage (foreman-eadn)", () => {
       .filter(([, tool]) => tool && tool.requireApproval !== true)
       .map(([name]) => name);
     expect(ungated).toEqual([]);
+  });
+});
+
+describe("withIdempotencyKey (SDK 0.118.0)", () => {
+  it("keys an action run on its tool call id", () => {
+    expect(withIdempotencyKey("runAction", { app: "slack" }, "call-1")).toEqual({
+      app: "slack",
+      idempotencyKey: "foreman:call-1",
+    });
+    expect(withIdempotencyKey("createActionRun", {}, "call-2").idempotencyKey).toBe(
+      "foreman:call-2",
+    );
+  });
+
+  it("keeps a key the model passed", () => {
+    expect(withIdempotencyKey("runAction", { idempotencyKey: "mine" }, "call-1")).toEqual({
+      idempotencyKey: "mine",
+    });
+  });
+
+  it("leaves other methods and calls without an id alone", () => {
+    const input = { app: "slack" };
+    expect(withIdempotencyKey("listApps", input, "call-1")).toBe(input);
+    expect(withIdempotencyKey("runAction", input, undefined)).toBe(input);
+  });
+
+  it("caps the key at Zapier's 255 characters", () => {
+    const key = withIdempotencyKey("runAction", {}, "x".repeat(300)).idempotencyKey as string;
+    expect(key).toHaveLength(255);
   });
 });

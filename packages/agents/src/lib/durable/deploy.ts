@@ -255,6 +255,10 @@ export interface DraftTestResult {
   durableRunId: string | null;
   draftId: string;
   draftRevision: number;
+  /** Set once the run finished (only when the call waited for it). */
+  output?: unknown;
+  /** Set when the run failed (only when the call waited for it). */
+  error?: unknown;
 }
 
 /**
@@ -266,9 +270,11 @@ export interface DraftTestResult {
  *
  * The run snapshots the draft's payload at creation, so the draft is discarded
  * right after launch (unless `keepDraft`): an open draft would otherwise make a
- * later `publishWorkflowVersion` 409 and linger in the user's editor. Like
- * `runAutomationOnce`, this returns as soon as the run is accepted ("initialized");
- * follow it with `getWorkflowRunStatus`.
+ * later `publishWorkflowVersion` 409 and linger in the user's editor. Without
+ * `waitSeconds` this returns as soon as the run is accepted ("initialized"), like
+ * `runAutomationOnce`. With it (SDK 0.119.0) the call returns once the run ends,
+ * with its `output` or `error`, or as it stands when the wait runs out; follow an
+ * unfinished run with `getWorkflowRunStatus`.
  */
 export async function testAutomationDraft(opts: {
   sdk: Sdk;
@@ -277,6 +283,7 @@ export async function testAutomationDraft(opts: {
   input?: unknown;
   connections?: Record<string, string | number>;
   keepDraft?: boolean;
+  waitSeconds?: number;
 }): Promise<DraftTestResult> {
   const { sdk, workflowId } = opts;
   const created = await sdk.createWorkflowDraft({ workflow: workflowId, slug: "foreman-test" });
@@ -300,6 +307,7 @@ export async function testAutomationDraft(opts: {
       draft: draftId,
       draftRevision: saved.data.draft_revision,
       input: opts.input,
+      ...(opts.waitSeconds ? { waitSeconds: opts.waitSeconds } : {}),
     });
     return {
       kind: "draft",
@@ -308,6 +316,8 @@ export async function testAutomationDraft(opts: {
       durableRunId: run.data.durable_run_id,
       draftId,
       draftRevision: run.data.draft_revision,
+      output: run.data.output,
+      error: run.data.error,
     };
   } finally {
     if (!opts.keepDraft) {

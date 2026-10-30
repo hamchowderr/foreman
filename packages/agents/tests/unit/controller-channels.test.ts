@@ -239,6 +239,7 @@ describe("memory ownership", () => {
       thread: { isDM: true } as never,
       message: msg("hi") as never,
       defaultResourceId: "slack:U123",
+      requestContext: new RequestContext(),
     });
     expect(resourceId).toBe("foreman-user-1");
   });
@@ -254,6 +255,7 @@ describe("memory ownership", () => {
           thread: { isDM: true } as never,
           message: msg("hi") as never,
           defaultResourceId: "slack:U123",
+          requestContext: new RequestContext(),
         }),
       ),
     ).rejects.toThrow("db down");
@@ -266,8 +268,8 @@ describe("one session per channel thread", () => {
     return { session, controller: { createSession: vi.fn(async () => session) } };
   }
 
-  it("creates the owner's session in its own scope, bound to the thread", async () => {
-    // Scoped so it never reuses (and re-points) the user's unscoped web session.
+  it("creates the owner's session under its own id, bound to the thread", async () => {
+    // Its own id so it never reuses (and re-points) the user's web session.
     const { session, controller } = fakeController();
     const requestContext = new RequestContext();
     requestContext.set("userId", "foreman-user-1");
@@ -283,7 +285,6 @@ describe("one session per channel thread", () => {
       expect.objectContaining({
         resourceId: "foreman-user-1",
         id: channelSessionKey("thread-9"),
-        scope: channelSessionKey("thread-9"),
         threadId: "thread-9",
         createInitialThread: false,
       }),

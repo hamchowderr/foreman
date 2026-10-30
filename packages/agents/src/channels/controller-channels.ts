@@ -29,7 +29,7 @@ import { redeemLinkCodeAndRelink } from "./relink";
  *  - Memory: every channel thread is owned by the sender's Foreman user id
  *    (`resolveResourceId`), so working memory, OM and recall are shared with the web
  *    chat and the other channels.
- *  - Session: one controller Session per channel thread (`resolveSession`), scoped so
+ *  - Session: one controller Session per channel thread (`resolveSession`), with its own id so
  *    it never collides with the user's web session.
  *  - Tools: every handler stamps the sender's user id and workspace on the run's
  *    RequestContext before dispatch, which is where Zapier tools and the workspace
@@ -74,7 +74,7 @@ export function skipControllerChannels(): void {
   hostChannels = false;
 }
 
-/** The session id and registry scope for one channel thread's session. */
+/** The session id for one channel thread's session. */
 export function channelSessionKey(threadId: string): string {
   return `channel:${threadId}`;
 }
@@ -227,9 +227,9 @@ export function buildForemanChannels(): AgentControllerChannelsConfig | undefine
     resolveResourceId: ({ platform, message }) =>
       registerChannelUser(platform, message.author.userId, message.author.fullName),
 
-    // One session per channel thread, under the owner's resource but in its own
-    // registry scope, so it never takes over (or switches the thread of) the user's
-    // web session. Also runs on approve/deny clicks, which is where a click from
+    // One session per channel thread, under the owner's resource but with its own
+    // session id, so it never takes over (or switches the thread of) the user's
+    // web session (whose id is the resourceId). Also runs on approve/deny clicks, which is where a click from
     // anyone but the owner is refused.
     resolveSession: async ({ controller, thread, requestContext }): Promise<Session> => {
       if (resolveRequestUserId(requestContext) !== thread.resourceId) {
@@ -243,7 +243,6 @@ export function buildForemanChannels(): AgentControllerChannelsConfig | undefine
       const session = await controller.createSession({
         resourceId: thread.resourceId,
         id: key,
-        scope: key,
         threadId: thread.id,
         createInitialThread: false,
         requestContext,

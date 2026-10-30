@@ -257,7 +257,16 @@ export interface TestRunResult {
   runId: string;
   status: string;
   durableRunId: string | null;
+  /** A draft run's result, when it ended within {@link DRAFT_TEST_WAIT_SECONDS}. */
+  output?: unknown;
+  error?: unknown;
 }
+
+/**
+ * How long a draft test run waits for its result (SDK 0.119.0 `waitSeconds`), so
+ * a quick test answers in one call instead of a follow-up inspect.
+ */
+export const DRAFT_TEST_WAIT_SECONDS = 30;
 
 /**
  * Test an automation's source WITHOUT touching its live version. With a saved
@@ -300,8 +309,16 @@ export async function testAutomationById(
     source,
     input: opts.input,
     connections: automation.connections,
+    waitSeconds: DRAFT_TEST_WAIT_SECONDS,
   });
-  return { kind: "draft", runId: r.runId, status: r.status, durableRunId: r.durableRunId };
+  return {
+    kind: "draft",
+    runId: r.runId,
+    status: r.status,
+    durableRunId: r.durableRunId,
+    output: r.output,
+    error: r.error,
+  };
 }
 
 async function managedAutomation(
