@@ -11,6 +11,7 @@ export type Database = {
           token: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           expires_at: string;
@@ -51,6 +52,7 @@ export type Database = {
           status: string;
           updated_at: string;
         };
+        ComputedFields: never;
         Insert: {
           action_key: string;
           action_type: string;
@@ -99,6 +101,7 @@ export type Database = {
           proposal_id: string;
           result: string;
         };
+        ComputedFields: never;
         Insert: {
           error?: string | null;
           executed_at: string;
@@ -133,6 +136,7 @@ export type Database = {
           scopes: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at: string;
           id: string;
@@ -172,6 +176,7 @@ export type Database = {
           synced_at: string;
           title: string;
         };
+        ComputedFields: never;
         Insert: {
           action_count?: number | null;
           app_key: string;
@@ -207,6 +212,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           app_key: string;
           created_at: string;
@@ -244,17 +250,18 @@ export type Database = {
       app_settings: {
         Row: {
           id: boolean;
-          settings: Json;
+          settings: NonNullable<Json>;
           updated_at: string;
         };
+        ComputedFields: never;
         Insert: {
           id?: boolean;
-          settings?: Json;
+          settings?: NonNullable<Json>;
           updated_at?: string;
         };
         Update: {
           id?: boolean;
-          settings?: Json;
+          settings?: NonNullable<Json>;
           updated_at?: string;
         };
         Relationships: [];
@@ -274,6 +281,7 @@ export type Database = {
           visibility: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at: string;
           id: string;
@@ -314,7 +322,7 @@ export type Database = {
       };
       automation: {
         Row: {
-          connections: Json;
+          connections: NonNullable<Json>;
           created_at: string;
           description: string | null;
           editor_url: string | null;
@@ -332,8 +340,9 @@ export type Database = {
           zapier_version_id: string | null;
           zapier_workflow_id: string;
         };
+        ComputedFields: never;
         Insert: {
-          connections?: Json;
+          connections?: NonNullable<Json>;
           created_at: string;
           description?: string | null;
           editor_url?: string | null;
@@ -352,7 +361,7 @@ export type Database = {
           zapier_workflow_id: string;
         };
         Update: {
-          connections?: Json;
+          connections?: NonNullable<Json>;
           created_at?: string;
           description?: string | null;
           editor_url?: string | null;
@@ -396,6 +405,7 @@ export type Database = {
           workflow_version_id: string | null;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           automation_id: string;
           created_at: string;
@@ -450,6 +460,7 @@ export type Database = {
           gateway_name: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           billing_email?: string | null;
           gateway_customer_id: string;
@@ -488,6 +499,7 @@ export type Database = {
           subscription_id: string | null;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           amount_due?: number;
           amount_paid?: number;
@@ -553,6 +565,7 @@ export type Database = {
           status: string | null;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           amount: number;
           created_at?: string;
@@ -603,6 +616,7 @@ export type Database = {
           type: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           brand?: string | null;
           created_at?: string;
@@ -657,6 +671,7 @@ export type Database = {
           tier: string | null;
           unit_amount: number | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           currency?: string;
@@ -701,6 +716,7 @@ export type Database = {
           name: string;
           updated_at: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           description?: string | null;
@@ -741,6 +757,7 @@ export type Database = {
           updated_at: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           cancel_at?: string | null;
           cancel_at_period_end?: boolean;
@@ -812,6 +829,7 @@ export type Database = {
           subscription_id: string | null;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           id?: string;
           metric: string;
@@ -853,6 +871,7 @@ export type Database = {
           unit_amount: number | null;
           up_to: number | null;
         };
+        ComputedFields: never;
         Insert: {
           flat_amount?: number | null;
           id?: string;
@@ -883,6 +902,7 @@ export type Database = {
           enabled: boolean;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           capability: string;
           enabled?: boolean;
@@ -913,6 +933,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           channel: string;
           channel_user_id: string;
@@ -958,6 +979,7 @@ export type Database = {
           used_at: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           channel: string;
           code: string;
@@ -986,6 +1008,7 @@ export type Database = {
           created_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           alias: string;
           app_key: string;
@@ -1022,6 +1045,7 @@ export type Database = {
           visibility: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           archived_at?: string | null;
           created_at: string;
@@ -1071,6 +1095,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at: string;
           expires_at?: string | null;
@@ -1109,6 +1134,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           artifact_id: string;
           created_at: string;
@@ -1148,6 +1174,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at: string;
           doc_path: string;
@@ -1195,7 +1222,7 @@ export type Database = {
           integrationTools: Json | null;
           mcpClients: Json | null;
           memory: Json | null;
-          model: Json;
+          model: NonNullable<Json>;
           name: string;
           outputProcessors: Json | null;
           requestContextSchema: Json | null;
@@ -1208,6 +1235,7 @@ export type Database = {
           workflows: Json | null;
           workspace: Json | null;
         };
+        ComputedFields: never;
         Insert: {
           agentId: string;
           agents?: Json | null;
@@ -1224,7 +1252,7 @@ export type Database = {
           integrationTools?: Json | null;
           mcpClients?: Json | null;
           memory?: Json | null;
-          model: Json;
+          model: NonNullable<Json>;
           name: string;
           outputProcessors?: Json | null;
           requestContextSchema?: Json | null;
@@ -1253,7 +1281,7 @@ export type Database = {
           integrationTools?: Json | null;
           mcpClients?: Json | null;
           memory?: Json | null;
-          model?: Json;
+          model?: NonNullable<Json>;
           name?: string;
           outputProcessors?: Json | null;
           requestContextSchema?: Json | null;
@@ -1282,6 +1310,7 @@ export type Database = {
           updatedAtZ: string | null;
           visibility: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -1359,6 +1388,7 @@ export type Database = {
           updatedAtZ: string | null;
           userId: string | null;
         };
+        ComputedFields: never;
         Insert: {
           attributes?: Json | null;
           createdAt: string;
@@ -1460,7 +1490,7 @@ export type Database = {
       mastra_background_tasks: {
         Row: {
           agent_id: string;
-          args: Json;
+          args: NonNullable<Json>;
           completedAt: string | null;
           completedAtZ: string | null;
           createdAt: string;
@@ -1483,9 +1513,10 @@ export type Database = {
           tool_call_id: string;
           tool_name: string;
         };
+        ComputedFields: never;
         Insert: {
           agent_id: string;
-          args: Json;
+          args: NonNullable<Json>;
           completedAt?: string | null;
           completedAtZ?: string | null;
           createdAt: string;
@@ -1510,7 +1541,7 @@ export type Database = {
         };
         Update: {
           agent_id?: string;
-          args?: Json;
+          args?: NonNullable<Json>;
           completedAt?: string | null;
           completedAtZ?: string | null;
           createdAt?: string;
@@ -1537,19 +1568,20 @@ export type Database = {
       };
       mastra_channel_config: {
         Row: {
-          data: Json;
+          data: NonNullable<Json>;
           platform: string;
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
-          data: Json;
+          data: NonNullable<Json>;
           platform: string;
           updatedAt: string;
           updatedAtZ?: string | null;
         };
         Update: {
-          data?: Json;
+          data?: NonNullable<Json>;
           platform?: string;
           updatedAt?: string;
           updatedAtZ?: string | null;
@@ -1562,7 +1594,7 @@ export type Database = {
           configHash: string | null;
           createdAt: string;
           createdAtZ: string | null;
-          data: Json;
+          data: NonNullable<Json>;
           error: string | null;
           id: string;
           platform: string;
@@ -1571,12 +1603,13 @@ export type Database = {
           updatedAtZ: string | null;
           webhookId: string | null;
         };
+        ComputedFields: never;
         Insert: {
           agentId: string;
           configHash?: string | null;
           createdAt: string;
           createdAtZ?: string | null;
-          data: Json;
+          data: NonNullable<Json>;
           error?: string | null;
           id: string;
           platform: string;
@@ -1590,7 +1623,7 @@ export type Database = {
           configHash?: string | null;
           createdAt?: string;
           createdAtZ?: string | null;
-          data?: Json;
+          data?: NonNullable<Json>;
           error?: string | null;
           id?: string;
           platform?: string;
@@ -1611,7 +1644,7 @@ export type Database = {
           externalId: string | null;
           groundTruth: Json | null;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           isDeleted: boolean;
           metadata: Json | null;
           organizationId: string | null;
@@ -1623,6 +1656,7 @@ export type Database = {
           updatedAtZ: string | null;
           validTo: number | null;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           createdAtZ?: string | null;
@@ -1632,7 +1666,7 @@ export type Database = {
           externalId?: string | null;
           groundTruth?: Json | null;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           isDeleted: boolean;
           metadata?: Json | null;
           organizationId?: string | null;
@@ -1653,7 +1687,7 @@ export type Database = {
           externalId?: string | null;
           groundTruth?: Json | null;
           id?: string;
-          input?: Json;
+          input?: NonNullable<Json>;
           isDeleted?: boolean;
           metadata?: Json | null;
           organizationId?: string | null;
@@ -1675,6 +1709,7 @@ export type Database = {
           id: string;
           version: number;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           createdAtZ?: string | null;
@@ -1714,6 +1749,7 @@ export type Database = {
           updatedAtZ: string | null;
           version: number;
         };
+        ComputedFields: never;
         Insert: {
           candidateId?: string | null;
           candidateKey?: string | null;
@@ -1770,7 +1806,7 @@ export type Database = {
           experimentId: string;
           groundTruth: Json | null;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           itemDatasetVersion: number | null;
           itemId: string;
           organizationId: string | null;
@@ -1784,6 +1820,7 @@ export type Database = {
           toolMockReport: Json | null;
           traceId: string | null;
         };
+        ComputedFields: never;
         Insert: {
           completedAt: string;
           completedAtZ?: string | null;
@@ -1793,7 +1830,7 @@ export type Database = {
           experimentId: string;
           groundTruth?: Json | null;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           itemDatasetVersion?: number | null;
           itemId: string;
           organizationId?: string | null;
@@ -1816,7 +1853,7 @@ export type Database = {
           experimentId?: string;
           groundTruth?: Json | null;
           id?: string;
-          input?: Json;
+          input?: NonNullable<Json>;
           itemDatasetVersion?: number | null;
           itemId?: string;
           organizationId?: string | null;
@@ -1859,6 +1896,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           agentVersion?: string | null;
           completedAt?: string | null;
@@ -1921,6 +1959,7 @@ export type Database = {
           entityType: string;
           userId: string;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           createdAtZ?: string | null;
@@ -1947,9 +1986,10 @@ export type Database = {
           id: string;
           mcpClientId: string;
           name: string;
-          servers: Json;
+          servers: NonNullable<Json>;
           versionNumber: number;
         };
+        ComputedFields: never;
         Insert: {
           changedFields?: Json | null;
           changeMessage?: string | null;
@@ -1959,7 +1999,7 @@ export type Database = {
           id: string;
           mcpClientId: string;
           name: string;
-          servers: Json;
+          servers: NonNullable<Json>;
           versionNumber: number;
         };
         Update: {
@@ -1971,7 +2011,7 @@ export type Database = {
           id?: string;
           mcpClientId?: string;
           name?: string;
-          servers?: Json;
+          servers?: NonNullable<Json>;
           versionNumber?: number;
         };
         Relationships: [];
@@ -1988,6 +2028,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -2033,6 +2074,7 @@ export type Database = {
           versionNumber: number;
           workflows: Json | null;
         };
+        ComputedFields: never;
         Insert: {
           agents?: Json | null;
           changedFields?: Json | null;
@@ -2087,6 +2129,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -2122,6 +2165,7 @@ export type Database = {
           thread_id: string;
           type: string;
         };
+        ComputedFields: never;
         Insert: {
           content: string;
           createdAt: string;
@@ -2188,6 +2232,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           agentId?: string | null;
           archivedAt?: string | null;
@@ -2318,6 +2363,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeObservations: string;
           activeObservationsPendingUpdate?: string | null;
@@ -2417,6 +2463,7 @@ export type Database = {
           rules: Json | null;
           versionNumber: number;
         };
+        ComputedFields: never;
         Insert: {
           blockId: string;
           changedFields?: Json | null;
@@ -2459,6 +2506,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -2493,6 +2541,7 @@ export type Database = {
           updatedAtZ: string | null;
           workingMemory: string | null;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           createdAtZ?: string | null;
@@ -2526,6 +2575,7 @@ export type Database = {
           scheduled_fire_at: number;
           trigger_kind: string;
         };
+        ComputedFields: never;
         Insert: {
           actual_fire_at: number;
           error?: string | null;
@@ -2564,10 +2614,11 @@ export type Database = {
           owner_id: string | null;
           owner_type: string | null;
           status: string;
-          target: Json;
+          target: NonNullable<Json>;
           timezone: string | null;
           updated_at: number;
         };
+        ComputedFields: never;
         Insert: {
           created_at: number;
           cron: string;
@@ -2579,7 +2630,7 @@ export type Database = {
           owner_id?: string | null;
           owner_type?: string | null;
           status: string;
-          target: Json;
+          target: NonNullable<Json>;
           timezone?: string | null;
           updated_at: number;
         };
@@ -2594,7 +2645,7 @@ export type Database = {
           owner_id?: string | null;
           owner_type?: string | null;
           status?: string;
-          target?: Json;
+          target?: NonNullable<Json>;
           timezone?: string | null;
           updated_at?: number;
         };
@@ -2618,6 +2669,7 @@ export type Database = {
           type: string;
           versionNumber: number;
         };
+        ComputedFields: never;
         Insert: {
           changedFields?: Json | null;
           changeMessage?: string | null;
@@ -2668,6 +2720,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -2714,10 +2767,10 @@ export type Database = {
           generateReasonPrompt: string | null;
           generateScorePrompt: string | null;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           metadata: Json | null;
           organizationId: string | null;
-          output: Json;
+          output: NonNullable<Json>;
           preprocessPrompt: string | null;
           preprocessStepResult: Json | null;
           projectId: string | null;
@@ -2727,7 +2780,7 @@ export type Database = {
           resourceId: string | null;
           runId: string;
           score: number;
-          scorer: Json;
+          scorer: NonNullable<Json>;
           scorerId: string;
           source: string;
           spanId: string | null;
@@ -2736,6 +2789,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           additionalContext?: Json | null;
           analyzePrompt?: string | null;
@@ -2753,10 +2807,10 @@ export type Database = {
           generateReasonPrompt?: string | null;
           generateScorePrompt?: string | null;
           id: string;
-          input: Json;
+          input: NonNullable<Json>;
           metadata?: Json | null;
           organizationId?: string | null;
-          output: Json;
+          output: NonNullable<Json>;
           preprocessPrompt?: string | null;
           preprocessStepResult?: Json | null;
           projectId?: string | null;
@@ -2766,7 +2820,7 @@ export type Database = {
           resourceId?: string | null;
           runId: string;
           score: number;
-          scorer: Json;
+          scorer: NonNullable<Json>;
           scorerId: string;
           source: string;
           spanId?: string | null;
@@ -2792,10 +2846,10 @@ export type Database = {
           generateReasonPrompt?: string | null;
           generateScorePrompt?: string | null;
           id?: string;
-          input?: Json;
+          input?: NonNullable<Json>;
           metadata?: Json | null;
           organizationId?: string | null;
-          output?: Json;
+          output?: NonNullable<Json>;
           preprocessPrompt?: string | null;
           preprocessStepResult?: Json | null;
           projectId?: string | null;
@@ -2805,7 +2859,7 @@ export type Database = {
           resourceId?: string | null;
           runId?: string;
           score?: number;
-          scorer?: Json;
+          scorer?: NonNullable<Json>;
           scorerId?: string;
           source?: string;
           spanId?: string | null;
@@ -2825,6 +2879,7 @@ export type Database = {
           mimeType: string | null;
           size: number;
         };
+        ComputedFields: never;
         Insert: {
           content: string;
           createdAt: string;
@@ -2865,6 +2920,7 @@ export type Database = {
           tree: Json | null;
           versionNumber: number;
         };
+        ComputedFields: never;
         Insert: {
           assets?: Json | null;
           changedFields?: Json | null;
@@ -2922,6 +2978,7 @@ export type Database = {
           updatedAtZ: string | null;
           visibility: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -2959,6 +3016,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           createdAtZ?: string | null;
@@ -2994,6 +3052,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           authorId: string;
           connectionId: string;
@@ -3026,17 +3085,18 @@ export type Database = {
           createdAtZ: string | null;
           resourceId: string | null;
           run_id: string;
-          snapshot: Json;
+          snapshot: NonNullable<Json>;
           updatedAt: string;
           updatedAtZ: string | null;
           workflow_name: string;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           createdAtZ?: string | null;
           resourceId?: string | null;
           run_id: string;
-          snapshot: Json;
+          snapshot: NonNullable<Json>;
           updatedAt: string;
           updatedAtZ?: string | null;
           workflow_name: string;
@@ -3046,7 +3106,7 @@ export type Database = {
           createdAtZ?: string | null;
           resourceId?: string | null;
           run_id?: string;
-          snapshot?: Json;
+          snapshot?: NonNullable<Json>;
           updatedAt?: string;
           updatedAtZ?: string | null;
           workflow_name?: string;
@@ -3073,6 +3133,7 @@ export type Database = {
           versionNumber: number;
           workspaceId: string;
         };
+        ComputedFields: never;
         Insert: {
           autoSync?: boolean | null;
           changedFields?: Json | null;
@@ -3125,6 +3186,7 @@ export type Database = {
           updatedAt: string;
           updatedAtZ: string | null;
         };
+        ComputedFields: never;
         Insert: {
           activeVersionId?: string | null;
           authorId?: string | null;
@@ -3156,6 +3218,7 @@ export type Database = {
           metadata: Json | null;
           vector_id: string;
         };
+        ComputedFields: never;
         Insert: {
           embedding?: string | null;
           id?: number;
@@ -3179,6 +3242,7 @@ export type Database = {
           team_name: string | null;
           updated_at: string;
         };
+        ComputedFields: never;
         Insert: {
           bot_token: string;
           bot_user_id?: string | null;
@@ -3208,6 +3272,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at: string;
           current_version_id?: string | null;
@@ -3264,6 +3329,7 @@ export type Database = {
           tools: string;
           version: number;
         };
+        ComputedFields: never;
         Insert: {
           agent_id: string;
           created_at: string;
@@ -3307,6 +3373,7 @@ export type Database = {
           name: string;
           updatedAt: string;
         };
+        ComputedFields: never;
         Insert: {
           createdAt: string;
           default_workspace_id?: string | null;
@@ -3342,6 +3409,7 @@ export type Database = {
           email: string | null;
           id: string;
         };
+        ComputedFields: never;
         Insert: {
           email?: string | null;
           id: string;
@@ -3366,16 +3434,17 @@ export type Database = {
           id: string;
           is_read: boolean;
           is_seen: boolean;
-          payload: Json;
+          payload: NonNullable<Json>;
           updated_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           id?: string;
           is_read?: boolean;
           is_seen?: boolean;
-          payload?: Json;
+          payload?: NonNullable<Json>;
           updated_at?: string;
           user_id: string;
         };
@@ -3384,7 +3453,7 @@ export type Database = {
           id?: string;
           is_read?: boolean;
           is_seen?: boolean;
-          payload?: Json;
+          payload?: NonNullable<Json>;
           updated_at?: string;
           user_id?: string;
         };
@@ -3405,6 +3474,7 @@ export type Database = {
           full_name: string | null;
           id: string;
         };
+        ComputedFields: never;
         Insert: {
           avatar_url?: string | null;
           created_at?: string;
@@ -3425,6 +3495,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"];
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           id?: string;
           role?: Database["public"]["Enums"]["app_role"];
@@ -3450,6 +3521,7 @@ export type Database = {
           default_workspace: string | null;
           id: string;
         };
+        ComputedFields: never;
         Insert: {
           default_workspace?: string | null;
           id: string;
@@ -3480,6 +3552,7 @@ export type Database = {
           updated_at: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           updated_at?: string;
           workspace_id: string;
@@ -3503,6 +3576,7 @@ export type Database = {
           updated_at: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           updated_at?: string;
           workspace_id: string;
@@ -3527,6 +3601,7 @@ export type Database = {
           id: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           credits?: number;
           id?: string;
@@ -3557,6 +3632,7 @@ export type Database = {
           workspace_credits_id: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           change_type: string;
           changed_at?: string;
@@ -3604,6 +3680,7 @@ export type Database = {
           updated_at: string;
           workspace_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           id?: string;
@@ -3653,21 +3730,22 @@ export type Database = {
       workspace_members: {
         Row: {
           added_at: string;
-          permissions: Json;
+          permissions: NonNullable<Json>;
           workspace_id: string;
           workspace_member_id: string;
           workspace_member_role: Database["public"]["Enums"]["workspace_member_role_type"];
         };
+        ComputedFields: never;
         Insert: {
           added_at?: string;
-          permissions?: Json;
+          permissions?: NonNullable<Json>;
           workspace_id: string;
           workspace_member_id: string;
           workspace_member_role?: Database["public"]["Enums"]["workspace_member_role_type"];
         };
         Update: {
           added_at?: string;
-          permissions?: Json;
+          permissions?: NonNullable<Json>;
           workspace_id?: string;
           workspace_member_id?: string;
           workspace_member_role?: Database["public"]["Enums"]["workspace_member_role_type"];
@@ -3699,6 +3777,7 @@ export type Database = {
           workspace_id: string;
           zapier_connection_mode: string;
         };
+        ComputedFields: never;
         Insert: {
           max_bulk_items?: number | null;
           rate_limit_per_hour?: number | null;
@@ -3735,6 +3814,7 @@ export type Database = {
           name: string;
           slug: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           id?: string;
@@ -3763,6 +3843,7 @@ export type Database = {
           user_id: string;
           workspace_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           access_token: string;
           created_at: string;
@@ -3807,61 +3888,40 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      app_admin_get_recent_30_day_signin_count: { Args: never; Returns: number };
-      app_admin_get_total_user_count: { Args: never; Returns: number };
-      app_admin_get_total_workspace_count: { Args: never; Returns: number };
-      app_admin_get_user_id_by_email: {
-        Args: { emailarg: string };
-        Returns: string;
+      app_admin_get_recent_30_day_signin_count: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
+      app_admin_get_total_user_count: { Args: Record<PropertyKey, never>; Returns: number };
+      app_admin_get_total_workspace_count: { Args: Record<PropertyKey, never>; Returns: number };
+      app_admin_get_user_id_by_email: { Args: { emailarg: string }; Returns: string };
       app_admin_get_users_created_per_month: {
-        Args: never;
+        Args: Record<PropertyKey, never>;
         Returns: {
           month: string;
           number_of_users: number;
         }[];
       };
       app_admin_get_workspaces_created_per_month: {
-        Args: never;
+        Args: Record<PropertyKey, never>;
         Returns: {
           month: string;
           number_of_workspaces: number;
         }[];
       };
-      check_if_authenticated_user_owns_email: {
-        Args: { email: string };
-        Returns: boolean;
-      };
+      check_if_authenticated_user_owns_email: { Args: { email: string }; Returns: boolean };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
-      decrement_workspace_credits: {
-        Args: { amount: number; ws_id: string };
-        Returns: undefined;
-      };
-      get_customer_workspace_id: {
-        Args: { customer_id: string };
-        Returns: string;
-      };
-      get_workspace_team_member_admins: {
-        Args: { ws_id: string };
-        Returns: string[];
-      };
-      get_workspace_team_member_ids: {
-        Args: { ws_id: string };
-        Returns: string[];
-      };
+      decrement_workspace_credits: { Args: { amount: number; ws_id: string }; Returns: undefined };
+      get_customer_workspace_id: { Args: { customer_id: string }; Returns: string };
+      get_workspace_team_member_admins: { Args: { ws_id: string }; Returns: string[] };
+      get_workspace_team_member_ids: { Args: { ws_id: string }; Returns: string[] };
       has_workspace_permission: {
         Args: { permission: string; user_id: string; workspace_id: string };
         Returns: boolean;
       };
       is_application_admin: { Args: { user_id?: string }; Returns: boolean };
-      is_workspace_admin: {
-        Args: { user_id: string; workspace_id: string };
-        Returns: boolean;
-      };
-      is_workspace_member: {
-        Args: { user_id: string; workspace_id: string };
-        Returns: boolean;
-      };
+      is_workspace_admin: { Args: { user_id: string; workspace_id: string }; Returns: boolean };
+      is_workspace_member: { Args: { user_id: string; workspace_id: string }; Returns: boolean };
       update_workspace_member_permissions: {
         Args: { member_id: string; new_permissions: Json; workspace_id: string };
         Returns: undefined;
@@ -3907,9 +3967,7 @@ export type Tables<
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R;
@@ -3933,9 +3991,7 @@ export type TablesInsert<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I;
     }
@@ -3958,9 +4014,7 @@ export type TablesUpdate<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U;
     }
@@ -3983,9 +4037,7 @@ export type Enums<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
@@ -4000,9 +4052,7 @@ export type CompositeTypes<
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
