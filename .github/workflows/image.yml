@@ -70,9 +70,10 @@ jobs:
         env:
           BRANCH: release/foreman-agents
         run: |
-          if out=$(git push origin "HEAD:refs/heads/$BRANCH" 2>&1); then echo "$out"; exit 0; fi
-          echo "$out"
-          if grep -qE 'non-fast-forward' <<<"$out"; then
+          if git push origin "HEAD:refs/heads/$BRANCH"; then exit 0; fi
+          # Refused: fine only if a newer run already released a descendant of this commit.
+          git fetch --quiet origin "refs/heads/$BRANCH"
+          if git merge-base --is-ancestor HEAD FETCH_HEAD; then
             echo "$BRANCH already holds a newer commit; leaving it there"; exit 0
           fi
           exit 1
