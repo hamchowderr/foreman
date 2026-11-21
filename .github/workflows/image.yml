@@ -1,0 +1,78 @@
+# Builds Foreman's agent server (Dockerfile.agents) into a Docker image here, instead of on the server that runs it
+# (release/README.md). A pull request only builds the image. main also publishes it to GHCR and moves
+# release/foreman-agents, which Coolify deploys from, so the server only downloads an image that already exists.
+name: image
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
+  workflow_dispatch:
+
+# Pull requests cancel their own older runs. Every push to main runs to the end, so each commit's image is published.
+concurrency:
+  group: image-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  image:
+    name: foreman-agents image
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: write
+    env:
+      IMAGE: ghcr.io/hamchowderr/foreman-agents
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so the release push can tell that it moves the branch forward (see Release).
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v4
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.agents
+          load: true
+          tags: foreman-agents:check
+          cache-from: type=gha,scope=foreman-agents
+          cache-to: type=gha,scope=foreman-agents,mode=max
+      - name: Image size
+        run: docker image inspect foreman-agents:check --format '{{.Size}}' | awk '{ printf "%.0f MB\n", $1 / 1000000 }'
+      - if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.agents
+          push: true
+          # Coolify deploys the exact commit's image (release/foreman-agents.Dockerfile), so there is no `latest`.
+          tags: ${{ env.IMAGE }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=foreman-agents
+      # Coolify deploys from this branch (release/foreman-agents.Dockerfile), so it only ever picks up a commit whose
+      # image is already published. The push is never forced: GitHub accepts it only if it moves the branch forward, so
+      # a re-run of an older commit, or an older run that finishes after a newer one, leaves the newer release in place.
+      - name: Release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          BRANCH: release/foreman-agents
+        run: |
+          if out=$(git push origin "HEAD:refs/heads/$BRANCH" 2>&1); then echo "$out"; exit 0; fi
+          echo "$out"
+          if grep -qE 'non-fast-forward' <<<"$out"; then
+            echo "$BRANCH already holds a newer commit; leaving it there"; exit 0
+          fi
+          exit 1
